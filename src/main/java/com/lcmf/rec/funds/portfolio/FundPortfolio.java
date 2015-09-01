@@ -64,15 +64,17 @@ public class FundPortfolio {
 	 * 预期5年最大值
 	 * @return
 	 */
-	public float expectReturnMax(){
+	public float expectAnnualReturnMax(){
 		
 		double u = this.fp.getCamp_return();
 		double sigma = this.fp.getCamp_sd();
 		
-		int days = 250 * 5;
-		double p = Math.pow(Math.E, u * days);
-		double upper_p = p * (1 + sigma * Math.sqrt(days)) - 1;
-		return (float)upper_p;
+		int days = 250;
+		
+		double portfolio_p = Math.pow(Math.E, (u) * days);
+		double portfolio_upper_p = portfolio_p * (1 + sigma * Math.sqrt(days));
+	
+		return (float)(portfolio_upper_p - 1);
 	}
 	
 	
@@ -80,15 +82,17 @@ public class FundPortfolio {
 	 * 预期5年最小值
 	 * @return
 	 */
-	public float expectReturnMin(){
+	public float expectAnnualReturnMin(){
 		
 		double u = this.fp.getCamp_return();
 		double sigma = this.fp.getCamp_sd();
 		
-		int days = 250 * 5;
-		double p = Math.pow(Math.E, u * days);
-		double bottom_p = p * (1 - sigma * Math.sqrt(days)) - 1;
-		return (float)bottom_p;
+		int days = 250;
+		
+		double portfolio_p = Math.pow(Math.E, (u) * days);
+		double portfolio_bottom_p = portfolio_p * (1 - sigma * Math.sqrt(days));
+	
+		return (float)(portfolio_bottom_p - 1);
 	}
 
 	/**

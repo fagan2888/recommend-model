@@ -59,7 +59,6 @@ public class CopyRighter {
 		double hs_upper_p = hs_p * (1 + hs300_sd * Math.sqrt(days));
 		double hs_bottom_p = hs_p * (1 - hs300_sd * Math.sqrt(days));
 		
-		
 		String base = "未来5年，当前为您提供的配置方案在90%%的置信区间中将获得%.1f%%-%.1f%%的平均年化收益，而同期沪深300指数在90%%的置信区间中将获得%.1f%%-%.1f%%的平均年化收益。从图形中显示的收益变化趋势可以看出，该配置方案将使您在未来的投资中";
 		String desc = String.format(base, (portfolio_bottom_p - 1) * 100, (portfolio_upper_p - 1) * 100, (hs_bottom_p - 1) * 100, (hs_upper_p - 1) * 100);
 		
@@ -67,12 +66,14 @@ public class CopyRighter {
 		double hs300_return_annual = Math.pow((1 + hs300_return), 250) - 1;
 
 		if (portfolio_return_annual > hs300_return_annual * 1.1) {
-			return desc + "跑赢大盘。";
+			desc = desc + "跑赢大盘。";
 		} else if (portfolio_return_annual <= hs300_return_annual * 1.1 && portfolio_return_annual >= hs300_return_annual * 0.9) {
-			return desc + "获得更加稳健的获得市场平均收益。";
+			desc = desc + "获得更加稳健的获得市场平均收益。";
 		} else {
-			return desc + "获取稳定回报。";
+			desc = desc + "获取稳定回报。";
 		}
+		desc = desc + "预期平均年化收益仅仅表示一种可能性，是基于资本市场假设模型以及每个产品的平均回报率的长期前瞻性预测得出。在极少数情况下，投资组合年化收益将可能大于90%置信区间下的年化损失。";
+		return desc;
 	}
 	
 	public static String risk_grade_header_desc(double risk_grade, double hs300_risk_grade){
@@ -102,7 +103,11 @@ public class CopyRighter {
 	
 	public static String liquidity_bottom_desc(double sp_weights){
 		String percent = String.format("%.1f%%", (1 - sp_weights) * 100);
-		return "当前为您提供的理财配置，均是流动性极高的产品。您可以在短时间内随时取用无需担心流动性的问题。" + "\n" + "您配置的方案中，如果您对资金有临时取用的需求，其中" + percent +  "的金额可以在4个工作日内到账。";
+		String sp_percent = String.format("%.1f%%", sp_weights * 100);
+		if(sp_weights < 0.01)
+			return "您配置的方案中，如果您对资金有临时取用的需求，" + percent + "的金额可以在4个工作日内到账。";
+		else
+			return "您配置的方案中，如果您对资金有临时取用的需求，" + percent + "的金额可以在4个工作日内到账," + sp_percent + "的金额可以在11个工作日内到账。";
 	}
 	
 }

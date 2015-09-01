@@ -45,7 +45,7 @@ public class FundPortfolioMySQLWriter {
 			String sql_base = "insert into fund_portfolios (fp_risk_grade, fp_type, fp_name, fp_annual_return, fp_max_drawdown, fp_risk_vs_return, fp_industry_dispersion, fp_liquidity, fp_expect_return_min, fp_expect_return_max, fp_expired_date, created_at, updated_at) values ('%f','%s','%s','%f','%f', '%s', '%s', '%s', '%f', '%f', '%s','%s', '%s')";
 			String sql = String.format(sql_base, fpf.getRiskGrade(), fpf.getType(), fpf.getFp_name(),
 					fpf.getAnnual_return_ratio(), fpf.getMaxDrawdonw(), fpf.getRiskvsreturn(), 1, "高",
-					fpf.expectReturnMin(), fpf.expectReturnMax(), after_tommmorrow_str, tt.toString(), tt.toString());
+					fpf.expectAnnualReturnMin(), fpf.expectAnnualReturnMax(), after_tommmorrow_str, tt.toString(), tt.toString());
 			mysql.insertDB(sql);
 
 			sql = "select id from fund_portfolios where fp_name = '" + fpf.getFp_name() + "'";
