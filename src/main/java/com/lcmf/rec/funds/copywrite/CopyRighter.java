@@ -77,11 +77,11 @@ public class CopyRighter {
 	
 	public static String risk_grade_header_desc(double risk_grade, double hs300_risk_grade){
 		if(risk_grade > hs300_risk_grade)
-			return String.format("根据您的风险评测结果为%.1f，高于沪深300指数%.1f的风险值。", risk_grade * 10, hs300_risk_grade * 10);
+			return String.format("您的风险评测结果为%.1f，高于沪深300指数%.1f的风险值。", risk_grade * 10, hs300_risk_grade * 10);
 		else if(risk_grade == hs300_risk_grade)
-			return String.format("根据您的风险评测结果为%.1f，等于沪深300指数%.1f的风险值。", risk_grade * 10, hs300_risk_grade * 10);
+			return String.format("您的风险评测结果为%.1f，等于沪深300指数%.1f的风险值。", risk_grade * 10, hs300_risk_grade * 10);
 		else
-			return String.format("根据您的风险评测结果为%.1f，低于沪深300指数%.1f的风险值。", risk_grade * 10, hs300_risk_grade * 10);
+			return String.format("您的风险评测结果为%.1f，低于沪深300指数%.1f的风险值。", risk_grade * 10, hs300_risk_grade * 10);
 	}
 	
 	public static String risk_grade_bottom_desc(){
