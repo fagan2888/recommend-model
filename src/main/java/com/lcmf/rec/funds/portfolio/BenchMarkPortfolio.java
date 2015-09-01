@@ -94,7 +94,9 @@ public class BenchMarkPortfolio {
 			hs_300.setType("hs300");
 			
 
-		} catch (SQLException | ParseException e) {
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (ParseException e){
 			e.printStackTrace();
 		}
 
@@ -140,7 +142,9 @@ public class BenchMarkPortfolio {
 			zz_500.setFp_name(fp_name_str);
 			zz_500.setType("zz500");
 
-		} catch (SQLException | ParseException e) {
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (ParseException e){
 			e.printStackTrace();
 		}
 
@@ -186,7 +190,9 @@ public class BenchMarkPortfolio {
 			js_money.setFp_name(fp_name_str);
 			js_money.setType("money");
 
-		} catch (SQLException | ParseException e) {
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (ParseException e){
 			e.printStackTrace();
 		}
 

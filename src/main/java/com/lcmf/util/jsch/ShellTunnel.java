@@ -31,7 +31,9 @@ public class ShellTunnel{
 			session.connect(30000);
 			return true;
 			
-		} catch (NumberFormatException | JSchException e) {
+		} catch (NumberFormatException e) {
+			e.printStackTrace();
+		} catch (JSchException e){
 			e.printStackTrace();
 		}
 

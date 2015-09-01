@@ -17,11 +17,17 @@ public class ExcelReader {
 	}
 
 	private void loadExcel(String filePath) {
-		try {
-			wb = WorkbookFactory.create(new File(filePath));
-		} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
-			e.printStackTrace();
-		}
+		
+			try {
+				wb = WorkbookFactory.create(new File(filePath));
+			} catch (EncryptedDocumentException e) {
+				e.printStackTrace();
+			} catch (InvalidFormatException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		
 	}
 
 	public Sheet read(int sheetIndex) {
