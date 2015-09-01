@@ -90,7 +90,7 @@ public class BenchMarkPortfolio {
 			String today_str = format.format(new Date());
 			String fp_name_str = String.format("%s_%s", "沪深_300", today_str);
 			hs_300.setFp_name(fp_name_str);
-			hs_300.setRiskvsreturn("风险高收益低不相匹配");
+			hs_300.setRiskvsreturn("风险高，收益低");
 			hs_300.setType("hs300");
 			
 
