@@ -85,7 +85,7 @@ public class CopyRighter {
 	}
 	
 	public static String risk_grade_bottom_desc(){
-		return "上图为市场标准情况下，不同类型的投资风险分值。例如，风险为0分为无风险投资，如全仓购买五年国债等。根据如上标准，您可以定位您当前承担风险的情况，并根据实际情况进行调整。";
+		return "上图为市场标准情况下，不同类型的投资风险分值。风险0分为无风险投资，如将所有资金投资于一年期银行定期存款。根据以上标准，可以定位您当前承担风险的情况，并根据实际情况进行调整。";
 	}
 	
 	public static String risk_vs_return_header_desc(){
@@ -93,7 +93,7 @@ public class CopyRighter {
 	}
 
 	public static String risk_vs_return_bottom_desc(){
-		return "图中曲线为参考历史数据情况下，绘制出收益和风险的关系图。其中x轴为风险值，Y坐标为该风险值下的平均日收益。为您提供无风险投资、沪深300指数以及中证500指数与您的配置方案进行对比。曲线上的点表示在同等风险情况下可能获得的最高收益。";
+		return "图中曲线为参考历史数据情况下，绘制出收益和风险的关系图。其中x轴为波动，Y轴为该波动下的平均日收益。为您提供无风险投资、沪深300指数以及中证500指数与您的配置方案进行对比。曲线上的点表示在同等波动情况下可能获得的最高收益。";
 	} 	
 	
 	public static String liquidity_header_desc(){
