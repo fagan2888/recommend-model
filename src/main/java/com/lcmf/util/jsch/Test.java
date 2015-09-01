@@ -1,19 +1,20 @@
 package com.lcmf.util.jsch;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Properties;
+
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
 public class Test {
 
+	private static Logger logger = Logger.getLogger(Test.class);
 	public static void main(String[] args) throws IOException {
-		// TODO Auto-generated method stub
 
-		Properties prop = new Properties();
-		FileInputStream fis = new FileInputStream("./conf/mofang.db");
-		prop.load(fis);
-		System.out.println(prop.getProperty("port","r432432"));
+		PropertyConfigurator.configure("./conf/log4j.properties");
+		logger.info("Create bench mark portfolio done");
+		
+		
 	}
 
 }

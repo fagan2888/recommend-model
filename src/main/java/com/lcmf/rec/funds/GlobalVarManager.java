@@ -33,7 +33,6 @@ public class GlobalVarManager {
 		performance_date_list = DateStrList.dList(ConstVarManager.getPerformance_start_date_str(), ConstVarManager.getPerformance_end_date_str());
 	}
 	
-	
 	public static GlobalVarManager getInstance(){
 		if(manager == null){
 			manager = new GlobalVarManager();
