@@ -14,7 +14,7 @@
                 <configuration>  
                     <archive>  
                         <manifest>  
-                            <mainClass>com.lcmf.rec.fund_combination.App.Main</mainClass>  
+                            <mainClass>com.lcmf.rec.fund_combination.App.main</mainClass>  
                         </manifest>  
                     </archive>  
                     <descriptorRefs>  
