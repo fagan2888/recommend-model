@@ -24,6 +24,8 @@ public class FundPortfolio {
 	private String type = "etf";
 	/** 资产组合类型 */
 
+	public List<String> money_values = null;
+	
 	private double[] fpValues = null;
 	/** 资产组合的净值走势 */
 
@@ -46,6 +48,7 @@ public class FundPortfolio {
 		String fp_id_str = String.format("%s%03d", today_str, Math.round(this.fp.getRisk_grade() * 100));
 		this.fp_name = type + "_" + fp_id_str;
 
+		this.money_values = BenchMarkPortfolio.getBenchMarkPortfolio("js_money").money_values;
 		/** 计算组合的净值 */
 		this.fpValues = computePerformanceValues(vlist);
 		/** 计算组合的最大回撤 */
@@ -186,11 +189,25 @@ public class FundPortfolio {
 					}
 				}
 			}
+			int n = i - 1;
+			String money_value_str = money_values.get(i);
+			if (money_value_str.equalsIgnoreCase("") || 0 == Double.parseDouble(money_value_str)) {
+				continue;
+			}
+			while (n >= 0) {
+				String value_str = money_values.get(n);
+				if (value_str.equalsIgnoreCase("") || 0 == Double.parseDouble(value_str)) {
+					n--;
+				} else {
+					profit += (1 - sum_w) * (Double.parseDouble(money_value_str) / Double.parseDouble(value_str) - 1);
+					break;
+				}
+			}
 //			if (profit == 0.0) {
 //				fpValues[i] = fpValues[i - 1];
 //			} else {
-				profit = profit * sum_w + ConstVarManager.getRf() * (1 - sum_w);
-				fpValues[i] = fpValues[i - 1] * (profit + 1);
+//				profit = profit * sum_w + ConstVarManager.getRf() * (1 - sum_w);
+			fpValues[i] = fpValues[i - 1] * (profit + 1);
 //			}
 		}
 

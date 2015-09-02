@@ -189,6 +189,7 @@ public class BenchMarkPortfolio {
 			String fp_name_str = String.format("%s_%s", "嘉实货币A", today_str);
 			js_money.setFp_name(fp_name_str);
 			js_money.setType("money");
+			js_money.money_values = performance_values.get(0);
 
 		} catch (SQLException e) {
 			e.printStackTrace();
