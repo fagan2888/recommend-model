@@ -89,12 +89,14 @@ public class FundPortfolio {
 		double u = this.fp.getCamp_return();
 		double sigma = this.fp.getCamp_sd();
 
-		int days = 250;
+		int days = 365;
 
-		double portfolio_p = Math.pow(Math.E, (u) * days);
+		// double portfolio_p = Math.pow(Math.E, (u) * days);
+		double portfolio_p = Math.pow((1 + u), days);
+//		double portfolio_p = this.annual_return_ratio;
 		double portfolio_upper_p = portfolio_p * (1 + sigma * Math.sqrt(days));
 
-		return (float) (portfolio_upper_p - 1);
+		return (float) (portfolio_upper_p);
 	}
 
 	/**
@@ -107,12 +109,14 @@ public class FundPortfolio {
 		double u = this.fp.getCamp_return();
 		double sigma = this.fp.getCamp_sd();
 
-		int days = 250;
+		int days = 365;
 
-		double portfolio_p = Math.pow(Math.E, (u) * days);
+		// double portfolio_p = Math.pow(Math.E, (u) * days);
+		double portfolio_p = Math.pow((1 + u), days);
+//		double portfolio_p = this.annual_return_ratio;
 		double portfolio_bottom_p = portfolio_p * (1 - sigma * Math.sqrt(days));
 
-		return (float) (portfolio_bottom_p - 1);
+		return (float) (portfolio_bottom_p);
 	}
 
 	/**
@@ -182,8 +186,12 @@ public class FundPortfolio {
 					}
 				}
 			}
-			profit = profit * sum_w + ConstVarManager.getRf() * (1 - sum_w);
-			fpValues[i] = fpValues[i - 1] * (profit + 1);
+//			if (profit == 0.0) {
+//				fpValues[i] = fpValues[i - 1];
+//			} else {
+				profit = profit * sum_w + ConstVarManager.getRf() * (1 - sum_w);
+				fpValues[i] = fpValues[i - 1] * (profit + 1);
+//			}
 		}
 
 		return fpValues;
