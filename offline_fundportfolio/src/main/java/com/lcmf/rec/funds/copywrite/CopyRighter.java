@@ -94,7 +94,7 @@ public class CopyRighter {
 	}
 
 	public static String risk_vs_return_bottom_desc(){
-		return "图中曲线为参考历史数据情况下，绘制出收益和风险的关系图。其中x轴为波动，Y轴为该波动下的平均日收益。为您提供无风险投资、沪深300指数以及中证500指数与您的配置方案进行对比。曲线上的点表示在同等波动情况下可能获得的最高收益。";
+		return "图中曲线上的点表示在同等波动情况下可能获得的最高收益。X轴为波动，Y轴为该波动下的平均年化收益。为您提供了无风险投资、沪深300指数以及中证500指数与您的配置方案进行对比。";
 	} 	
 	
 	public static String liquidity_header_desc(){

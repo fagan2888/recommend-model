@@ -1,5 +1,6 @@
 package com.lcmf.rec.io.db;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -45,7 +46,8 @@ public class FundPortfolioMySQLWriter {
 			String sql_base = "insert into fund_portfolios (fp_risk_grade, fp_type, fp_name, fp_annual_return, fp_max_drawdown, fp_risk_vs_return, fp_industry_dispersion, fp_liquidity, fp_expect_return_min, fp_expect_return_max, fp_expired_date, created_at, updated_at) values ('%f','%s','%s','%f','%f', '%s', '%s', '%s', '%f', '%f', '%s','%s', '%s')";
 			String sql = String.format(sql_base, fpf.getRiskGrade(), fpf.getType(), fpf.getFp_name(),
 					fpf.getAnnual_return_ratio(), fpf.getMaxDrawdonw(), fpf.getRiskvsreturn(), 1, "高",
-					fpf.expectAnnualReturnMin(), fpf.expectAnnualReturnMax(), after_tommmorrow_str, tt.toString(), tt.toString());
+					fpf.expectAnnualReturnMin(), fpf.expectAnnualReturnMax(), after_tommmorrow_str, tt.toString(),
+					tt.toString());
 			mysql.insertDB(sql);
 
 			sql = "select id from fund_portfolios where fp_name = '" + fpf.getFp_name() + "'";
@@ -63,16 +65,26 @@ public class FundPortfolioMySQLWriter {
 				double sum_w = 0.0;
 				List<String> fund_codes = GlobalVarManager.getInstance().getFund_mofang_ids();
 				for (int i = 0; i < fund_codes.size(); i++) {
-					sql = String.format(sql_base, fp_id, fpf.getFp_name(), Long.parseLong(fund_codes.get(i)),
-							weights[i], fpf.getRiskGrade(), tt.toString(), tt.toString());
+					double tmp_w = weights[i];
+					BigDecimal b = new BigDecimal(tmp_w);
+					double w = b.setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue();
+					if (w <= 0.0)
+						continue;
+					sql = String.format(sql_base, fp_id, fpf.getFp_name(), Long.parseLong(fund_codes.get(i)), w,
+							fpf.getRiskGrade(), tt.toString(), tt.toString());
 					mysql.insertDB(sql);
-					sum_w += weights[i];
+					sum_w += w;
 				}
 				if (null != moneyPortfolio) {
-					sql = String.format(sql_base, fp_id, moneyPortfolio.getFp_name(),
-							Long.parseLong(BenchMarkPortfolio.getJsMoneyId()), 1 - sum_w, moneyPortfolio.getRiskGrade(),
-							tt.toString(), tt.toString());
-					mysql.insertDB(sql);
+					double tmp_w = 1 - sum_w;
+					BigDecimal b = new BigDecimal(tmp_w);
+					double w = b.setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue();
+					if (w > 0) {
+						sql = String.format(sql_base, fp_id, moneyPortfolio.getFp_name(),
+								Long.parseLong(BenchMarkPortfolio.getJsMoneyId()), w,
+								moneyPortfolio.getRiskGrade(), tt.toString(), tt.toString());
+						mysql.insertDB(sql);
+					}
 				}
 
 			}
