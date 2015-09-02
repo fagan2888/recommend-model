@@ -65,11 +65,13 @@ public class FundPortfolioMySQLWriter {
 				double sum_w = 0.0;
 				List<String> fund_codes = GlobalVarManager.getInstance().getFund_mofang_ids();
 				for (int i = 0; i < fund_codes.size(); i++) {
+					//保留两位小数，四舍五入
 					double tmp_w = weights[i];
 					BigDecimal b = new BigDecimal(tmp_w);
 					double w = b.setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue();
 					if (w <= 0.0)
 						continue;
+					
 					sql = String.format(sql_base, fp_id, fpf.getFp_name(), Long.parseLong(fund_codes.get(i)), w,
 							fpf.getRiskGrade(), tt.toString(), tt.toString());
 					mysql.insertDB(sql);

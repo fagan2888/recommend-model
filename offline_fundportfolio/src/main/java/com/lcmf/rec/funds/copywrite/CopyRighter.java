@@ -1,5 +1,7 @@
 package com.lcmf.rec.funds.copywrite;
 
+import java.math.BigDecimal;
+
 /**
  * 各种页面的文案
  * @author yjiaoneal
@@ -102,8 +104,13 @@ public class CopyRighter {
 	}
 	
 	public static String liquidity_bottom_desc(double sp_weights){
-		String percent = String.format("%.1f%%", (1 - sp_weights) * 100);
-		String sp_percent = String.format("%.1f%%", sp_weights * 100);
+		//保留两位小数，四舍五入
+		double tmp_w = sp_weights;
+		BigDecimal b = new BigDecimal(tmp_w);
+		sp_weights = b.setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue();
+		String percent = String.format("%f%%", (1 - sp_weights) * 100);
+		String sp_percent = String.format("%f%%", sp_weights * 100);
+		
 		if(sp_weights < 0.01)
 			return "您配置的方案中，如果您对资金有临时取用的需求，100%的金额可以在4个工作日内到账。";
 		else
