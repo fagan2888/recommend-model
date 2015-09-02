@@ -70,6 +70,7 @@ public class GlobalVarManager {
 					performance_fund_values.add(performance_fund_value_seq.get(fund_mofang_ids.get(i)));
 				}
 				
+				
 			} catch (SQLException e) {
 				e.printStackTrace();
 			} catch (ParseException e) {
