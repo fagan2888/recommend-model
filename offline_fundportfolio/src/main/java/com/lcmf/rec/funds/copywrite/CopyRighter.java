@@ -107,7 +107,7 @@ public class CopyRighter {
 		if(sp_weights < 0.01)
 			return "您配置的方案中，如果您对资金有临时取用的需求，" + percent + "的金额可以在4个工作日内到账。";
 		else
-			return "您配置的方案中，如果您对资金有临时取用的需求，" + percent + "的金额可以在4个工作日内到账," + sp_percent + "的金额可以在11个工作日内到账。";
+			return "您配置的方案中，如果您对资金有临时取用的需求，" + percent + "的金额可以在4个工作日内到账，" + sp_percent + "的金额可以在11个工作日内到账。";
 	}
 	
 }
