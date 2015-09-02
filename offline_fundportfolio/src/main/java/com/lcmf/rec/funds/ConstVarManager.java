@@ -19,8 +19,10 @@ public class ConstVarManager {
 	static {
 		
 		model_start_date_str = "2006-01-04";
+//		model_start_date_str = "2009-09-04";
 		model_end_date_str = "2015-05-30";
 		performance_start_date_str = "2009-09-04";
+//		performance_start_date_str = "2006-01-04";
 		
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 		Calendar calendar = Calendar.getInstance();
@@ -28,6 +30,7 @@ public class ConstVarManager {
 		int day = calendar.get(Calendar.DATE);
 		calendar.set(Calendar.DATE, day - 1);
 		performance_end_date_str = format.format(calendar.getTime());
+//		model_end_date_str = format.format(calendar.getTime());
 	}
 
 

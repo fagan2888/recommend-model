@@ -74,6 +74,10 @@ public class FundsCombination {
 		this.fund_values = fund_values;
 		this.fund_ids = fund_ids;
 	}
+	
+	public FundsCombination(List<FrontierPoint> frontiers){
+		this.original_efficient_frontier = frontiers;
+	}
 
 	
 	/**
