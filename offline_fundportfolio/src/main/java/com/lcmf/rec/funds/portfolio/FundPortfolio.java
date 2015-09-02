@@ -96,7 +96,7 @@ public class FundPortfolio {
 //		double portfolio_p = this.annual_return_ratio;
 		double portfolio_upper_p = portfolio_p * (1 + sigma * Math.sqrt(days));
 
-		return (float) (portfolio_upper_p);
+		return (float) (portfolio_upper_p - 1);
 	}
 
 	/**
@@ -116,7 +116,7 @@ public class FundPortfolio {
 //		double portfolio_p = this.annual_return_ratio;
 		double portfolio_bottom_p = portfolio_p * (1 - sigma * Math.sqrt(days));
 
-		return (float) (portfolio_bottom_p);
+		return (float) (portfolio_bottom_p - 1);
 	}
 
 	/**
