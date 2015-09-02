@@ -14,7 +14,7 @@ public class ConstVarManager {
 	
 	private static String  performance_end_date_str  = "";
 	
-	private static double rf = 0.030 / 365; /** 无风险收益率*/ 
+	private static double rf = 0.030 / 250; /** 无风险收益率*/ 
 	
 	static {
 		

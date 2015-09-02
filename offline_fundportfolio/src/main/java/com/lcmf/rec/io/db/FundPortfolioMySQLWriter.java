@@ -272,7 +272,7 @@ public class FundPortfolioMySQLWriter {
 
 			String sql_base = "insert into fund_portfolio_risk_vs_returns (fpr_risk_grade, fpr_efficient_frontier_id ,fpr_fund_portfolio_id, fpr_no_risk, fpr_allocation, fpr_hushen300, fpr_zhongzheng500, fpr_no_risk_risk,fpr_allocation_risk, fpr_hushen300_risk, fpr_zhongzheng500_risk,fpr_no_risk_return, fpr_allocation_return, fpr_hushen300_return,fpr_zhongzheng500_return, fpr_header_desc, fpr_bottom_desc ,created_at, updated_at) values ('%f','%d','%d','%s','%s','%s','%s','%f','%f','%f','%f','%f','%f','%f','%f','%s','%s','%s','%s')";
 			sql = String.format(sql_base, fp.getRiskGrade(), ef_id, fp_id, "无风险组合", "您的配置", "沪深300", "中证500", 0.0,
-					fp.getCampSd(), hs_300.getCampSd(), zz_500.getCampSd(), ConstVarManager.getRf() * 365, fp.getCampReturn() * 250,
+					fp.getCampSd(), hs_300.getCampSd(), zz_500.getCampSd(), ConstVarManager.getRf() * 250, fp.getCampReturn() * 250,
 					hs_300.getCampReturn() * 250, zz_500.getCampReturn() * 250, header_desc, bottom_desc, tt.toString(),
 					tt.toString());
 			mysql.insertDB(sql);
