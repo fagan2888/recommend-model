@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
 import com.lcmf.rec.funds.FundsCombination;
 import com.lcmf.rec.funds.GlobalVarManager;
@@ -16,15 +17,16 @@ import com.lcmf.rec.funds.markowitz.FrontierPoint;
 import com.lcmf.rec.funds.portfolio.BenchMarkPortfolio;
 import com.lcmf.rec.funds.portfolio.FundPortfolio;
 import com.lcmf.rec.io.db.FundPortfolioMySQLWriter;
+import com.lcmf.util.jsch.Test;
 
 
 public class App {
 
+	private static Logger logger = Logger.getLogger(App.class);
 	
 	public static void main(String[] args) throws SQLException, ParseException, FileNotFoundException {
 
-//		BasicConfigurator.configure();
-//		Logger logger = Logger.getLogger(App.class);
+		PropertyConfigurator.configure("./conf/log4j.properties");
 		
 		FundPortfolio hs_300 = BenchMarkPortfolio.getBenchMarkPortfolio("hs300");
 		FundPortfolio zz_500 = BenchMarkPortfolio.getBenchMarkPortfolio("zz500");
