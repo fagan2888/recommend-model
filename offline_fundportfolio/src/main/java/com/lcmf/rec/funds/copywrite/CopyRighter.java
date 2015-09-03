@@ -48,25 +48,12 @@ public class CopyRighter {
 		}
 	}
 
-	public static String expect_trends_bottom_desc(double portfolio_return, double hs300_return, double portfolio_sd, double hs300_sd) {
+	public static String expect_trends_bottom_desc(double portfolio_expect_max, double portfolio_expect_min, double hs300_expect_max, double hs_300_min, double portfolio_return_annual, double hs300_return_annual) {
 		
-		int days = 250;
-		
-		double portfolio_p = Math.pow(Math.E, (portfolio_return) * days);
-		double portfolio_upper_p = portfolio_p * (1 + portfolio_sd * Math.sqrt(days));
-		double portfolio_bottom_p = portfolio_p * (1 - portfolio_sd * Math.sqrt(days));
-
-		
-		double hs_p = Math.pow(Math.E, (hs300_return) * days);
-		double hs_upper_p = hs_p * (1 + hs300_sd * Math.sqrt(days));
-		double hs_bottom_p = hs_p * (1 - hs300_sd * Math.sqrt(days));
 		
 		String base = "未来5年，当前为您提供的配置方案在90%%的置信区间中将获得%.1f%%-%.1f%%的平均年化收益，而同期沪深300指数在90%%的置信区间中将获得%.1f%%-%.1f%%的平均年化收益。从图形中显示的收益变化趋势可以看出，该配置方案将使您在未来的投资中";
-		String desc = String.format(base, (portfolio_bottom_p - 1) * 100, (portfolio_upper_p - 1) * 100, (hs_bottom_p - 1) * 100, (hs_upper_p - 1) * 100);
+		String desc = String.format(base, portfolio_expect_min * 100, portfolio_expect_max * 100, hs_300_min * 100, hs300_expect_max * 100);
 		
-		double portfolio_return_annual = Math.pow((1 + portfolio_return), 250) - 1;
-		double hs300_return_annual = Math.pow((1 + hs300_return), 250) - 1;
-
 		if (portfolio_return_annual > hs300_return_annual * 1.1) {
 			desc = desc + "跑赢大盘。";
 		} else if (portfolio_return_annual <= hs300_return_annual * 1.1 && portfolio_return_annual >= hs300_return_annual * 0.9) {

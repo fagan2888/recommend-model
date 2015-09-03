@@ -8,6 +8,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import com.lcmf.rec.funds.ConstVarManager;
 import com.lcmf.rec.funds.indicator.FundsIndicator;
 import com.lcmf.rec.funds.markowitz.FrontierPoint;
@@ -15,6 +17,8 @@ import com.lcmf.rec.io.db.FundValueReader;
 
 public class BenchMarkPortfolio {
 
+	private static Logger logger = Logger.getLogger(BenchMarkPortfolio.class);
+	
 	private static final String hs_300_id = "30000858";
 	private static final String zz_500_id = "30000621";
 	private static final String js_money_id = "30003314";
@@ -45,8 +49,11 @@ public class BenchMarkPortfolio {
 
 	private BenchMarkPortfolio() {
 		load_hs_300();
+		logger.info("load hs_300 data done");
 		load_zz_500();
+		logger.info("load zz_500 data done");
 		load_js_money();
+		logger.info("load js_money data done");
 	}
 
 	/**
@@ -189,7 +196,7 @@ public class BenchMarkPortfolio {
 			String fp_name_str = String.format("%s_%s", "嘉实货币A", today_str);
 			js_money.setFp_name(fp_name_str);
 			js_money.setType("money");
-			js_money.money_values = performance_values.get(0);
+//			js_money.money_values = performance_values.get(0);
 
 		} catch (SQLException e) {
 			e.printStackTrace();

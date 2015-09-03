@@ -30,6 +30,7 @@ public class App {
 		FundPortfolio zz_500 = BenchMarkPortfolio.getBenchMarkPortfolio("zz500");
 		FundPortfolio js_money = BenchMarkPortfolio.getBenchMarkPortfolio("jsmoney");
 		
+		
 //		logger.info("Create bench mark portfolio done");
 
 		FundPortfolioMySQLWriter fp_writer = new FundPortfolioMySQLWriter();
@@ -55,17 +56,10 @@ public class App {
 			fPortfolios.add(new FundPortfolio(fPoints.get(i), "etf", gManager.getPerformance_fund_values()));
 		}
 		
-		List<FrontierPoint> new_fp = new ArrayList<FrontierPoint>();
-		for(int i = 0; i < fPortfolios.size(); i++){
-			new_fp.add(fPortfolios.get(i).getFp());
-		}
-		
-		FundsCombination new_fc = new FundsCombination(new_fp);
-		
 		
 		// 计算有效前沿
-		EfficientFrontier frontier = new EfficientFrontier(new_fc.frontierCurve(), "etf");
-		EfficientFrontier line = new EfficientFrontier(new_fc.lowerShapeLine(), "etf");
+		EfficientFrontier frontier = new EfficientFrontier(fc.frontierCurve(), "etf");
+		EfficientFrontier line = new EfficientFrontier(fc.lowerShapeLine(), "etf");
 
 		// 基金组合存入数据库
 		fp_writer.writeFundProtfolioEfficientFrontier(frontier, line);
