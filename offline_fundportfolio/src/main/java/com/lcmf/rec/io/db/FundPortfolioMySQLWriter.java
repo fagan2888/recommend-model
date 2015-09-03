@@ -10,6 +10,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.lcmf.rec.funds.ConstVarManager;
 import com.lcmf.rec.funds.GlobalVarManager;
 import com.lcmf.rec.funds.copywrite.CopyRighter;
@@ -24,6 +26,8 @@ import net.sf.json.JSONObject;
 
 public class FundPortfolioMySQLWriter {
 
+	private static Logger logger = Logger.getLogger(FundPortfolioMySQLWriter.class);
+	
 	RecommendMySQL mysql = new RecommendMySQL();
 
 	public FundPortfolioMySQLWriter() {
@@ -50,6 +54,8 @@ public class FundPortfolioMySQLWriter {
 					fpf.getAnnual_return_ratio(), fpf.getMaxDrawdonw(), fpf.getRiskvsreturn(), 1, "高",
 					fpf.expectAnnualReturnMin(), fpf.expectAnnualReturnMax(), after_tommmorrow_str, tt.toString(),
 					tt.toString());
+			
+			logger.debug(sql);
 			mysql.insertDB(sql);
 
 			sql = "select id from fund_portfolios where fp_name = '" + fpf.getFp_name() + "'";
@@ -76,6 +82,7 @@ public class FundPortfolioMySQLWriter {
 					
 					sql = String.format(sql_base, fp_id, fpf.getFp_name(), Long.parseLong(fund_codes.get(i)), w,
 							fpf.getRiskGrade(), tt.toString(), tt.toString());
+					logger.debug(sql);
 					mysql.insertDB(sql);
 					sum_w += w;
 				}
@@ -87,6 +94,7 @@ public class FundPortfolioMySQLWriter {
 						sql = String.format(sql_base, fp_id, moneyPortfolio.getFp_name(),
 								Long.parseLong(BenchMarkPortfolio.getJsMoneyId()), w,
 								moneyPortfolio.getRiskGrade(), tt.toString(), tt.toString());
+						logger.debug(sql);
 						mysql.insertDB(sql);
 					}
 				}
@@ -119,6 +127,7 @@ public class FundPortfolioMySQLWriter {
 			Timestamp tt = new Timestamp(date.getTime());
 			sql = String.format(sql_base, fpf.getRiskGrade(), fp_id, header_desc, bottom_desc, 0.0, 0.3, 0.70, 1.0,
 					tt.toString(), tt.toString());
+			logger.debug(sql);
 			mysql.insertDB(sql);
 
 		} catch (SQLException e) {
@@ -158,6 +167,7 @@ public class FundPortfolioMySQLWriter {
 			sql = String.format(sql_base, fpf.getRiskGrade(), fp_id, header_desc, bottom_desc,
 					fpf.getTotal_return_ratio(), historyJson(fpf.getFpValues(), date_str_list), tt.toString(),
 					tt.toString());
+			logger.debug(sql);
 			mysql.insertDB(sql);
 
 		} catch (SQLException e) {
@@ -206,6 +216,7 @@ public class FundPortfolioMySQLWriter {
 			Date date = new Date();
 			Timestamp tt = new Timestamp(date.getTime());
 			sql = String.format(sql_base, fp_id, header_desc, bottom_desc, tt.toString(), tt.toString());
+			logger.debug(sql);
 			mysql.insertDB(sql);
 
 		} catch (SQLException e) {
@@ -234,7 +245,7 @@ public class FundPortfolioMySQLWriter {
 			String sql_base = "insert into efficient_frontiers (ef_name, ef_points, ef_line, created_at, updated_at) values ('%s','%s', '%s','%s', '%s')";
 			String sql = String.format(sql_base, ef.getEf_name(), jsonObject.toString(), lineObject.toString(),
 					tt.toString(), tt.toString());
-
+			logger.debug(sql);
 			mysql.insertDB(sql);
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -279,6 +290,7 @@ public class FundPortfolioMySQLWriter {
 					fp.getCampSd(), hs_300.getCampSd(), zz_500.getCampSd(), ConstVarManager.getRf() * 250, fp.getCampReturn() * 250,
 					hs_300.getCampReturn() * 250, zz_500.getCampReturn() * 250, header_desc, bottom_desc, tt.toString(),
 					tt.toString());
+			logger.debug(sql);
 			mysql.insertDB(sql);
 
 			return true;
@@ -291,8 +303,8 @@ public class FundPortfolioMySQLWriter {
 	public boolean writeFundProtfolioExpectTrends(FundPortfolio fp) {
 		FundPortfolio hs_300 = BenchMarkPortfolio.getBenchMarkPortfolio("hs300");
 		String header_desc = CopyRighter.expect_trends_header_desc(fp.getCampReturn(), hs_300.getCampReturn());
-		String bottom_desc = CopyRighter.expect_trends_bottom_desc(fp.getCampReturn(), hs_300.getCampReturn(),
-				fp.getCampSd(), hs_300.getCampSd());
+		String bottom_desc = CopyRighter.expect_trends_bottom_desc(fp.expectAnnualReturnMax(), fp.expectAnnualReturnMin(),
+				hs_300.expectAnnualReturnMax(), hs_300.expectAnnualReturnMin(), fp.computeAnnualReturnRatio(), hs_300.computeAnnualReturnRatio());
 
 		try {
 
@@ -311,7 +323,7 @@ public class FundPortfolioMySQLWriter {
 			String sql_base = "insert into fund_portfolio_expect_trends (fpe_risk_grade, fpe_fund_portfolio_id, fpe_points, fpe_header_desc, fpe_bottom_desc ,created_at, updated_at) values ('%f','%d','%s','%s','%s','%s','%s')";
 			sql = String.format(sql_base, fp.getRiskGrade(), fp_id, expectTrendJSON(fp.getCampReturn(), fp.getCampSd()),
 					header_desc, bottom_desc, tt.toString(), tt.toString());
-
+			logger.debug(sql);
 			mysql.insertDB(sql);
 			return true;
 		} catch (SQLException e) {
@@ -330,7 +342,7 @@ public class FundPortfolioMySQLWriter {
 		upper_pt.add(1.0);
 		bottom_pt.add(1.0);
 		for (int i = 1; i < 250 * 5; i++) {
-			double tmp_p = Math.pow((1 + u), i);
+			double tmp_p = Math.pow(Math.E, u * i);
 			double tmp_upper_p = tmp_p * (1 + sigma * Math.sqrt(i));
 			double tmp_bottom_p = tmp_p * (1 - sigma * Math.sqrt(i));
 			pt.add(tmp_p);

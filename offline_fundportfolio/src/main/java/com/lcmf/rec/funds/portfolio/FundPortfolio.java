@@ -4,13 +4,19 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import org.apache.log4j.Logger;
+
 import com.lcmf.rec.funds.ConstVarManager;
 import com.lcmf.rec.funds.FundsCombination;
+import com.lcmf.rec.funds.GlobalVarManager;
 import com.lcmf.rec.funds.indicator.FundMaxYield;
 import com.lcmf.rec.funds.indicator.FundsIndicator;
 import com.lcmf.rec.funds.markowitz.FrontierPoint;
 
 public class FundPortfolio {
+
+	private static Logger logger = Logger.getLogger(FundPortfolio.class);
 
 	private FundsCombination fc = null;
 	/** 计算该资产组合的类 */
@@ -24,8 +30,6 @@ public class FundPortfolio {
 	private String type = "etf";
 	/** 资产组合类型 */
 
-	public List<String> money_values = null;
-	
 	private double[] fpValues = null;
 	/** 资产组合的净值走势 */
 
@@ -48,7 +52,6 @@ public class FundPortfolio {
 		String fp_id_str = String.format("%s%03d", today_str, Math.round(this.fp.getRisk_grade() * 100));
 		this.fp_name = type + "_" + fp_id_str;
 
-		this.money_values = BenchMarkPortfolio.getBenchMarkPortfolio("js_money").money_values;
 		/** 计算组合的净值 */
 		this.fpValues = computePerformanceValues(vlist);
 		/** 计算组合的最大回撤 */
@@ -87,19 +90,20 @@ public class FundPortfolio {
 	 * 
 	 * @return
 	 */
-	public float expectAnnualReturnMax() {
+	public double expectAnnualReturnMax() {
 
 		double u = this.fp.getCamp_return();
 		double sigma = this.fp.getCamp_sd();
 
-		int days = 365;
+		int days = fpValues.length;
 
-		// double portfolio_p = Math.pow(Math.E, (u) * days);
-		double portfolio_p = Math.pow((1 + u), days);
-//		double portfolio_p = this.annual_return_ratio;
+		double portfolio_p = Math.pow(Math.E, (u) * days);
+		// double portfolio_p = Math.pow((1 + u), days);
+		// double portfolio_p = this.annual_return_ratio;
 		double portfolio_upper_p = portfolio_p * (1 + sigma * Math.sqrt(days));
 
-		return (float) (portfolio_upper_p - 1);
+		double p = Math.pow(portfolio_upper_p, (1 / (1.0 * days / 365)));
+		return p - 1;
 	}
 
 	/**
@@ -107,19 +111,25 @@ public class FundPortfolio {
 	 * 
 	 * @return
 	 */
-	public float expectAnnualReturnMin() {
+	public double expectAnnualReturnMin() {
 
 		double u = this.fp.getCamp_return();
 		double sigma = this.fp.getCamp_sd();
 
-		int days = 365;
+		int days = fpValues.length;
 
-		// double portfolio_p = Math.pow(Math.E, (u) * days);
-		double portfolio_p = Math.pow((1 + u), days);
-//		double portfolio_p = this.annual_return_ratio;
+		double portfolio_p = Math.pow(Math.E, (u) * days);
+		// double portfolio_p = Math.pow((1 + u), days);
+		// double portfolio_p = this.annual_return_ratio;
 		double portfolio_bottom_p = portfolio_p * (1 - sigma * Math.sqrt(days));
-
-		return (float) (portfolio_bottom_p - 1);
+		double p = Math.pow(portfolio_bottom_p, (1 / (1.0 * days / 365)));
+		
+		//强行把风险是0的收益下沿改成 1.75%
+		if(this.fp.getRisk_grade() <= 0.1){
+			return 0.0175;
+		}
+		
+		return p - 1;
 	}
 
 	/**
@@ -164,23 +174,55 @@ public class FundPortfolio {
 		}
 		fpValues[0] = 1.0;
 
+		List<List<String>> tmp_values = new ArrayList<List<String>>();
+		for (int i = 0; i < pValues.size(); i++) {
+			List<String> tmp = new ArrayList<String>();
+			for (String v : pValues.get(i)) {
+				tmp.add(v);
+			}
+			tmp_values.add(tmp);
+		}
+
 		double[] weights = this.fp.getWeights();
+
+		double sum_w = 0.0;
+		for (int i = 0; i < weights.length; i++) {
+			sum_w = sum_w + weights[i];
+		}
+
+		double[] ws = null;
+		if (sum_w <= 0.99) {
+
+			ws = new double[weights.length + 1];
+			for (int i = 0; i < weights.length; i++) {
+				ws[i] = weights[i];
+			}
+			ws[weights.length] = 1 - sum_w;
+			tmp_values.add(GlobalVarManager.getInstance().getPerformance_money_values());
+
+		} else {
+
+			ws = new double[weights.length + 1];
+			for (int i = 0; i < weights.length; i++) {
+				ws[i] = weights[i];
+			}
+
+		}
+
 		int len = fpValues.length;
-		int num = pValues.size();
+		int num = tmp_values.size();
 
 		for (int i = 1; i < len; i++) {
 			double profit = 0.0;
-			double sum_w = 0.0;
 			for (int j = 0; j < num; j++) {
-				double w = weights[j];
-				sum_w += w;
-				String today_value_str = pValues.get(j).get(i);
+				double w = ws[j];
+				String today_value_str = tmp_values.get(j).get(i);
 				int m = i - 1;
 				if (today_value_str.equalsIgnoreCase("") || 0 == Double.parseDouble(today_value_str)) {
 					continue;
 				}
 				while (m >= 0) {
-					String value_str = pValues.get(j).get(m);
+					String value_str = tmp_values.get(j).get(m);
 					if (value_str.equalsIgnoreCase("") || 0 == Double.parseDouble(value_str)) {
 						m--;
 					} else {
@@ -189,26 +231,7 @@ public class FundPortfolio {
 					}
 				}
 			}
-			int n = i - 1;
-			String money_value_str = money_values.get(i);
-			if (money_value_str.equalsIgnoreCase("") || 0 == Double.parseDouble(money_value_str)) {
-				continue;
-			}
-			while (n >= 0) {
-				String value_str = money_values.get(n);
-				if (value_str.equalsIgnoreCase("") || 0 == Double.parseDouble(value_str)) {
-					n--;
-				} else {
-					profit += (1 - sum_w) * (Double.parseDouble(money_value_str) / Double.parseDouble(value_str) - 1);
-					break;
-				}
-			}
-//			if (profit == 0.0) {
-//				fpValues[i] = fpValues[i - 1];
-//			} else {
-//				profit = profit * sum_w + ConstVarManager.getRf() * (1 - sum_w);
 			fpValues[i] = fpValues[i - 1] * (profit + 1);
-//			}
 		}
 
 		return fpValues;
