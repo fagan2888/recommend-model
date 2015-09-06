@@ -1,0 +1,55 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.lcmf.rec</groupId>
+  <artifactId>financial_experiment</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>financial_experiment</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  
+  
+  <repositories>  
+        <repository>  
+            <id>nexus</id>  
+            <name>nexus</name>  
+            <url>http://182.92.214.1:8095/nexus/content/groups/public/</url>  
+            <releases>  
+                <enabled>true</enabled>  
+            </releases>  
+            <snapshots>  
+                <enabled>true</enabled>  
+            </snapshots>  
+        </repository>  
+    </repositories>  
+    
+    <pluginRepositories>  
+        <pluginRepository>  
+            <id>nexus</id>  
+            <name>nexus</name>  
+            <url>http://182.92.214.1:8095/nexus/content/groups/public/</url>  
+            <releases>  
+                <enabled>true</enabled>  
+            </releases>  
+            <snapshots>  
+                <enabled>true</enabled>  
+            </snapshots>  
+        </pluginRepository>  
+        
+    </pluginRepositories> 
+</project>
