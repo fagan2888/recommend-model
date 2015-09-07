@@ -4,10 +4,11 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class FundsIndicator {
 	
 	private List<List<String>> fund_values   =  null;
+	
+	private double[][]         cleaned_data  =  null;
 	
 	private double[][]         cov           =  null;
 	
@@ -15,37 +16,20 @@ public class FundsIndicator {
 
 	private double[]           variance      =  null;
 	
-	
 	public FundsIndicator(List<List<String>> fund_values){
 		this.fund_values = fund_values;
+		this.cleaned_data = cleanData(fund_values);
 		computeVariance();
 		computeCov();
 		computeReturns();
 	}
 	
-	/*
-	 * remove empty value in string value list 
+	/**
+	 * 去掉没有记录的日期的数据，取最小相交集
+	 * @param list_values
+	 * @return
 	 */
-	public static double[] removeEmptyValues(List<String> str_values){
-
-		List<Double> vs = new ArrayList<Double>();
-		for(String s_value : str_values){
-				if(s_value.equalsIgnoreCase("")){
-					continue;
-				}
-				vs.add(Double.parseDouble(s_value));
-		}
-		if(vs.size() == 0){
-			return null;
-		}
-		double[] ret = new double[vs.size()];
-		for(int i = 0; i < vs.size(); i++){
-			ret[i] = vs.get(i);
-		}
-		return ret;
-	}
-
-	public static double[][] removeEmptyValues(List<List<String>> list_values){
+	public static double[][] cleanData(List<List<String>> list_values){
 		if(list_values == null ||  list_values.size() == 0){
 			return null;
 		}
@@ -60,10 +44,31 @@ public class FundsIndicator {
 		
 		for(int i = 0; i < len; i++){
 			
+			boolean all_has_value = true;
+			for(int j = 0; j < num; j++){
+				if("".equalsIgnoreCase(list_values.get(j).get(i)) || 0.0 == Double.parseDouble(list_values.get(j).get(i))){
+					all_has_value = false;
+					break;
+				}
+			}
+			
+			if(all_has_value){
+				for(int j = 0; j < num; j++){
+					result_list.get(j).add(list_values.get(j).get(i));
+				}
+			}
 		}
 		
-		return null;
-	} 
+		int r_len = result_list.get(0).size();
+		int r_num = result_list.size();
+		double[][] re = new double[r_num][r_len];
+		for(int i = 0; i < result_list.size(); i++){
+			for(int j = 0; j < result_list.get(i).size(); j++){
+				re[i][j] = Double.parseDouble(result_list.get(i).get(j));
+			}
+		}
+		return re;
+	}
 	
 
 	/**
@@ -71,9 +76,9 @@ public class FundsIndicator {
 	 * @throws FileNotFoundException 
 	 */
 	private void computeVariance(){
-		variance = new double[fund_values.size()];
-		for(int i = 0; i < fund_values.size(); i++){
-			double[] values = removeEmptyValues(fund_values.get(i));
+		variance = new double[cleaned_data.length];
+		for(int i = 0; i < cleaned_data.length; i++){
+			double[] values = cleaned_data[i];
 			double[] profits = FundProfit.fundProfitRatioArray(values);
 			if(profits == null){
 				variance[i] = 0;
@@ -89,30 +94,24 @@ public class FundsIndicator {
 	 * @throws FileNotFoundException 
 	 */
 	private void computeCov(){
-		computeVariance();
 		
-		int len = fund_values.size();
+		int len = cleaned_data.length;
 		cov = new double[len][len];
-		
+
 		for(int i = 0; i < len; i++){
-			
-			for(int j = i + 1; j < len; j++){
-				DoubleFundValues dfv = removeEmptyValues(fund_values.get(i), fund_values.get(j));
-				cov[i][j] = COV.cov(FundProfit.fundProfitRatioArray(dfv.fund_values1), FundProfit.fundProfitRatioArray(dfv.fund_values2));
+			for(int j = i; j < len; j++){
+				cov[i][j] = COV.cov(FundProfit.fundProfitRatioArray(cleaned_data[i]), FundProfit.fundProfitRatioArray(cleaned_data[j]));
 				cov[j][i] = cov[i][j];
 			}
 		}
 		
-		for(int i = 0; i < len; i++){
-			cov[i][i] = variance[i];
-		}
 	}
 	
 	private void computeReturns(){
 	
-		returns = new double[fund_values.size()];
-		for(int i = 0; i < fund_values.size(); i++){
-			double[] values = removeEmptyValues(fund_values.get(i));
+		returns = new double[cleaned_data.length];
+		for(int i = 0; i < cleaned_data.length; i++){
+			double[] values = cleaned_data[i];
 			if(values == null){
 				returns[i] = 0;
 				continue;
@@ -121,7 +120,7 @@ public class FundsIndicator {
 			}
 		}
 	}
-	
+
 	
 	/**
 	 * compute funds values max retrance
