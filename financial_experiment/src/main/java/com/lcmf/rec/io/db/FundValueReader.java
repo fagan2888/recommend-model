@@ -15,10 +15,12 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 
 public class FundValueReader {
@@ -127,6 +129,7 @@ public class FundValueReader {
 					fund_mofang_ids.add(String.valueOf(rs.getInt(1)));
 				}
 			}
+			Collections.sort(fund_mofang_ids);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -136,6 +139,7 @@ public class FundValueReader {
 
 	public void addFundId(String fund_id){
 		fund_mofang_ids.add(String.valueOf(fund_id));
+		Collections.sort(fund_mofang_ids);
 	}
 	
 	public void readFundValues(String start_date_str, String end_date_str) throws SQLException, ParseException {
@@ -197,6 +201,14 @@ public class FundValueReader {
 		return fund_values;
 	}
 
+	public List<List<String>> getValueList(){
+		List<List<String>> values = new ArrayList<List<String>>();
+		for (String key : fund_mofang_ids) {
+			values.add(this.getFund_value_seq().get(key));
+		}
+		return values;
+	}
+	
 	public static void main(String[] args) throws SQLException, FileNotFoundException, ParseException {
 
 		FundValueReader reader = new FundValueReader();

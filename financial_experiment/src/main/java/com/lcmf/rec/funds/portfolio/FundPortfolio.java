@@ -1,7 +1,8 @@
 package com.lcmf.rec.funds.portfolio;
 
-public class FundPortfolio {
+import com.lcmf.rec.funds.markowitz.FrontierPoint;
 
+public class FundPortfolio {
 
 	/** 资产组合收益*/
 	private double portfolio_return = 0.0;
@@ -13,7 +14,18 @@ public class FundPortfolio {
 	private double[] weights        = null;
 	
 	/** 资产组合名字 */
-	private String fp_name = "";
+	private String fp_name = "default";
+	
+	
+	public FundPortfolio(){
+		
+	}
+	
+	public FundPortfolio(FrontierPoint fp){
+		this.portfolio_return = fp.getCamp_return();
+		this.protfolio_risk   = fp.getCamp_risk();
+		this.weights          = fp.getWeights();
+	}
 
 	public double getPortfolio_return() {
 		return portfolio_return;

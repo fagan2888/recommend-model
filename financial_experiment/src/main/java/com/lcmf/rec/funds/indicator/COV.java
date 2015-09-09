@@ -1,5 +1,10 @@
 package com.lcmf.rec.funds.indicator;
 
+import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
+
+import com.lcmf.rec.funds.io.OUT;
+
 public class COV {
 
 	/**
@@ -33,6 +38,28 @@ public class COV {
 		return covab;
 	}
 	
+	/** 计算协方差矩阵,按照列向量计算 */
+	public static double[][] cov(double[][] data){
+		int len = data.length;
+		int num = data[0].length;
+		
+		double[][] trans_data = new double[num][len];
+		for(int i = 0; i < num; i++){
+			for(int j = 0; j < len; j++){
+				trans_data[i][j] = data[j][i];
+			}
+		}
+		
+		double[][] c = new double[num][num];
+		for(int i = 0; i < num; i++){
+			for(int j = i; j < num; j++){
+				c[i][j] = cov(trans_data[i], trans_data[j]);
+				c[j][i] = c[i][j];
+			}
+		}
+		
+		return c;
+	}
 	
 	public static double variance(double[] values){
 		
