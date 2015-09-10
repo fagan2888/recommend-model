@@ -35,7 +35,7 @@ public class TestMarkowitz {
 			FundsIndicator fi = new FundsIndicator(ds);
 //			long mid = System.currentTimeMillis();
 			Markowitz markowitz = new Markowitz(fi.getReturns(), fi.getCov());
-			markowitz.setNum(200);
+			markowitz.setNum(100);
 			List<FrontierPoint> fps = markowitz.efficientFrontier();
 			long end = System.currentTimeMillis();
 			time += end - start;
