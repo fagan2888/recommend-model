@@ -1,14 +1,17 @@
 package com.lcmf.rec.online_fundportfolio;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
 
+
+@SpringBootApplication
+@ComponentScan({"com.lcmf.rec.web_controller"})
 public class WebApp {
 
 	private static Logger logger = Logger.getLogger(WebApp.class);
@@ -18,7 +21,9 @@ public class WebApp {
 	}
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
-	
+		logger.info("web server starting");
+		ApplicationContext context = SpringApplication.run(WebApp.class, args);
+		logger.info("web server start done");
 	}
-
+	
 }
