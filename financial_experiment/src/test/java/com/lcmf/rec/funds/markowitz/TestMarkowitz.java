@@ -17,12 +17,16 @@ public class TestMarkowitz {
 
 	@Test
 	public void testComputeTime() throws SQLException, ParseException {
+		
+		long read_start = System.currentTimeMillis();
 		FundValueReader reader = new FundValueReader();
 		reader.connect(FundValueReader.host, FundValueReader.port, FundValueReader.database, FundValueReader.username,
 				FundValueReader.password);
 		reader.readFundIds("./conf/funds");
 		reader.readFundValues("2006-01-04", "2015-05-30");
 		List<List<String>> ds = reader.getValueList();
+		long read_end = System.currentTimeMillis();
+		System.out.println(read_end - read_start);
 
 		int iteration_num = 1000;
 		int time = 0;
