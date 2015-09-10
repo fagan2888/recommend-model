@@ -26,7 +26,7 @@ public class TestMarkowitz {
 		reader.readFundValues("2006-01-04", "2015-05-30");
 		List<List<String>> ds = reader.getValueList();
 		long read_end = System.currentTimeMillis();
-		System.out.println(read_end - read_start);
+		System.out.println("Read Data time cost : " + String.valueOf(read_end - read_start));
 
 		int iteration_num = 1000;
 		int time = 0;
@@ -40,6 +40,6 @@ public class TestMarkowitz {
 			long end = System.currentTimeMillis();
 			time += end - start;
 		}
-		System.out.println(time);
+		System.out.println("compute 1000 markowitz and 5 funds cost time : " + time);
 	}
 }
