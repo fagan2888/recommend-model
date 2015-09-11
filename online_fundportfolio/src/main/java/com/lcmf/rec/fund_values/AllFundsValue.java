@@ -5,10 +5,12 @@ import java.util.List;
 
 public class AllFundsValue {
 
-	public static final HashMap<String, List<String>> map = new HashMap<String, List<String>>();
+	private static final HashMap<String, List<String>> map = new HashMap<String, List<String>>();
 	
 	static {
 		
+		
 	}
+	
 
 }

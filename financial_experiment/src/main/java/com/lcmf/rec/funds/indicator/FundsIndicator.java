@@ -39,7 +39,12 @@ public class FundsIndicator {
 			result_list.add(new ArrayList<String>());
 		}
 		
-		int len = list_values.get(0).size();
+		int len = Integer.MAX_VALUE;
+		for(int i = 0; i < list_values.size(); i++){
+			if(list_values.get(i).size() < len){
+				len = list_values.get(i).size();
+			}
+		}
 		int num = list_values.size();
 		
 		for(int i = 0; i < len; i++){
