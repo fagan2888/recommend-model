@@ -1,5 +1,7 @@
 package com.lcmf.rec.funds.markowitz;
 
+import net.sf.json.JSONObject;
+
 public class FrontierPoint {
 
 	private double[] weights;
@@ -12,16 +14,9 @@ public class FrontierPoint {
 		this.weights = weights;
 	}
 	
-	
 	public String toString(){
-		StringBuilder sb = new StringBuilder();
-		for(double v : weights){
-			sb.append(v).append(",");
-		}
-		sb.append(",");
-		sb.append(camp_risk).append(",");
-		sb.append(camp_return);
-		return sb.toString();
+		JSONObject object = JSONObject.fromObject(this);
+		return object.toString();
 	}
 	
 	public FrontierPoint clone(){
@@ -33,35 +28,28 @@ public class FrontierPoint {
 		return fp;
 	}
 
-
 	public double[] getWeights() {
 		return weights;
 	}
-
 
 	public void setWeights(double[] weights) {
 		this.weights = weights;
 	}
 
-
 	public double getCamp_return() {
 		return camp_return;
 	}
-
 
 	public void setCamp_return(double camp_return) {
 		this.camp_return = camp_return;
 	}
 
-
 	public double getCamp_risk() {
 		return camp_risk;
 	}
 
-
 	public void setCamp_risk(double camp_risk) {
 		this.camp_risk = camp_risk;
 	}
-
 	
 }

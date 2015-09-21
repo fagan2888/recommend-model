@@ -6,6 +6,7 @@ import java.io.UnsupportedEncodingException;
 
 public class OUT {
 
+	
 	/** 把二维数组输出成csv格式*/
 	public static void printCSV(double[][] data, String path) throws FileNotFoundException, UnsupportedEncodingException{
 		PrintStream ps = new PrintStream(path, "utf8");
@@ -19,6 +20,7 @@ public class OUT {
 		}
 		ps.close();
 	}
+
 	
 	/** 把二维数组输出*/
 	public static void printStdout(double[][] data) throws FileNotFoundException, UnsupportedEncodingException{

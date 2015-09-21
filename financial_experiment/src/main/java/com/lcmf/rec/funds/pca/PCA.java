@@ -9,6 +9,10 @@ import com.lcmf.rec.funds.indicator.COV;
 import Jama.EigenvalueDecomposition;
 import Jama.Matrix;
 
+/**
+ * @author yjiaoneal
+ *
+ */
 public class PCA {
 
 	/** 需要降维的数据 , 按列向量计算*/
@@ -27,7 +31,7 @@ public class PCA {
 	private Matrix eigen_vector = null;
 
 	/** pca矩阵 */
-	private Matrix pca_value_matrix = null;
+	private Matrix pca_value_diagonal = null;
 
 	/** pca特征值 */
 	private double[] pca_value = null;
@@ -41,6 +45,10 @@ public class PCA {
 	/** 主成分比重 */
 	private double threshold = 0.95;
 	
+	public double[] getPca_value() {
+		return pca_value;
+	}
+
 	private HashMap<Double, double[]> eigen_value_vector_map = new HashMap<Double, double[]>();
 	
 
@@ -88,15 +96,6 @@ public class PCA {
 		eigen_value = evDecomposition.getRealEigenvalues();
 		eigen_vector = evDecomposition.getV();
 		eigen_diagonal = evDecomposition.getD();
-		int n = eigen_diagonal.getColumnDimension();
-		
-		for(int i = 0; i < n; i++){
-			for(int j = 0; j < n; j++){
-				if(i != j){
-					eigen_diagonal.set(i, j, 0.0);
-				}
-			}
-		}
 		
 	}
 
@@ -148,20 +147,22 @@ public class PCA {
 			}
 		}
 
+		pca_value_diagonal = new Matrix(num, num, 0.0);
+		
 		int len = eigen_vector.getRowDimension();
 
 		double[][] pca_vector = new double[num][len];
 		for(int i = 0; i < num; i++){
 			Double v = eigen_value_list.get(i);
+			pca_value_diagonal.set(i, i, v);
 			double[] vector = eigen_value_vector_map.get(v);
 			for(int j = 0; j < vector.length; j++){
 				pca_vector[i][j] = vector[j];
 			}
 		}
-		
 		pca_vector_matrix = new Matrix(pca_vector).transpose();
-		
 	}
+
 	
 	public void pc(){
 		Matrix trans_data = new Matrix(this.data).transpose();
@@ -178,6 +179,18 @@ public class PCA {
 
 	public Matrix getPca_vector_matrix() {
 		return pca_vector_matrix;
+	}
+
+	public Matrix getEigen_diagonal() {
+		return eigen_diagonal;
+	}
+
+	public Matrix getEigen_vector() {
+		return eigen_vector;
+	}
+
+	public Matrix getPca_value_diagonal() {
+		return pca_value_diagonal;
 	}
 	
 }

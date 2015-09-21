@@ -1,9 +1,5 @@
 package com.lcmf.rec.funds.indicator;
 
-import java.io.FileNotFoundException;
-import java.io.UnsupportedEncodingException;
-
-import com.lcmf.rec.funds.io.OUT;
 
 public class COV {
 
