@@ -36,7 +36,6 @@ public class DateStrList {
 			e.printStackTrace();
 			return null;
 		}
-		
 	}
 	
 	

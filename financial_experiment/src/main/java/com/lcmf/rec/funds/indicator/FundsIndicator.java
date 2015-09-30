@@ -109,7 +109,6 @@ public class FundsIndicator {
 				cov[j][i] = cov[i][j];
 			}
 		}
-		
 	}
 	
 	private void computeReturns(){
@@ -185,7 +184,6 @@ public class FundsIndicator {
 			}
 
 		}
-
 		return retrance;
 	}
 	
