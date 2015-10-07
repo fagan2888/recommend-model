@@ -7,13 +7,11 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
 import com.lcmf.rec.io.db.FundInfoReaer;
 import com.lcmf.rec.io.db.FundTypeReader;
 import com.lcmf.rec.io.db.FundValueReader;
 
 public class AllFundData {
-
 	
 	private static final int huobi_type = 16;
 	
@@ -72,12 +70,12 @@ public class AllFundData {
 	public static void main(String[] args) throws SQLException, ParseException, FileNotFoundException {
 
 		AllFundData afd = new AllFundData();
-		List<String> datas = afd.typeFund("2015-06-01", "2015-09-29", AllFundData.zhishu_type);
+		List<String> datas = afd.typeFund("2005-01-01", "2015-09-29", AllFundData.hunhe_type);
 		for(String str : datas){
 			System.out.println(str);
 		}
 		
-		PrintStream ps = new PrintStream("./data/zhishu.csv");
+		PrintStream ps = new PrintStream("./data/hunhe.csv");
 		for(String str : datas){
 			ps.println(str);
 		}
@@ -85,5 +83,4 @@ public class AllFundData {
 		ps.flush();
 		ps.close();
 	}
-
 }
