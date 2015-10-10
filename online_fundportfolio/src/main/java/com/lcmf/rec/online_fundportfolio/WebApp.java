@@ -8,10 +8,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
-
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-@ComponentScan({"com.lcmf.rec.web_controller"})
+@ComponentScan({"com.lcmf.rec.web_controller","com.lcmf.rec.schedule_task"})
+@EnableScheduling
 public class WebApp {
 
 	private static Logger logger = Logger.getLogger(WebApp.class);
@@ -21,9 +22,11 @@ public class WebApp {
 	}
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
-		logger.info("web server starting");
+		logger.info("web app starting");
 		ApplicationContext context = SpringApplication.run(WebApp.class, args);
-		logger.info("web server start done");
+		logger.info("web app start done");
 	}
+
+
 	
 }

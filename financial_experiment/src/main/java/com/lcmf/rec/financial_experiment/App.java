@@ -2,7 +2,6 @@ package com.lcmf.rec.financial_experiment;
 
 /**
  * Hello world!
- *
  */
 public class App 
 {

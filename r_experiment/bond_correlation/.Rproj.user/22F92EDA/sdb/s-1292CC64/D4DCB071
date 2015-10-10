@@ -1,0 +1,18 @@
+{
+    "contents" : "benchmark <- read.csv('./data/bond_benchmark.csv', header = T)\ndata <- read.csv(\"./data/fund_values.csv\",header = T)\nlen = length(data)\n\nresult <- c('','中证国债', '中证企业债', '中证转债')\ni = 2\nwhile(i <= len){\n  c1 <- cor(na.omit(cbind(data[i], benchmark$中证国债)))\n  c2 <- cor(na.omit(cbind(data[i], benchmark$中证企业债)))\n  c3 <- cor(na.omit(cbind(data[i], benchmark$中证转债)))\n  res <- c(colnames(data[i]), c1[1,2], c2[1,2], c3[1,2])\n  result <- rbind(result, res)\n  i <- i + 1\n}\n\nwrite.csv(na.omit(result), './data/cor.csv')",
+    "created" : 1444455439173.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1271547811",
+    "id" : "D4DCB071",
+    "lastKnownWriteTime" : 1444464784,
+    "path" : "D:/recommend_model/r_experiment/bond_correlation/correlation.R",
+    "project_path" : "correlation.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "type" : "r_source"
+}
