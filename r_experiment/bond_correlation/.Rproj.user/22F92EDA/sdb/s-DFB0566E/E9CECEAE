@@ -1,0 +1,18 @@
+{
+    "contents" : "library(RMySQL)\n\nmysql_fund_values <- function(fund_codes, start_date, end_date){\n  conn <- dbConnect(MySQL(), dbname = \"mofang\", host=\"182.92.214.1\", username=\"jiaoyang\", password=\"Mofang123\")\n\n  \n  result <- NA;\n  i <- 1;\n  \n  for(code in fund_codes){\n    \n    sql <- sprintf(\"select fi_globalid from fund_infos where fi_code = %d\", code);\n    \n    fund_mofang_id <- dbGetQuery(conn, sql)\n    \n    id <- fund_mofang_id$fi_globalid\n    \n    sql <- sprintf(\"select fv_time, fv_authority_value from fund_value where fv_fund_id = %d and fv_time >= '%s' and fv_time <= '%s'\", id, start_date, end_date);\n    \n    #print(sql);\n    \n    values <- dbGetQuery(conn,sql);\n    \n    if( i == 1){\n      result <- values;\n    }else{\n      result <- merge(result ,values, by.x=\"fv_time\", by.y=\"fv_time\");\n    }\n    i <- i + 1;\n    \n  }\n  \n  rows <- result$fv_time\n  cols <- fund_codes\n  res = result[1:dim(result)[1], 2:dim(result)[2]]\n  #dimnames(res) <- list(rows, cols)\n  colnames(res) <- cols;\n  rownames(res) <- rows;\n  \n  dbDisconnect(conn);\n  return(res);\n}\n\nfund_codes <- c(160119, 000051, 000216, 050025, 000071)\n#fund_codes <- c(160119)\nres <- mysql_fund_values(fund_codes,'2015-09-30','2015-10-13')\nprint(res)",
+    "created" : 1444727453562.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "927024039",
+    "id" : "E9CECEAE",
+    "lastKnownWriteTime" : 1444896651,
+    "path" : "D:/recommend_model/r_experiment/bond_correlation/mysql.R",
+    "project_path" : "mysql.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "type" : "r_source"
+}
