@@ -88,7 +88,7 @@ for item in hs_status:
 	history.append((date , fund_values[date], tags[tag],  datetime.datetime.now(), datetime.datetime.now()))
 	print sql % (date , fund_values[date], tags[tag],  datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-prediction_sql = "insert into hs300_predictions (current_date_start, current_date_end, current_status, prediction_status,created_at, updated_at) values ('%s', '%s', '%s', '%s', '%s', '%s')"
+prediction_sql = "insert into hs300_predictions (current_date_start, current_date_end, current_status, prediction_status,prediction_date_start, prediction_date_end, created_at, updated_at) values ('%s', '%s', '%s', '%s', '%s', '%s', '%s' ,'%s')"
 
 conn = MySQLdb.connect(host='182.92.214.1', port=3306, user='jiaoyang', passwd='Mofang123', db='recommend', charset='utf8')
 cur = conn.cursor()
@@ -98,8 +98,8 @@ cur.close()
 conn.commit()
 
 cur = conn.cursor()
-print prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-cur.execute(prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")));
+print prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],'2015-10-19','2015-10-23',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+cur.execute(prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],'2015-10-19', '2015-10-23',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")));
 cur.close()
 conn.commit()
 conn.close()

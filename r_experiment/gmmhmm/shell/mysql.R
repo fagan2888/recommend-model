@@ -1,7 +1,7 @@
 library(RMySQL)
 
 mysql_fund_values <- function(fund_codes, start_date, end_date){
-  conn <- dbConnect(MySQL(), dbname = "mofang", host="182.92.214.1", username="jiaoyang", password="Mofang123")
+  conn <- dbConnect(MySQL(), dbname = "mofang_api", host="rdsijnrreijnrre.mysql.rds.aliyuncs.com",username="koudai", password="Mofang123")
 
   
   result <- NA;
@@ -15,7 +15,7 @@ mysql_fund_values <- function(fund_codes, start_date, end_date){
     
     id <- fund_mofang_id$fi_globalid
     
-    sql <- sprintf("select fv_time, fv_authority_value from fund_value where fv_fund_id = %d and fv_time >= '%s' and fv_time <= '%s'", id, start_date, end_date);
+    sql <- sprintf("select fv_time, fv_net_value from fund_value where fv_fund_id = %d and fv_time >= '%s' and fv_time <= '%s'", id, start_date, end_date);
     
     #print(sql);
     
