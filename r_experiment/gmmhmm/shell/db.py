@@ -9,9 +9,9 @@ sys.setdefaultencoding('utf8')
 
 
 fund_values = {}
-conn = MySQLdb.connect(host='182.92.214.1', port=3306, user='jiaoyang', passwd='Mofang123', db='mofang', charset='utf8')
+conn = MySQLdb.connect(host='rdsijnrreijnrre.mysql.rds.aliyuncs.com', port=3306, user='koudai', passwd='Mofang123', db='mofang_api', charset='utf8')
 cur = conn.cursor()
-cur.execute("select fv_time, fv_authority_value from fund_value where fv_fund_id = 30000858")
+cur.execute("select fv_time, fv_net_value from fund_value where fv_fund_id = 30000858")
 for record in cur.fetchall():
 	d = record[0]
 	v = record[1]
@@ -90,7 +90,8 @@ for item in hs_status:
 
 prediction_sql = "insert into hs300_predictions (current_date_start, current_date_end, current_status, prediction_status,prediction_date_start, prediction_date_end, created_at, updated_at) values ('%s', '%s', '%s', '%s', '%s', '%s', '%s' ,'%s')"
 
-conn = MySQLdb.connect(host='182.92.214.1', port=3306, user='jiaoyang', passwd='Mofang123', db='recommend', charset='utf8')
+#conn = MySQLdb.connect(host='182.92.214.1', port=3306, user='jiaoyang', passwd='Mofang123', db='recommend', charset='utf8')
+conn = MySQLdb.connect(host='rdsijnrreijnrre.mysql.rds.aliyuncs.com', port=3306, user='koudai', passwd='Mofang123', db='recommend', charset='utf8')
 cur = conn.cursor()
 for item in history:
 	cur.execute(sql % item)
@@ -99,8 +100,10 @@ conn.commit()
 
 cur = conn.cursor()
 print prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],'2015-10-19','2015-10-23',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-cur.execute(prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],'2015-10-19', '2015-10-23',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")));
+#cur.execute(prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],'2015-10-19', '2015-10-23',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")));
+cur.execute(prediction_sql % (start_date_str, '2015-10-16', tags[current_status], tags[prediction_s],'2015-10-19', '2015-10-23',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")));
 cur.close()
 conn.commit()
 conn.close()
+
 

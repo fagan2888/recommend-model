@@ -4,7 +4,7 @@ source('./shell/mysql.R')
 
 fund_codes <- c(000051, 160119)
 #fund_codes <- c(000051)
-start_date <- '2010-01-01'
+start_date <- '2012-09-01'
 end_date <- Sys.Date()
 print(end_date);
 
