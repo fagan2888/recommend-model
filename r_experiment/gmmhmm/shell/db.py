@@ -70,7 +70,7 @@ while True:
 		n = i;
 		break
 
-start_date_str = hs_status[len(hs_status) - n].strip().split(',')[0].strip()
+start_date_str = hs_status[len(hs_status) - (n - 1)].strip().split(',')[0].strip()
 end_date_str = hs_status[len(hs_status) - 1].strip().split(',')[0].strip()
 start_date_str = start_date_str[1:len(start_date_str) - 1]
 end_date_str = end_date_str[1:len(end_date_str) - 1]
@@ -99,9 +99,10 @@ cur.close()
 conn.commit()
 
 cur = conn.cursor()
-print prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],'2015-10-19','2015-10-23',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+print prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],'2015-10-26','2015-10-30',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+sql = prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],'2015-10-26','2015-10-30',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 #cur.execute(prediction_sql % (start_date_str, end_date_str, tags[current_status], tags[prediction_s],'2015-10-19', '2015-10-23',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")));
-cur.execute(prediction_sql % (start_date_str, '2015-10-16', tags[current_status], tags[prediction_s],'2015-10-19', '2015-10-23',datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")));
+cur.execute(sql);
 cur.close()
 conn.commit()
 conn.close()
