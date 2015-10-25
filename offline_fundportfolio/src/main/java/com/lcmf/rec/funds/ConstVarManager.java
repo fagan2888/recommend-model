@@ -27,7 +27,9 @@ public class ConstVarManager {
 		calendar.setTime(new Date());
 		int day = calendar.get(Calendar.DATE);
 		calendar.set(Calendar.DATE, day - 1);
+//		calendar.set(Calendar.DATE, day - 2);
 		performance_end_date_str = format.format(calendar.getTime());
+//		System.out.println(performance_end_date_str);
 		
 	}
 

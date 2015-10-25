@@ -14,15 +14,15 @@ import java.sql.Statement;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
-
 import org.apache.commons.io.IOUtils;
+
+import com.lcmf.rec.funds.utils.DateStrList;
 
 public class FundValueReader {
 
@@ -233,49 +233,54 @@ public class FundValueReader {
 
 	public static void main(String[] args) throws SQLException, ParseException, IOException {
 
-		List<String> lines = IOUtils.readLines(new FileInputStream("./data/指数时间轴.csv"),"gbk");
-		String date_str = lines.get(0).trim().replaceAll("/", "-");
-		List<String> dates = new ArrayList<String>();
-		for(String d : date_str.split(","))
-			dates.add(d);
-		dates.remove(0);
-		
-		FundValueReader reader = new FundValueReader();
-		reader.connect(FundValueReader.host, FundValueReader.port, FundValueReader.database, FundValueReader.username,
-				FundValueReader.password);
-		reader.readFundIds("./data/chunzhai.ids");
-		reader.readFundValues("2001-01-01", "2015-05-30");
-
-		
-		PrintStream ps = new PrintStream("./data/fund_values.csv");
-		StringBuilder sb = new StringBuilder();
-		sb.append(",");
-		for(String date : dates){
-			sb.append(date).append(",");
-		}
-		ps.println(sb.toString());
-		
-		for (String key : reader.fund_values.keySet()) {
-			String fund_id = reader.fund_ids_map.get(key);
-			sb = new StringBuilder();
-			sb.append(fund_id).append(",");
-			Double pre_v = null;
-			HashMap<String, Double> values = reader.fund_values.get(key);
-			for(String d : dates){
-				Double v = values.get(d);
-				if(null == v){
-					if(null == pre_v)
-						sb.append(",");
-					else
-						sb.append(pre_v).append(",");
-				}else{
-					sb.append(v).append(",");
-					pre_v = v;
-				}
-			}
-			ps.println(sb.toString());
-		}
-		ps.close();
+//		List<String> lines = IOUtils.readLines(new FileInputStream("./data/指数时间轴.csv"),"gbk");
+//		String date_str = lines.get(0).trim().replaceAll("/", "-");
+//		List<String> dates = new ArrayList<String>();
+//		for(String d : date_str.split(","))
+//			dates.add(d);
+//		dates.remove(0);
+//		
+//		FundValueReader reader = new FundValueReader();
+//		reader.connect(FundValueReader.host, FundValueReader.port, FundValueReader.database, FundValueReader.username,
+//				FundValueReader.password);
+//		reader.readFundIds("./data/chunzhai.ids");
+//		reader.readFundValues("2001-01-01", "2015-05-30");
+//
+//		
+//		PrintStream ps = new PrintStream("./data/fund_values.csv");
+//		StringBuilder sb = new StringBuilder();
+//		sb.append(",");
+//		for(String date : dates){
+//			sb.append(date).append(",");
+//		}
+//		ps.println(sb.toString());
+//		
+//		for (String key : reader.fund_values.keySet()) {
+//			String fund_id = reader.fund_ids_map.get(key);
+//			sb = new StringBuilder();
+//			sb.append(fund_id).append(",");
+//			Double pre_v = null;
+//			HashMap<String, Double> values = reader.fund_values.get(key);
+//			for(String d : dates){
+//				Double v = values.get(d);
+//				if(null == v){
+//					if(null == pre_v)
+//						sb.append(",");
+//					else
+//						sb.append(pre_v).append(",");
+//				}else if (0 == v){
+//					if(null == pre_v)
+//						sb.append(",");
+//					else
+//						sb.append(pre_v).append(",");
+//				}else{
+//					sb.append(v).append(",");
+//					pre_v = v;
+//				}
+//			}
+//			ps.println(sb.toString());
+//		}
+//		ps.close();
 		
 //		for (String key : reader.fund_values.keySet()) {
 //			System.out.println(key);
@@ -314,6 +319,39 @@ public class FundValueReader {
 //		}
 //		ps.close();
 		
+//		FundValueReader reader = new FundValueReader();
+//		reader.connect(FundValueReader.host, FundValueReader.port, FundValueReader.database, FundValueReader.username,
+//				FundValueReader.password);
+//		reader.readFundIds("./data/chunzhai.ids");
+//		reader.readFundValues("2009-09-04", "2015-05-30");
 		
+		
+		FundValueReader reader = new FundValueReader();
+		reader.connect(FundValueReader.host, FundValueReader.port, FundValueReader.database, FundValueReader.username,
+				FundValueReader.password);
+		reader.readFundIds("./data/chunzhai.ids");;
+		reader.readFundValues("2001-01-01", "2015-10-20");
+
+		List<String> dates = DateStrList.dList("2001-01-01", "2015-10-20");
+		
+		PrintStream ps = new PrintStream("./data/fund_values.csv");
+		StringBuilder sb = new StringBuilder();
+		sb.append(",");
+		for(String date : dates){
+			sb.append(date).append(",");
+		}
+		ps.println(sb.toString());
+		
+		HashMap<String, List<String>> map = reader.fund_value_seq;
+		for (String key : map.keySet()) {
+			List<String> list = map.get(key);
+			sb = new StringBuilder();
+			sb.append(reader.fund_ids_map.get(key)).append(",");
+			for (String str : list) {
+				sb.append(str).append(",");
+			}
+			ps.println(sb.toString());
+		}
+		ps.close();
 	}
 }

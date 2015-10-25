@@ -1,5 +1,7 @@
 package com.lcmf.rec.funds.utils;
 
+import java.io.FileNotFoundException;
+import java.io.PrintStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -38,10 +40,17 @@ public class DateStrList {
 		}
 	}
 	
-	
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
+	public static void main(String[] args) throws FileNotFoundException {
+		List<String> date_list = DateStrList.dList("2009-09-04", "2015-10-13");
+		System.out.println(date_list);
+		PrintStream ps = new PrintStream("./data/date.csv");
+		StringBuilder sb = new StringBuilder();
+		for(String v : date_list){
+			sb.append(v).append(",");
+		}
+		ps.println(sb.toString());
+		ps.flush();
+		ps.close();
 	}
 
 }
