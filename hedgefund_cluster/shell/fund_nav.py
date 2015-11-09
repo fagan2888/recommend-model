@@ -23,19 +23,21 @@ conn.close()
 
 for key in infos:
 	dv = {}
-	print key,",",
+	#print key,",",
 	for (d, r) in infos[key]:
 		dv[d] = r
 	ds = list(dv.keys())	
+	if len(ds) < 20:
+		continue
 	ds.sort()
-	for d in ds:
-		print d,',',
-	print
+	#for d in ds:
+	#	print d,',',
+	#print
 	print key,',',
 	for d in ds:
 		print dv[d],',',
 	print	
-	print
+
 
 
 
