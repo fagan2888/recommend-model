@@ -36,7 +36,7 @@ public class GlobalVarManager {
 	
 	private static GlobalVarManager manager = null;
 	
-	private GlobalVarManager(){
+	public GlobalVarManager(){
 		//载入数据
 		loadFundValues();
 		load_performance_money_values();
@@ -72,6 +72,7 @@ public class GlobalVarManager {
 				for (int i = 0; i < fund_mofang_ids.size(); i++) {
 					model_fund_values.add(model_fund_value_seq.get(fund_mofang_ids.get(i)));
 				}
+				
 				
 				//读入performance基金净值数据
 				reader.readFundValues(ConstVarManager.getPerformance_start_date_str(), ConstVarManager.getPerformance_end_date_str());

@@ -9,45 +9,22 @@ import java.util.HashMap;
 import java.util.List;
 import com.lcmf.rec.funds.utils.DateStrList;
 import com.lcmf.rec.io.db.FundInfoReaer;
-import com.lcmf.rec.io.db.FundTypeReader;
 import com.lcmf.rec.io.db.FundValueReader;
 
-public class AllFundData {
+public class FundValues {
 
-	private static final int huobi_type = 16;
-
-	private static final int gupiao_type = 5;
-
-	private static final int zhaiquan_type = 7;
-
-	private static final int hunhe_type = 6;
-
-	private static final int etf_type = 9;
-
-	private static final int lof_type = 10;
-
-	private static final int zhishu_type = 15;
-	
-	private static final int qdii_type = 11;
-
-	public List<String> typeFund(String start_date_str, String end_date_str, int type)
-			throws SQLException, ParseException {
+	public static void main(String[] args) throws SQLException, ParseException, FileNotFoundException {
+		// TODO Auto-generated method stub
 
 		List<String> datas = new ArrayList<String>();
-
-		FundTypeReader reader = new FundTypeReader();
-		reader.connect(FundTypeReader.host, FundTypeReader.port, FundTypeReader.database, FundTypeReader.username,
-				FundTypeReader.password);
-
-		List<Integer> funds = reader.typeToFund(type);
-		reader.close();
-
+	
+		String start_date_str = "2005-01-01";
+		String end_date_str   = "2015-11-05";
+		
 		FundValueReader v_reader = new FundValueReader();
 		v_reader.connect(FundValueReader.host, FundValueReader.port, FundValueReader.database, FundValueReader.username,
 				FundValueReader.password);
-		for (Integer id : funds) {
-			v_reader.addFundId(String.valueOf(id));
-		}
+		v_reader.readFundIds("./conf/funds");
 		v_reader.readFundValues(start_date_str, end_date_str);
 		v_reader.close();
 
@@ -68,22 +45,11 @@ public class AllFundData {
 
 			datas.add(sb.toString());
 		}
-
-		return datas;
-	}
-
-	public static void main(String[] args) throws SQLException, ParseException, FileNotFoundException {
-
 		
-		AllFundData afd = new AllFundData();
-		List<String> datas = afd.typeFund("2005-01-01", "2015-10-20", AllFundData.zhaiquan_type);
-		for (String str : datas) {
-			System.out.println(str);
-		}
+		
+		PrintStream ps = new PrintStream("./data/app.csv");
 
-		PrintStream ps = new PrintStream("./data/zhaiquan.csv");
-
-		List<String> dates = DateStrList.dList("2005-01-01", "2015-10-20");
+		List<String> dates = DateStrList.dList(start_date_str, end_date_str);
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(",");
@@ -91,12 +57,16 @@ public class AllFundData {
 			sb.append(date).append(",");
 		}
 		ps.println(sb.toString());
+		System.out.println(sb.toString());
 
 		for (String str : datas) {
 			ps.println(str);
+			System.out.println(str);
 		}
 
 		ps.flush();
 		ps.close();
+		
 	}
+
 }

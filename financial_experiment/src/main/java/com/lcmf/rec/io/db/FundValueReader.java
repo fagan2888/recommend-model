@@ -170,7 +170,8 @@ public class FundValueReader {
 			String fi_id = fund_mofang_ids.get(i).trim();
 			String select_sql = String
 					.format("select fv_time, fv_authority_value from fund_value where fv_fund_id = '%s'", fi_id);
-//			System.out.println(select_sql);
+//			String select_sql = String
+//					.format("select fv_time, fv_authority_increase from fund_value where fv_fund_id = '%s'", fi_id);
 			ResultSet rs = selectDB(select_sql);
 			HashMap<String, Double> values = new HashMap<String, Double>();
 			while (rs.next()) {
