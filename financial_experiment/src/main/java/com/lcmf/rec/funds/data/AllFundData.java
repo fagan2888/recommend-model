@@ -27,6 +27,8 @@ public class AllFundData {
 	private static final int lof_type = 10;
 
 	private static final int zhishu_type = 15;
+	
+	private static final int qdii_type = 11;
 
 	public List<String> typeFund(String start_date_str, String end_date_str, int type)
 			throws SQLException, ParseException {
@@ -72,13 +74,14 @@ public class AllFundData {
 
 	public static void main(String[] args) throws SQLException, ParseException, FileNotFoundException {
 
+		
 		AllFundData afd = new AllFundData();
-		List<String> datas = afd.typeFund("2005-01-01", "2015-10-20", AllFundData.huobi_type);
+		List<String> datas = afd.typeFund("2005-01-01", "2015-10-20", AllFundData.zhaiquan_type);
 		for (String str : datas) {
 			System.out.println(str);
 		}
 
-		PrintStream ps = new PrintStream("./data/huobi.csv");
+		PrintStream ps = new PrintStream("./data/zhaiquan.csv");
 
 		List<String> dates = DateStrList.dList("2005-01-01", "2015-10-20");
 

@@ -4,9 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
 import org.apache.log4j.Logger;
-
 import com.lcmf.rec.funds.ConstVarManager;
 import com.lcmf.rec.funds.FundsCombination;
 import com.lcmf.rec.funds.GlobalVarManager;
