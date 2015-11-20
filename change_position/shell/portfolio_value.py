@@ -5,7 +5,6 @@ import datetime
 import string
 
 conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='recommend', charset='utf8')
-'''
 cur = conn.cursor()
 
 portfolio_base_sql = "insert into portfolios (p_name, p_risk, pf_focus, pf_position_record, pf_anaual_returns, pf_expect_returns_max, pf_expect_returns_min, created_at, updated_at) values ('%s', '%f', '%s', '%s', '%f', '%f', '%f', '%s', '%s')"
@@ -22,56 +21,55 @@ cur.execute(sql)
 cur.close()
 conn.commit()
 
-'''
 
 cur = conn.cursor()
 weight_base_sql = "insert into portfolio_weights (pw_portfolio_id, pw_portfolio_name, pw_fund_id, pw_weight, pw_risk, created_at, updated_at) values ('%d', '%s', '%d', '%f', '%f', '%s', '%s')"
-sql = weight_base_sql % (4, 'risk_one',30000621, 0.2, 0.1, '2015-05-06', '2015-05-06')
+sql = weight_base_sql % (1, 'risk_one',30000621, 0.2, 0.1, '2015-05-06', '2015-05-06')
 print sql
 cur.execute(sql)
-sql = weight_base_sql % (4, 'risk_one',30000858, 0.2, 0.1, '2015-05-06', '2015-05-06')
+sql = weight_base_sql % (1, 'risk_one',30000858, 0.2, 0.1, '2015-05-06', '2015-05-06')
 print sql
 cur.execute(sql)
-sql = weight_base_sql % (4, 'risk_one',30000696, 0.2, 0.1, '2015-05-06', '2015-05-06')
+sql = weight_base_sql % (1, 'risk_one',30000696, 0.2, 0.1, '2015-05-06', '2015-05-06')
 print sql
 cur.execute(sql)
-sql = weight_base_sql % (4, 'risk_one',30000471, 0.2, 0.1, '2015-05-06', '2015-05-06')
+sql = weight_base_sql % (1, 'risk_one',30000471, 0.2, 0.1, '2015-05-06', '2015-05-06')
 print sql
 cur.execute(sql)
-sql = weight_base_sql % (4, 'risk_one',30000340, 0.2, 0.1, '2015-05-06', '2015-05-06')
-print sql
-cur.execute(sql)
-
-
-sql = weight_base_sql % (5, 'risk_one',30000621, 0.1, 0.1, '2015-08-11', '2015-08-11')
-print sql
-cur.execute(sql)
-sql = weight_base_sql % (5, 'risk_one',30000858, 0.2, 0.1, '2015-08-11', '2015-08-11')
-print sql
-cur.execute(sql)
-sql = weight_base_sql % (5, 'risk_one',30000696, 0.3, 0.1, '2015-08-11', '2015-08-11')
-print sql
-cur.execute(sql)
-sql = weight_base_sql % (5, 'risk_one',30000471, 0.2, 0.1, '2015-08-11', '2015-08-11')
-print sql
-cur.execute(sql)
-sql = weight_base_sql % (5, 'risk_one',30000340, 0.2, 0.1, '2015-08-11', '2015-08-11')
+sql = weight_base_sql % (1, 'risk_one',30000340, 0.2, 0.1, '2015-05-06', '2015-05-06')
 print sql
 cur.execute(sql)
 
-sql = weight_base_sql % (6, 'risk_one',30000621, 0.3, 0.1, datetime.datetime.now(), datetime.datetime.now())
+
+sql = weight_base_sql % (2, 'risk_one',30000621, 0.1, 0.1, '2015-08-11', '2015-08-11')
 print sql
 cur.execute(sql)
-sql = weight_base_sql % (6, 'risk_one',30000858, 0.1, 0.1, datetime.datetime.now(), datetime.datetime.now())
+sql = weight_base_sql % (2, 'risk_one',30000858, 0.2, 0.1, '2015-08-11', '2015-08-11')
 print sql
 cur.execute(sql)
-sql = weight_base_sql % (6, 'risk_one',30000696, 0.4, 0.1, datetime.datetime.now(), datetime.datetime.now())
+sql = weight_base_sql % (2, 'risk_one',30000696, 0.3, 0.1, '2015-08-11', '2015-08-11')
 print sql
 cur.execute(sql)
-sql = weight_base_sql % (6, 'risk_one',30000471, 0.1, 0.1, datetime.datetime.now(), datetime.datetime.now())
+sql = weight_base_sql % (2, 'risk_one',30000471, 0.2, 0.1, '2015-08-11', '2015-08-11')
 print sql
 cur.execute(sql)
-sql = weight_base_sql % (6, 'risk_one',30000340, 0.1, 0.1, datetime.datetime.now(), datetime.datetime.now())
+sql = weight_base_sql % (2, 'risk_one',30000340, 0.2, 0.1, '2015-08-11', '2015-08-11')
+print sql
+cur.execute(sql)
+
+sql = weight_base_sql % (3, 'risk_one',30000621, 0.3, 0.1, datetime.datetime.now(), datetime.datetime.now())
+print sql
+cur.execute(sql)
+sql = weight_base_sql % (3, 'risk_one',30000858, 0.1, 0.1, datetime.datetime.now(), datetime.datetime.now())
+print sql
+cur.execute(sql)
+sql = weight_base_sql % (3, 'risk_one',30000696, 0.4, 0.1, datetime.datetime.now(), datetime.datetime.now())
+print sql
+cur.execute(sql)
+sql = weight_base_sql % (3, 'risk_one',30000471, 0.1, 0.1, datetime.datetime.now(), datetime.datetime.now())
+print sql
+cur.execute(sql)
+sql = weight_base_sql % (3, 'risk_one',30000340, 0.1, 0.1, datetime.datetime.now(), datetime.datetime.now())
 print sql
 cur.execute(sql)
 
