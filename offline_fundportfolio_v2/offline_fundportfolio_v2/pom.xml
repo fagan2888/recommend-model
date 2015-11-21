@@ -21,7 +21,7 @@
                 <configuration>  
                     <archive>  
                         <manifest>  
-                            <mainClass>com.lcmf.rec.fund_combination.App</mainClass>  
+                            <mainClass>com.lcmf.rec.offline_fundportfolio_v2.App</mainClass>  
                         </manifest>  
                     </archive>  
                     <descriptorRefs>  
