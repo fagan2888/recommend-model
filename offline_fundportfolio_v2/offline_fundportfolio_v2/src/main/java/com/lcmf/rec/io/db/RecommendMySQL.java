@@ -10,6 +10,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
+import com.jcraft.jsch.Logger;
+
 public class RecommendMySQL {
 
 	public static String host = "dev.mofanglicai.com.cn";
@@ -69,7 +71,8 @@ public class RecommendMySQL {
 	public boolean connect(String host, String port, String database, String username, String password) {
 
 		String url = String.format(ConnString, host, port, database, username, password);
-
+		System.out.println(url);
+		
 		try {
 			Class.forName(DriverName);
 			conn = DriverManager.getConnection(url);

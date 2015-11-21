@@ -24,6 +24,8 @@ public class App {
 	public static void main(String[] args) throws SQLException, ParseException, FileNotFoundException {
 
 		PropertyConfigurator.configure("./conf/log4j.properties");
+		
+		logger.info("started");
 
 		FundPortfolioMySQLWriter fp_writer = new FundPortfolioMySQLWriter();
 		
