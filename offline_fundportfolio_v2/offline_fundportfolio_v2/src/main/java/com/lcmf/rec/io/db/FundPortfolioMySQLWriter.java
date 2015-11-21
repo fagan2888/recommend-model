@@ -44,7 +44,7 @@ public class FundPortfolioMySQLWriter {
 			SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 			String after_tommmorrow_str = format.format(after_tommmorrow_date);
 
-			String sql_base = "insert into fund_portfolios (fp_risk_grade, fp_type, fp_name, fp_annual_return, fp_max_drawdown, fp_risk_vs_return, fp_industry_dispersion, fp_liquidity, fp_expect_return_min, fp_expect_return_max, fp_expired_date, created_at, updated_at) values ('%f','%s','%s','%f','%f', '%s', '%s', '%s', '%f', '%f', '%s','%s', '%s')";
+			String sql_base = "replace into fund_portfolios (fp_risk_grade, fp_type, fp_name, fp_annual_return, fp_max_drawdown, fp_risk_vs_return, fp_industry_dispersion, fp_liquidity, fp_expect_return_min, fp_expect_return_max, fp_expired_date, created_at, updated_at) values ('%f','%s','%s','%f','%f', '%s', '%s', '%s', '%f', '%f', '%s','%s', '%s')";
 			String sql = String.format(sql_base, fpf.getRisk(), fpf.getType(), fpf.getRisk_name(),
 					fpf.getAnnual_return_ratio(), fpf.getMaxDrawdonw(), fpf.getRiskvsreturn(), 1, "高",
 					fpf.getExpect_returns_min(), fpf.getExpect_returns_max(), after_tommmorrow_str, tt.toString(),
@@ -63,7 +63,7 @@ public class FundPortfolioMySQLWriter {
 			}
 
 			if ("etf".equalsIgnoreCase(fpf.getType())) {
-				sql_base = "insert into fund_portfolio_weights (fp_fund_portfolio_id, fp_fund_portfolio_name, fp_fund_id, fp_weight, fp_risk_grade, created_at, updated_at) values ('%d','%s', '%d', '%f', '%f' , '%s', '%s')";
+				sql_base = "replace into fund_portfolio_weights (fp_fund_portfolio_id, fp_fund_portfolio_name, fp_fund_id, fp_weight, fp_risk_grade, created_at, updated_at) values ('%d','%s', '%d', '%f', '%f' , '%s', '%s')";
 				double[] weights = fpf.getWeights();
 				double sum_w = 0.0;
 				List<String> fund_codes = fpf.getMofang_ids();
@@ -104,7 +104,7 @@ public class FundPortfolioMySQLWriter {
 				return false;
 			}
 
-			String sql_base = "insert into fund_portfolio_risks (fpr_risk_grade, fpr_fund_portfolio_id, fpr_header_desc, fpr_bottom_desc, fpr_no_risk_risk, fpr_gold_etf_risk, fpr_hushen300_risk, fpr_zhongzheng500_risk ,created_at, updated_at) values ('%f','%d','%s','%s', '%f','%f','%f','%f', '%s', '%s')";
+			String sql_base = "replace into fund_portfolio_risks (fpr_risk_grade, fpr_fund_portfolio_id, fpr_header_desc, fpr_bottom_desc, fpr_no_risk_risk, fpr_gold_etf_risk, fpr_hushen300_risk, fpr_zhongzheng500_risk ,created_at, updated_at) values ('%f','%d','%s','%s', '%f','%f','%f','%f', '%s', '%s')";
 			Date date = new Date();
 			Timestamp tt = new Timestamp(date.getTime());
 			sql = String.format(sql_base, fpf.getRisk(), fp_id, header_desc, bottom_desc, 0.0, 0.3, 0.70, 1.0,
@@ -142,7 +142,7 @@ public class FundPortfolioMySQLWriter {
 			}
 
 			List<String> date_str_list = GlobalVarManager.getInstance().getDates_str_list();
-			String sql_base = "insert into fund_portfolio_histories (fph_risk_grade, fph_fund_portfolio_id, fph_header_desc, fph_bottom_desc, fph_accumulate_income_rate, fph_points ,created_at, updated_at) values ('%f','%d','%s','%s','%f', '%s', '%s', '%s')";
+			String sql_base = "replace into fund_portfolio_histories (fph_risk_grade, fph_fund_portfolio_id, fph_header_desc, fph_bottom_desc, fph_accumulate_income_rate, fph_points ,created_at, updated_at) values ('%f','%d','%s','%s','%f', '%s', '%s', '%s')";
 			Date date = new Date();
 			Timestamp tt = new Timestamp(date.getTime());
 			sql = String.format(sql_base, fpf.getRisk(), fp_id, header_desc, bottom_desc,
@@ -197,7 +197,7 @@ public class FundPortfolioMySQLWriter {
 				return false;
 			}
 
-			String sql_base = "insert into fund_portfolio_liquidities (fpl_fund_portfolio_id, fpl_header_desc, fpl_bottom_desc, created_at, updated_at) values ('%d','%s', '%s', '%s', '%s')";
+			String sql_base = "replace into fund_portfolio_liquidities (fpl_fund_portfolio_id, fpl_header_desc, fpl_bottom_desc, created_at, updated_at) values ('%d','%s', '%s', '%s', '%s')";
 			Date date = new Date();
 			Timestamp tt = new Timestamp(date.getTime());
 			sql = String.format(sql_base, fp_id, header_desc, bottom_desc, tt.toString(), tt.toString());
@@ -242,7 +242,7 @@ public class FundPortfolioMySQLWriter {
 //			System.out.println();
 //			System.out.println();
 //			System.out.println();
-			String sql_base = "insert into fund_portfolio_expect_trends (fpe_risk_grade, fpe_fund_portfolio_id, fpe_points, fpe_header_desc, fpe_bottom_desc ,created_at, updated_at) values ('%f','%d','%s','%s','%s','%s','%s')";
+			String sql_base = "replace into fund_portfolio_expect_trends (fpe_risk_grade, fpe_fund_portfolio_id, fpe_points, fpe_header_desc, fpe_bottom_desc ,created_at, updated_at) values ('%f','%d','%s','%s','%s','%s','%s')";
 			sql = String.format(sql_base, fp.getRisk(), fp_id, expectTrendJSON(fp.getU(), fp.getStd()),
 					header_desc, bottom_desc, tt.toString(), tt.toString());
 			logger.debug(sql);

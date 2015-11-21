@@ -31,13 +31,14 @@ public class LastPortfolios {
 
 		List<String> risk_names = new ArrayList<String>();
 
-		for (int i = 1; i <= 10; i++) {
+		for (int i = 0; i <= 10; i++) {
 			risk_names.add("risk" + i + "_" + date);
 		}
 
 		List<FundPortfolio> portfolios = new ArrayList<FundPortfolio>();
 
-		int risk = 0;
+		int risk = -1;
+		
 		for (String name : risk_names) {
 
 			risk++;
@@ -86,17 +87,34 @@ public class LastPortfolios {
 				expect_returns_min = rs.getDouble(3);
 			}
 
-			for (int j = 0; j <= 9; j++) {
+			if (risk == 0) {
+
 				FundPortfolio portfolio = new FundPortfolio(name, vs);
-				portfolio.setRisk(1.0 * risk - 1.0 * j / 10.0);
+				portfolio.setRisk(0);
 				portfolio.setMofang_ids(fids);
 				portfolio.setWeights(ws);
 				portfolio.setAnnual_return_ratio(annual_returns);
 				portfolio.setExpect_returns_max(expect_returns_max);
 				portfolio.setExpect_returns_min(expect_returns_min);
 				portfolio.generateRiskName();
-				
+
 				portfolios.add(portfolio);
+				
+			} else {
+
+				for (int j = 0; j <= 9; j++) {
+					
+					FundPortfolio portfolio = new FundPortfolio(name, vs);
+					portfolio.setRisk(1.0 * risk - 1.0 * j / 10.0);
+					portfolio.setMofang_ids(fids);
+					portfolio.setWeights(ws);
+					portfolio.setAnnual_return_ratio(annual_returns);
+					portfolio.setExpect_returns_max(expect_returns_max);
+					portfolio.setExpect_returns_min(expect_returns_min);
+					portfolio.generateRiskName();
+
+					portfolios.add(portfolio);
+				}
 			}
 
 		}
@@ -109,7 +127,6 @@ public class LastPortfolios {
 	public static void main(String[] args) throws SQLException {
 		LastPortfolios lastportfolios = new LastPortfolios();
 		List<FundPortfolio> portfolios = lastportfolios.getLastPortfolios();
-
 	}
 
 }

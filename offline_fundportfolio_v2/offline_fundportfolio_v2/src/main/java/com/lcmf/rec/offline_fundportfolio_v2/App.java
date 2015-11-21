@@ -36,7 +36,6 @@ public class App {
 		fp_writer.writeFundProtfolioRiskGrade(hs_300);
 		fp_writer.writeFundProtfolioliquidity(hs_300);
 		fp_writer.writeFundProtfolioExpectTrends(hs_300);
-		fp_writer.writeFundProtfolioRiskGrade(hs_300);
 		
 		logger.info("write hs_300 to database done");
 		fp_writer.writeFundPortfolio(zz_500);
@@ -44,7 +43,6 @@ public class App {
 		fp_writer.writeFundProtfolioRiskGrade(zz_500);
 		fp_writer.writeFundProtfolioliquidity(zz_500);
 		fp_writer.writeFundProtfolioExpectTrends(zz_500);
-		fp_writer.writeFundProtfolioRiskGrade(zz_500);
 		
 		logger.info("write zz_500 to database done");
 		
@@ -53,7 +51,6 @@ public class App {
 		fp_writer.writeFundProtfolioRiskGrade(js_money);
 		fp_writer.writeFundProtfolioliquidity(js_money);
 		fp_writer.writeFundProtfolioExpectTrends(js_money);
-		fp_writer.writeFundProtfolioRiskGrade(js_money);
 		
 		logger.info("write money to database done");
 		
@@ -71,7 +68,6 @@ public class App {
 			fp_writer.writeFundProtfolioRiskGrade(fpft);
 			fp_writer.writeFundProtfolioliquidity(fpft);
 			fp_writer.writeFundProtfolioExpectTrends(fpft);
-			fp_writer.writeFundProtfolioRiskGrade(fpft);
 		}
 		fp_writer.close();
 		
