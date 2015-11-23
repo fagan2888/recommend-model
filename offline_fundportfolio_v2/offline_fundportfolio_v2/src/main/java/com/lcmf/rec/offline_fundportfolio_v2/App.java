@@ -27,6 +27,8 @@ public class App {
 		
 		logger.info("started");
 
+//		GlobalVarManager.getInstance().getDates_str_list();
+		
 		FundPortfolioMySQLWriter fp_writer = new FundPortfolioMySQLWriter();
 		
 		FundPortfolio hs_300 = BenchMarkPortfolio.getBenchMarkPortfolio("hs300");

@@ -143,6 +143,7 @@ public class FundPortfolioMySQLWriter {
 			}
 
 			List<String> date_str_list = GlobalVarManager.getInstance().getDates_str_list();
+			//System.out.println(date_str_list);
 			String sql_base = "replace into fund_portfolio_histories (fph_risk_grade, fph_fund_portfolio_id, fph_header_desc, fph_bottom_desc, fph_accumulate_income_rate, fph_points ,created_at, updated_at) values ('%f','%d','%s','%s','%f', '%s', '%s', '%s')";
 			Date date = new Date();
 			Timestamp tt = new Timestamp(date.getTime());
@@ -175,13 +176,20 @@ public class FundPortfolioMySQLWriter {
 
 		int len = values.length;
 		int i = 0;
-		int interval = len / 10;
+//		int interval = len / 20;
+		int interval = 5;
 		while (i < len) {
 			String date_str = date_str_list.get(i);
 			double v = values[i];
 			jsonObject.put(date_str, v / values[0] - 1);
 			i = i + interval;
 		}
+		
+//		System.out.println(date_str_list.size());
+//		System.out.println(date_str_list);
+//		System.out.println(jsonObject);
+//		System.out.println();
+		
 		return jsonObject.toString();
 	}
 
