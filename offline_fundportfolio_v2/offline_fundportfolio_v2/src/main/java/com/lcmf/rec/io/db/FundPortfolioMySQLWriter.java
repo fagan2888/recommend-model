@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -171,10 +172,10 @@ public class FundPortfolioMySQLWriter {
 		
 //		logger.info(values.length);
 //		logger.info(date_str_list.size());
-		
+
 		int len = values.length;
 		int i = 0;
-		int interval = len / 20;
+		int interval = len / 10;
 		while (i < len) {
 			String date_str = date_str_list.get(i);
 			double v = values[i];

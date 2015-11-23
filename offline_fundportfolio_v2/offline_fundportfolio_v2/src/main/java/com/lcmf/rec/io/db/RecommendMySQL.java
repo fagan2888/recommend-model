@@ -71,7 +71,7 @@ public class RecommendMySQL {
 	public boolean connect(String host, String port, String database, String username, String password) {
 
 		String url = String.format(ConnString, host, port, database, username, password);
-		System.out.println(url);
+		//System.out.println(url);
 		
 		try {
 			Class.forName(DriverName);

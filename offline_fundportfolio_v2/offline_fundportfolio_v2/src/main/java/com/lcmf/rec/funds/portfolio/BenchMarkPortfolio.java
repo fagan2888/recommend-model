@@ -102,6 +102,7 @@ public class BenchMarkPortfolio {
 			hs_300.setRisk(7.0);
 			
 			
+			
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} catch (ParseException e){
@@ -205,7 +206,7 @@ public class BenchMarkPortfolio {
 			js_money = new FundPortfolio("js_money", dvs);
 			SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
 			String today_str = format.format(new Date());
-			String fp_name_str = String.format("%s_%s", "易方达天天理财货币A", today_str);
+			String fp_name_str = String.format("%s_%s", "嘉实货币A", today_str);
 			js_money.setRisk_name(fp_name_str);
 			js_money.setType("money");
 			js_money.computeAnnualReturns();
