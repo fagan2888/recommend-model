@@ -55,8 +55,8 @@ public class App {
 		fp_writer.writeFundProtfolioRiskGrade(js_money);
 		fp_writer.writeFundProtfolioliquidity(js_money);
 		fp_writer.writeFundProtfolioExpectTrends(js_money);
-		
-		logger.info("write money to database done");
+//		
+//		logger.info("write money to database done");
 		
 		logger.info("Create bench mark portfolio done");
 

@@ -210,7 +210,7 @@ public class BenchMarkPortfolio {
 			js_money.setRisk_name(fp_name_str);
 			js_money.setType("money");
 			js_money.computeAnnualReturns();
-			js_money.setRisk(0.0);
+			js_money.setRisk(-1);
 //
 //			SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
 //			String today_str = format.format(new Date());

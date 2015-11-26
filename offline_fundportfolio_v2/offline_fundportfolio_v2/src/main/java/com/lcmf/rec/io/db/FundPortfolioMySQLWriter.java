@@ -25,7 +25,7 @@ import net.sf.json.JSONObject;
 public class FundPortfolioMySQLWriter {
 
 	private static Logger logger = Logger.getLogger(FundPortfolioMySQLWriter.class);
-	
+
 	RecommendMySQL mysql = new RecommendMySQL();
 
 	public FundPortfolioMySQLWriter() {
@@ -50,7 +50,7 @@ public class FundPortfolioMySQLWriter {
 					fpf.getAnnual_return_ratio(), fpf.getMaxDrawdonw(), fpf.getRiskvsreturn(), 1, "高",
 					fpf.getExpect_returns_min(), fpf.getExpect_returns_max(), after_tommmorrow_str, tt.toString(),
 					tt.toString());
-			
+
 			logger.debug(sql);
 			mysql.insertDB(sql);
 
@@ -69,13 +69,13 @@ public class FundPortfolioMySQLWriter {
 				double sum_w = 0.0;
 				List<String> fund_codes = fpf.getMofang_ids();
 				for (int i = 0; i < fund_codes.size(); i++) {
-					//保留两位小数，四舍五入
+					// 保留两位小数，四舍五入
 					double tmp_w = weights[i];
 					BigDecimal b = new BigDecimal(tmp_w);
 					double w = b.setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue();
 					if (w <= 0.0)
 						continue;
-					
+
 					sql = String.format(sql_base, fp_id, fpf.getRisk_name(), Long.parseLong(fund_codes.get(i)), w,
 							fpf.getRisk(), tt.toString(), tt.toString());
 					logger.debug(sql);
@@ -99,19 +99,22 @@ public class FundPortfolioMySQLWriter {
 			String sql = "select id from fund_portfolios where fp_name = '" + fpf.getRisk_name() + "'";
 			ResultSet rs = mysql.selectDB(sql);
 			int fp_id = -1;
-			if (rs.next()) {
-				fp_id = rs.getInt(1);
-			} else {
-				return false;
-			}
+//			if (rs.next()) {
+//				fp_id = rs.getInt(1);
+//			} else {
+//				return false;
+//			}
 
-			String sql_base = "replace into fund_portfolio_risks (fpr_risk_grade, fpr_fund_portfolio_id, fpr_header_desc, fpr_bottom_desc, fpr_no_risk_risk, fpr_gold_etf_risk, fpr_hushen300_risk, fpr_zhongzheng500_risk ,created_at, updated_at) values ('%f','%d','%s','%s', '%f','%f','%f','%f', '%s', '%s')";
-			Date date = new Date();
-			Timestamp tt = new Timestamp(date.getTime());
-			sql = String.format(sql_base, fpf.getRisk(), fp_id, header_desc, bottom_desc, 0.0, 0.3, 0.70, 1.0,
-					tt.toString(), tt.toString());
-			logger.debug(sql);
-			mysql.insertDB(sql);
+			while (rs.next()) {
+				fp_id = rs.getInt(1);
+				String sql_base = "replace into fund_portfolio_risks (fpr_risk_grade, fpr_fund_portfolio_id, fpr_header_desc, fpr_bottom_desc, fpr_no_risk_risk, fpr_gold_etf_risk, fpr_hushen300_risk, fpr_zhongzheng500_risk ,created_at, updated_at) values ('%f','%d','%s','%s', '%f','%f','%f','%f', '%s', '%s')";
+				Date date = new Date();
+				Timestamp tt = new Timestamp(date.getTime());
+				sql = String.format(sql_base, fpf.getRisk(), fp_id, header_desc, bottom_desc, 0.0, 0.3, 0.70, 1.0,
+						tt.toString(), tt.toString());
+				logger.debug(sql);
+				mysql.insertDB(sql);
+			}
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -143,13 +146,12 @@ public class FundPortfolioMySQLWriter {
 			}
 
 			List<String> date_str_list = GlobalVarManager.getInstance().getDates_str_list();
-			//System.out.println(date_str_list);
+			// System.out.println(date_str_list);
 			String sql_base = "replace into fund_portfolio_histories (fph_risk_grade, fph_fund_portfolio_id, fph_header_desc, fph_bottom_desc, fph_accumulate_income_rate, fph_points ,created_at, updated_at) values ('%f','%d','%s','%s','%f', '%s', '%s', '%s')";
 			Date date = new Date();
 			Timestamp tt = new Timestamp(date.getTime());
-			sql = String.format(sql_base, fpf.getRisk(), fp_id, header_desc, bottom_desc,
-					fpf.getTotal_return_ratio(), historyJson(fpf.getFpValues(), date_str_list), tt.toString(),
-					tt.toString());
+			sql = String.format(sql_base, fpf.getRisk(), fp_id, header_desc, bottom_desc, fpf.getTotal_return_ratio(),
+					historyJson(fpf.getFpValues(), date_str_list), tt.toString(), tt.toString());
 			logger.debug(sql);
 			mysql.insertDB(sql);
 
@@ -170,13 +172,13 @@ public class FundPortfolioMySQLWriter {
 	 */
 	public static String historyJson(double[] values, List<String> date_str_list) {
 		JSONObject jsonObject = new JSONObject();
-		
-//		logger.info(values.length);
-//		logger.info(date_str_list.size());
+
+		// logger.info(values.length);
+		// logger.info(date_str_list.size());
 
 		int len = values.length;
 		int i = 0;
-//		int interval = len / 20;
+		// int interval = len / 20;
 		int interval = 5;
 		while (i < len) {
 			String date_str = date_str_list.get(i);
@@ -184,12 +186,12 @@ public class FundPortfolioMySQLWriter {
 			jsonObject.put(date_str, v / values[0] - 1);
 			i = i + interval;
 		}
-		
-//		System.out.println(date_str_list.size());
-//		System.out.println(date_str_list);
-//		System.out.println(jsonObject);
-//		System.out.println();
-		
+
+		// System.out.println(date_str_list.size());
+		// System.out.println(date_str_list);
+		// System.out.println(jsonObject);
+		// System.out.println();
+
 		return jsonObject.toString();
 	}
 
@@ -223,8 +225,9 @@ public class FundPortfolioMySQLWriter {
 	public boolean writeFundProtfolioExpectTrends(FundPortfolio fp) {
 		FundPortfolio hs_300 = BenchMarkPortfolio.getBenchMarkPortfolio("hs300");
 		String header_desc = CopyRighter.expect_trends_header_desc(fp.getStd(), hs_300.getU());
-		String bottom_desc = CopyRighter.expect_trends_bottom_desc(fp.getExpect_returns_max(), fp.getExpect_returns_min(),
-				hs_300.getExpect_returns_max(), hs_300.getExpect_returns_min(), fp.getAnnual_return_ratio(), hs_300.getAnnual_return_ratio());
+		String bottom_desc = CopyRighter.expect_trends_bottom_desc(fp.getExpect_returns_max(),
+				fp.getExpect_returns_min(), hs_300.getExpect_returns_max(), hs_300.getExpect_returns_min(),
+				fp.getAnnual_return_ratio(), hs_300.getAnnual_return_ratio());
 
 		try {
 
@@ -240,20 +243,20 @@ public class FundPortfolioMySQLWriter {
 			Date date = new Date();
 			Timestamp tt = new Timestamp(date.getTime());
 
-//			System.out.println(fp.getRisk_name());
-//			System.out.println(fp_id);
-//			System.out.println(fp.getU());
-//			System.out.println(fp.getStd());
-//			System.out.println(expectTrendJSON(fp.getU(), fp.getStd()));
-//			System.out.println(header_desc);
-//			System.out.println(bottom_desc);
-//			System.out.println();
-//			System.out.println();
-//			System.out.println();
-//			System.out.println();
+			// System.out.println(fp.getRisk_name());
+			// System.out.println(fp_id);
+			// System.out.println(fp.getU());
+			// System.out.println(fp.getStd());
+			// System.out.println(expectTrendJSON(fp.getU(), fp.getStd()));
+			// System.out.println(header_desc);
+			// System.out.println(bottom_desc);
+			// System.out.println();
+			// System.out.println();
+			// System.out.println();
+			// System.out.println();
 			String sql_base = "replace into fund_portfolio_expect_trends (fpe_risk_grade, fpe_fund_portfolio_id, fpe_points, fpe_header_desc, fpe_bottom_desc ,created_at, updated_at) values ('%f','%d','%s','%s','%s','%s','%s')";
-			sql = String.format(sql_base, fp.getRisk(), fp_id, expectTrendJSON(fp.getU(), fp.getStd()),
-					header_desc, bottom_desc, tt.toString(), tt.toString());
+			sql = String.format(sql_base, fp.getRisk(), fp_id, expectTrendJSON(fp.getU(), fp.getStd()), header_desc,
+					bottom_desc, tt.toString(), tt.toString());
 			logger.debug(sql);
 			mysql.insertDB(sql);
 			return true;
