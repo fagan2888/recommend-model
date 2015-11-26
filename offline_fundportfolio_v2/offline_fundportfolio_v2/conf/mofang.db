@@ -1,4 +1,4 @@
-host = dev.mofanglicai.com.cn
+host = localhost
 port = 3306
 database = mofang
 username = jiaoyang
