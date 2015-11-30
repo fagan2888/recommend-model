@@ -128,10 +128,12 @@ funds = [110026, 110020, 160119, 110007, 216, 70008]
 fids = [30000714, 30000793, 30000621, 30001895,30000696, 30003314]
 
 
+#start_date = '2013-01-04'
 start_date = dates[0]
 now_time = datetime.datetime.now()
 yes_time = now_time + datetime.timedelta(days=-1)
 end_date   = yes_time.strftime('%Y-%m-%d')
+#end_date   =  '2015-11-20'
 full_values = funds_values(funds, start_date, end_date)
 
 
@@ -229,8 +231,8 @@ for i in range(0, 11):
 
 		date_time = datetime.datetime.strptime(dates[j],'%Y-%m-%d')
 		date_time_threshold = datetime.datetime.strptime('2014-10-01','%Y-%m-%d') 					
-		#if(date_time < date_time_threshold):
-		#	continue				
+		if(date_time < date_time_threshold):
+			continue				
 		date_str = datetime.datetime.strptime(dates[j],'%Y-%m-%d').strftime('%Y%m%d')
 		name = 'risk' + str(i) +'_' + dates[j] 
 		sql = portfolio_base_sql % (name, 1.0 * i / 10, dates[j],'reason','focus', '固定周期调仓，优化资产配置比例。', 0.07, 0.10,0.05, datetime.datetime.now(), datetime.datetime.now())
@@ -306,12 +308,10 @@ conn.commit()
 
 update_copywrite_base_sql = "update portfolios set pf_position_reason = '%s' where pf_date = '%s' and p_risk = '%f'"
 cur = conn.cursor()
-sql = update_copywrite_base_sql % ('A股市场持续震荡，逐渐筑底成功，智能配置模型建议继续全仓中证500指数基金。', '2015-09-11', 1.0)
-cur.execute(sql)
 sql = update_copywrite_base_sql % ('全仓配置货币基金，享受安全稳健收益。', '2015-09-11', 0.0)
 cur.execute(sql)
-for i in range(1, 10):
-	sql = update_copywrite_base_sql % ('A股市场持续震荡，智能配置模型建议提高债券类资产的配置比例。', '2015-09-11', 1.0 * i / 10)
+for i in range(1,11):
+	sql = update_copywrite_base_sql % ('根据市场行情对配置方案进行调整，平衡收益和风险。', '2015-09-11', 1.0 * i / 10)
 	cur.execute(sql)
 
 cur.close()
@@ -333,6 +333,9 @@ for i in range(0, 11):
 
 for i in range(0, 11):
 	sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2014-12-31', 1.0 * i / 10)
+	cur.execute(sql)
+for i in range(0, 11):
+	sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2014-10-10', 1.0 * i / 10)
 	cur.execute(sql)
 cur.close()
 conn.commit()
@@ -356,7 +359,9 @@ for i in range(1, 11):
 for i in range(1, 11):
 	sql = update_copywrite_base_sql % ('A股牛市曙光初现，债券市场继续走强。市场资金面持续宽松，风险偏好逐渐加强，板块轮动效应明显。', '2014-12-31', 1.0 * i / 10)
 	cur.execute(sql)
-
+for i in range(1, 11):
+	sql = update_copywrite_base_sql % ('京津冀污染持续升级，环保产业扶持力度将加大，持续关注板块和个股的机会。大盘逐渐走强，或出现短期结构性行情。', '2014-10-10', 1.0 * i / 10)
+	cur.execute(sql)
 sql = update_copywrite_base_sql % ('全仓配置货币基金，享受安全稳健收益。', '2015-09-11', 0)
 cur.execute(sql)
 sql = update_copywrite_base_sql % ('全仓配置货币基金，享受安全稳健收益。', '2015-06-19', 0)
@@ -364,6 +369,8 @@ cur.execute(sql)
 sql = update_copywrite_base_sql % ('全仓配置货币基金，享受安全稳健收益。', '2015-03-27', 0)
 cur.execute(sql)
 sql = update_copywrite_base_sql % ('全仓配置货币基金，享受安全稳健收益。', '2014-12-31', 0)
+cur.execute(sql)
+sql = update_copywrite_base_sql % ('全仓配置货币基金，享受安全稳健收益。', '2014-10-10', 0)
 cur.execute(sql)
 cur.close()
 conn.commit()
@@ -416,6 +423,28 @@ annual_return_min = portfolio_p * ( 1 - sigma * (250 ** 0.5)) -	1
 sql = update_return_base_sql % (annual_return, annual_return_max, annual_return_min, '2015-09-11', 0.0)
 cur.execute(sql)
 
+cur.close()
+conn.commit()
+
+
+cur = conn.cursor()
+for key in final_values.keys():
+	values = final_values[key]
+	length = len(values)
+	month_num = 1.0 * length / 20	
+	month_returns = (values[length-1] / values[0]) ** (1.0 / month_num) - 1
+	sql = "update portfolios set pf_month_returns = '%f' where p_risk = '%f' and pf_date = '%s'" % (month_returns, 1.0 * key / 10, '2015-09-11')
+	cur.execute(sql)
+cur.close()
+conn.commit()
+
+
+length = len(money_values)
+month_num = 1.0 * length / 20	
+month_returns = (money_values[length-1] / money_values[0]) ** (1.0 / month_num) - 1
+sql = "update portfolios set pf_month_returns = '%f' where p_risk = '%f' and pf_date = '%s'" % (month_returns, 1.0 * 0.0 / 10, '2015-09-11')
+cur = conn.cursor()
+cur.execute(sql)
 cur.close()
 conn.commit()
 
