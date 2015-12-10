@@ -123,9 +123,8 @@ def funds_values(funds, start_date, end_date):
     return full_values
 
 
-
-funds = [110026, 110020, 160119, 110007, 216, 70008]
-fids = [30000714, 30000793, 30000621, 30001895,30000696, 30003314]
+funds = [110026, 110020, 160119, 110007, 563, 590009, 216, 70008]
+fids = [30000714, 30000793, 30000621, 30001895, 30002145 , 30001839, 30000696, 30003314]
 
 
 #start_date = '2013-01-04'
@@ -135,26 +134,34 @@ yes_time = now_time + datetime.timedelta(days=-1)
 end_date   = yes_time.strftime('%Y-%m-%d')
 #end_date   =  '2015-11-20'
 full_values = funds_values(funds, start_date, end_date)
+print full_values
 
 
 keys = full_values.keys()
 keys.sort()
 
-
 final_values = {}
-
 
 for i in range(1, 11):
 
 	risk = risks[i]
-	weight = [0, 0, 0, 0, 0]
+	weight = [0, 0, 0, 0, 0, 0, 0]
 	r_w = risk[0]
 	weight[0] =	string.atof(r_w[1].strip()) * 0.2 
 	weight[1] =	string.atof(r_w[1].strip()) * 0.3
 	weight[2] =	string.atof(r_w[1].strip()) * 0.5 
-	weight[3] =	string.atof(r_w[2].strip()) * 1.0 
-	weight[4] =	string.atof(r_w[0].strip()) * 1.0 
-	weight   =    	normalized(weight)
+
+	if(string.atof(r_w[2].strip()) <= 0.5):
+		weight[3] = string.atof(r_w[2].strip()) * 0.5		
+		weight[4] = string.atof(r_w[2].strip()) * 0.5		
+		weight[5] = 0
+	elif(string.atof(r_w[2].strip()) >= 0.51 and string.atof(r_w[2].strip()) <= 1):
+		weight[3] = string.atof(r_w[2].strip()) * 1.0 / 3.0
+		weight[4] = string.atof(r_w[2].strip()) * 1.0 / 3.0	
+		weight[5] = string.atof(r_w[2].strip()) * 1.0 / 3.0		
+
+	weight[6] =	string.atof(r_w[0].strip()) * 1.0 
+	weight    =    	normalized(weight)
 
 	values = []	
 	values.append(1)
@@ -169,9 +176,18 @@ for i in range(1, 11):
 				weight[0] =	string.atof(r_w[1].strip()) * 0.2 
 				weight[1] =	string.atof(r_w[1].strip()) * 0.3
 				weight[2] =	string.atof(r_w[1].strip()) * 0.5 
-				weight[3] =	string.atof(r_w[2].strip()) * 1.0 
-				weight[4] =	string.atof(r_w[0].strip()) * 1.0 
-				weight   =    	normalized(weight)
+
+				if(string.atof(r_w[2].strip()) <= 0.5):
+					weight[3] = string.atof(r_w[2].strip()) * 0.5		
+					weight[4] = string.atof(r_w[2].strip()) * 0.5		
+					weight[5] = 0
+				elif(string.atof(r_w[2].strip()) >= 0.51 and string.atof(r_w[2].strip()) <= 1):
+					weight[3] = string.atof(r_w[2].strip()) * 1.0 / 3.0
+					weight[4] = string.atof(r_w[2].strip()) * 1.0 / 3.0	
+					weight[5] = string.atof(r_w[2].strip()) * 1.0 / 3.0		
+
+				weight[6] =	string.atof(r_w[0].strip()) * 1.0 
+				weight    =    	normalized(weight)
 
 		except:
 			pass
@@ -214,16 +230,26 @@ weight_base_sql = "replace into portfolio_weights (pw_portfolio_id, pw_portfolio
 for i in range(0, 11):
 
 	risk = []	
-	weight = [0, 0, 0, 0, 0, 0]
+	weight = [0, 0, 0, 0, 0, 0, 0, 0]
 
 	if i > 0:
+
 		risk      =     risks[i]
 		r_w  	  =     risk[0]	
 		weight[0] =	string.atof(r_w[1].strip()) * 0.2 
 		weight[1] =	string.atof(r_w[1].strip()) * 0.3
 		weight[2] =	string.atof(r_w[1].strip()) * 0.5 
-		weight[3] =	string.atof(r_w[2].strip()) * 1.0 
-		weight[4] =	string.atof(r_w[0].strip()) * 1.0 
+
+		if(string.atof(r_w[2].strip()) <= 0.5):
+			weight[3] = string.atof(r_w[2].strip()) * 0.5		
+			weight[4] = string.atof(r_w[2].strip()) * 0.5		
+			weight[5] = 0
+		elif(string.atof(r_w[2].strip()) >= 0.51 and string.atof(r_w[2].strip()) <= 1):
+			weight[3] = string.atof(r_w[2].strip()) * 1.0 / 3.0
+			weight[4] = string.atof(r_w[2].strip()) * 1.0 / 3.0	
+			weight[5] = string.atof(r_w[2].strip()) * 1.0 / 3.0		
+
+		weight[6] =	string.atof(r_w[0].strip()) * 1.0 
 		weight    =    	normalized(weight)
 
 
@@ -250,16 +276,27 @@ for i in range(0, 11):
 		conn.commit()	
 	
 		if i > 0:
+
 			r_w = risk[j]
-			weight = [0, 0, 0, 0, 0]
+			weight = [0, 0, 0, 0, 0, 0, 0, 0]
 			weight[0] =	string.atof(r_w[1].strip()) * 0.2 
 			weight[1] =	string.atof(r_w[1].strip()) * 0.3
 			weight[2] =	string.atof(r_w[1].strip()) * 0.5 
-			weight[3] =	string.atof(r_w[2].strip()) * 1.0 
-			weight[4] =	string.atof(r_w[0].strip()) * 1.0 
-			weight   =    normalized(weight)
+
+			if(string.atof(r_w[2].strip()) <= 0.5):
+				weight[3] = string.atof(r_w[2].strip()) * 0.5		
+				weight[4] = string.atof(r_w[2].strip()) * 0.5		
+				weight[5] = 0
+			elif(string.atof(r_w[2].strip()) >= 0.51 and string.atof(r_w[2].strip()) <= 1):
+				weight[3] = string.atof(r_w[2].strip()) * 1.0 / 3.0
+				weight[4] = string.atof(r_w[2].strip()) * 1.0 / 3.0	
+				weight[5] = string.atof(r_w[2].strip()) * 1.0 / 3.0		
+
+			weight[6] =	string.atof(r_w[0].strip()) * 1.0 
+			weight    =     normalized(weight)
+
 		else:
-			weight = [0,0,0,0,0,1]
+			weight = [0,0,0,0,0,0,0,1]
 
 		cur = conn.cursor()	
 		for n in range(0, len(weight)):
@@ -447,5 +484,6 @@ cur = conn.cursor()
 cur.execute(sql)
 cur.close()
 conn.commit()
+
 
 conn.close()
