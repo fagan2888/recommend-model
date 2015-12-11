@@ -123,8 +123,8 @@ def funds_values(funds, start_date, end_date):
     return full_values
 
 
-funds = [110026, 110020, 160119, 110007, 563, 590009, 216, 70008]
-fids = [30000714, 30000793, 30000621, 30001895, 30002145 , 30001839, 30000696, 30003314]
+funds = [110026, 110020, 160119, 110007, 563, 530008, 216, 70008]
+fids = [30000714, 30000793, 30000621, 30001895, 30002145 , 30001876, 30000696, 30003314]
 
 
 #start_date = '2013-01-04'
@@ -134,7 +134,7 @@ yes_time = now_time + datetime.timedelta(days=-1)
 end_date   = yes_time.strftime('%Y-%m-%d')
 #end_date   =  '2015-11-20'
 full_values = funds_values(funds, start_date, end_date)
-print full_values
+#print full_values
 
 
 keys = full_values.keys()
