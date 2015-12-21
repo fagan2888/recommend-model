@@ -1,8 +1,8 @@
 #coding=utf8
 
+
 import string
 import MySQLdb
-
 
 
 def datelist(start_date, end_date):
@@ -24,7 +24,8 @@ conn = MySQLdb.connect(host='rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com', port=
 
 cur = conn.cursor()
 
-cur.execute('select code, date, net_value, authority_value from fund_value_daily')
+cur.execute("select code, date, net_value, authority_value from fund_value_daily where code = '1238' ")
+
 
 fund_values = {}
 
@@ -34,5 +35,8 @@ for record in cur.fetchall():
 	date = record[1]	
 	net_value = record[2]
 	authority_value = record[3]
-
+	dvs = fund_values.setdefault(code, {})
+	dvs[date] = (net_value, authority_value)
 		
+
+print fund_values

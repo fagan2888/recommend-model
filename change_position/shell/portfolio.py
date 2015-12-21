@@ -416,6 +416,7 @@ sigma = np.std(profits)
 u = np.mean(profits)
 
 
+
 portfolio_p = e ** (u * 250)
 portfolio_upper_p = portfolio_p * ( 1 + sigma * (250 ** 0.5)) 
 annual_return_max = portfolio_p * ( 1 + sigma * (250 ** 0.5)) -	1
@@ -439,6 +440,7 @@ cur.close()
 conn.commit()
 
 
+
 length = len(money_values)
 month_num = 1.0 * length / 20	
 month_returns = (money_values[length-1] / money_values[0]) ** (1.0 / month_num) - 1
@@ -447,5 +449,6 @@ cur = conn.cursor()
 cur.execute(sql)
 cur.close()
 conn.commit()
+
 
 conn.close()
