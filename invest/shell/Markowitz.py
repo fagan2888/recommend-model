@@ -12,14 +12,14 @@ class Markowitz:
 
 	#
 	#注释
+	#return_rate : 资产收益率矩阵
 	def __init__(self, return_rate):
 		self.r     =     return_rate
 
 	#
-	#
+	#获得有效前沿
 	def efficient_frontier(self):
 
-	
 		n_asset    =     len(self.r)
 		asset_mean = []
 		for record in self.r:
@@ -44,14 +44,17 @@ class Markowitz:
 		return risks, returns, portfolios
 
 
+
 if __name__ == '__main__':
+
 
 	rs = [[0.25,0.3,0.4, 0.3, 0.2, -0.1, -0.2], [0.1, 0.2, 0.3, -0.01, -0.2, 0.01, 0.02]]	
 	bond = [[0, 1.0],[0, 1.0]]
 	m  = Markowitz(rs)
 	risks, returns, portfolios = m.efficient_frontier()
+
 	#	print risks
 	#	print returns
 	#	print portfolios[999]
-	for i in range(0, len(risks)):
-		print risks[i], ',', returns[i]	
+	#for i in range(0, len(risks)):
+	#	print risks[i], ',', returns[i]	
