@@ -1,5 +1,6 @@
 #coding=utf8
 
+
 import string
 import math
 
@@ -8,8 +9,8 @@ from cvxopt import matrix
 from cvxopt.blas import dot
 from cvxopt.solvers import qp
 from sklearn import datasets, linear_model	
-
 import numpy as np
+from scipy.stats import norm
 
 
 #计算有效前沿
@@ -19,8 +20,9 @@ def efficient_frontier(return_rate):
 
 
 	asset_mean = np.mean(return_rate, axis = 1)
+	#print asset_mean
 
-	cov        =     np.cov(self.r)
+	cov        =     np.cov(return_rate)
 	
 	S	   =     matrix(cov)
 	pbar       =     matrix(asset_mean)	
@@ -32,7 +34,7 @@ def efficient_frontier(return_rate):
 	b                 =  matrix(1.0)
 
 			
-	N = 1000
+	N = 100
 	mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
 	portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
 	returns = [ dot(pbar,x) for x in portfolios ]
@@ -75,6 +77,7 @@ def sharp(portfolio, rf):
 	return    (r - rf) / sigma
 
 
+
 #索提诺比率
 def sortino(portfolio, rf):
 	pr        =    np.mean(portfolio)
@@ -82,7 +85,7 @@ def sortino(portfolio, rf):
 
 
 
-#treynor-mazuy模型的
+#treynor-mazuy模型
 def tm(portfolio, market, rf):
 	xparams   = []	
 	yparams   = []
@@ -113,7 +116,34 @@ def hm(portfolio, market, rf):
 
 
 
-	
+#value at risk
+def var(portfolio):
+	parray = np.array(portfolio)	
+	valueAtRisk = norm.ppf(0.05, parray.mean(), parray.std())	
+	return valueAtRisk
+
+
+
+
+def ppw(portfolio):	
+	return 0
+
+
+
+
+def grs(portfolio):
+	return 0	
+
+
+
+def black_litterman():
+	return 0		
+
+
+
+def printHello():
+	print 'hello'
+
 
 if __name__ == '__main__':
 
