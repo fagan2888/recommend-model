@@ -11,6 +11,7 @@ from cvxopt.solvers import qp
 from sklearn import datasets, linear_model	
 import numpy as np
 from scipy.stats import norm
+from cvxopt import matrix, solvers
 
 
 #计算有效前沿
@@ -125,13 +126,65 @@ def var(portfolio):
 
 
 
-def ppw(portfolio):	
-	return 0
+
+#positive peroid weight
+def ppw(portfolio, benchmark, rf):	
+
+	length = len(benchmark)
+	A = []
+	b = []
+
+	for i in range(0, length):
+		item = []
+		for j in range(0, length + 3):
+			item.append(0)
+		A.append(item)
+	
+	for i in range(0,  length + 3):
+		b.append(0)	
+
+	for i in range(0, length):
+		A[i][i] = -1
+		b[i]    = -1e-13
+
+	i = length
+	for j in range(0, length):
+		A[j][i]	 = 1
+	b[i] = 1	
+
+
+	i = length + 1				
+	for j in range(0, length):
+		A[j][i] = -1
+	b[i] = -1	
+
+
+	i = length + 2
+	for j in range(0, length):
+		A[j][i] = -benchmark[j]
+
+	b[i] = 0		 
+			
+	c = []
+	for j in range(0, length):
+		c.append(benchmark[j])	
+
+	A = matrix(A)
+	b = matrix(b)
+	c = matrix(c)
+
+	sol = solvers.lp(c, A, b)
+	ppw = 0
+	for i in range(0, len(sol['x'])):
+		ppw = ppw + portfolio[i] * sol['x'][i]	
+
+	return ppw
 
 
 
 
 def grs(portfolio):
+		
 	return 0	
 
 
@@ -154,6 +207,10 @@ if __name__ == '__main__':
 	#print jensen(rs[0], rs[1], 0.02)
 	#print sharp(rs[0], 0.02)
 	#print sortino(rs[0], 0.02)
-	print tm(rs[0], rs[1], 0.02)
+	#print tm(rs[0], rs[1], 0.02)
+	print ppw(rs[0], rs[1])
 
+
+
+	
 

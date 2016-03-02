@@ -1,16 +1,33 @@
-coding=utf8
+#coding=utf8
 
 
 import string
 import MySQLdb
 from datetime import datetime
 
-start_date = '2012-01-01'
+
+#start_date = '2007-01-05'
+
+
+#start_date = '2008-01-04'
+
+
+#start_date = '2009-01-09'
+
+
+#start_date = '2010-01-08'
+
+
+#start_date = '2011-01-07'
+
+start_date = '2012-01-06'
+
 conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='mofang', charset='utf8')
 
 
 #所有股票型基金
 types = [5, 6, 9, 10, 15]
+#types = [5, 9, 10, 15]
 item_ids = []
 for type_id in types:
 	cur = conn.cursor()
@@ -28,22 +45,29 @@ fund_mofangids = []
 base_date = datetime.strptime(start_date,'%Y-%m-%d')
 for item in item_ids:
 	cur = conn.cursor()
-	cur.execute('select fi_regtime, fi_first_raise from fund_infos where fi_globalid = %d' % item)	
+	cur.execute('select fi_regtime, fi_laste_raise ,fi_name from fund_infos where fi_globalid = %d' % item)	
 	record = cur.fetchone()
 	date = record[0]
 	scale = record[1]
 
+
+	#if record[2].strip().find(u'债') >= 0:
+	#	continue
+
+	if record[2].encode('utf8').find('债') >= 0:
+		continue
+
 	if date is None:
 		continue
-	if scale < 10000000:
+	if scale < 1000000:
 		continue
 	if scale >10000000000:
 		continue
 
 	date_str = date.strftime('%Y-%m-%d')
-	now_date = datetime.strptime(date_str, '%Y-%m-%d')
+	raise_date = datetime.strptime(date_str, '%Y-%m-%d')
 
-	if now_date > base_date:
+	if raise_date > base_date:
 		continue
 
 	fund_mofangids.append(item)
@@ -51,7 +75,9 @@ for item in item_ids:
 
 
 conn.commit()	
+
 #print fund_mofangids
+
 
 funds = []
 for mofangid in fund_mofangids:
@@ -78,8 +104,6 @@ for code in funds:
 
 	cur.close()
 
+
 conn.commit()
 conn.close()
-
-
-
