@@ -12,11 +12,42 @@ from sklearn import datasets, linear_model
 import numpy as np
 from scipy.stats import norm
 from cvxopt import matrix, solvers
-from numpy import *
+from numpy import isnan
 
 
 #计算有效前沿
-def efficient_frontier(return_rate):
+def efficient_frontier_index(return_rate):
+
+        n_asset    =     len(return_rate)
+
+
+        asset_mean = np.mean(return_rate, axis = 1)
+        #print asset_mean
+
+        cov        =     np.cov(return_rate)
+
+        S          =     matrix(cov)
+        pbar       =     matrix(asset_mean)
+
+        G          =     matrix(0.0, (n_asset, n_asset))
+        G[::n_asset + 1]  =  -1.0
+        h                 =  matrix(0.0, (n_asset, 1))
+        A                 =  matrix(1.0, (1, n_asset))
+        b                 =  matrix(1.0)
+
+
+        N = 100
+        mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
+        portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
+        returns = [ dot(pbar,x) for x in portfolios ]
+        risks = [ sqrt(dot(x, S*x)) for x in portfolios ]
+
+
+        return risks, returns, portfolios
+
+
+#计算有效前沿
+def efficient_frontier_fund(return_rate):
 
 	n_asset    =     len(return_rate)
 
@@ -27,10 +58,24 @@ def efficient_frontier(return_rate):
 	
 	S	   =     matrix(cov)
 	pbar       =     matrix(asset_mean)	
+
+
+
+	G          =     matrix(0.0 , (2 * n_asset,  n_asset))
+
+
+	for i in range(0, n_asset):
+		G[i, i] = -1
+		G[n_asset + i, i ] = 1
+
+
+	h                 =  matrix(0.0, (2 * n_asset, 1))
+
+
+	for i in range(0, n_asset):
+		h[n_asset + i, 0] = 0.5
 	
-	G          =     matrix(0.0, (n_asset, n_asset))	
-	G[::n_asset + 1]  =  -1.0	
-	h                 =  matrix(0.0, (n_asset, 1))
+	
 	A                 =  matrix(1.0, (1, n_asset))
 	b                 =  matrix(1.0)
 
@@ -43,6 +88,7 @@ def efficient_frontier(return_rate):
 
 	
 	return risks, returns, portfolios
+
 
 
 
@@ -60,6 +106,7 @@ def semivariance(portfolio):
 	return     math.sqrt(var)	
 			
 
+
 		
 #jensen测度
 '''
@@ -76,9 +123,10 @@ def jensen(portfolio, market, rf):
 	m = []		
 	for i in range(0, len(portfolio)):
 		p.append(portfolio[i] - rf)
-		m.append(market[i] - rf)
+		m.append([market[i] - rf])
 
-	
+	#print p
+	#print m	
 	clf       = linear_model.LinearRegression()
 	clf.fit(m, p)
 	alpha = clf.intercept_
@@ -142,9 +190,13 @@ def var(portfolio):
 
 
 #positive peroid weight
-def ppw(portfolio, benchmark, rf):	
+def ppw(portfolio, benchmark):	
 
-		
+	
+	#print 'p', portfolio
+	#print 'm', benchmark
+
+	
 	length = len(benchmark)
 	A = []
 	b = []
@@ -184,9 +236,14 @@ def ppw(portfolio, benchmark, rf):
 	for j in range(0, length):
 		c.append(benchmark[j])	
 
+
 	A = matrix(A)
 	b = matrix(b)
 	c = matrix(c)
+
+	#print A
+	#print b
+	#print c
 
 	sol = solvers.lp(c, A, b)
 	ppw = 0
@@ -216,13 +273,15 @@ def printHello():
 if __name__ == '__main__':
 
 
-        rs = [[0.25,0.3,0.4, 0.3, 0.2, -0.1, -0.2], [0.1, 0.2, 0.3, -0.01, -0.2, 0.01, 0.02]]
+        rs = [[0.25,0.3,0.4, 0.3, 0.2, -0.1, -0.2], [0.1, 0.2, 0.3, -0.01, -0.2, 0.01, 0.02], [0.001, 0.02, -0.03, 0.05, -0.06, -0.07, 0.1]]
+ 	risk ,returns, portfolio = efficient_frontier(rs)
+	print portfolio[0]
 	#print np.cov(rs)
        	#print semivariance(rs[0])
 	#print jensen(rs[0], rs[1], 0.02)
 	#print sharp(rs[0], 0.02)
 	#print sortino(rs[0], 0.02)
 	#print tm(rs[0], rs[1], 0.02)
-	print ppw(rs[0], rs[1])
+	#print ppw(rs[0], rs[1])
 
 
