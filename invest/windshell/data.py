@@ -13,6 +13,7 @@ import numpy as np
 #index_col = '000300.SH'
 
 
+
 #基金和指数数据抽取和对齐
 def fund_index_data(start_date, end_date, index_code):
 
@@ -116,7 +117,6 @@ def index_value(start_date, end_date, index_code):
 
 
 
-
 def establish_data():
 	indicator_df = pd.read_csv('./wind/fund_establish_date.csv', index_col = 'code', parse_dates = [1])	
 	return indicator_df
@@ -150,7 +150,10 @@ def fund_position(start_date, end_date):
 		vs = positiondf[col].values
 		has = True
 		for v in vs:
-			if isnan(v):
+			try:
+				if isnan(v):
+					has = False
+			except:
 				has = False
 
 		if has:
@@ -159,6 +162,7 @@ def fund_position(start_date, end_date):
 
 	positiondf = positiondf[codes]										
 	return positiondf	
+
 
 
 if __name__ == '__main__':
@@ -170,4 +174,7 @@ if __name__ == '__main__':
 	#print fund_scale.values
 	#print stock_fund_code()
 	print fund_position('2011-01-02','2012-12-31')
+
+
+
 
