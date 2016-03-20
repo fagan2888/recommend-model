@@ -21,7 +21,6 @@ from datetime import datetime
 #technicallocation
 
 
-
 #中类资产配置
 def indexallocation(indexdf):
 
@@ -193,6 +192,7 @@ def portfolio(indexdf, funddf, fund_rank):
 	return ws
 	
 
+
 def portfolio_value(funddf, ws):
 
 	funddf = funddf.dropna()
@@ -227,6 +227,7 @@ def portfolio_value(funddf, ws):
 	return pvs, prs						
 	
 
+
 #利用blacklitterman做战略资产配置		
 def strategicallocation(delta,	weq, V, tau, P, Q):
 
@@ -242,10 +243,109 @@ def strategicallocation(delta,	weq, V, tau, P, Q):
 	return re
 
 
-#资产配置
-def asset_allocation(start_date, end_date, fund_tags, P, Q):
 
+def largesmallcapfunds(fund_tags):
+
+	largecap          =   fund_tags['largecap']
+	smallcap          =   fund_tags['smallcap']
+	risefitness       =   fund_tags['risefitness']			
+	declinefitness    =   fund_tags['declinefitness']			
+	oscillationfitness=   fund_tags['oscillationfitness']			
+	growthfitness     =   fund_tags['growthfitness']			
+	valuefitness      =   fund_tags['valuefitness']			
+
+
+	largecap_set      =   set(largecap)
+	smallcap_set      =   set(smallcap)
+
+	largecap_fund     =   []
+        smallcap_fund     =   []
 	
+	largecap_fund.append(largecap[0])
+	smallcap_fund.append(smallcap[0])
+
+
+	for code in risefitness:
+		if code in largecap_set:
+			largecap_fund.append(code)
+			break
+
+	for code in declinefitness:
+		if code in largecap_set:
+			largecap_fund.append(code)
+			break
+	
+
+	for code in oscillationfitness:
+		if code in largecap_set:
+			largecap_fund.append(code)
+			break
+
+	for code in growthfitness:
+		if code in largecap_set:
+			largecap_fund.append(code)
+			break
+
+	for code in valuefitness:
+		if code in largecap_set:
+			largecap_fund.append(code)
+			break
+
+
+	for code in risefitness:
+		if code in smallcap_set:
+			smallcap_fund.append(code)
+			break
+
+	for code in declinefitness:
+		if code in smallcap_set:
+			smallcap_fund.append(code)
+			break
+	
+
+	for code in oscillationfitness:
+		if code in smallcap_set:
+			smallcap_fund.append(code)
+			break
+
+	for code in growthfitness:
+		if code in smallcap_set:
+			smallcap_fund.append(code)
+			break
+
+	for code in valuefitness:
+		if code in smallcap_set:
+			smallcap_fund.append(code)
+			break
+
+
+	largecap_fund = list(set(largecap_fund))
+	smallcap_fund = list(set(smallcap_fund))
+
+	return largecap_fund, smallcap_fund
+
+
+#
+def boundlimit(n):
+
+	bounds = []
+
+	min_bound  = []
+	max_bound  = []				
+	for i in range(0, n):
+		min_bound.append(0.05)	
+		max_bound.append(0.4)
+
+	bounds.append(min_bound)
+	bounds.append(max_bound)
+
+	return bounds
+
+
+#资产配置
+def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
+#########################################################################	
+
 	delta = 2.5
 	tau = 0.05
 
@@ -293,36 +393,79 @@ def asset_allocation(start_date, end_date, fund_tags, P, Q):
 	for i in range(0, len(ws)):
 		ws[i] = 1.0 * ws[i] / sum		
 
-
 	#print er
 	indexws = ws
+	print indexws
+	#largecap_fund, smallcap_fund = largesmallcapfunds(fund_tags)
 
-
-	largecap          =   fund_tags['largecap']
-	smallcap          =   fund_tags['smallcap']
-	risefitness       =   fund_tags['risefitness']			
-	declinefitness    =   fund_tags['declinefitness']			
-	oscillafitness    =   fund_tags['risefitness']			
-	growthfitness     =   fund_tags['risefitness']			
-	valuefitness      =   fund_tags['risefitness']			
+	#print largecap_fund
+	#risk, returns, ws, sharp = markowitz(
+	#print smallcap_fund
 
 
 
-	print largecap	
-	print smallcap
+	funddf = data.fund_value(start_date, end_date)	
+
+	bounds = boundlimit(len(largecap_fund))
+	risk, returns, ws, sharp = markowitz(funddf[largecap_fund], bounds)
+
+	largecap_fund_w = {}
+	for i in range(0, len(largecap_fund)):
+		code = largecap_fund[i]
+		largecap_fund_w[code] = ws[i] * indexws[0]
+
+	
+	bounds = boundlimit(len(smallcap_fund))
+	risk, returns ,ws ,sharp = markowitz(funddf[smallcap_fund], bounds)
+
+	smallcap_fund_w = {}
+	for i in range(0, len(smallcap_fund)):
+		code = smallcap_fund[i]
+		smallcap_fund_w[code] = ws[i] * indexws[1]
+
+
+	'''	
+	#平均分配			
+	largecap_fund_w = {}
+	for code in largecap_fund:
+		largecap_fund_w[code] = 1.0 / len(largecap_fund) * indexws[0]
+
+	
+	smallcap_fund_w = {}
+	for code in smallcap_fund:
+		smallcap_fund_w[code] = 1.0 / len(smallcap_fund) * indexws[1]
+	'''
+
+	fundws = {}
+	for code in largecap_fund:
+		w = fundws.setdefault(code, 0)
+		fundws[code] = w + largecap_fund_w[code]	
+	for code in smallcap_fund:
+		w = fundws.setdefault(code, 0)
+		fundws[code] = w + smallcap_fund_w[code]	
+
+
+#######################################################################
+
+	#print largecap	
+	#print smallcap
 	#print risefitness
 	#print declinefitness
 	#print oscillafitness
 	#print growthfitness
 	#print valuefitness
-	print 
+	#print 
 
 
-	code_set = set()
-	tag_set  = set()
-
+	fund_codes = []
+	ws         = []		
+	for k, v in fundws.items():
+		fund_codes.append(k)
+		ws.append(v)
 
 	#for code in largecap:
-		
-	
-	return 0
+
+	return fund_codes, ws
+
+
+

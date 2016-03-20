@@ -15,7 +15,6 @@ from numpy import isnan
 from scipy import linalg
 
 
-
 #计算有效前沿
 def efficient_frontier(return_rate, bound):
 
@@ -83,8 +82,6 @@ def efficient_frontier(return_rate, bound):
 		return risks, returns, portfolios
 
 
-
-
 #计算有效前沿
 def efficient_frontier_index(return_rate):
 
@@ -115,6 +112,7 @@ def efficient_frontier_index(return_rate):
 
 
         return risks, returns, portfolios
+
 
 
 #计算有效前沿
@@ -247,6 +245,7 @@ def hm(portfolio, market, rf):
 	return clf.intercept_,  clf.coef_[0], clf.coef_[1]
 
 
+
 #value at risk
 def var(portfolio):
 	parray = np.array(portfolio)	
@@ -365,7 +364,13 @@ def black_litterman(delta, weq, sigma, tau, P, Q, Omega):
 	lmbda = np.dot(linalg.pinv(P).T,(w.T * (1 + tau) - weq).T)
 
 
-	return [er, w, lmbda]
+	ws = []
+	for v in w:
+		ws.append(v[0])
+	
+
+
+	return [er, ws, lmbda]
 
 
 

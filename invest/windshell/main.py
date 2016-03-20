@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+
 import numpy as np
 import string
 import sys
@@ -14,9 +15,12 @@ import fundindicator as fi
 import data
 import datetime
 from numpy import *
+import fund_evaluation as fe
+
 
 
 rf = const.rf
+
 
 
 def fundfilter(start_date, end_date):
@@ -79,73 +83,8 @@ def fundfilter(start_date, end_date):
 	return codes
 						
 
-'''
-#基金标签
-def largesmallcap(codes, start_date, end_date):
-
-
-	funddf = data.fund_value(start_date, end_date)
-	funddf = funddf[codes]
-
-
-	#大小盘适应度标签
-	capindexdf = data.index_value(start_date, end_date, ['399314.SZ', '399316.SZ'])		
-	largecaptag = st.largecaptag(funddf, capindexdf)
-	smallcaptag = st.smallcaptag(funddf, capindexdf)
-
-
-	return largecaptag, smallcaptag
-
-
-def portfolio_weight(train_start, train_end, index_codes ,largecaptag, smallcaptag):
-
-	
-	funddf = data.fund_value(train_start, train_end)
-
-	capindexdf = data.index_value(train_start, train_end, ['399314.SZ', '399316.SZ'])		
-
-	fund_rank = []
-
-	largesharp = {}
-	largecodes = []
-	smallsharp = {}
-	smallcodes = []
-
-
-	for k,v in largecaptag.items():
-		largesharp[k] = fin.sharp(v, rf)	
-
-	
-	for k,v in smallcaptag.items():
-		smallsharp[k] = fin.sharp(v, rf)	
-
-
-	x = largesharp
-        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-        sorted_largesharp = sorted_x
-	for k, v in sorted_largesharp:
-		largecodes.append(k)	
-
-
-	x = smallsharp
-        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-        sorted_smallsharp = sorted_x
-	for k, v in sorted_smallsharp:
-		smallcodes.append(k)	
-
-
-	fund_rank.append(largecodes)
-	fund_rank.append(smallcodes)
-
-
-	ws  = pf.portfolio(capindexdf, funddf,  fund_rank)		
-	
-	return ws
-'''
-
 
 if __name__ == '__main__':
-
 
 
 	train_start_date = ['2007-01-05', '2008-01-04', '2009-01-09', '2010-01-08', '2011-01-07', '2012-01-06']	
@@ -164,276 +103,232 @@ if __name__ == '__main__':
 	smallcapvalue_code       = '399377.SZ' #巨潮小盘价值
 
 
-	#for i in range(0 ,len(train_start_date)):
-	i = 5
-	#for i in range(3 ,4):
-
-
-
-	train_start = train_start_date[i]
-	train_end   = train_end_date[i]
-	test_start  = test_start_date[i]
-	test_end    = test_end_date[i]
-
-
-	#testdf = data.fund_value(test_start, test_end)
-
-	#print train_start, train_end		
-
-
-	codes                  =   fundfilter(train_start, train_end)			
-	
-	fund_codes, fund_tags  =   st.tagfunds(train_start, train_end, codes)
-
-	funddf                 =   data.fund_value(train_start, train_end)
-
-	trainfunddf            =   funddf[fund_codes]		
-
-	#print fund_tags
-
-	#bound = []
-	#bound.append([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
-	#bound.append([0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4])
-
-
-	risk, returns, ws, sharp = pf.markowitz(trainfunddf, None)
-
-
-	P = [[-1, 1]]	
-	Q = [[0.0005]]
-
-
-	pf.asset_allocation(train_start, train_end, fund_tags, P, Q)
-
-
-	#print risk
-	#print returns
-	#print sharp
-
-	#print ws
-	#print fund_codes
-
-
-
-	fundws = {}
-	for i in range(0, len(fund_codes)):
-		fundws[fund_codes[i]] = ws[i] 
-
 
 	fund_risk_control_date = {}
 	fund_risk_control_position = {}
 	portfolio_risk_control_date = None 
 	portfolio_risk_contorl_position = 1.0
 	portfolio_vs = []
-
-
-	#print fund_values		
-
-
-	funddf  = data.fund_value(train_start, test_end)
-	funddf  = funddf[fund_codes]
-	funddfr = funddf.pct_change()
-	funddfr = funddfr.dropna()
-
-
-	testfunddf    = data.fund_value(test_start, test_end)
-	testfunddf    = testfunddf[fund_codes]
-	testfunddfr   = testfunddf.pct_change()
-	testfunddfr   = testfunddfr.dropna()
-
-
-	dates = testfunddfr.index
-
-
-	his_pvs = []
-	his_fvs = {}
-	his_pvs.append(1)
-	for code in fundws.keys():
-		his_fvs[code] = [fundws[code]]	
-	
-
-	his_funddfr = data.fund_value(train_start, train_end).pct_change().dropna()
-	his_index = his_funddfr.index
-	for index in his_index:
-		pv = 0
-		for code in fund_codes:
-			r = his_funddfr.loc[index, code]
-			vs = his_fvs[code]
-			last_his_v = vs[len(vs) - 1]
-			vs.append(last_his_v * (1 + r))
-			pv = pv + last_his_v * (1 + r)	
-		his_pvs.append(pv)
-
-	#print his_pvs
-
-	
-	portfolio_vs = []
 	portfolio_vs.append(1)
 
 
-	fund_values = {}
-	for i in range(0, len(fund_codes)):
-		fund_values[fund_codes[i]] = [ws[i]]
+	#for i in range(0 ,len(train_start_date)):
 
 
-	for i in range(1, len(dates)):
+	for i in range(1 ,2):
 
 
-		indicator_end_date  = dates[i - 1]
-		current_date        = dates[i]
+		#####################################################
+		#训练和评测数据时间
+		train_start = train_start_date[i]
+		train_end   = train_end_date[i]
+		test_start  = test_start_date[i]
+		test_end    = test_end_date[i]
+		####################################################
 
 
-		historydf           = funddf[train_start : indicator_end_date]
-		his_max_semivariance= fi.fund_maxsemivariance(historydf)
-		his_weekly_return   = fi.fund_weekly_return(historydf)
-		his_month_return    = fi.fund_month_return(historydf)
+		###################################################
+		#评测数据
+		funddf        = data.fund_value(train_start, test_end)
+		codes         = funddf.columns
+		evaluationdf  = data.fund_value(test_start, test_end)
+		evaluationdf  = evaluationdf[codes]		
+		###################################################
 
 
-		currentdf             = funddf[train_start : dates[i]]
-		current_semivariance  = fi.fund_semivariance(currentdf)
-
-		current_weekly_return = {}
-		for code in fund_codes:
-			current_weekly_return[code] = funddfr.loc[current_date, code]
-		current_month_return = {}	
+		####################################################################
+		#筛选基金池，基金打标签
+		codes                  =   fundfilter(train_start, train_end)			
+		fund_codes, fund_tags  =   st.tagfunds(train_start, train_end, codes)
+		####################################################################
 
 
-		for code in currentdf.columns:
-			vs      = currentdf[code]
-			length  = len(vs)
-			current_month_return[code]  = vs[length - 1] /  vs[length - 5] - 1	
+		#####################################################################################
+		#blacklitterman 资产配置
+		P = [[-1, 1]]	
+		Q = [[0.001]]
 
-		#print 'his_max_semivariance' , his_max_semivariance
-		#print
-		#print 'his_weekly_return', his_weekly_return
-		#print
-		#print 'his_month_return', his_month_return 
-		#print
-		#print 'current_semivariance', current_semivariance
-		#print
-		#print 'current_weekly_return', current_weekly_return
-		#print
-		#print 'current_month_return',current_month_return 		
-		#print
+		largecap_fund, smallcap_fund = pf.largesmallcapfunds(fund_tags)			
+		fund_codes, ws = pf.asset_allocation(train_start, train_end, largecap_fund, smallcap_fund, P, Q)
 
 
-		for code in fund_codes:
-			if not fund_risk_control_date.has_key(code):
-				fund_risk_control_position[code] = 1.0
-				continue
-			else:
-				date = fund_risk_control_date[code]
-				if current_date - date > datetime.timedelta(days=30):
-					fund_risk_control_position[code] = 1.0
+		fundws = {}
+		for i in range(0, len(fund_codes)):
+			fundws[fund_codes[i]] = ws[i] 
+
+		print
+		print fundws
+		print
+		####################################################################################################	
 
 
-		for code in fund_codes:
-			fvs = fund_values[code]
-			lastv = fvs[len(fvs) - 1]
-			r   = funddfr.loc[current_date ,code]
-			#lastv = lastv * ( 1 + r )
-			lastv = lastv + lastv *  r * fund_risk_control_position[code]
-			fvs.append(lastv)
+		##################################################################################
+		#训练数据
+		funddf  = data.fund_value(train_start, test_end)
+		funddf  = funddf[fund_codes]
+		funddfr = funddf.pct_change()
+		funddfr = funddfr.dropna()
+
+		testfunddf    = data.fund_value(test_start, test_end)
+		testfunddf    = testfunddf[fund_codes]
+		testfunddfr   = testfunddf.pct_change()
+		testfunddfr   = testfunddfr.dropna()
+
+		dates = testfunddfr.index
+		#####################################################################################
 
 
-		pv = 0
-		for code in fund_codes:
-			fvs = fund_values[code]
-			lastv = fvs[len(fvs) - 1]
-			pv = pv + lastv
-		portfolio_vs.append(pv)
+		#########################################################################################
+		#组合的历史净值
+		his_pvs = []
+		his_fvs = {}
+		his_pvs.append(1)
+		for code in fundws.keys():
+			his_fvs[code] = [fundws[code]]	
+		
 
+		his_funddfr = data.fund_value(train_start, train_end).pct_change().dropna()
+		his_index = his_funddfr.index
+		for index in his_index:
+			pv = 0
+			for code in fund_codes:
+				r = his_funddfr.loc[index, code]
+				vs = his_fvs[code]
+				last_his_v = vs[len(vs) - 1]
+				vs.append(last_his_v * (1 + r))
+				pv = pv + last_his_v * (1 + r)	
+			his_pvs.append(pv)
+		#####################################################################################################
 
-		for code in his_max_semivariance:
-			if current_semivariance[code] > his_max_semivariance[code]:
-				#print 'semivariance', code, dates[i]			
-				fund_risk_control_date[code]          = current_date
-				fund_risk_control_position[code]      = 0.6	
 	
-		for code in current_weekly_return:
-			rs = his_weekly_return[code]
-			if current_weekly_return[code] <= rs[( int )( 0.15 * len(rs) )]:
-				#print 'weekly_return', code, dates[i], current_weekly_return[code], rs[( int )( 0.15 * len(rs) )]		
-				fund_risk_control_date[code]          = current_date
-				fund_risk_control_position[code]      = 0.6					
-			if current_weekly_return[code] <= rs[( int )( 0.05 * len(rs) )]:
-				#print 'weekly_return', code, dates[i], current_weekly_return[code], rs[( int )( 0.15 * len(rs) )]		
-				fund_risk_control_date[code]          = current_date
-				fund_risk_control_position[code]      = 0.2
+		#######################################################################################################	
+		#组合的初始净值	
+		portfolio_date_vs = {}
 
-		#p_maxdrawdown = fi.portfolio_maxdrawdown(pvs)
+		fund_values = {}
+		for i in range(0, len(fund_codes)):
+			fund_values[fund_codes[i]] = [ws[i]]
+		#######################################################################################################	
 
-
-		#print current_date, fund_risk_control_position
-		#print 
+		n = 0		
+		for i in range(1, len(dates)):
 
 
-		'''
-		print current_date, fund_risk_control_position
+			indicator_end_date  = dates[i - 1]
+			current_date        = dates[i]
+
+
+			#################################################################################	
+			#风控后基金仓位静默30天，大于30天后全仓
+			for code in fund_codes:
+				if not fund_risk_control_date.has_key(code):
+					fund_risk_control_position[code] = 1.0
+					continue
+				else:
+					date = fund_risk_control_date[code]
+					if current_date - date > datetime.timedelta(days=30):
+						fund_risk_control_position[code] = 1.0
+			###############################################################################
+
+
+			######################################################################################
+			#计算净值
+			for code in fund_codes:
+				fvs = fund_values[code]
+				lastv = fvs[len(fvs) - 1]
+				r   = funddfr.loc[current_date ,code]
+				#lastv = lastv * ( 1 + r )
+				lastv = lastv + lastv *  r * fund_risk_control_position[code]
+				fvs.append(lastv)
+
+			pv = 0
+			for code in fund_codes:
+				fvs = fund_values[code]
+				lastv = fvs[len(fvs) - 1]
+				pv = pv + lastv
+			portfolio_vs.append(pv)
+
+			portfolio_date_vs[current_date] = pv
+			#########################################################################################
+
+
+			##########################################################################################
+			#风控
+			historydf           = funddf[train_start : indicator_end_date]
+			his_max_semivariance= fi.fund_maxsemivariance(historydf)
+			his_weekly_return   = fi.fund_weekly_return(historydf)
+			his_month_return    = fi.fund_month_return(historydf)
+
+
+			currentdf             = funddf[train_start : dates[i]]
+			current_semivariance  = fi.fund_semivariance(currentdf)
+
+			current_weekly_return = {}
+			for code in fund_codes:
+				current_weekly_return[code] = funddfr.loc[current_date, code]
+			current_month_return = {}	
+
+
+			for code in currentdf.columns:
+				vs      = currentdf[code]
+				length  = len(vs)
+				current_month_return[code]  = vs[length - 1] /  vs[length - 5] - 1	
+
+			
+			for code in his_max_semivariance:
+				if current_semivariance[code] > his_max_semivariance[code]:
+					#print 'semivariance', code, dates[i]			
+					fund_risk_control_date[code]          = current_date
+					fund_risk_control_position[code]      = 0.6	
+		
+			for code in current_weekly_return:
+				rs = his_weekly_return[code]
+				if current_weekly_return[code] <= rs[( int )( 0.15 * len(rs) )]:
+					#print 'weekly_return', code, dates[i], current_weekly_return[code], rs[( int )( 0.15 * len(rs) )]		
+					fund_risk_control_date[code]          = current_date
+					fund_risk_control_position[code]      = 0.6					
+				if current_weekly_return[code] <= rs[( int )( 0.05 * len(rs) )]:
+					#print 'weekly_return', code, dates[i], current_weekly_return[code], rs[( int )( 0.15 * len(rs) )]		
+					fund_risk_control_date[code]          = current_date
+					fund_risk_control_position[code]      = 0.2
+
+			#p_maxdrawdown = fi.portfolio_maxdrawdown(pvs)
+			##############################################################################
+
+
+			#print current_date, fund_risk_control_position
+			#print 
+
+
+			##############################################################################################
+			#资产每12个周再平衡
+			n = n + 1
+			if n % 13 == 0:
+				fund_codes, ws = pf.asset_allocation(train_start, indicator_end_date.strftime('%Y-%m-%d'), largecap_fund, smallcap_fund, P, Q)
+				fundws = {}
+				for i in range(0, len(fund_codes)):
+					fundws[fund_codes[i]] = ws[i] 
+
+
+				portfolio_v = portfolio_vs[-1]
+				for code in fundws:
+					fvs = fund_values[code]
+					fvs.append(portfolio_v * fundws[code])
+					fund_values[code] = fvs					
+			##############################################################################################
+
+
+		#print portfolio_vs
+
+
+		print 	
+		portfolio_dates = portfolio_date_vs.keys()
+		portfolio_dates.sort()
+		for date in portfolio_dates:
+			print date, portfolio_date_vs[date]
+
+		
 		print 
-
-		for code in fund_codes:
-			fvs = fund_values[code]
-			lastv = fvs[len(fvs) - 1]
-			r   = funddfr.loc[current_date ,code]
-			#lastv = lastv * ( 1 + r )
-			lastv = lastv + lastv *  r * fund_risk_control_position[code]
-			fvs.append(lastv)
-
-
-		pv = 0
-		for code in fund_codes:
-			fvs = fund_values[code]
-			lastv = fvs[len(fvs) - 1]
-			pv = pv + lastv
-		portfolio_vs.append(pv)
-		'''
-
-	print portfolio_vs
-
-
-		#for code in current_month_return:
-		#	rs = his_month_return[code]
-		#	if current_month_return[code] <= rs[( int )( 0.05 * len(rs) )]:
-		#		print 'month_return', code, dates[i], current_month_return[code], rs[( int )( 0.05 * len(rs) )]	
-
-
-		#for code in fund_codes:
-				
-		#if i % 13 == 0:
-		#	risk, returns, ws, sharp = pf.markowitz(funddf[train_start : indicator_end_date])
-										
-		#print historydfr 
-		#end_date = dates[i]
-		#print end_date								
-
-
-	'''	
-	largecaptag, smallcaptag = largesmallcap(codes, train_start, train_end)
-
-	ws = portfolio_weight(train_start, train_end, ['399314.SZ', '399316.SZ'], largecaptag, smallcaptag)
-
-
-	#print ws	
-
-	pvs, prs = pf.portfolio_value(testdf, ws)
-
-	print train_start, train_end
-	print test_start
-	print ws
-
-	#print pvs
-	print 'sharp : ', fi.portfolio_sharp(prs), 'return : ', fi.portfolio_return(prs), 'risk : ', fi.portfolio_risk(prs)		
-
-	fundsharp = fi.fund_sharp(testdf)
-	fundreturn = fi.fund_return(testdf)
-	fundrisk   = fi.fund_risk(testdf)
-
-	print 'middle sharp : ', fundsharp[len(fundsharp) / 2][1], 'middle return : ' , fundreturn[len(fundreturn) / 2][1], 'middle risk : ' ,  fundrisk[len(fundrisk) / 2][1]
-	#print largecaptag
-	#print smallcaptag
-	#print codes 
-
-	'''
+		fe.evaluation(evaluationdf, portfolio_vs)
 
 

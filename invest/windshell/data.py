@@ -17,6 +17,7 @@ import numpy as np
 #基金和指数数据抽取和对齐
 def fund_index_data(start_date, end_date, index_code):
 
+
 	#取开始时间和结束时间的数据	
 	df = pd.read_csv('./wind/fund_value.csv', index_col = 'date', parse_dates = [0] )
 	df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
@@ -118,18 +119,21 @@ def index_value(start_date, end_date, index_code):
 
 
 def establish_data():
+
 	indicator_df = pd.read_csv('./wind/fund_establish_date.csv', index_col = 'code', parse_dates = [1])	
 	return indicator_df
 
 
 
 def scale_data():
+
 	indicator_df = pd.read_csv('./wind/fund_scale.csv', index_col = 'code')	
 	return indicator_df
 
 
 
 def stock_fund_code():
+
 	funddf = pd.read_csv('./wind/stock_fund_code.csv', index_col = 'code')	
 	codes = []
 	for code in funddf.index:
@@ -139,6 +143,7 @@ def stock_fund_code():
 
 
 def fund_position(start_date, end_date):
+
 
 	positiondf = pd.read_csv('./wind/fund_position.csv', index_col = 'date' , parse_dates = [0])	
 	positiondf = positiondf[ positiondf.index <= datetime.strptime(end_date,'%Y-%m-%d')]
@@ -174,7 +179,5 @@ if __name__ == '__main__':
 	#print fund_scale.values
 	#print stock_fund_code()
 	print fund_position('2011-01-02','2012-12-31')
-
-
 
 
