@@ -64,7 +64,6 @@ def fund_index_data(start_date, end_date, index_code):
 	return fund_df, index_df
 
 
-
 def fund_value(start_date, end_date):
 
 	

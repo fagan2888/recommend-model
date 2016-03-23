@@ -1,7 +1,6 @@
 #coding=utf8
 
 
-
 import numpy as np
 import string
 import sys
@@ -16,6 +15,7 @@ import data
 import datetime
 from numpy import *
 import fund_evaluation as fe
+import pandas as pd
 
 
 
@@ -46,9 +46,51 @@ def fundfilter(start_date, end_date):
 	ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 0.5)
 	#print ppw_data
 
-	#按照业绩持续性过滤
 	stability_data = sf.stabilityfilter(funddf, 2.0 / 3)
 	#print stability_data
+
+
+	'''
+	jensen_dict = {}
+	for k,v in jensen_data:
+		jensen_dict[k] = v
+					
+				
+	sortino_dict = {}
+	for k,v in sortino_data:
+		sortino_dict[k] = v
+	
+	ppw_dict = {}
+	for k,v in ppw_data:
+		ppw_dict[k] = v
+
+	stability_dict = {}
+	for k,v in stability_data:
+		stability_dict[k] = v
+
+	codes = list(jensen_dict.keys())
+	codes.sort()
+
+
+	jensen_array = []
+	sortino_array = []
+	ppw_array = []
+	stability_array = []
+
+	for code in codes:
+		jensen_array.append(jensen_dict[code] if jensen_dict.has_key(code) else 0)
+		sortino_array.append(sortino_dict[code] if sortino_dict.has_key(code) else 0)
+		ppw_array.append(ppw_dict[code] if ppw_dict.has_key(code) else 0)
+		stability_array.append(stability_dict[code] if stability_dict.has_key(code) else 0)
+
+
+	indicators = {'code':codes, 'jensen':jensen_array, 'sortino':sortino_array, 'ppw':ppw_array,'stability':stability_array}	
+
+	frame = pd.DataFrame(indicators)			
+
+	frame.to_csv('./wind/fund_indicator.csv')
+	'''
+
 
 	scale_set = set()
 	for k, v in scale_data:
@@ -79,10 +121,20 @@ def fundfilter(start_date, end_date):
 	for code in scale_set:
 		if (code in setuptime_set) and (code in jensen_set) and (code in sortino_set) and (code in ppw_set) and (code in stability_set):
 			codes.append(code)
-	
-	return codes
-						
 
+				
+	#按照业绩持续性过滤
+	#stability_data = sf.stabilityfilter(funddf[codes], 2.0 / 3)
+	#print stability_data
+
+	#codes = []	
+	#for k, v in stability_data:
+	#	codes.append(k)	
+
+
+	return codes
+
+						
 
 if __name__ == '__main__':
 
@@ -103,7 +155,6 @@ if __name__ == '__main__':
 	smallcapvalue_code       = '399377.SZ' #巨潮小盘价值
 
 
-
 	fund_risk_control_date = {}
 	fund_risk_control_position = {}
 	portfolio_risk_control_date = None 
@@ -114,9 +165,7 @@ if __name__ == '__main__':
 
 	#for i in range(0 ,len(train_start_date)):
 
-
-	for i in range(1 ,2):
-
+	for i in range(0 ,1):
 
 		#####################################################
 		#训练和评测数据时间
@@ -146,16 +195,22 @@ if __name__ == '__main__':
 		#####################################################################################
 		#blacklitterman 资产配置
 		P = [[-1, 1]]	
-		Q = [[0.001]]
+		Q = [[0.0005]]
 
 		largecap_fund, smallcap_fund = pf.largesmallcapfunds(fund_tags)			
 		fund_codes, ws = pf.asset_allocation(train_start, train_end, largecap_fund, smallcap_fund, P, Q)
+
+
+		#allocationfunddf  = data.fund_value(train_start, train_end)
+		#bounds  = pf.boundlimit(len(fund_codes))
+		#risk, returns ,ws ,sharp = pf.markowitz(allocationfunddf[fund_codes], bounds)
 
 
 		fundws = {}
 		for i in range(0, len(fund_codes)):
 			fundws[fund_codes[i]] = ws[i] 
 
+	
 		print
 		print fundws
 		print
@@ -202,34 +257,23 @@ if __name__ == '__main__':
 
 	
 		#######################################################################################################	
-		#组合的初始净值	
+		#组合的初始净值和每只基金初始仓位
 		portfolio_date_vs = {}
 
 		fund_values = {}
 		for i in range(0, len(fund_codes)):
 			fund_values[fund_codes[i]] = [ws[i]]
+
+		for code in fund_codes:
+			fund_risk_control_position[code] = 1.0
+			fund_risk_control_date[code]     = dates[1]
 		#######################################################################################################	
 
-		n = 0		
 		for i in range(1, len(dates)):
 
 
 			indicator_end_date  = dates[i - 1]
 			current_date        = dates[i]
-
-
-			#################################################################################	
-			#风控后基金仓位静默30天，大于30天后全仓
-			for code in fund_codes:
-				if not fund_risk_control_date.has_key(code):
-					fund_risk_control_position[code] = 1.0
-					continue
-				else:
-					date = fund_risk_control_date[code]
-					if current_date - date > datetime.timedelta(days=30):
-						fund_risk_control_position[code] = 1.0
-			###############################################################################
-
 
 			######################################################################################
 			#计算净值
@@ -249,7 +293,17 @@ if __name__ == '__main__':
 			portfolio_vs.append(pv)
 
 			portfolio_date_vs[current_date] = pv
+			#print current_date, pv
 			#########################################################################################
+
+
+			#################################################################################	
+			#风控后基金仓位静默30天，大于30天后全仓
+			for code in fund_codes:
+				date = fund_risk_control_date[code]
+				if current_date - date > datetime.timedelta(days=30):
+					fund_risk_control_position[code] = 1.0
+			###############################################################################
 
 
 			##########################################################################################
@@ -301,15 +355,21 @@ if __name__ == '__main__':
 
 
 			##############################################################################################
-			#资产每12个周再平衡
-			n = n + 1
-			if n % 13 == 0:
+
+			#资产每13个周再平衡
+			if i % 13 == 0:
+
+				#allocationfunddf = data.fund_value(train_start, indicator_end_date.strftime('%Y-%m-%d'))
+				#bounds  = pf.boundlimit(len(fund_codes))
+				#risk, returns ,ws ,sharp = pf.markowitz(allocationfunddf[fund_codes], bounds)
+
 				fund_codes, ws = pf.asset_allocation(train_start, indicator_end_date.strftime('%Y-%m-%d'), largecap_fund, smallcap_fund, P, Q)
 				fundws = {}
 				for i in range(0, len(fund_codes)):
 					fundws[fund_codes[i]] = ws[i] 
 
 
+				print current_date, fundws
 				portfolio_v = portfolio_vs[-1]
 				for code in fundws:
 					fvs = fund_values[code]
@@ -324,11 +384,23 @@ if __name__ == '__main__':
 		print 	
 		portfolio_dates = portfolio_date_vs.keys()
 		portfolio_dates.sort()
+
+
+		out_date = []
+		out_vs   = []	
 		for date in portfolio_dates:
 			print date, portfolio_date_vs[date]
+			out_date.append(date)
+			out_vs.append(portfolio_date_vs[date])
+
 
 		
+		out_df = pd.DataFrame({'date': out_date, 'value' : out_vs})	
+		out_df.to_csv('wind/values.csv')				
+
+
 		print 
 		fe.evaluation(evaluationdf, portfolio_vs)
+
 
 

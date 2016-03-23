@@ -1,7 +1,6 @@
 #coding=utf8
 
 
-
 import string
 import pandas as pd
 import numpy as np
@@ -32,9 +31,8 @@ for line in lines:
 	line = line.strip()
 	line = line.replace('-','')
 	line = line.replace('\'','')
-	print line
+	#print line
 
 
 f.close()
-
 

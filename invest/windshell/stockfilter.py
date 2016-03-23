@@ -165,12 +165,14 @@ def stabilityfilter(funddf, ratio):
 	funddf = funddf.iloc[tran_index]
 	funddfr = funddf.pct_change()
 
-	fundstab = {}
-	fundscore = {}
 	length = len(funddfr)
 
+	fundstab = {}
+	fundscore = {}
 
 	for i in range(1, length):
+
+
 		fr = {}	
 		for code in funddfr.columns:
 			r = funddfr[code].values[i]
@@ -217,9 +219,11 @@ def stabilityfilter(funddf, ratio):
 			if rank >= lastrank:
 				score.append(5)
 			else:
-				score.append(lastscore + (lastrank - rank))
-					
-			
+				score.append(lastscore - (lastrank - rank))
+		
+			stab.append(rank)	
+
+
 	final_fund_stability = {}
 	for k, v in fundscore.items():
 		final_fund_stability[k] = np.sum(v)
@@ -232,6 +236,7 @@ def stabilityfilter(funddf, ratio):
 
 	result = []
 	for i in range(0, (int)(len(sorted_stability) * ratio)):
+		#print sorted_stability[i]
 		result.append(sorted_stability[i])
 
 
