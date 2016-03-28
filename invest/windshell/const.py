@@ -14,3 +14,10 @@ smallcapgrowth_code      = '399376.SZ' #巨潮小盘成长
 smallcapvalue_code       = '399377.SZ' #巨潮小盘价值
 
 
+
+csibondindex_code         = 'H11001.CSI'  #中证全债指数
+ratebondindex_code        = 'H11001.CSI'  #中证国债指数
+credictbondindex_code     = 'H11073.CSI'  #中证信用债指数
+convertiblebondindex_code = '000832.SH'   #中证可转债指数
+
+

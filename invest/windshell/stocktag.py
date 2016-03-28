@@ -566,8 +566,8 @@ def smallcapprefer(funddf, indexdf, ratio):
         for i in range(0, (int)(len(sorted_smallcapprefer) * ratio)):
                 result.append(sorted_smallcapprefer[i])
 
-
         return result
+
 				
 
 def growthcapprefer(funddf, indexdf, ratio):
@@ -614,8 +614,6 @@ def growthcapprefer(funddf, indexdf, ratio):
 
         return result
 				
-
-
 
 
 def valuecapprefer(funddf, indexdf, ratio):
@@ -667,7 +665,176 @@ def valuecapprefer(funddf, indexdf, ratio):
 
 
         return result
-				
+
+	
+def ratebondprefer(funddf, indexdf, ratio):
+
+	ratebondprefer = {}
+	
+	funddfr = funddf.pct_change()
+        indexdfr = indexdf.pct_change()
+
+	#cols   = indexdfr.columns
+
+	indexr = indexdfr.values
+
+        cols = funddfr.columns
+        for col in cols:
+                p = []
+                m = []
+                rs = funddfr[col].values
+                #print col, rs
+                indexrs = indexdfr.values
+                for i in range(0, len(rs)):
+                        if isnan(rs[i]) or isnan(indexr[i]):
+                                continue
+                        else:
+                                p.append(rs[i])
+                                m.append(indexr[i])
+
+                #print p
+		#print m
+		#print np.corrcoef(p,m)
+                ratebondprefer[col] = np.corrcoef(p, m)[0][1]
+
+
+        x = ratebondprefer
+        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+        sorted_ratebondprefer = sorted_x
+
+
+        result = []
+        for i in range(0, (int)(len(sorted_ratebondprefer) * ratio)):
+                result.append(sorted_ratebondprefer[i])
+
+        return result
+
+
+def creditbondprefer(funddf, indexdf, ratio):
+
+	creditbondprefer = {}
+	
+	funddfr = funddf.pct_change()
+        indexdfr = indexdf.pct_change()
+
+	#cols   = indexdfr.columns
+
+	indexr = indexdfr.values
+
+        cols = funddfr.columns
+        for col in cols:
+                p = []
+                m = []
+                rs = funddfr[col].values
+                #print col, rs
+                indexrs = indexdfr.values
+                for i in range(0, len(rs)):
+                        if isnan(rs[i]) or isnan(indexr[i]):
+                                continue
+                        else:
+                                p.append(rs[i])
+                                m.append(indexr[i])
+
+                #print p
+		#print m
+		#print np.corrcoef(p,m)
+                creditbondprefer[col] = np.corrcoef(p, m)[0][1]
+
+
+        x = creditbondprefer
+        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+        sorted_creditbondprefer = sorted_x
+
+        result = []
+        for i in range(0, (int)(len(sorted_creditbondprefer) * ratio)):
+                result.append(sorted_creditbondprefer[i])
+
+        return result
+
+
+def creditbondprefer(funddf, indexdf, ratio):
+
+	creditbondprefer = {}
+	
+	funddfr = funddf.pct_change()
+        indexdfr = indexdf.pct_change()
+
+	#cols   = indexdfr.columns
+
+	indexr = indexdfr.values
+
+        cols = funddfr.columns
+        for col in cols:
+                p = []
+                m = []
+                rs = funddfr[col].values
+                #print col, rs
+                indexrs = indexdfr.values
+                for i in range(0, len(rs)):
+                        if isnan(rs[i]) or isnan(indexr[i]):
+                                continue
+                        else:
+                                p.append(rs[i])
+                                m.append(indexr[i])
+
+                #print p
+		#print m
+		#print np.corrcoef(p,m)
+                creditbondprefer[col] = np.corrcoef(p, m)[0][1]
+
+
+        x = creditbondprefer
+        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+        sorted_creditbondprefer = sorted_x
+
+        result = []
+        for i in range(0, (int)(len(sorted_creditbondprefer) * ratio)):
+                result.append(sorted_creditbondprefer[i])
+
+        return result
+
+
+
+def convertiblebondprefer(funddf, indexdf, ratio):
+
+	convertiblebondprefer = {}
+	
+	funddfr = funddf.pct_change()
+        indexdfr = indexdf.pct_change()
+
+	#cols   = indexdfr.columns
+
+	indexr = indexdfr.values
+
+        cols = funddfr.columns
+        for col in cols:
+                p = []
+                m = []
+                rs = funddfr[col].values
+                #print col, rs
+                indexrs = indexdfr.values
+                for i in range(0, len(rs)):
+                        if isnan(rs[i]) or isnan(indexr[i]):
+                                continue
+                        else:
+                                p.append(rs[i])
+                                m.append(indexr[i])
+
+                #print p
+		#print m
+		#print np.corrcoef(p,m)
+                convertiblebondprefer[col] = np.corrcoef(p, m)[0][1]
+
+        x = convertiblebondprefer
+        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+        sorted_convertiblebondprefer = sorted_x
+
+        result = []
+        for i in range(0, (int)(len(sorted_convertiblebondprefer) * ratio)):
+                result.append(sorted_convertiblebondprefer[i])
+
+        return result
+
 
 #treynor-mazuy测度
 def tmmeasure(funddf, indexdf):
@@ -1041,6 +1208,197 @@ def tagfunds(start_date, end_date, codes):
 
 
 
+def tagbonds(start_date, end_date, codes):
+
+
+	funddf = data.bond_value(start_date, end_date)
+        funddf = funddf[codes]
+
+
+	csibondindexdf              = data.bond_index_value(start_date, end_date, const.csibondindex_code)
+	ratebondindexdf             = data.bond_index_value(start_date, end_date, const.ratebondindex_code)	
+
+	creditbondindexdf           = data.bond_index_value(start_date, end_date, const.credictbondindex_code)
+	convertiblebondindexdf      = data.bond_index_value(start_date, end_date, const.convertiblebondindex_code)
+
+	risefitness_result          =  risefitness(funddf, csibondindexdf, 0.5)	
+	declinefitness_result       =  declinefitness(funddf, csibondindexdf, 0.5)
+	oscillationfitness_result   =  oscillationfitness(funddf, csibondindexdf, 0.5)	
+	ratebondprefer_result       =  ratebondprefer(funddf, ratebondindexdf,0.5) 
+	creditbondprefer_result     =  creditbondprefer(funddf, creditbondindexdf, 0.5)
+	convertiblebondprefer_result=  convertiblebondprefer(funddf, convertiblebondindexdf, 0.5)
+
+
+        #print 'rise'
+        risefitness_set = set()
+        for k,v in risefitness_result:
+                risefitness_set.add(k)
+                #print k, v
+
+        #print
+        declinefitness_set = set()
+        #print 'decline'
+        for k,v in declinefitness_result:
+                declinefitness_set.add(k)
+                #print k, v
+
+        #print
+
+        #print 'oscillation'
+        oscillationfitness_set = set()
+        for k,v in oscillationfitness_result:
+                oscillationfitness_set.add(k)
+                #print k, v
+        #print
+
+
+        #print 'ratebondprefer'
+        ratebondprefer_set = set()
+        for k,v in ratebondprefer_result:
+                ratebondprefer_set.add(k)
+
+        #print 'ratebondprefer'
+        creditbondprefer_set = set()
+        for k,v in creditbondprefer_result:
+                creditbondprefer_set.add(k)
+
+
+        convertiblebondprefer_set = set()
+        for k,v in convertiblebondprefer_result:
+                convertiblebondprefer_set.add(k)
+
+	#print risefitness_set
+	#print declinefitness_set
+	#print oscillationfitness_set
+	#print creditbondprefer_set
+	#print convertiblebondprefer_set
+
+	final_codes = set()
+
+	for code in risefitness_set:
+		final_codes.add(code)
+
+	for code in declinefitness_set:
+        	final_codes.add(code)		
+
+	for code in oscillationfitness_set:
+        	final_codes.add(code)
+
+	for code in ratebondprefer_set:
+		final_codes.add(code)
+
+	for code in creditbondprefer_set:
+		final_codes.add(code)
+
+	for code in convertiblebondprefer_set:
+		final_codes.add(code)
+
+	fund_tags = {}
+	funds     = set()
+
+	#print 'rise'
+        codes = []
+        for code in risefitness_set:
+                if code in final_codes and (not code in funds):
+                        codes.append(code)
+
+        risefitness_df = funddf[codes]
+        sharps = fi.fund_sharp(risefitness_df)
+        #print sharps
+        tmp = []
+        for item in sharps:
+                tmp.append(item[0])
+        fund_tags['risefitness'] = tmp
+
+	if len(sharps) > 0:
+        	funds.add(sharps[0][0])
+
+
+        #print 'decline'
+        codes = []
+        for code in declinefitness_set:
+                if code in final_codes and (not code in funds):
+                        codes.append(code)
+
+        declinefitness_df = funddf[codes]
+        sharps = fi.fund_sharp(declinefitness_df)
+        #print sharps
+        tmp = []
+        for item in sharps:
+                tmp.append(item[0])
+        fund_tags['declinefitness'] = tmp
+	if len(sharps) > 0:
+        	funds.add(sharps[0][0])
+
+
+	#print 'oscillation'
+        codes = []
+        for code in oscillationfitness_set:
+                if code in final_codes and (not code in funds):
+                        codes.append(code)
+
+        oscillationfitness_df = funddf[codes]
+        sharps = fi.fund_sharp(oscillationfitness_df)
+        #print sharps
+        tmp = []
+        for item in sharps:
+                tmp.append(item[0])
+        fund_tags['oscillationfitness'] = tmp
+	if len(sharps) > 0:
+        	funds.add(sharps[0][0])
+
+
+	#print 'ratebondprefer'
+        codes = []
+        for code in ratebondprefer_set:
+                if code in final_codes and (not code in funds):
+                        codes.append(code)
+
+        ratebondprefer_df = funddf[codes]
+        sharps = fi.fund_sharp(ratebondprefer_df)
+        #print sharps
+        tmp = []
+        for item in sharps:
+                tmp.append(item[0])
+        fund_tags['ratebondprefer'] = tmp
+	if len(sharps) > 0:
+        	funds.add(sharps[0][0])
+
+
+	#print 'creditbondprefer'
+        codes = []
+        for code in creditbondprefer_set:
+                if code in final_codes and (not code in funds):
+                        codes.append(code)
+
+        creditbondprefer_df = funddf[codes]
+        sharps = fi.fund_sharp(creditbondprefer_df)
+        #print sharps
+        tmp = []
+        for item in sharps:
+                tmp.append(item[0])
+        fund_tags['creditbondprefer'] = tmp
+	if len(sharps) > 0:
+        	funds.add(sharps[0][0])
+
+
+	#print 'creditbondprefer'
+        codes = []
+        for code in convertiblebondprefer_set:
+                if code in final_codes and (not code in funds):
+                        codes.append(code)
+
+        convertiblebondprefer_df = funddf[codes]
+        sharps = fi.fund_sharp(convertiblebondprefer_df)
+        #print sharps
+        tmp = []
+        for item in sharps:
+                tmp.append(item[0])
+        fund_tags['convertiblebondprefer'] = tmp
+	if len(sharps) > 0:
+        	funds.add(sharps[0][0])
+
+	return list(funds), fund_tags
 
 
 if __name__ == '__main__':
@@ -1049,15 +1407,13 @@ if __name__ == '__main__':
 	train_start = '2010-01-01'	
 	train_end   = '2012-12-31'
 
-
 	codes       =   main.fundfilter(train_start, train_end)		
 	#print codes
 
-	
 	fund_codes  =   tagfunds(train_start, train_end, codes)
 
-	
 	print fund_codes
+
 	#risk, returns, ws, sharp = pf.markowitz() 			
 
 
@@ -1336,4 +1692,5 @@ if __name__ == '__main__':
 	print funds
 
 	'''
+
 

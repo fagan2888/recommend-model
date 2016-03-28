@@ -16,14 +16,20 @@ from datetime import datetime
 def fundsetuptimefilter(codes, start_date, indicator_df):
 
         establish_date_code = set()
+
         for code in indicator_df.index:
+
                 date = indicator_df['establish_date'][code]
+
                 if date <= datetime.strptime(start_date, '%Y-%m-%d'):
                         establish_date_code.add(code)
 
 	final_codes = []
+
 	for code in codes:
+
 		if code in establish_date_code:
+
 			final_codes.append(code)
 
 	return final_codes	
@@ -65,7 +71,6 @@ def jensenfilter(funddf, indexdf, rf, ratio):
 
 	return result			
 									
-
 
 
 

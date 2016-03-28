@@ -72,8 +72,49 @@ def fund_value(start_date, end_date):
 	df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
 	df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
 
+
 	#取基金成立时间指标
 	indicator_df = pd.read_csv('./wind/fund_establish_date.csv', index_col = 'code', parse_dates = [1])
+	establish_date_code = set()
+	for code in indicator_df.index:
+		date = indicator_df['establish_date'][code]		
+		if date <= datetime.strptime(start_date, '%Y-%m-%d'):
+			establish_date_code.add(code)
+
+
+	cols = df.columns
+	fund_cols = []
+	for col in cols:
+
+		#有20%的净值是nan，则过滤掉该基金
+		vs = df[col].values	
+		n = 0
+		for v in vs:
+			if isnan(v):
+				n = n + 1	
+		if n > 0.2 * len(vs):
+			continue
+
+		if col.find('OF') >= 0 and col in establish_date_code:
+			fund_cols.append(col)
+
+
+	fund_df = df[fund_cols]
+
+	return fund_df
+
+
+def bond_value(start_date, end_date):
+
+	
+	#取开始时间和结束时间的数据	
+	df = pd.read_csv('./wind/bound_value.csv', index_col = 'date', parse_dates = [0])
+	df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
+	df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
+
+
+	#取基金成立时间指标
+	indicator_df = pd.read_csv('./wind/bound_establish_date.csv', index_col = 'code', parse_dates = [1])
 	establish_date_code = set()
 	for code in indicator_df.index:
 		date = indicator_df['establish_date'][code]		
@@ -116,12 +157,30 @@ def index_value(start_date, end_date, index_code):
 	return index_df
 
 
+def bond_index_value(start_date, end_date, index_code):
+	
+	#取开始时间和结束时间的数据	
+	df = pd.read_csv('./wind/bound_value.csv', index_col = 'date', parse_dates = [0] )
+	df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
+	df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
+
+	index_df = df[index_code]
+
+	return index_df
+
+
 
 def establish_data():
 
 	indicator_df = pd.read_csv('./wind/fund_establish_date.csv', index_col = 'code', parse_dates = [1])	
 	return indicator_df
 
+
+
+def bond_establish_data():
+
+	indicator_df = pd.read_csv('./wind/bound_establish_date.csv', index_col = 'code', parse_dates = [1])	
+	return indicator_df
 
 
 def scale_data():
@@ -166,7 +225,6 @@ def fund_position(start_date, end_date):
 
 	positiondf = positiondf[codes]										
 	return positiondf	
-
 
 
 if __name__ == '__main__':
