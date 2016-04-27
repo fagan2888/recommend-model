@@ -395,7 +395,7 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
 
 	#print er
 	indexws = ws
-	print indexws
+	#print indexws
 	#largecap_fund, smallcap_fund = largesmallcapfunds(fund_tags)
 
 	#print largecap_fund

@@ -910,6 +910,12 @@ def tagfunds(start_date, end_date, codes):
 
 
 	positiondf         = data.fund_position(start_date, end_date)
+	columns            = set(positiondf.columns)
+	tmp_codes          = []
+	for code in codes:
+		if code in columns:
+			tmp_codes.append(code)
+	codes = tmp_codes		
 	positiondf         = positiondf[codes]
 
 
@@ -1090,6 +1096,7 @@ def tagfunds(start_date, end_date, codes):
 	fund_tags = {}
 
 
+
 	#print 'large'
 	codes = []
 	for code in largecapfitness_set:
@@ -1205,7 +1212,6 @@ def tagfunds(start_date, end_date, codes):
 
 	#print fund_tags
 	return list(funds), fund_tags
-
 
 
 def tagbonds(start_date, end_date, codes):

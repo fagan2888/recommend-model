@@ -14,6 +14,11 @@ import numpy as np
 
 
 
+def funds():
+	df = pd.read_csv('./wind/fund_value.csv', index_col = 'date', parse_dates = [0] )
+	return df
+
+
 #基金和指数数据抽取和对齐
 def fund_index_data(start_date, end_date, index_code):
 
@@ -68,9 +73,10 @@ def fund_value(start_date, end_date):
 
 	
 	#取开始时间和结束时间的数据	
-	df = pd.read_csv('./wind/fund_value.csv', index_col = 'date', parse_dates = [0])
+	df = pd.read_csv('./wind/fund_value.csv', index_col = 'date', parse_dates = 'date')
 	df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
 	df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
+
 
 
 	#取基金成立时间指标
@@ -100,7 +106,7 @@ def fund_value(start_date, end_date):
 
 
 	fund_df = df[fund_cols]
-
+	#funddf['163001.OF'].to_csv('./tmp/163001.csv')
 	return fund_df
 
 
@@ -226,15 +232,36 @@ def fund_position(start_date, end_date):
 	positiondf = positiondf[codes]										
 	return positiondf	
 
+#按照自适应滤波模型做基金买入和卖出点择时
+def buysell():
+	buy  = set()
+	sell = set()
+	f = open('./wind/glb.csv','r')
+	lines = f.readlines()
+	for line in lines:
+		vec = line.strip().split(',')
+		d = datetime.strptime(vec[0].strip(), '%Y/%m/%d')
+		if (string.atof(vec[1]) > 0.0):
+			buy.add(d)
+		elif(string.atof(vec[2]) > 0.0):
+			sell.add(d)
+	#print buy
+	#print sell
+	return buy, sell
+
 
 if __name__ == '__main__':
 	
-	fund_df, index_df = fund_index_data('2011-02-03', '2015-03-02', '000300.SH')
+	#fund_df, index_df = fund_index_data('2011-02-03', '2015-03-02', '000300.SH')
 	#print fund_df, index_df 
 	#print np.mean(index_df.pct_change())
 	#fund_scale =  scale_data()
 	#print fund_scale.values
 	#print stock_fund_code()
-	print fund_position('2011-01-02','2012-12-31')
+	#print fund_position('2011-01-02','2012-12-31')
+	fund, df = fund_index_data('2009-10-10','2016-04-22', ['000300.SH','000905.SH'])
+	df.to_csv('./tmp/index.csv')
+	#print df['000300.SH','000905.SH']
+	#buysell()
 
 

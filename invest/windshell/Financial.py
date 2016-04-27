@@ -208,6 +208,12 @@ def sharp(portfolio, rf):
 	return    (r - rf) / sigma
 
 
+#sharp
+def sharp_annual(portfolio, rf):
+	r         =    np.mean(portfolio) * 52
+	sigma     =    np.std(portfolio) * (52 ** 0.5)
+	rf        =    0.03
+	return    (r - rf) / sigma
 
 #索提诺比率
 def sortino(portfolio, rf):
@@ -261,7 +267,7 @@ def ppw(portfolio, benchmark):
 	#print 'p', portfolio
 	#print 'm', benchmark
 
-	
+	solvers.options['show_progress'] = False
 	length = len(benchmark)
 	A = []
 	b = []

@@ -1,7 +1,6 @@
 #coding=utf8
 
 
-
 import numpy as np
 import string
 import sys
@@ -12,7 +11,6 @@ import data
 from numpy import isnan
 from datetime import datetime
 import pandas as pd
-
 
 
 def fund_maxsemivariance(funddf):
@@ -144,6 +142,37 @@ def fund_sharp(funddf):
 
 
 	return result
+
+
+def fund_sharp_annual(funddf):
+
+	fundsharp = {}
+	
+	funddfr = funddf.pct_change().dropna()
+
+	codes = funddfr.columns
+
+	for code in codes:
+		rs = []	
+		for r in funddfr[code].values:
+			if not isnan(r):
+				rs.append(r)
+
+		fundsharp[code] = fin.sharp_annual(rs, const.rf)
+	
+
+	x = fundsharp
+        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+        sorted_sharp = sorted_x
+
+        result = []
+        for i in range(0, len(sorted_sharp)):
+                result.append(sorted_sharp[i])
+
+
+	return result
+
+
 
 
 

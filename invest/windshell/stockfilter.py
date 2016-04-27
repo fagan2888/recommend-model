@@ -1,6 +1,5 @@
 #coding=utf8
 
-
 import numpy as np
 import string
 import sys
@@ -9,8 +8,6 @@ import Financial as fin
 import data
 from numpy import *
 from datetime import datetime
-
-
 
 #按照基金成立时间过滤
 def fundsetuptimefilter(codes, start_date, indicator_df):
@@ -156,7 +153,6 @@ def ppwfilter(funddf, indexdf, rf, ratio):
 	return result			
 		
 
-
 #基金稳定性测度
 def stabilityfilter(funddf, ratio):
 
@@ -248,8 +244,6 @@ def stabilityfilter(funddf, ratio):
 	return result			
 		
 
-
-
 #按照规模过滤
 def scalefilter(ratio):
 
@@ -276,5 +270,3 @@ def scalefilter(ratio):
                 result.append(sorted_scale[i])
 
 	return result	
-
-

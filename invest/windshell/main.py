@@ -1,7 +1,6 @@
 #coding=utf8
 
 
-
 import numpy as np
 import string
 import sys
@@ -22,13 +21,12 @@ import pandas as pd
 rf = const.rf
 
 
-
 def fundfilter(start_date, end_date):
 
-
+			
 	funddf = data.fund_value(start_date, end_date)
+	#funddf['163001.OF'].to_csv('./tmp/163001.csv')
 	indexdf = data.index_value(start_date, end_date, '000300.SH')
-
 
 	#按照规模过滤
 	scale_data     = sf.scalefilter(2.0 / 3)	
@@ -47,27 +45,46 @@ def fundfilter(start_date, end_date):
 	#print ppw_data
 
 	stability_data = sf.stabilityfilter(funddf, 2.0 / 3)
+
+	sharpe_data    = fi.fund_sharp_annual(funddf)	
+	
 	#print stability_data
 
-
-	'''
+	#print 'jensen'
 	jensen_dict = {}
 	for k,v in jensen_data:
 		jensen_dict[k] = v
-					
+		#print k, v
+
+	#print 
+	#print 'sortino'			
 				
 	sortino_dict = {}
 	for k,v in sortino_data:
 		sortino_dict[k] = v
-	
+		#print k,v
+
+	#print 
+	#print 'ppw'	
 	ppw_dict = {}
 	for k,v in ppw_data:
 		ppw_dict[k] = v
+		#print k,v
 
+
+	#print 
+	#print 'statbility'
 	stability_dict = {}
 	for k,v in stability_data:
 		stability_dict[k] = v
+		#print k,v 
 
+		
+	sharpe_dict = {}
+	for k,v in sharpe_data:
+		sharpe_dict[k] = v
+
+	'''
 	codes = list(jensen_dict.keys())
 	codes.sort()
 
@@ -101,6 +118,8 @@ def fundfilter(start_date, end_date):
 	jensen_set = set()
 	for k, v in jensen_data:
 		jensen_set.add(k)
+	
+
 
 	sortino_set = set()
 	for k, v in sortino_data:
@@ -118,11 +137,23 @@ def fundfilter(start_date, end_date):
 
 	codes = []
 
+
 	for code in scale_set:
 		if (code in setuptime_set) and (code in jensen_set) and (code in sortino_set) and (code in ppw_set) and (code in stability_set):
 			codes.append(code)
 
-				
+
+	indicator_str = "%s,%f,%f,%f,%f,%f\n"
+	f = open('./tmp/indicator.csv','w')
+	f.write("code,sharpe,jensen,sortino,ppw,stability\n")
+	for code in codes:
+		f.write(indicator_str % (code, sharpe_dict[code],jensen_dict[code], sortino_dict[code], ppw_dict[code], stability_dict[code]))
+		#print code,jensen_dict[code], sortino_dict[code], ppw_dict[code], stability_dict[code]		
+
+	f.flush()	
+	f.close()
+
+
 	#按照业绩持续性过滤
 	#stability_data = sf.stabilityfilter(funddf[codes], 2.0 / 3)
 	#print stability_data
@@ -131,18 +162,17 @@ def fundfilter(start_date, end_date):
 	#for k, v in stability_data:
 	#	codes.append(k)	
 
-
 	return codes
 
-						
+
 
 if __name__ == '__main__':
 
 
-	train_start_date = ['2007-01-05', '2008-01-04', '2009-01-09', '2010-01-08', '2011-01-07', '2012-01-06']	
-	train_end_date   = ['2009-12-31', '2010-12-31', '2011-12-31', '2012-12-31', '2013-12-31', '2014-12-31']
-	test_start_date  = ['2010-01-08', '2011-01-07', '2012-01-06', '2013-01-04', '2014-01-03', '2015-01-09']
-	test_end_date    = ['2010-12-31', '2011-12-30', '2012-12-31', '2013-12-31', '2014-12-31', '2015-12-31']
+	train_start_date = ['2007-01-05', '2008-01-04', '2009-01-09', '2010-01-08', '2011-01-07', '2012-01-06', '2013-01-01', '2013-04-22','2011-02-21']	
+	train_end_date   = ['2009-12-31', '2010-12-31', '2011-12-31', '2012-12-31', '2013-12-31', '2014-12-31', '2016-03-01','2016-04-22','2014-02-21']
+	test_start_date  = ['2010-01-08', '2011-01-07', '2012-01-06', '2013-01-04', '2014-01-03', '2015-01-09', '2015-03-01','2016-01-01','2016-01-01']
+	test_end_date    = ['2010-12-31', '2011-12-30', '2012-12-31', '2013-12-31', '2014-12-31', '2015-12-31', '2016-03-01','2016-04-22','2016-04-22']
 
 
 	hs300_code               = '000300.SH' #沪深300
@@ -165,7 +195,8 @@ if __name__ == '__main__':
 
 	#for i in range(0 ,len(train_start_date)):
 
-	for i in range(0 ,1):
+
+	for i in range(8 ,9):
 
 		#####################################################
 		#训练和评测数据时间
@@ -189,6 +220,56 @@ if __name__ == '__main__':
 		#筛选基金池，基金打标签
 		codes                  =   fundfilter(train_start, train_end)			
 		fund_codes, fund_tags  =   st.tagfunds(train_start, train_end, codes)
+
+		#print fund_tags.keys()	
+
+		tags = {}
+		for key in fund_tags.keys():
+			cs = fund_tags[key]
+			for c in cs:
+				ts = tags.setdefault(c,[])
+				ts.append(key)
+
+		#print tags	
+		head = "code,rise,oscillation,decline,large,small,growth,value\n"
+		f = open('./tmp/tags.csv','w')
+		f.write(head)
+		for key in tags.keys():
+			tag_str = str(key) + ","
+			ts = tags[key]
+			ts = set(ts)
+			if 'risefitness' in ts:
+				tag_str = tag_str + '1,'	
+			else:
+				tag_str = tag_str + '0,'	
+			if 'oscillationfitness' in ts:
+				tag_str = tag_str + '1,'	
+			else:
+				tag_str = tag_str + '0,'	
+			if 'declinefitness' in ts:
+				tag_str = tag_str + '1,'	
+			else:
+				tag_str = tag_str + '0,'	
+			if 'largecap' in ts:
+				tag_str = tag_str + '1,'	
+			else:
+				tag_str = tag_str + '0,'	
+			if 'smallcap' in ts:
+				tag_str = tag_str + '1,'	
+			else:
+				tag_str = tag_str + '0,'	
+			if 'growthfitness' in ts:
+				tag_str = tag_str + '1,'	
+			else:
+				tag_str = tag_str + '0,'	
+			if 'valuefitness' in ts:
+				tag_str = tag_str + '1\n'	
+			else:
+				tag_str = tag_str + '0\n'	
+			f.write(tag_str)
+		f.flush()
+		f.close()
+		#print fund_codes
 		####################################################################
 
 
@@ -205,15 +286,15 @@ if __name__ == '__main__':
 		#bounds  = pf.boundlimit(len(fund_codes))
 		#risk, returns ,ws ,sharp = pf.markowitz(allocationfunddf[fund_codes], bounds)
 
-
 		fundws = {}
 		for i in range(0, len(fund_codes)):
 			fundws[fund_codes[i]] = ws[i] 
 
 	
 		print
-		print fundws
+		print train_end, fundws
 		print
+
 		####################################################################################################	
 
 
@@ -253,11 +334,12 @@ if __name__ == '__main__':
 				vs.append(last_his_v * (1 + r))
 				pv = pv + last_his_v * (1 + r)	
 			his_pvs.append(pv)
+
 		#####################################################################################################
 
-	
 		#######################################################################################################	
 		#组合的初始净值和每只基金初始仓位
+
 		portfolio_date_vs = {}
 
 		fund_values = {}
@@ -365,8 +447,8 @@ if __name__ == '__main__':
 
 				fund_codes, ws = pf.asset_allocation(train_start, indicator_end_date.strftime('%Y-%m-%d'), largecap_fund, smallcap_fund, P, Q)
 				fundws = {}
-				for i in range(0, len(fund_codes)):
-					fundws[fund_codes[i]] = ws[i] 
+				for n in range(0, len(fund_codes)):
+					fundws[fund_codes[n]] = ws[n] 
 
 
 				print current_date, fundws
@@ -377,9 +459,7 @@ if __name__ == '__main__':
 					fund_values[code] = fvs					
 			##############################################################################################
 
-
 		#print portfolio_vs
-
 
 		print 	
 		portfolio_dates = portfolio_date_vs.keys()
@@ -393,14 +473,11 @@ if __name__ == '__main__':
 			out_date.append(date)
 			out_vs.append(portfolio_date_vs[date])
 
-
 		
 		out_df = pd.DataFrame({'date': out_date, 'value' : out_vs})	
 		out_df.to_csv('wind/values.csv')				
 
-
 		print 
 		fe.evaluation(evaluationdf, portfolio_vs)
-
 
 
