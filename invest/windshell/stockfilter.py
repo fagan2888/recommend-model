@@ -112,6 +112,7 @@ def ppwfilter(funddf, indexdf, rf, ratio):
 
 	length = len(funddf.index)
 
+	'''	
 	tran_index = []
 	for i in range(0, length):
 		if i % 4 == 0:
@@ -122,7 +123,11 @@ def ppwfilter(funddf, indexdf, rf, ratio):
 
 	indexdf = indexdf.iloc[tran_index]	
 	indexdfr = indexdf.pct_change()
-	
+	'''
+
+	funddfr = funddf.pct_change()
+	indexdfr = indexdf.pct_change()
+
 	ppw = {}
 	cols = funddfr.columns
 	for col in cols:
@@ -144,6 +149,7 @@ def ppwfilter(funddf, indexdf, rf, ratio):
 	x = ppw
 	sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
 	sorted_ppw = sorted_x				
+
 
 	result = []
 	for i in range(0, (int)(len(sorted_ppw) * ratio)):

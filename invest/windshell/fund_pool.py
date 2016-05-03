@@ -18,6 +18,9 @@ import fund_evaluation as fe
 import pandas as pd
 
 
+from sklearn.cluster import KMeans
+
+
 rf = const.rf
 
 indicator = {}
@@ -26,6 +29,7 @@ def fundfilter(start_date, end_date):
 
 			
 	funddf = data.fund_value(start_date, end_date)
+	#print funddf
 	indexdf = data.index_value(start_date, end_date, '000300.SH')
 
 	#按照规模过滤
@@ -47,7 +51,8 @@ def fundfilter(start_date, end_date):
 	stability_data = sf.stabilityfilter(funddf, 2.0 / 3)
 
 	sharpe_data    = fi.fund_sharp(funddf)	
-	
+
+
 	#print stability_data
 
 	#print 'jensen'
@@ -120,7 +125,6 @@ def fundfilter(start_date, end_date):
 		jensen_set.add(k)
 	
 
-
 	sortino_set = set()
 	for k, v in sortino_data:
 		sortino_set.add(k)
@@ -142,8 +146,8 @@ def fundfilter(start_date, end_date):
 		if (code in setuptime_set) and (code in jensen_set) and (code in sortino_set) and (code in ppw_set) and (code in stability_set):
 			codes.append(code)
 
-
 	#indicator_str = "%s,%f,%f,%f,%f,%f\n"	
+
 	for code in codes:
 		inds = indicator.setdefault(code, [])
 		inds.append(code)
@@ -152,6 +156,10 @@ def fundfilter(start_date, end_date):
 		inds.append(sortino_dict[code])
 		inds.append(ppw_dict[code])
 		inds.append(stability_dict[code])
+		#inds.append(return_dict[code])
+		#inds.append(risk_dict[code])
+
+
 	#f = open('./tmp/indicator.csv','w')
 	#f.write("code,sharpe,jensen,sortino,ppw,stability\n")
 	#for code in codes:
@@ -206,16 +214,20 @@ if __name__ == '__main__':
 
 	all_codes = []
 
+
 	pool_vs = {}
 	fund_vs = {}
 	selected_fund_vs = {}			
 	allocation_vs    = {}
+	cluster_vs       = {}
 
 
 	fundws = {}
 	poolws = {}
 	selectedfundws = {}
 	allocationws   = {}
+	clusterws      = {}
+
 
 	funddf = data.funds()
 	funddfr = funddf.pct_change().fillna(0.0)
@@ -231,7 +243,9 @@ if __name__ == '__main__':
 
 			indicator = {}
 
-			start_date             = dates[i - 26].strftime('%Y-%m-%d')
+			start_date             = dates[i - 52].strftime('%Y-%m-%d')
+			pool_start_date        = dates[i - 13].strftime('%Y-%m-%d')
+
 			end_date               = dates[i].strftime('%Y-%m-%d')
 			codes                  = fundfilter(start_date, end_date)			
 			fund_codes, fund_tags  = st.tagfunds(start_date, end_date, codes)
@@ -244,15 +258,36 @@ if __name__ == '__main__':
 
 			funddf                 = data.fund_value(start_date, end_date)
 			pool_codes             = list(fund_codes)
-
+			
 			fund_valuedf           = data.fund_value(start_date, end_date)
 			fund_codes             = list(fund_valuedf.columns)
 
+
+			pool_fund_df = data.fund_value(pool_start_date, end_date)
+			pool_fund_df = pool_fund_df[fund_valuedf.columns]
+
+
+			return_data    = fi.fund_return(funddf)	
+			risk_data      = fi.fund_risk(funddf)	
+			return_dict = {}
+			for k,v in return_data:
+				return_dict[k] = v
+				ind = indicator.setdefault(k,[])
+				ind.append(v)
+				#indicator[k].append(v)
+			risk_dict = {}
+			for k,v in risk_data:
+				risk_dict[k] = v
+				#indictor[k].append(v)
+				ind = indicator.setdefault(k,[])
+				ind.append(v)
+
+	
 			P = [[-1, 1]]
                 	Q = [[0.0005]]
 
                 	largecap_fund, smallcap_fund = pf.largesmallcapfunds(fund_tags)
-                	selected_codes, ws = pf.asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q)
+                	selected_codes, ws = pf.asset_allocation(pool_start_date, end_date, largecap_fund, smallcap_fund, P, Q)
 
 			for n in range(0, len(fund_codes)):
 				fundws[fund_codes[n]] = 1.0 / len(fund_codes) 
@@ -310,10 +345,57 @@ if __name__ == '__main__':
 				else:
 					inds.append(0)
 
+			
+			labels = {}
+			feature = []
+			cluster = {}
+			for code in pool_codes:
+				feature.append([risk_dict[code], return_dict[code]])	
+			clf = KMeans(n_clusters = 3)
+			clf.fit(feature)
+
+
+			for n in range(0, len(pool_codes)):
+				labels[pool_codes[n]] = clf.labels_[n]	
+				ind = indicator.setdefault(pool_codes[n], [])
+				ind.append(clf.labels_[n])
+				cl  = cluster.setdefault(clf.labels_[n], [])
+				cl.append(pool_codes[n])
+
+
+
+			for k,v in cluster.items():
+				clfunddf = pool_fund_df[v]
+				if len(v) > 1:			
+					final_risk, final_return, final_ws,final_sharp = pf.markowitz(clfunddf, None)	
+					for m in range(0, len(v)):
+						clusterws[v[m]] = final_ws[m] / 3.0
+				else:
+					c = v[0]
+					clusterws[c] = 1.0 / 3.0	
+
+			for code in clusterws.keys():		
+				w = clusterws[code]
+				if w < 0.02:
+					del(clusterws[code])
+
+			sumws = 0
+			for code in clusterws.keys():
+				sumws = sumws + clusterws[code]
+
+
+			for code in clusterws.keys():
+				clusterws[code] = clusterws[code] / sumws
+
+	
+				#print final_ws
+
+			print clusterws
+
 
 			#print end_date, indicator
-			ind_format = "%s,%f,%f,%f,%f,%f,%d,%d,%d,%d,%d,%d,%d\n"
-			head       = 'code, sharpe, jensen, sortino, ppw, stability, rise, oscillation, decline, largecap, smallcap, growth, value\n'
+			ind_format = "%s,%f,%f,%f,%f,%f,%f,%f,%d,%d,%d,%d,%d,%d,%d,%d\n"
+			head       = 'code, sharpe, jensen, sortino, ppw, stability, return, risk, rise, oscillation, decline, largecap, smallcap, growth, value,label\n'
 			f = open('./tmp/indicator_tags_' + end_date +'.csv','w')
 			f.write(head)	
 			for code in tags.keys():
@@ -321,7 +403,15 @@ if __name__ == '__main__':
 				f.write(ind_format % tuple(ind))
 			f.flush()
 			f.close()
-				#f.write(tag_str)
+
+
+			
+			#print clf.cluster_centers_
+			#print clf.labels_
+
+			#pool_funddf = data.fund_value(pool_start_date, end_date)
+									
+			#f.write(tag_str)
 			#f.flush()
 			#f.close()
 
@@ -330,13 +420,17 @@ if __name__ == '__main__':
 				
 		#funddf  = data.fund_value(dates[i - 1].strftime('%Y-%m-%d'), dates[i].strftime('%Y-%m-%d'))
 		#funddfr = funddf.pct_change()
+
+
 		pre_d   = dates[i - 1]
 		d       = dates[i]
+
 
 		pr      = 0.0
 		fr      = 0.0
 		sr      = 0.0
 		ar      = 0.0
+		cr      = 0.0
 
 
 		for code in pool_codes:
@@ -358,6 +452,10 @@ if __name__ == '__main__':
 					
 			ar = ar + allocationws.setdefault(code, 0.0) * funddfr.loc[d, code]	
 
+		for code in clusterws.keys():
+			cr = cr + clusterws.setdefault(code,0.0) * funddfr.loc[d, code]
+
+
 		v = selected_fund_vs.setdefault(pre_d,1)
 		selected_fund_vs[d] = v * ( 1 + sr )	
 		#print d, v * ( 1 + pr)
@@ -366,16 +464,24 @@ if __name__ == '__main__':
 		allocation_vs[d] = v * ( 1 + ar )	
 		#print d, v * ( 1 + pr)
 
-		print d, allocation_vs[d], selected_fund_vs[d], pool_vs[d], fund_vs[d]	
+		v = allocation_vs.setdefault(pre_d,1)
+		allocation_vs[d] = v * ( 1 + ar )	
+
+
+		v = cluster_vs.setdefault(pre_d,1)
+		cluster_vs[d] = v * ( 1 + cr )	
+
+
+		print d, cluster_vs[d], allocation_vs[d], selected_fund_vs[d], pool_vs[d], fund_vs[d]	
 
 
 	#pool_f.flush()
 	#pool_f.close()	
 
 	f = open('./tmp/pool.csv','w')
-	head = "date,allocation_fund, selected_fund, fund_pool, fund\n"	
+	head = "date,cluster_fund, allocation_fund, selected_fund, fund_pool, fund\n"	
 	f.write(head)
-	vformat = "%s,%f,%f,%f,%f\n"
+	vformat = "%s,%f,%f,%f,%f,%f\n"
 
 	ds = pool_vs.keys()
 	ds = list(ds)
@@ -385,7 +491,8 @@ if __name__ == '__main__':
 		fundv = fund_vs[d]
 		selectedv = selected_fund_vs[d]
 		allocationv = allocation_vs[d]
-		f.write(vformat % (d.strftime('%Y-%m-%d'),allocationv, selectedv, poolv, fundv))
+		clusterv    = cluster_vs[d]
+		f.write(vformat % (d.strftime('%Y-%m-%d'), clusterv, allocationv, selectedv, poolv, fundv))
 
 	f.flush()
 	f.close()

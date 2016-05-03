@@ -26,7 +26,7 @@ def indexallocation(indexdf):
 
 	indexdfr = indexdf.pct_change()
 		
-	indexdfr = indexdfr.dropna()	
+	indexdfr = indexdfr.fillna(0.0)	
 	
 	codes = indexdfr.columns
 
@@ -64,13 +64,13 @@ def indexallocation(indexdf):
 #细类资产配置
 def technicallocation(funddf, fund_rank):
 
+
         rf = const.rf
 
 	funddfr = funddf.pct_change()
 
-	funddfr = funddfr.dropna()
+	funddfr = funddfr.fillna(0.0)
 
-	
 	final_risk = 0
 	final_return = 0
 	final_ws = []
@@ -82,7 +82,7 @@ def technicallocation(funddf, fund_rank):
 		codes = fund_rank[0 : i]
 		dfr = funddfr[codes]
 
-		dfr.dropna()
+		#dfr.fillna(0.0)
 		
 		return_rate = []
 		for code in codes:
@@ -109,93 +109,11 @@ def technicallocation(funddf, fund_rank):
 #markowitz
 def markowitz(funddf, bounds):
 
-
         rf = const.rf
 
 	funddfr = funddf.pct_change()
 
-	funddfr = funddfr.dropna()
-
-	
-	final_risk = 0
-	final_return = 0
-	final_ws = []
-	final_sharp = -1000
-	final_codes = []
-	
-	
-	codes = funddfr.columns
-
-	return_rate = []
-	for code in codes:
-		return_rate.append(funddfr[code].values)
-
-
-	#print return_rate	
-	risks, returns, ws = fin.efficient_frontier(return_rate, bounds)
-
-	
-	for j in range(0, len(risks)):
-
-		sharp = (returns[j] - rf) / risks[j]
-		if sharp > final_sharp:
-
-			final_risk = risks[j]
-			final_return = returns[j]
-			final_ws     = ws[j]
-			final_sharp  = sharp	
-
-
-	return final_risk, final_return, final_ws, final_sharp
-
-
-
-def portfolio(indexdf, funddf, fund_rank):
-					
-
-	fundweights = {}
-	indexrisk, indexreturn ,indexws, indexsharp = indexallocation(indexdf)
-
-	for i in range(0, len(indexws)):
-		indexw = indexws[i]
-		codes = fund_rank[i]
-		fundrisk, fundreturn, fundws, fundsharp = technicallocation(funddf, codes)
-
-		for j in range(0 ,len(fundws)):
-
-			code = codes[j]
-			w    = fundws[j]
-
-			weight = fundweights.setdefault(code, 0)						
-			weight = weight + w * indexw
-
-			fundweights[code] = weight
-
-
-	ws = {}
-
-	for k,v in fundweights.items():
-		if v < 0.01:
-			continue
-		ws[k] = v			
-
-
-	sum = 0
-	for k, v in ws.items():
-		sum = sum + v
-
-
-	for k in ws.keys():
-		ws[k] = ws[k] / sum				
-
-
-	return ws
-	
-
-
-def portfolio_value(funddf, ws):
-
-	funddf = funddf.dropna()
+	funddfr = funddfr.fillna(0.0)
 
 	codes = ws.keys()
 	
@@ -364,7 +282,7 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
 
 	indexdf = data.index_value(start_date, end_date, [const.largecap_code, const.smallcap_code])
 
-	indexdfr = indexdf.pct_change().dropna()
+	indexdfr = indexdf.pct_change().fillna(0.0)
 
 
 	indexrs = []

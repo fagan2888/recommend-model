@@ -268,6 +268,7 @@ def ppw(portfolio, benchmark):
 	#print 'm', benchmark
 
 	solvers.options['show_progress'] = False
+
 	length = len(benchmark)
 	A = []
 	b = []

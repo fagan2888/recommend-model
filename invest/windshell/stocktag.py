@@ -1089,13 +1089,9 @@ def tagfunds(start_date, end_date, codes):
 	funddf = data.fund_value(start_date, end_date)
         #funddf = funddf[codes]	
 
-
 	funds = set()
 
-
 	fund_tags = {}
-
-
 
 	#print 'large'
 	codes = []
