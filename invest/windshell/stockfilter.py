@@ -260,12 +260,12 @@ def scalefilter(ratio):
 	for code in fund_scale_df.index:
 		v = fund_scale_df.loc[code].values	
 		if code in stock_codes:
-			if v >= 10000000000:
+			if string.atof(v[0]) >= 10000000000.0:
 				continue
 	
 		scale[code] = v
 
-
+	#print 'scale 000457 : ' ,scale['000457.OF']
 	x = scale
         sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=False)
         sorted_scale = sorted_x

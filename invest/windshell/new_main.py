@@ -1,6 +1,5 @@
 #coding=utf8
 
-
 import numpy as np
 import string
 import sys
@@ -26,31 +25,34 @@ def fundfilter(start_date, end_date):
 	indicator = {}
 
 	funddf = data.fund_value(start_date, end_date)
-	#funddf['163001.OF'].to_csv('./tmp/163001.csv')
+	#print 'hehe'
+	#print funddf['000457.OF']
+	#print funddf['163001.OF'].to_csv('./tmp/163001.csv')
 	indexdf = data.index_value(start_date, end_date, '000300.SH')
 
 	#按照规模过滤
-	#scale_data     = sf.scalefilter(2.0 / 3)	
-	scale_data     = sf.scalefilter(1.0)	
-	
+	scale_data     = sf.scalefilter(2.0 / 3)	
+	#scale_data     = sf.scalefilter(1.0)	
+	#print scale_data
 	#按照基金创立时间过滤
 	setuptime_data = sf.fundsetuptimefilter(funddf.columns, start_date, data.establish_data())
 
+	#print setuptime_data
 	#按照jensen测度过滤
-	#jensen_data    = sf.jensenfilter(funddf, indexdf, rf, 0.5)
-	jensen_data    = sf.jensenfilter(funddf, indexdf, rf, 1.0)
+	jensen_data    = sf.jensenfilter(funddf, indexdf, rf, 0.5)
+	#jensen_data    = sf.jensenfilter(funddf, indexdf, rf, 1.0)
 
 	#按照索提诺比率过滤
-	#sortino_data   = sf.sortinofilter(funddf, rf, 0.5)
-	sortino_data   = sf.sortinofilter(funddf, rf, 1.0)
+	sortino_data   = sf.sortinofilter(funddf, rf, 0.5)
+	#sortino_data   = sf.sortinofilter(funddf, rf, 1.0)
 
 	#按照ppw测度过滤
-	#ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 0.5)
-	ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 1.0)
+	ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 0.5)
+	#ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 1.0)
 	#print ppw_data
 
-	#stability_data = sf.stabilityfilter(funddf, 2.0 / 3)
-	stability_data = sf.stabilityfilter(funddf, 1.0)
+	stability_data = sf.stabilityfilter(funddf, 2.0 / 3)
+	#stability_data = sf.stabilityfilter(funddf, 1.0)
 
 	sharpe_data    = fi.fund_sharp_annual(funddf)	
 	
@@ -61,7 +63,6 @@ def fundfilter(start_date, end_date):
 	for k,v in jensen_data:
 		jensen_dict[k] = v
 		#print k, v
-
 	#print 
 	#print 'sortino'			
 				
@@ -140,6 +141,10 @@ def fundfilter(start_date, end_date):
 	for k, v in stability_data:
 		stability_set.add(k)
 
+	#print 'jensen', '000457.OF' in jensen_set
+	#print 'sortino', '000457.OF' in sortino_set
+	#print 'ppw', '000457.OF' in ppw_set
+	#print 'stability', '000457.OF' in stability_set
 
 	codes = []
 
@@ -227,7 +232,7 @@ if __name__ == '__main__':
 	net_value_f.write('date, net_value\n')
 
 	
-	for i in range(156, len(dates)):
+	for i in range(156, len(dates) - 13):
 
 		if (i - 156) % 13 == 0:
 
@@ -235,7 +240,9 @@ if __name__ == '__main__':
 			start_date             = dates[i - 52].strftime('%Y-%m-%d')
                         allocation_start_date  = dates[i - 13].strftime('%Y-%m-%d')
                         end_date               = dates[i].strftime('%Y-%m-%d')
+			future_end_date        = dates[i + 13].strftime('%Y-%m-%d')
 
+	
                         codes,indicator        = fundfilter(start_date, end_date)
 			fund_codes, fund_tags  = st.tagfunds(start_date, end_date, codes)				
 			tmp_codes = set()	
@@ -250,7 +257,9 @@ if __name__ == '__main__':
 			#fund_codes = list(tmp_codes)
 
 			all_funddf        = data.fund_value(start_date, end_date)
-			fund_codes        = list(indicator.keys())
+
+			#fund_codes        = list(indicator.keys())
+
 			allocation_funddf = data.fund_value(allocation_start_date, end_date)
 			allocation_funddf = allocation_funddf[fund_codes]
 

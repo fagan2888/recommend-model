@@ -1107,7 +1107,8 @@ def tagfunds(start_date, end_date, codes):
 	fund_tags['largecap'] = tmp
 	#print sharps[0][0]
 	#print sharps	
-	funds.add(sharps[0][0])
+	if len(sharps) > 0:
+		funds.add(sharps[0][0])
 
 
 	#print 'small'
@@ -1123,7 +1124,8 @@ def tagfunds(start_date, end_date, codes):
 	for item in sharps:
 		tmp.append(item[0])
 	fund_tags['smallcap'] = tmp
-	funds.add(sharps[0][0])
+	if len(sharps) > 0:
+		funds.add(sharps[0][0])
 
 
 	#print 'rise'
@@ -1139,7 +1141,8 @@ def tagfunds(start_date, end_date, codes):
 	for item in sharps:
 		tmp.append(item[0])
 	fund_tags['risefitness'] = tmp
-	funds.add(sharps[0][0])
+	if len(sharps) > 0:
+		funds.add(sharps[0][0])
 
 
 	#print 'decline'	
@@ -1155,7 +1158,8 @@ def tagfunds(start_date, end_date, codes):
 	for item in sharps:
 		tmp.append(item[0])
 	fund_tags['declinefitness'] = tmp
-	funds.add(sharps[0][0])
+	if len(sharps) > 0:
+		funds.add(sharps[0][0])
 
 
 	#print 'oscillation'
@@ -1171,7 +1175,8 @@ def tagfunds(start_date, end_date, codes):
 	for item in sharps:
 		tmp.append(item[0])
 	fund_tags['oscillationfitness'] = tmp
-	funds.add(sharps[0][0])
+	if len(sharps) > 0:
+		funds.add(sharps[0][0])
 
 
 	#print 'growth'
@@ -1187,7 +1192,8 @@ def tagfunds(start_date, end_date, codes):
 	for item in sharps:
 		tmp.append(item[0])
 	fund_tags['growthfitness'] = tmp
-	funds.add(sharps[0][0])
+	if len(sharps) > 0:
+		funds.add(sharps[0][0])
 
 
 	#print 'value'
@@ -1203,7 +1209,8 @@ def tagfunds(start_date, end_date, codes):
 	for item in sharps:
 		tmp.append(item[0])
 	fund_tags['valuefitness'] = tmp
-	funds.add(sharps[0][0])
+	if len(sharps) > 0:
+		funds.add(sharps[0][0])
 
 
 	#print fund_tags
