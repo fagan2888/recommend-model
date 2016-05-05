@@ -250,6 +250,7 @@ def stabilityfilter(funddf, ratio):
 	return result			
 		
 
+
 #按照规模过滤
 def scalefilter(ratio):
 
@@ -258,10 +259,10 @@ def scalefilter(ratio):
 
 	scale = {}	
 	for code in fund_scale_df.index:
-		v = fund_scale_df.loc[code].values	
+		v = fund_scale_df.loc[code].values
 		if code in stock_codes:
-			if string.atof(v[0]) >= 10000000000.0:
-				continue
+			#if string.atof(v[0]) >= 10000000000.0:
+			continue
 	
 		scale[code] = v
 

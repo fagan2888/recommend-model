@@ -1,5 +1,6 @@
 #coding=utf8
 
+
 import numpy as np
 import string
 import sys
@@ -10,6 +11,7 @@ import stockfilter as sf
 import stocktag as st
 import portfolio as pf
 import fundindicator as fi
+import fund_selector as fs
 import data
 import datetime
 from numpy import *
@@ -148,11 +150,9 @@ def fundfilter(start_date, end_date):
 
 	codes = []
 
-
 	for code in scale_set:
 		if (code in setuptime_set) and (code in jensen_set) and (code in sortino_set) and (code in ppw_set) and (code in stability_set):
 			codes.append(code)
-
 
 	for code in codes:
 		ind = indicator.setdefault(code, {})
@@ -185,18 +185,16 @@ def fundfilter(start_date, end_date):
 
 	return codes, indicator
 
-
-
 if __name__ == '__main__':
 
 
 	max_drawdown = 0.2
 
- 	start_date = '2007-01-05'
-        end_date   = '2016-04-22'
+	start_date = '2007-01-05'
+	end_date   = '2016-04-22'
 
 	indexdf    =  data.index_value(start_date, end_date, '000300.SH')
-        dates      = indexdf.index
+	dates      = indexdf.index
 
 
 	allfunddf  = data.funds()
@@ -227,55 +225,72 @@ if __name__ == '__main__':
 	fund_codes  = []
 	change_position_index = 0
 
-
 	net_value_f = open('./tmp/net_value.csv','w')
 	net_value_f.write('date, net_value\n')
 
-	
-	for i in range(156, len(dates) - 13):
+	for i in range(156, len(dates)):
 
 		if (i - 156) % 13 == 0:
 
-			change_position_index  = i
+			#change_position_index  = i
 			start_date             = dates[i - 52].strftime('%Y-%m-%d')
-                        allocation_start_date  = dates[i - 13].strftime('%Y-%m-%d')
-                        end_date               = dates[i].strftime('%Y-%m-%d')
-			future_end_date        = dates[i + 13].strftime('%Y-%m-%d')
+			allocation_start_date  = dates[i - 13].strftime('%Y-%m-%d')
+			end_date               = dates[i].strftime('%Y-%m-%d')
+			future_end_date        = dates[-1].strftime('%Y-%m-%d')
 
-	
-                        codes,indicator        = fundfilter(start_date, end_date)
-			fund_codes, fund_tags  = st.tagfunds(start_date, end_date, codes)				
-			tmp_codes = set()	
+			if i + 13 >= len(dates):
+				future_end_date = dates[-1].strftime('%Y-%m-%d')
+			else:
+				future_end_date = dates[i + 13].strftime('%Y-%m-%d')
+
+
+			codes, indicator       = fundfilter(start_date, end_date)
+			fund_pool, fund_tags   = st.tagfunds(start_date, end_date, codes)
+			allocation_funddf      = data.fund_value(allocation_start_date, end_date)[fund_pool]
+			fund_codes             = fs.select_fund(allocation_funddf, fund_tags)
+
+			#fund_codes = list(fund_pool)
+
+			#print fund_pool
 			tags = {}
-                        for key in fund_tags.keys():
-                                cs = fund_tags[key]
-                                for c in cs:
-                                        ts = tags.setdefault(c,[])
-                                        ts.append(key)
-					tmp_codes.add(c)
+			for key in fund_tags.keys():
+					cs = fund_tags[key]
+					for c in cs:
+							ts = tags.setdefault(c,[])
+							ts.append(key)
 
 			#fund_codes = list(tmp_codes)
 
-			all_funddf        = data.fund_value(start_date, end_date)
+			#all_funddf        = data.fund_value(start_date, end_date)
 
 			#fund_codes        = list(indicator.keys())
+			#allocation_funddf = data.fund_value(allocation_start_date, end_date)
+			#allocation_funddf = allocation_funddf[fund_codes]
 
-			allocation_funddf = data.fund_value(allocation_start_date, end_date)
-			allocation_funddf = allocation_funddf[fund_codes]
 
-		
+			####################################################################
+			future_funddf   = data.fund_value(end_date, future_end_date)
+			future_funddf   = future_funddf[fund_pool]
+			future_codes    = []
+			future_funddf_sharp = fi.fund_sharp_annual(future_funddf)
+			end_n     = (int)(len(future_funddf_sharp) * 0.25)
+			start_n   = (int)(len(future_funddf_sharp) * 0.125)
+			for n in range(start_n, end_n):
+				future_codes.append(future_funddf_sharp[n][0])
+			#fund_codes = future_codes
+			#####################################################################
+
+
 			return_data    = fi.fund_return(allocation_funddf)
-                        risk_data      = fi.fund_risk(allocation_funddf)
-                        return_dict = {}
-                        for k,v in return_data:
-                                return_dict[k] = v
-                        risk_dict = {}
-                        for k,v in risk_data:
-                                risk_dict[k] = v
+			risk_data      = fi.fund_risk(allocation_funddf)
+			return_dict = {}
+			for k,v in return_data:
+				return_dict[k] = v
+			risk_dict = {}
+			for k,v in risk_data:
+				risk_dict[k] = v
 
-
-
-			tag_indicator = {}	
+			tag_indicator = {}
 			for key in tags.keys():
                                 #tag_str = str(key) + ","
                                 ts = tags[key]
@@ -309,8 +324,9 @@ if __name__ == '__main__':
                                         inds.append(1)
                                 else:
                                         inds.append(0)
-	
 
+
+			'''
 			indicator_str = "%s,%f,%f,%f,%f,%f,%f,%f,%d,%d,%d,%d,%d,%d,%d\n"
 			f = open('./tmp/indicator_' + end_date + '.csv','w')
 			f.write("code,sharpe,jensen,sortino,ppw,stability,risk,return,rise,oscillation,decline,largecap,smallcap,growth,value\n")
@@ -319,37 +335,41 @@ if __name__ == '__main__':
 				tag_ind = tag_indicator.setdefault(code,[-1, -1, -1, -1, -1, -1, -1])
 				f.write(indicator_str % (code, ind['sharpe'], ind['jensen'], ind['sortino'], ind['ppw'], ind['stability'], risk_dict[code], return_dict[code], tag_ind[0], tag_ind[1], tag_ind[2], tag_ind[3], tag_ind[4], tag_ind[5], tag_ind[6]))
 				#print code,jensen_dict[code], sortino_dict[code], ppw_dict[code], stability_dict[code]		
-
-			f.flush()	
+			f.flush()
 			f.close()
-
+			'''
 
 			'''	
 			fund_codes, fund_tags  = st.tagfunds(start_date, end_date, codes)
 
 			P = [[-1, 1]]
-                        Q = [[0.0005]]
+            Q = [[0.0005]]
 
-                        largecap_fund, smallcap_fund = pf.largesmallcapfunds(fund_tags)
-                        fund_codes, ws = pf.asset_allocation(allocation_start_date, end_date, largecap_fund, smallcap_fund, P, Q)
+            largecap_fund, smallcap_fund = pf.largesmallcapfunds(fund_tags)
+            fund_codes, ws = pf.asset_allocation(allocation_start_date, end_date, largecap_fund, smallcap_fund, P, Q)
 
 
 			#print len(fund_codes)
 			fundws = {}
 
-			
 			for n in range(0, len(fund_codes)):
-				fundws[fund_codes[n]] = ws[n]							  '''	
+				fundws[fund_codes[n]] = ws[n]
 
-			fundws = {}
+			'''
+
+			ws = []
 			for n in range(0, len(fund_codes)):
-				fundws[fund_codes[n]] = 1.0 / len(fund_codes)
+				ws.append(1.0 / len(fund_codes))
 
-			#print fundws		  
+			#print fund_codes
+			#print ws
+
+
+			#print fundws
 			last_pv = portfolio_vs[-1]
 			fund_values = {}
 			for n in range(0, len(fund_codes)):
-				fund_values[fund_codes[n]] = [last_pv * fundws[fund_codes[n]]]
+				fund_values[n] = [last_pv * ws[n]]
 
 			fund_risk_control_date = {}
 			fund_risk_control_position = {}
@@ -357,6 +377,7 @@ if __name__ == '__main__':
 
 ###############################################################################################################
 
+		'''
 		current_date = dates[i]
 		for code in fund_risk_control_date.keys():
 			date = fund_risk_control_date[code]
@@ -405,17 +426,17 @@ if __name__ == '__main__':
 			portfolio_risk_control_position = 0.5
 			portfolio_risk_control_date = dates[i-1] 
 				
-
+		'''
 
 ##################################################################################################################################
 
 		pv    = 0
 		d     = dates[i]
-		for code in fund_codes:
-			vs = fund_values[code]
+		for n in range(0, len(fund_codes)):
+			vs = fund_values[n]
 			#vs.append(vs[-1]  + vs[-1] * allfunddfr.loc[d, code] * fund_risk_control_position.setdefault(code, 1.0) )
 			#vs.append(vs[-1]  + vs[-1] * allfunddfr.loc[d, code] * portfolio_risk_control_position)
-			vs.append(vs[-1]  + vs[-1] * allfunddfr.loc[d, code])
+			vs.append(vs[-1]  + vs[-1] * allfunddfr.loc[d, fund_codes[n]])
 			pv = pv + vs[-1]
 
 		portfolio_vs.append(pv)
@@ -424,5 +445,3 @@ if __name__ == '__main__':
 
 	net_value_f.flush()
 	net_value_f.close()
-
-							

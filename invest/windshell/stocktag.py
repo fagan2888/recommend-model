@@ -794,7 +794,6 @@ def creditbondprefer(funddf, indexdf, ratio):
         return result
 
 
-
 def convertiblebondprefer(funddf, indexdf, ratio):
 
 	convertiblebondprefer = {}
@@ -897,11 +896,10 @@ def hmmeasure(funddf, indexdf):
 #输出每一个基金的标签
 def tagfunds(start_date, end_date, codes):
 					
-
 	funddf = data.fund_value(start_date, end_date)
-        funddf = funddf[codes]	
-	
-	
+	funddf = funddf[codes]
+
+
 	capindexdf         = data.index_value(start_date, end_date, ['399314.SZ', '399316.SZ'])
 	largecapindexdf    = data.index_value(start_date, end_date, ['399314.SZ'])
 	smallcapindexdf    = data.index_value(start_date, end_date, ['399316.SZ'])
@@ -915,13 +913,13 @@ def tagfunds(start_date, end_date, codes):
 	for code in codes:
 		if code in columns:
 			tmp_codes.append(code)
-	codes = tmp_codes		
+	codes = tmp_codes
+
 	positiondf         = positiondf[codes]
 
-
-        largecapfitness_result    = largecapfitness(funddf, capindexdf, 0.5)
-        smallcapfitness_result    = smallcapfitness(funddf, capindexdf, 0.5)
-	risefitness_result        = risefitness(funddf, hs300indexdf, 0.5)	
+	largecapfitness_result    = largecapfitness(funddf, capindexdf, 0.5)
+	smallcapfitness_result    = smallcapfitness(funddf, capindexdf, 0.5)
+	risefitness_result        = risefitness(funddf, hs300indexdf, 0.5)
 	declinefitness_result     = declinefitness(funddf, hs300indexdf, 0.5)	
 	oscillationfitness_result = oscillationfitness(funddf, hs300indexdf,  0.5)
 	growthfitness_result      = growthfitness(funddf, growthvalueindexdf, 0.5)
@@ -964,12 +962,14 @@ def tagfunds(start_date, end_date, codes):
 
 	#print 
 
+
 	#print 'oscillation'
 	oscillation_set = set()
 	for k,v in oscillationfitness_result:
 		oscillation_set.add(k)
 		#print k, v
 	#print 
+
 
 	#print 'growth'
 	growthfitness_set = set()	
@@ -985,7 +985,8 @@ def tagfunds(start_date, end_date, codes):
 		valuefitness_set.add(k)
 		#print k, v
 
-	#print 
+
+	#print
 	#print 'positionprefer'	
 	positionprefer_set = set()
 	for k,v in positionprefer_result:
@@ -993,7 +994,6 @@ def tagfunds(start_date, end_date, codes):
 		#print k, v
 
 
-	
 	#print 
 	#print 'largecapprefer'	
 	largecapprefer_set = set()
@@ -1084,145 +1084,69 @@ def tagfunds(start_date, end_date, codes):
 	#print 'hm'
 	#print hmmeasure(funddf, hs300indexdf)
 
-
 	codes = list(final_codes)
-	funddf = data.fund_value(start_date, end_date)
-        #funddf = funddf[codes]	
+	funddf = funddf[codes]
+	#funddf = data.fund_value(start_date, end_date)
+    #funddf = funddf[codes]
 
-	funds = set()
+	#funds = set()
 
 	fund_tags = {}
-
 	#print 'large'
+
+
 	codes = []
 	for code in largecapfitness_set:
-		if code in final_codes and (not code in funds):
+		if code in final_codes:
 			codes.append(code)
-		
-	largecapfitness_df = funddf[codes]
-	sharps = fi.fund_sharp(largecapfitness_df)
-	tmp = []
-	for item in sharps:
-		tmp.append(item[0])
-	fund_tags['largecap'] = tmp
-	#print sharps[0][0]
-	#print sharps	
-	if len(sharps) > 0:
-		funds.add(sharps[0][0])
+	fund_tags['largecap'] = codes
 
 
-	#print 'small'
 	codes = []
 	for code in smallcapfitness_set:
-		if code in final_codes and (not code in funds):
+		if code in final_codes:
 			codes.append(code)
-		
-	smallcapfitness_df = funddf[codes]
-	sharps = fi.fund_sharp(smallcapfitness_df)
-	#print sharps	
-	tmp = []
-	for item in sharps:
-		tmp.append(item[0])
-	fund_tags['smallcap'] = tmp
-	if len(sharps) > 0:
-		funds.add(sharps[0][0])
+	fund_tags['smallcap'] = codes
 
 
-	#print 'rise'
 	codes = []
 	for code in risefitness_set:
-		if code in final_codes and (not code in funds):
+		if code in final_codes:
 			codes.append(code)
-		
-	risefitness_df = funddf[codes]
-	sharps = fi.fund_sharp(risefitness_df)
-	#print sharps	
-	tmp = []
-	for item in sharps:
-		tmp.append(item[0])
-	fund_tags['risefitness'] = tmp
-	if len(sharps) > 0:
-		funds.add(sharps[0][0])
+	fund_tags['risefitness'] = codes
 
-
-	#print 'decline'	
 	codes = []
 	for code in declinefitness_set:
-		if code in final_codes and (not code in funds):
+		if code in final_codes:
 			codes.append(code)
-		
-	declinefitness_df = funddf[codes]
-	sharps = fi.fund_sharp(declinefitness_df)
-	#print sharps	
-	tmp = []
-	for item in sharps:
-		tmp.append(item[0])
-	fund_tags['declinefitness'] = tmp
-	if len(sharps) > 0:
-		funds.add(sharps[0][0])
+	fund_tags['declinefitness'] = codes
 
-
-	#print 'oscillation'
 	codes = []
 	for code in oscillation_set:
-		if code in final_codes and (not code in funds):
+		if code in final_codes:
 			codes.append(code)
-		
-	oscillationfitness_df = funddf[codes]
-	sharps = fi.fund_sharp(oscillationfitness_df)
-	#print sharps	
-	tmp = []
-	for item in sharps:
-		tmp.append(item[0])
-	fund_tags['oscillationfitness'] = tmp
-	if len(sharps) > 0:
-		funds.add(sharps[0][0])
+	fund_tags['oscillationfitness'] = codes
 
-
-	#print 'growth'
 	codes = []
 	for code in growthfitness_set:
-		if code in final_codes and (not code in funds):
+		if code in final_codes:
 			codes.append(code)
-		
-	growthfitness_df = funddf[codes]
-	sharps = fi.fund_sharp(growthfitness_df)
-	#print sharps	
-	tmp = []
-	for item in sharps:
-		tmp.append(item[0])
-	fund_tags['growthfitness'] = tmp
-	if len(sharps) > 0:
-		funds.add(sharps[0][0])
+	fund_tags['growthfitness'] = codes
 
-
-	#print 'value'
 	codes = []
 	for code in valuefitness_set:
-		if code in final_codes and (not code in funds):
+		if code in final_codes:
 			codes.append(code)
-		
-	valuefitness_df = funddf[codes]
-	sharps = fi.fund_sharp(valuefitness_df)
-	#print sharps	
-	tmp = []
-	for item in sharps:
-		tmp.append(item[0])
-	fund_tags['valuefitness'] = tmp
-	if len(sharps) > 0:
-		funds.add(sharps[0][0])
+	fund_tags['valuefitness'] = codes
 
 
-	#print fund_tags
-	return list(funds), fund_tags
+	return list(final_codes) , fund_tags
 
 
 def tagbonds(start_date, end_date, codes):
 
-
 	funddf = data.bond_value(start_date, end_date)
         funddf = funddf[codes]
-
 
 	csibondindexdf              = data.bond_index_value(start_date, end_date, const.csibondindex_code)
 	ratebondindexdf             = data.bond_index_value(start_date, end_date, const.ratebondindex_code)	
