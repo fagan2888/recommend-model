@@ -109,41 +109,37 @@ def technicallocation(funddf, fund_rank):
 #markowitz
 def markowitz(funddf, bounds):
 
-        rf = const.rf
-
+	rf = const.rf
 	funddfr = funddf.pct_change()
-
 	funddfr = funddfr.fillna(0.0)
 
-	codes = ws.keys()
-	
-	values = []
-	w      = []
+	final_risk = 0
+	final_return = 0
+	final_ws = []
+	final_sharp = -1000
+	final_codes = []
+
+
+	codes = funddfr.columns
+
+	return_rate = []
+
 	for code in codes:
-		vs = funddf[code].values
-		tran_vs = []
-		for v in vs:
-			tran_vs.append(v / vs[0])
-		
-		values.append(tran_vs)
-		w.append(ws[code])
+		return_rate.append(funddfr[code].values)
+
+	# print return_rate
+	risks, returns, ws = fin.efficient_frontier(return_rate, bounds)
+
+	for j in range(0, len(risks)):
+		sharp = (returns[j] - rf) / risks[j]
+		if sharp > final_sharp:
+			final_risk = risks[j]
+			final_return = returns[j]
+			final_ws = ws[j]
+			final_sharp = sharp
 
 
-
-	pvs = []
-	num = len(values[0])
-	for i in range(0, num):
-        	v = 0
-        	for j in range(0, len(ws)):
-                	v = v + values[j][i] * w[j]
-        	pvs.append(v)
-	
-	prs = []
-	for i in range(1, len(pvs)):
-		prs.append(pvs[i] / pvs[i-1] - 1)		
-
-	return pvs, prs						
-	
+	return final_risk, final_return, final_ws, final_sharp
 
 
 #利用blacklitterman做战略资产配置		
@@ -284,7 +280,6 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
 
 	indexdfr = indexdf.pct_change().fillna(0.0)
 
-
 	indexrs = []
 	for code in indexdfr.columns:
 		indexrs.append(indexdfr[code].values)
@@ -321,10 +316,10 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
 	#print smallcap_fund
 
 
-
 	funddf = data.fund_value(start_date, end_date)	
 
 	bounds = boundlimit(len(largecap_fund))
+
 	risk, returns, ws, sharp = markowitz(funddf[largecap_fund], bounds)
 
 	largecap_fund_w = {}

@@ -234,7 +234,7 @@ if __name__ == '__main__':
 
 			#change_position_index  = i
 			start_date             = dates[i - 52].strftime('%Y-%m-%d')
-			allocation_start_date  = dates[i - 13].strftime('%Y-%m-%d')
+			allocation_start_date  = dates[i - 52].strftime('%Y-%m-%d')
 			end_date               = dates[i].strftime('%Y-%m-%d')
 			future_end_date        = dates[-1].strftime('%Y-%m-%d')
 
@@ -247,9 +247,11 @@ if __name__ == '__main__':
 			codes, indicator       = fundfilter(start_date, end_date)
 			fund_pool, fund_tags   = st.tagfunds(start_date, end_date, codes)
 			allocation_funddf      = data.fund_value(allocation_start_date, end_date)[fund_pool]
-			fund_codes             = fs.select_fund(allocation_funddf, fund_tags)
+			#allocation_funddfr     = allocation_funddf.pct_change().fillna(0.0)
+			#fund_codes             = fs.select_fund(allocation_funddf, fund_tags)
 
-			#fund_codes = list(fund_pool)
+
+			fund_codes = list(fund_pool)
 
 			#print fund_pool
 			tags = {}
@@ -342,27 +344,32 @@ if __name__ == '__main__':
 			'''	
 			fund_codes, fund_tags  = st.tagfunds(start_date, end_date, codes)
 
-			P = [[-1, 1]]
-            Q = [[0.0005]]
 
-            largecap_fund, smallcap_fund = pf.largesmallcapfunds(fund_tags)
-            fund_codes, ws = pf.asset_allocation(allocation_start_date, end_date, largecap_fund, smallcap_fund, P, Q)
+			'''
 
+			#P = [[-1, 1]]
+			#Q = [[0.0005]]
+			#ws = []
+			#largecap_fund, smallcap_fund = pf.largesmallcapfunds(fund_tags)
+			#fund_codes, ws  =  pf.asset_allocation(allocation_start_date, end_date, largecap_fund, smallcap_fund, P, Q)
 
+			bounds = pf.boundlimit(len(fund_codes))
+			risk, returns ,ws ,sharp = pf.markowitz(allocation_funddf, bounds)
+
+			'''
 			#print len(fund_codes)
 			fundws = {}
 
 			for n in range(0, len(fund_codes)):
 				fundws[fund_codes[n]] = ws[n]
 
-			'''
-
 			ws = []
 			for n in range(0, len(fund_codes)):
 				ws.append(1.0 / len(fund_codes))
 
-			#print fund_codes
-			#print ws
+			'''
+			print fund_codes
+			print ws
 
 
 			#print fundws

@@ -43,37 +43,37 @@ def select_fund(funddf, fund_tags):
 			codes.append(code)
 			need_largecap = False
 			print code, i
-			#continue
+			continue
 		if code in set(smallcap_codes) and need_smallcap:
 			codes.append(code)
 			need_smallcap = False
 			print code, i
-			#continue
+			continue
 		if code in set(risefitness_codes) and need_risefitness:
 			codes.append(code)
 			need_risefitness = False
 			print code, i
-			#continue
+			continue
 		if code in set(declinefitness_codes) and need_declinefitness:
 			codes.append(code)
 			need_declinefitness = False
 			print code, i
-			#continue
+			continue
 		if code in set(oscillationfitness_codes) and need_oscillationfitness:
 			codes.append(code)
 			need_oscillationfitness = False
 			print code, i
-			#continue
+			continue
 		if code in set(growthfitness_codes) and need_growthfitness:
 			codes.append(code)
 			need_growthfitness = False
 			print code, i
-			#continue
+			continue
 		if code in set(valuefitness_codes) and need_valuefitness:
 			codes.append(code)
 			need_valuefitness = False
 			print code, i
-			#continue
+			continue
 
 	#print fund_sharpe
 	#print codes

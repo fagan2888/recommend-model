@@ -74,6 +74,7 @@ def efficient_frontier(return_rate, bound):
 				
 		N = 100
 		mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
+		print mus
 		portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
 		returns = [ dot(pbar,x) for x in portfolios ]
 		risks = [ sqrt(dot(x, S*x)) for x in portfolios ]	
@@ -135,7 +136,6 @@ def efficient_frontier_fund(return_rate):
 	for i in range(0, n_asset):
 		G[i, i] = -1
 		G[n_asset + i, i ] = 1
-
 
 	h                 =  matrix(0.0, (2 * n_asset, 1))
 
