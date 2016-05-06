@@ -1139,14 +1139,13 @@ def tagfunds(start_date, end_date, codes):
 			codes.append(code)
 	fund_tags['valuefitness'] = codes
 
-
 	return list(final_codes) , fund_tags
 
 
 def tagbonds(start_date, end_date, codes):
 
 	funddf = data.bond_value(start_date, end_date)
-        funddf = funddf[codes]
+	funddf = funddf[codes]
 
 	csibondindexdf              = data.bond_index_value(start_date, end_date, const.csibondindex_code)
 	ratebondindexdf             = data.bond_index_value(start_date, end_date, const.ratebondindex_code)	
@@ -1160,7 +1159,6 @@ def tagbonds(start_date, end_date, codes):
 	ratebondprefer_result       =  ratebondprefer(funddf, ratebondindexdf,0.5) 
 	creditbondprefer_result     =  creditbondprefer(funddf, creditbondindexdf, 0.5)
 	convertiblebondprefer_result=  convertiblebondprefer(funddf, convertiblebondindexdf, 0.5)
-
 
         #print 'rise'
         risefitness_set = set()
@@ -1227,111 +1225,45 @@ def tagbonds(start_date, end_date, codes):
 		final_codes.add(code)
 
 	fund_tags = {}
-	funds     = set()
 
-	#print 'rise'
         codes = []
         for code in risefitness_set:
-                if code in final_codes and (not code in funds):
+                if code in final_codes:
                         codes.append(code)
+        fund_tags['risefitness'] = codes
 
-        risefitness_df = funddf[codes]
-        sharps = fi.fund_sharp(risefitness_df)
-        #print sharps
-        tmp = []
-        for item in sharps:
-                tmp.append(item[0])
-        fund_tags['risefitness'] = tmp
-
-	if len(sharps) > 0:
-        	funds.add(sharps[0][0])
-
-
-        #print 'decline'
         codes = []
         for code in declinefitness_set:
-                if code in final_codes and (not code in funds):
+                if code in final_codes:
                         codes.append(code)
+        fund_tags['declinefitness'] = codes
 
-        declinefitness_df = funddf[codes]
-        sharps = fi.fund_sharp(declinefitness_df)
-        #print sharps
-        tmp = []
-        for item in sharps:
-                tmp.append(item[0])
-        fund_tags['declinefitness'] = tmp
-	if len(sharps) > 0:
-        	funds.add(sharps[0][0])
-
-
-	#print 'oscillation'
         codes = []
         for code in oscillationfitness_set:
-                if code in final_codes and (not code in funds):
+                if code in final_codes:
                         codes.append(code)
+        fund_tags['oscillationfitness'] = codes
 
-        oscillationfitness_df = funddf[codes]
-        sharps = fi.fund_sharp(oscillationfitness_df)
-        #print sharps
-        tmp = []
-        for item in sharps:
-                tmp.append(item[0])
-        fund_tags['oscillationfitness'] = tmp
-	if len(sharps) > 0:
-        	funds.add(sharps[0][0])
-
-
-	#print 'ratebondprefer'
         codes = []
         for code in ratebondprefer_set:
-                if code in final_codes and (not code in funds):
+                if code in final_codes:
                         codes.append(code)
+        fund_tags['ratebond'] = codes
 
-        ratebondprefer_df = funddf[codes]
-        sharps = fi.fund_sharp(ratebondprefer_df)
-        #print sharps
-        tmp = []
-        for item in sharps:
-                tmp.append(item[0])
-        fund_tags['ratebondprefer'] = tmp
-	if len(sharps) > 0:
-        	funds.add(sharps[0][0])
-
-
-	#print 'creditbondprefer'
         codes = []
         for code in creditbondprefer_set:
-                if code in final_codes and (not code in funds):
+                if code in final_codes:
                         codes.append(code)
+        fund_tags['creditbond'] = codes
 
-        creditbondprefer_df = funddf[codes]
-        sharps = fi.fund_sharp(creditbondprefer_df)
-        #print sharps
-        tmp = []
-        for item in sharps:
-                tmp.append(item[0])
-        fund_tags['creditbondprefer'] = tmp
-	if len(sharps) > 0:
-        	funds.add(sharps[0][0])
-
-
-	#print 'creditbondprefer'
         codes = []
         for code in convertiblebondprefer_set:
-                if code in final_codes and (not code in funds):
+                if code in final_codes:
                         codes.append(code)
+        fund_tags['convertiblebond'] = codes
 
-        convertiblebondprefer_df = funddf[codes]
-        sharps = fi.fund_sharp(convertiblebondprefer_df)
-        #print sharps
-        tmp = []
-        for item in sharps:
-                tmp.append(item[0])
-        fund_tags['convertiblebondprefer'] = tmp
-	if len(sharps) > 0:
-        	funds.add(sharps[0][0])
 
-	return list(funds), fund_tags
+	return list(final_codes), fund_tags
 
 
 if __name__ == '__main__':

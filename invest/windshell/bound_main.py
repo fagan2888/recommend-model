@@ -17,12 +17,9 @@ from numpy import *
 import fund_evaluation as fe
 import pandas as pd
 
-
 rf = const.rf
 
-
 def bondfilter(start_date, end_date):
-
 
 	funddf = data.bond_value(start_date, end_date)
 	indexdf = data.bond_index_value(start_date, end_date, 'H11001.CSI')
@@ -140,7 +137,6 @@ if __name__ == '__main__':
 		#筛选基金池，基金打标签
 		codes                  =   bondfilter(train_start, train_end)			
 		fund_codes, bondtags   =   st.tagbonds(train_start, train_end, codes)
-	
 		####################################################################
 
 
@@ -156,15 +152,16 @@ if __name__ == '__main__':
 		'''
 
 		allocationfunddf  = data.bond_value(train_start, train_end)
-		bounds  = pf.boundlimit(len(fund_codes))
+		bonds  = pf.bondlimit(len(fund_codes))
 		#print allocationfunddf[fund_codes]
-		risk, returns ,ws ,sharp = pf.markowitz(allocationfunddf[fund_codes], bounds)
+		risk, returns ,ws ,sharp = pf.markowitz(allocationfunddf[fund_codes], bonds)
+
 
 		fundws = {}
 		for i in range(0, len(fund_codes)):
 			fundws[fund_codes[i]] = ws[i] 
 
-	
+
 		print
 		print fundws
 		print
@@ -309,13 +306,12 @@ if __name__ == '__main__':
 
 
 			##############################################################################################
-
 			#资产每13个周再平衡
 			if i % 13 == 0:
 
 				allocationfunddf = data.bond_value(train_start, indicator_end_date.strftime('%Y-%m-%d'))
-				bounds  = pf.boundlimit(len(fund_codes))
-				risk, returns ,ws ,sharp = pf.markowitz(allocationfunddf[fund_codes], bounds)
+				bonds  = pf.bondlimit(len(fund_codes))
+				risk, returns ,ws ,sharp = pf.markowitz(allocationfunddf[fund_codes], bonds)
 
 				#fund_codes, ws = pf.asset_allocation(train_start, indicator_end_date.strftime('%Y-%m-%d'), largecap_fund, smallcap_fund, P, Q)
 

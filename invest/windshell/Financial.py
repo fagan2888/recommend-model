@@ -30,8 +30,8 @@ def efficient_frontier(return_rate, bound):
 	S	   =     matrix(cov)
 	pbar       =     matrix(asset_mean)	
 
-	if bound == None or len(bound) == 0:
 
+	if bound == None or len(bound) == 0:
 
 		G          =     matrix(0.0, (n_asset, n_asset))
 		G[::n_asset + 1]  =  -1.0
@@ -46,73 +46,60 @@ def efficient_frontier(return_rate, bound):
 		returns = [ dot(pbar,x) for x in portfolios ]
 		risks = [ sqrt(dot(x, S*x)) for x in portfolios ]
 
-
 		return risks, returns, portfolios
-
 
 	else:
 
 		G          =     matrix(0.0 , (3 * n_asset,  n_asset))
-
 		for i in range(0, n_asset):
 			G[i, i] = -1
 			G[n_asset + i, i ] = -1
 			G[2 * n_asset + i, i ] = 1
-
-
 		h                 =  matrix(0.0, (3 * n_asset, 1))
-
 
 		for i in range(0, n_asset):
 			h[n_asset + i, 0] = -1.0 * bound[0][i]
 			h[2 * n_asset + i, 0] = bound[1][i]
-	
-		
+
 		A                 =  matrix(1.0, (1, n_asset))
 		b                 =  matrix(1.0)
 
-				
 		N = 100
 		mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
-		print mus
 		portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
 		returns = [ dot(pbar,x) for x in portfolios ]
 		risks = [ sqrt(dot(x, S*x)) for x in portfolios ]	
 
-	
 		return risks, returns, portfolios
 
 
 #计算有效前沿
 def efficient_frontier_index(return_rate):
 
-	solvers.options['show_progress'] = False
+		solvers.options['show_progress'] = False
         
-	n_asset    =     len(return_rate)
+		n_asset    =     len(return_rate)
 
-        asset_mean = np.mean(return_rate, axis = 1)
+		asset_mean = np.mean(return_rate, axis = 1)
         #print asset_mean
 
-        cov        =     np.cov(return_rate)
+		cov        =     np.cov(return_rate)
+		S          =     matrix(cov)
+		pbar       =     matrix(asset_mean)
+		G          =     matrix(0.0, (n_asset, n_asset))
+		G[::n_asset + 1]  =  -1.0
+		h                 =  matrix(0.0, (n_asset, 1))
+		A                 =  matrix(1.0, (1, n_asset))
+		b                 =  matrix(1.0)
 
-        S          =     matrix(cov)
-        pbar       =     matrix(asset_mean)
-
-        G          =     matrix(0.0, (n_asset, n_asset))
-        G[::n_asset + 1]  =  -1.0
-        h                 =  matrix(0.0, (n_asset, 1))
-        A                 =  matrix(1.0, (1, n_asset))
-        b                 =  matrix(1.0)
-
-
-        N = 100
-        mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
-        portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
-        returns = [ dot(pbar,x) for x in portfolios ]
-        risks = [ sqrt(dot(x, S*x)) for x in portfolios ]
+		N = 100
+		mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
+		portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
+		returns = [ dot(pbar,x) for x in portfolios ]
+		risks = [ sqrt(dot(x, S*x)) for x in portfolios ]
 
 
-        return risks, returns, portfolios
+		return risks, returns, portfolios
 
 
 

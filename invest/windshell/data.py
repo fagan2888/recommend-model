@@ -19,6 +19,15 @@ def funds():
 	return df
 
 
+def bonds():
+	df = pd.read_csv('./wind/bond_value.csv', index_col = 0, parse_dates = 'date' )
+	return df
+
+def moneys():
+	df = pd.read_csv('./wind/money_value.csv', index_col = 0, parse_dates = 'date' )
+	return df
+
+
 #基金和指数数据抽取和对齐
 def fund_index_data(start_date, end_date, index_code):
 
@@ -112,21 +121,19 @@ def fund_value(start_date, end_date):
 
 def bond_value(start_date, end_date):
 
-	
 	#取开始时间和结束时间的数据	
-	df = pd.read_csv('./wind/bound_value.csv', index_col = 'date', parse_dates = [0])
+	df = pd.read_csv('./wind/bond_value.csv', index_col = 0, parse_dates = 'date')
 	df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
 	df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
 
-
+	#print df
 	#取基金成立时间指标
-	indicator_df = pd.read_csv('./wind/bound_establish_date.csv', index_col = 'code', parse_dates = [1])
+	indicator_df = pd.read_csv('./wind/bond_establish_date.csv', index_col = 'code', parse_dates = [1])
 	establish_date_code = set()
 	for code in indicator_df.index:
 		date = indicator_df['establish_date'][code]		
 		if date <= datetime.strptime(start_date, '%Y-%m-%d'):
 			establish_date_code.add(code)
-
 
 	cols = df.columns
 	fund_cols = []
@@ -144,6 +151,7 @@ def bond_value(start_date, end_date):
 		if col.find('OF') >= 0 and col in establish_date_code:
 			fund_cols.append(col)
 
+	fund_cols = list(set(fund_cols))
 
 	fund_df = df[fund_cols]
 
@@ -162,14 +170,15 @@ def index_value(start_date, end_date, index_code):
 
 	return index_df
 
-
 def bond_index_value(start_date, end_date, index_code):
 	
 	#取开始时间和结束时间的数据	
-	df = pd.read_csv('./wind/bound_value.csv', index_col = 'date', parse_dates = [0] )
+	df = pd.read_csv('./wind/bond_value.csv', index_col = 'date', parse_dates = [0] )
 	df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
 	df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
 
+	#print index_code
+	#print df
 	index_df = df[index_code]
 
 	return index_df
@@ -181,17 +190,14 @@ def establish_data():
 	indicator_df = pd.read_csv('./wind/fund_establish_date.csv', index_col = 'code', parse_dates = [1])	
 	return indicator_df
 
-
-
 def bond_establish_data():
 
-	indicator_df = pd.read_csv('./wind/bound_establish_date.csv', index_col = 'code', parse_dates = [1])	
+	indicator_df = pd.read_csv('./wind/bond_establish_date.csv', index_col = 'code', parse_dates = [1])
 	return indicator_df
 
 
 def scale_data():
-
-	indicator_df = pd.read_csv('./wind/fund_scale.csv', index_col = 'code')	
+	indicator_df = pd.read_csv('./wind/fund_scale.csv', index_col = 'code')
 	return indicator_df
 
 

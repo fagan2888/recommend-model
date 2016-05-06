@@ -379,6 +379,3 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
 	#for code in largecap:
 
 	return fund_codes, ws
-
-
-
