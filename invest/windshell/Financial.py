@@ -18,6 +18,7 @@ from scipy import linalg
 #计算有效前沿
 def efficient_frontier(return_rate, bound):
 
+
 	solvers.options['show_progress'] = False
 
 	n_asset    =     len(return_rate)
@@ -27,7 +28,7 @@ def efficient_frontier(return_rate, bound):
 
 	cov        =     np.cov(return_rate)
 	
-	S	   =     matrix(cov)
+	S	       =     matrix(cov)
 	pbar       =     matrix(asset_mean)	
 
 
@@ -51,24 +52,27 @@ def efficient_frontier(return_rate, bound):
 	else:
 
 		G          =     matrix(0.0 , (3 * n_asset,  n_asset))
-		for i in range(0, n_asset):
-			G[i, i] = -1
-			G[n_asset + i, i ] = -1
-			G[2 * n_asset + i, i ] = 1
-		h                 =  matrix(0.0, (3 * n_asset, 1))
 
+		for i in range(0, n_asset):
+			G[i, i]                = -1
+			G[n_asset + i, i ]     = -1
+			G[2 * n_asset + i, i ] = 1
+		h          =  matrix(0.0, (3 * n_asset, 1))
+
+		print len(h)
+		print len(bound[0])
 		for i in range(0, n_asset):
 			h[n_asset + i, 0] = -1.0 * bound[0][i]
 			h[2 * n_asset + i, 0] = bound[1][i]
 
-		A                 =  matrix(1.0, (1, n_asset))
-		b                 =  matrix(1.0)
+		A          =  matrix(1.0, (1, n_asset))
+		b          =  matrix(1.0)
 
-		N = 100
-		mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
+		N          = 100
+		mus        = [ 10**(5.0*t/N-1.0) for t in range(N) ]
 		portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
-		returns = [ dot(pbar,x) for x in portfolios ]
-		risks = [ sqrt(dot(x, S*x)) for x in portfolios ]	
+		returns    = [ dot(pbar,x) for x in portfolios ]
+		risks      = [ sqrt(dot(x, S*x)) for x in portfolios ]
 
 		return risks, returns, portfolios
 

@@ -1,6 +1,5 @@
 #coding=utf8
 
-
 import numpy as np
 import string
 import sys
@@ -64,8 +63,7 @@ def indexallocation(indexdf):
 #细类资产配置
 def technicallocation(funddf, fund_rank):
 
-
-        rf = const.rf
+	rf = const.rf
 
 	funddfr = funddf.pct_change()
 
@@ -118,7 +116,6 @@ def markowitz(funddf, bounds):
 	final_ws = []
 	final_sharp = -1000
 	final_codes = []
-
 
 	codes = funddfr.columns
 

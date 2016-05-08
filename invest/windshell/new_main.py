@@ -19,6 +19,7 @@ import fund_evaluation as fe
 import pandas as pd
 
 
+
 rf = const.rf
 
 
@@ -237,6 +238,7 @@ if __name__ == '__main__':
 			allocation_start_date  = dates[i - 13].strftime('%Y-%m-%d')
 			end_date               = dates[i].strftime('%Y-%m-%d')
 			future_end_date        = dates[-1].strftime('%Y-%m-%d')
+
 
 			if i + 13 >= len(dates):
 				future_end_date = dates[-1].strftime('%Y-%m-%d')

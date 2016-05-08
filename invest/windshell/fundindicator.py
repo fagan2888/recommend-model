@@ -224,32 +224,45 @@ def fund_risk(funddf):
 	return result
 
 
+def portfolio_sharpe(pvs):
+	rs = []
+	for i in range(1, len(pvs)):
+		rs.append(pvs[i] / pvs[i-1] - 1)
+	returns = np.mean(rs) * 52
+	risk    = np.std(rs) * (52 ** 0.5)
+	return (returns - 0.03) / risk
 
-def portfolio_sharp(prs):
-	return fin.sharp(prs, const.rf)
 
-
-
-def portfolio_return(prs):
+def portfolio_return(pvs):
 	#print pvs
 	#print pvs[0]
 	#print pvs[len(pvs) - 1]
-	return np.mean(prs)
+	rs = []
+	for i in range(1, len(pvs)):
+		rs.append(pvs[i] / pvs[i-1] - 1)
+	return np.mean(rs) * 52
 	#return pvs[len(pvs) - 1] / pvs[0] - 1
 
 
-def portfolio_risk(prs):
-	return np.std(prs)
+def portfolio_risk(pvs):
+	rs = []
+	for i in range(1, len(pvs)):
+		rs.append(pvs[i] / pvs[i-1] - 1)
+	return np.std(rs)
 
 
 
 def portfolio_maxdrawdown(pvs):
+	mdd = 0
+	peak = pvs[0]
+	for v in pvs:
+		if v > peak:
+			peak = v
+		dd = (peak - v) / peak
+		if dd > mdd:
+			mdd = dd
+	return mdd
 
-	inv_list =  np.array(pvs)
-	running_max = pd.expanding_max(inv_list)
-	diff = (inv_list - running_max)/running_max
-
-	return diff
 
 
 #基金的最大回撤
