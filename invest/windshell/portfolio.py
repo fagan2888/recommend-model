@@ -72,7 +72,7 @@ def technicallocation(funddf, fund_rank):
 	final_risk = 0
 	final_return = 0
 	final_ws = []
-	final_sharp = -1000
+	final_sharp = -10000000000000000.0
 	final_codes = []
 		
 	for i in range(2, min(11, len(fund_rank))):
@@ -105,7 +105,7 @@ def technicallocation(funddf, fund_rank):
 
 
 #markowitz
-def markowitz(funddf, bounds):
+def markowitz(funddf, bounds, d):
 
 	rf = const.rf
 	funddfr = funddf.pct_change()
@@ -114,17 +114,20 @@ def markowitz(funddf, bounds):
 	final_risk = 0
 	final_return = 0
 	final_ws = []
-	final_sharp = -1000
+	final_sharp = -10000000000000000000000000.0
 	final_codes = []
+
 
 	codes = funddfr.columns
 
+
 	return_rate = []
+
 
 	for code in codes:
 		return_rate.append(funddfr[code].values)
 
-	# print return_rate
+
 	risks, returns, ws = fin.efficient_frontier(return_rate, bounds)
 
 	for j in range(0, len(risks)):
@@ -135,6 +138,14 @@ def markowitz(funddf, bounds):
 			final_ws = ws[j]
 			final_sharp = sharp
 
+	f_str = '%s, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n'
+	f = open('./tmp/ef_' + d + '.csv','w')
+	f.write('date, risk, return, largecap, smallcap, rise, oscillation, decline ,growth ,value, ratebond, creditbond, convertiblebond, money1, money2, SP500.SPI, SPGSGCTR.SPI, HSCI.HI\n')
+	#for j in range(0, len(risks)):
+	#	f.write(f_str % (d,risks[j], returns[j], ws[j][0], ws[j][1], ws[j][2], ws[j][3], ws[j][4], ws[j][5], ws[j][6], ws[j][7], ws[j][8], ws[j][9], ws[j][10], ws[j][11], ws[j][12], ws[j][13], ws[j][14] ))
+
+	f.flush()
+	f.close()
 
 	return final_risk, final_return, final_ws, final_sharp
 
@@ -170,7 +181,7 @@ def largesmallcapfunds(fund_tags):
 	smallcap_set      =   set(smallcap)
 
 	largecap_fund     =   []
-        smallcap_fund     =   []
+	smallcap_fund     =   []
 	
 	largecap_fund.append(largecap[0])
 	smallcap_fund.append(smallcap[0])

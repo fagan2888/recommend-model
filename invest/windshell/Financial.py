@@ -1,23 +1,27 @@
 #coding=utf8
 
 
+
 import string
 import math
 from math import sqrt
 from cvxopt import matrix
 from cvxopt.blas import dot
-from cvxopt.solvers import qp
+from cvxopt.solvers import *
 from sklearn import datasets, linear_model	
 import numpy as np
 from scipy.stats import norm
+import cvxopt
 from cvxopt import matrix, solvers
 from numpy import isnan
 from scipy import linalg
+import pylab
+import matplotlib.pyplot as plt
+
 
 
 #计算有效前沿
 def efficient_frontier(return_rate, bound):
-
 
 	solvers.options['show_progress'] = False
 
@@ -29,7 +33,7 @@ def efficient_frontier(return_rate, bound):
 	cov        =     np.cov(return_rate)
 	
 	S	       =     matrix(cov)
-	pbar       =     matrix(asset_mean)	
+	pbar       =     matrix(asset_mean)
 
 
 	if bound == None or len(bound) == 0:
@@ -41,38 +45,81 @@ def efficient_frontier(return_rate, bound):
 		b                 =  matrix(1.0)
 
 
-		N = 100
+		N = 200
 		mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
 		portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
 		returns = [ dot(pbar,x) for x in portfolios ]
 		risks = [ sqrt(dot(x, S*x)) for x in portfolios ]
 
+
+		'''
+		plt.plot(risks, returns, 'o', markersize=5)
+		plt.xlabel('std')
+		plt.ylabel('mean')
+		plt.title('Mean and standard deviation of returns of randomly generated portfolios')
+		plt.show()
+		'''
+
 		return risks, returns, portfolios
 
 	else:
 
-		G          =     matrix(0.0 , (3 * n_asset,  n_asset))
-
+		#G          =     matrix(0.0 , (3 * n_asset + 4,  n_asset) )
+		G          =     matrix(0.0 , (3 * n_asset,  n_asset) )
 		for i in range(0, n_asset):
 			G[i, i]                = -1
 			G[n_asset + i, i ]     = -1
 			G[2 * n_asset + i, i ] = 1
-		h          =  matrix(0.0, (3 * n_asset, 1))
 
-		print len(h)
-		print len(bound[0])
+		'''
+		for n in range(0, 7):
+			G[3 * n_asset, n]     = -1
+		for n in range(7, 10):
+			G[3 * n_asset + 1, n] = -1
+		for n in range(10, 12):
+			G[3 * n_asset + 2, n] = -1
+		for n in range(12, 15):
+			G[3 * n_asset + 3, n] = -1
+		'''
+
+		#h          =  matrix(0.0, (3 * n_asset + 4, 1) )
+		h          =  matrix(0.0, (3 * n_asset, 1) )
+
 		for i in range(0, n_asset):
 			h[n_asset + i, 0] = -1.0 * bound[0][i]
 			h[2 * n_asset + i, 0] = bound[1][i]
 
+
+		'''
+		h[3* n_asset, 0]     = -0.05
+		h[3* n_asset + 1, 0] = -0.05
+		h[3* n_asset + 2, 0] = -0.05
+		h[3* n_asset + 3, 0] = -0.05
+		'''
+
 		A          =  matrix(1.0, (1, n_asset))
 		b          =  matrix(1.0)
 
-		N          = 100
+
+		N          = 200
 		mus        = [ 10**(5.0*t/N-1.0) for t in range(N) ]
 		portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
 		returns    = [ dot(pbar,x) for x in portfolios ]
 		risks      = [ sqrt(dot(x, S*x)) for x in portfolios ]
+
+
+
+		#for m in range(0, len(portfolios)):
+		#	print portfolios[m]
+		#	print
+		#m1 = np.polyfit(returns, risks, 2)
+		#x1 = np.sqrt(m1[2] / m1[0])
+		# CALCULATE THE OPTIMAL PORTFOLIO
+		#wt = solvers.qp(cvxopt.matrix(x1 * S), -pbar, G, h, A, b)['x']
+		#print portfolios[0], portfolios[1], portfolios[2]
+		#print wt[0] , wt[1] , wt[2]
+		#print
+
 
 		return risks, returns, portfolios
 
@@ -145,7 +192,7 @@ def efficient_frontier_fund(return_rate):
 	returns = [ dot(pbar,x) for x in portfolios ]
 	risks = [ sqrt(dot(x, S*x)) for x in portfolios ]	
 
-	
+
 	return risks, returns, portfolios
 
 
@@ -206,11 +253,11 @@ def sharp_annual(portfolio, rf):
 	rf        =    0.03
 	return    (r - rf) / sigma
 
+
 #索提诺比率
 def sortino(portfolio, rf):
 	pr        =    np.mean(portfolio)
 	return (pr - rf ) / semivariance(portfolio)
-
 
 
 #treynor-mazuy模型
@@ -365,23 +412,132 @@ def black_litterman(delta, weq, sigma, tau, P, Q, Omega):
 	ws = []
 	for v in w:
 		ws.append(v[0])
-	
 
 
 	return [er, ws, lmbda]
-
 
 
 def printHello():
 	print 'hello'
 
 
+def efficient_frontier_wrong(return_rate, bound):
+
+	solvers.options['show_progress'] = False
+	delta = 2.5
+	#cvxopt.solvers.options['abstol'] = 1e-20
+	#cvxopt.solvers.options['reltol'] = 1e-20
+	#cvxopt.solvers.options['feastol'] = 1e-20
+
+
+	if bound == None or len(bound) == 0:
+
+		n_asset    =     len(return_rate)
+		asset_mean = np.mean(return_rate, axis = 1)
+		cov        =     np.cov(return_rate)
+		S	       =     matrix(cov)
+		pbar       =     matrix(0.0, (n_asset, 1))
+		G          =     matrix(0.0, (n_asset, n_asset))
+		G[::n_asset + 1]  =  -1.0
+		h                 =  matrix(0.0, (n_asset, 1))
+		A                 =  matrix(1.0, (1, n_asset))
+		b                 =  matrix(1.0)
+		min_ws    = qp(S, -pbar, G, h, A, b)['x']
+		min_risk  = sqrt(dot(min_ws, S* min_ws))
+		min_return = dot(matrix(asset_mean), min_ws)
+		max_return = max(asset_mean)
+
+		pbar = matrix(asset_mean)
+		n = 100
+		return_interval = (max_return - min_return) / (1.0 * n)
+		final_ws      = []
+		final_returns = []
+		final_risks   = []
+		#print asset_mean
+		for i in range(0, n):
+			t_return   = min_return + i * return_interval
+			A          = matrix(1.0, (2, n_asset))
+			b          = matrix([1.0, t_return])
+			for j in range(0, len(asset_mean)):
+				A[1, j] = asset_mean[j]
+			ws      = qp(S, -pbar * delta, G, h, A, b)['x']
+			risk    = sqrt(dot(ws, S* ws))
+			returns = dot(matrix(asset_mean), ws)
+
+			final_ws.append(ws)
+			final_risks.append(risk)
+			final_returns.append(returns)
+
+		return final_risks, final_returns, final_ws
+	else:
+
+		n_asset    =     len(return_rate)
+		asset_mean = np.mean(return_rate, axis = 1)
+
+		G = matrix(0.0 , (3 * n_asset,  n_asset) )
+		for i in range(0, n_asset):
+			G[i, i]                = -1
+			G[n_asset + i, i ]     = -1
+			G[2 * n_asset + i, i ] = 1
+
+		h          =  matrix(0.0, (3 * n_asset, 1))
+		for i in range(0, n_asset):
+			h[n_asset + i, 0] = -1.0 * bound[0][i]
+			h[2 * n_asset + i, 0] = bound[1][i]
+
+
+		cov        =     np.cov(return_rate)
+		S	       =     matrix(cov)
+		pbar       =     matrix(0.0, (n_asset, 1))
+		A                 =  matrix(1.0, (1, n_asset))
+		b                 =  matrix(1.0)
+		min_ws    = qp(S, -pbar, G, h, A, b)['x']
+		min_risk  = sqrt(dot(min_ws, S* min_ws))
+		min_return = dot(matrix(asset_mean), min_ws)
+
+		max_return = max(asset_mean)
+
+		pbar = matrix(asset_mean)
+		n = 100
+		return_interval = (max_return - min_return) / (1.0 * n)
+		final_ws      = []
+		final_returns = []
+		final_risks   = []
+		#print asset_mean
+		for i in range(0, n):
+			t_return   = min_return + i * return_interval
+			A          = matrix(1.0, (2, n_asset))
+			b          = matrix([1.0, t_return])
+			for j in range(0, len(asset_mean)):
+				A[1, j] = asset_mean[j]
+			ws      = qp(S, -pbar, G, h, A, b)['x']
+			risk    = sqrt(dot(ws, S* ws))
+			returns = dot(matrix(asset_mean), ws)
+
+			final_ws.append(ws)
+			final_risks.append(risk)
+			final_returns.append(returns)
+
+		return final_risks, final_returns, final_ws
+
+
+
+	#for m in range(0, len(portfolios)):
+	#	print portfolios[m]
+	#	print
+	#m1 = np.polyfit(returns, risks, 2)
+	#x1 = np.sqrt(m1[2] / m1[0])
+	# CALCULATE THE OPTIMAL PORTFOLIO
+	#wt = solvers.qp(cvxopt.matrix(x1 * S), -pbar, G, h, A, b)['x']
+	#print portfolios[0], portfolios[1], portfolios[2]
+	#print wt[0] , wt[1] , wt[2]
 
 if __name__ == '__main__':
 
 
-        rs = [[0.25,0.3,0.4, 0.3, 0.2, -0.1, -0.2], [0.1, 0.2, 0.3, -0.01, -0.2, 0.01, 0.02], [0.001, 0.02, -0.03, 0.05, -0.06, -0.07, 0.1]]
- 	#risk ,returns, portfolio = efficient_frontier(rs)
+	rs = [[0.25,0.3,0.4, 0.3, 0.2, -0.1, -0.2], [0.1, 0.2, 0.3, -0.01, -0.2, 0.01, 0.02], [0.001, 0.02, -0.03, 0.05, -0.06, -0.07, 0.1]]
+	test_efficient_frontier(rs)
+
 	#print portfolio[0]
 	#print np.cov(rs)
        	#print semivariance(rs[0])
@@ -391,7 +547,7 @@ if __name__ == '__main__':
 	#print tm(rs[0], rs[1], 0.02)
 	#print ppw(rs[0], rs[1])
 
-
+	'''
 	weq = np.array([0.016,0.022,0.052,0.055,0.116,0.124,0.615])
 	C = np.array([[ 1.000, 0.488, 0.478, 0.515, 0.439, 0.512, 0.491],
 	      [0.488, 1.000, 0.664, 0.655, 0.310, 0.608, 0.779],
@@ -430,4 +586,4 @@ if __name__ == '__main__':
 
 	#print res
 
-
+	'''

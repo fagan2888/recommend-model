@@ -13,7 +13,6 @@ import numpy as np
 #index_col = '000300.SH'
 
 
-
 def funds():
 	df = pd.read_csv('./wind/fund_value.csv', index_col = 'date', parse_dates = [0] )
 	return df

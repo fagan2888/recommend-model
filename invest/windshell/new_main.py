@@ -19,7 +19,6 @@ import fund_evaluation as fe
 import pandas as pd
 
 
-
 rf = const.rf
 
 
@@ -81,7 +80,6 @@ def fundfilter(start_date, end_date):
 		ppw_dict[k] = v
 		#print k,v
 
-
 	#print 
 	#print 'statbility'
 	stability_dict = {}
@@ -89,7 +87,6 @@ def fundfilter(start_date, end_date):
 		stability_dict[k] = v
 		#print k,v 
 
-		
 	sharpe_dict = {}
 	for k,v in sharpe_data:
 		sharpe_dict[k] = v
@@ -182,9 +179,10 @@ def fundfilter(start_date, end_date):
 
 	#codes = []	
 	#for k, v in stability_data:
-	#	codes.append(k)	
+	#	codes.append(k)
 
 	return codes, indicator
+
 
 if __name__ == '__main__':
 

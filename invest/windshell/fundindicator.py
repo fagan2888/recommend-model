@@ -224,6 +224,7 @@ def fund_risk(funddf):
 	return result
 
 
+
 def portfolio_sharpe(pvs):
 	rs = []
 	for i in range(1, len(pvs)):
