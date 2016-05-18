@@ -42,7 +42,6 @@ def fund_maxsemivariance(funddf):
 	return fundsemivariance
 
 
-
 def fund_semivariance(funddf):
 
 
@@ -63,7 +62,6 @@ def fund_semivariance(funddf):
 	
 
 	return fundsemivariance
-
 
 
 def fund_weekly_return(funddf):
@@ -92,12 +90,13 @@ def fund_month_return(funddf):
 
 	length = len(funddf.index)
 
-        tran_index = []
-        for i in range(0, length):
-                if i % 4 == 0:
-                        tran_index.append(i)
 
-        funddf = funddf.iloc[tran_index]
+	tran_index = []
+	for i in range(0, length):
+		if i % 4 == 0:
+			tran_index.append(i)
+
+	funddf = funddf.iloc[tran_index]
 	
 	funddfr = funddf.pct_change().fillna(0.0)
 
@@ -114,7 +113,6 @@ def fund_month_return(funddf):
 	
 
 	return fundmonthreturn
-
 
 
 def fund_sharp(funddf):
@@ -135,13 +133,12 @@ def fund_sharp(funddf):
 	
 
 	x = fundsharp
-        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-        sorted_sharp = sorted_x
+	sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+	sorted_sharp = sorted_x
 
-        result = []
-        for i in range(0, len(sorted_sharp)):
-                result.append(sorted_sharp[i])
-
+	result = []
+	for i in range(0, len(sorted_sharp)):
+		result.append(sorted_sharp[i])
 
 	return result
 
@@ -162,7 +159,7 @@ def fund_sharp_annual(funddf):
 		fundsharp[code] = fin.sharp_annual(rs, const.rf)
 
 	x = fundsharp
-        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+    	sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
         sorted_sharp = sorted_x
 
         result = []

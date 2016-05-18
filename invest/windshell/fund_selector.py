@@ -14,7 +14,7 @@ import Financial as fin
 import fundindicator as fi
 
 
-def select_fund(funddf, fund_tags):
+def select_stock(funddf, fund_tags):
 
 	largecap_codes             = fund_tags['largecap']
 	smallcap_codes             = fund_tags['smallcap']
@@ -130,6 +130,7 @@ def select_bond(funddf, fund_tags):
 	#print codes
 
 	return codes, tag
+
 
 
 def select_money(funddf):

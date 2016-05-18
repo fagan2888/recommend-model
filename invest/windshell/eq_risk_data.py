@@ -22,7 +22,7 @@ asset_v = {}
 for code in cols:
 	asset_w[code] = 0.0
 for code in cols:
-	asset_v.setdefault(code, [1.0])
+	asset_v.setdefault(code, [1.0]):asset_w
 
 data = {}
 

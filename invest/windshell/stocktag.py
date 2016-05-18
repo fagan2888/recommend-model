@@ -890,32 +890,36 @@ def hmmeasure(funddf, indexdf):
                 #print p
                 hm[col] = fin.hm(p, m, rf)
 
-	return hm								
+	return hm
+
+
 
 
 #输出每一个基金的标签
-def tagfunds(start_date, end_date, codes):
-					
+def tagstockfund(start_date, end_date, codes):
+
+
 	funddf = data.fund_value(start_date, end_date)
 	funddf = funddf[codes]
 
 
-	capindexdf         = data.index_value(start_date, end_date, ['399314.SZ', '399316.SZ'])
-	largecapindexdf    = data.index_value(start_date, end_date, ['399314.SZ'])
-	smallcapindexdf    = data.index_value(start_date, end_date, ['399316.SZ'])
-	hs300indexdf       = data.index_value(start_date, end_date, ['000300.SH'])
-	growthvalueindexdf = data.index_value(start_date, end_date, ['399372.SZ','399373.SZ','399376.SZ','399377.SZ'])
+	capindexdf = data.index_value(start_date, end_date, ['399314.SZ', '399316.SZ'])
+	largecapindexdf = data.index_value(start_date, end_date, ['399314.SZ'])
+	smallcapindexdf = data.index_value(start_date, end_date, ['399316.SZ'])
+	hs300indexdf = data.index_value(start_date, end_date, ['000300.SH'])
+	growthvalueindexdf = data.index_value(start_date, end_date, ['399372.SZ', '399373.SZ', '399376.SZ', '399377.SZ'])
 
 
-	positiondf         = data.fund_position(start_date, end_date)
-	columns            = set(positiondf.columns)
-	tmp_codes          = []
+	positiondf = data.fund_position(start_date, end_date)
+	columns = set(positiondf.columns)
+	tmp_codes = []
 	for code in codes:
 		if code in columns:
 			tmp_codes.append(code)
 	codes = tmp_codes
 
-	positiondf         = positiondf[codes]
+	positiondf = positiondf[codes]
+
 
 	largecapfitness_result    = largecapfitness(funddf, capindexdf, 0.5)
 	smallcapfitness_result    = smallcapfitness(funddf, capindexdf, 0.5)
@@ -935,18 +939,18 @@ def tagfunds(start_date, end_date, codes):
 	largecapfitness_set =  set()
 	for k,v in largecapfitness_result:
 		largecapfitness_set.add(k)
-		#print k, v	
+		#print k, v
+
 
 	#print 
-
 	#print 'smallcap'
 	smallcapfitness_set = set()
 	for k,v in smallcapfitness_result:
 		smallcapfitness_set.add(k)
 		#print k, v	
 
-	#print 
 
+	#print 
 	#print 'rise'
 	risefitness_set = set()
 	for k,v in risefitness_result:
@@ -959,8 +963,6 @@ def tagfunds(start_date, end_date, codes):
 	for k,v in declinefitness_result:
 		declinefitness_set.add(k)
 		#print k, v
-
-	#print 
 
 
 	#print 'oscillation'
@@ -1073,7 +1075,6 @@ def tagfunds(start_date, end_date, codes):
 	#print final_codes
 
 
-
 	funddf = funddf[list(final_codes)]
 	#print 
 	#print 'tm'
@@ -1139,10 +1140,12 @@ def tagfunds(start_date, end_date, codes):
 			codes.append(code)
 	fund_tags['valuefitness'] = codes
 
+
 	return list(final_codes) , fund_tags
 
 
-def tagbonds(start_date, end_date, codes):
+
+def tagbondfund(start_date, end_date, codes):
 
 	funddf = data.bond_value(start_date, end_date)
 	funddf = funddf[codes]

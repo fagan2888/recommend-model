@@ -150,7 +150,41 @@ def markowitz(funddf, bounds, d):
 	return final_risk, final_return, final_ws, final_sharp
 
 
-#利用blacklitterman做战略资产配置		
+def markowitz_r(funddfr, bounds):
+
+	rf = const.rf
+
+	final_risk = 0
+	final_return = 0
+	final_ws = []
+	final_sharp = -10000000000000000000000000.0
+	final_codes = []
+
+
+	codes = funddfr.columns
+
+
+	return_rate = []
+
+	for code in codes:
+		return_rate.append(funddfr[code].values)
+
+
+	risks, returns, ws = fin.efficient_frontier(return_rate, bounds)
+
+	for j in range(0, len(risks)):
+		sharp = (returns[j] - rf) / risks[j]
+		if sharp > final_sharp:
+			final_risk = risks[j]
+			final_return = returns[j]
+			final_ws = ws[j]
+			final_sharp = sharp
+
+	return final_risk, final_return, final_ws, final_sharp
+
+
+
+#利用blacklitterman做战略资产配置
 def strategicallocation(delta,	weq, V, tau, P, Q):
 
 	P = np.array(P)

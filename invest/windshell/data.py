@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime
 from numpy import *
 import numpy as np
+import const
 
 
 #start_date = '2014-03-07'
@@ -14,16 +15,28 @@ import numpy as np
 
 
 def funds():
-	df = pd.read_csv('./wind/fund_value.csv', index_col = 'date', parse_dates = [0] )
+	df = pd.read_csv('./wind/fund_value.csv', index_col = 'date', parse_dates = 'date' )
 	return df
 
 
 def bonds():
-	df = pd.read_csv('./wind/bond_value.csv', index_col = 0, parse_dates = 'date' )
+	df = pd.read_csv('./wind/bond_value.csv', index_col = 'date', parse_dates = 'date' )
 	return df
 
+
 def moneys():
-	df = pd.read_csv('./wind/money_value.csv', index_col = 0, parse_dates = 'date' )
+	df = pd.read_csv('./wind/money_value.csv', index_col = 'date', parse_dates = 'date' )
+	return df
+
+
+def others():
+	df = pd.read_csv('./wind/other_value.csv', index_col = 'date', parse_dates = 'date' )
+	return df
+
+
+def stockindex():
+	df = pd.read_csv('./wind/fund_value.csv', index_col = 'date', parse_dates = 'date' )
+	df = df[[const.hs300_code, const.largecap_code, const.smallcap_code, const.largecapgrowth_code, const.largecapvalue_code, const.smallcapvalue_code, const.smallcapgrowth_code, const.zz500_code]]
 	return df
 
 
@@ -89,10 +102,11 @@ def fund_value(start_date, end_date):
 
 	#取基金成立时间指标
 	indicator_df = pd.read_csv('./wind/fund_establish_date.csv', index_col = 'code', parse_dates = 'date')
+	indicator_df = indicator_df.dropna()
 	establish_date_code = set()
 	for code in indicator_df.index:
 		date = indicator_df['establish_date'][code]		
-		if date <= datetime.strptime(start_date, '%Y-%m-%d'):
+		if datetime.strptime(date, '%Y-%m-%d') <= datetime.strptime(start_date, '%Y-%m-%d'):
 			establish_date_code.add(code)
 
 
@@ -128,10 +142,11 @@ def bond_value(start_date, end_date):
 	#print df
 	#取基金成立时间指标
 	indicator_df = pd.read_csv('./wind/bond_establish_date.csv', index_col = 'code', parse_dates = 'date')
+	indicator_df = indicator_df.dropna()
 	establish_date_code = set()
 	for code in indicator_df.index:
 		date = indicator_df['establish_date'][code]		
-		if date <= datetime.strptime(start_date, '%Y-%m-%d'):
+		if datetime.strptime(date,'%Y-%m-%d') <= datetime.strptime(start_date, '%Y-%m-%d'):
 			establish_date_code.add(code)
 
 	cols = df.columns
@@ -157,6 +172,47 @@ def bond_value(start_date, end_date):
 	return fund_df
 
 
+def money_value(start_date, end_date):
+
+
+	#取开始时间和结束时间的数据
+	df = pd.read_csv('./wind/money_value.csv', index_col = 0, parse_dates = 'date')
+	df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
+	df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
+
+
+	#print df
+	#取基金成立时间指标
+	indicator_df = pd.read_csv('./wind/money_establish_date.csv', index_col = 'code', parse_dates = 'date')
+	indicator_df = indicator_df.dropna()
+	establish_date_code = set()
+	for code in indicator_df.index:
+		date = indicator_df['establish_date'][code]
+		if datetime.strptime(date,'%Y-%m-%d') <= datetime.strptime(start_date, '%Y-%m-%d'):
+			establish_date_code.add(code)
+
+
+	cols = df.columns
+	fund_cols = []
+	for col in cols:
+
+		#有20%的净值是nan，则过滤掉该基金
+		vs = df[col].values
+		n = 0
+		for v in vs:
+			if isnan(v):
+				n = n + 1
+		if n > 0.2 * len(vs):
+			continue
+
+		if col.find('OF') >= 0 and col in establish_date_code:
+			fund_cols.append(col)
+
+	fund_cols = list(set(fund_cols))
+
+	fund_df = df[fund_cols]
+
+	return fund_df
 
 def index_value(start_date, end_date, index_code):
 
@@ -187,6 +243,7 @@ def bond_index_value(start_date, end_date, index_code):
 def establish_data():
 
 	indicator_df = pd.read_csv('./wind/fund_establish_date.csv', index_col = 'code', parse_dates = 'date')
+	indicator_df = indicator_df.dropna()
 	return indicator_df
 
 def bond_establish_data():
@@ -253,6 +310,7 @@ def buysell():
 	#print buy
 	#print sell
 	return buy, sell
+
 
 
 if __name__ == '__main__':
