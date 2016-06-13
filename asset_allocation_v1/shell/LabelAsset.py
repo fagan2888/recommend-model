@@ -362,3 +362,4 @@ if __name__ == '__main__':
 	df = pd.concat([stock_df, bond_df, money_df, other_df], axis = 1, join_axes=[stock_df.index])
 
 	df.to_csv('./tmp/labelasset.csv')
+
