@@ -12,14 +12,12 @@ import HighLowRiskAsset
 
 if __name__ == '__main__':
 
-
-	start_date = '2007-01-05'
+	start_date = '2006-01-05'
 	end_date = '2016-04-22'
 
-
-	#LabelAsset.labelasset(start_date, end_date)
+	LabelAsset.labelasset(start_date, end_date)
 	EqualRiskAssetRatio.equalriskassetratio()
-	#EqualRiskAsset.equalriskasset()
-	#HighLowRiskAsset.highlowriskasset()
+	EqualRiskAsset.equalriskasset()
+	HighLowRiskAsset.highlowriskasset()
 
 

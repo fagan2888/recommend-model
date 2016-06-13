@@ -3,6 +3,8 @@
 
 import string
 import pandas as pd
+import time
+from datetime import datetime
 
 
 def equalriskasset():
@@ -10,7 +12,11 @@ def equalriskasset():
 	rf = 0.03 / 52
 
 	ratio_df         = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date', parse_dates = 'date' )
+	ratio_dates      = ratio_df.index
+	start_date = ratio_dates[0]
+
 	dfr              = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
+	dfr              = dfr[dfr.index >= start_date]
 
 	dates = dfr.index
 	ratio_dates = ratio_df.index
@@ -66,12 +72,14 @@ def equalriskasset():
 				cvs = asset_combination[asset]
 				cvs.append( [vs[-1] * asset_ratio[asset], vs[-1] * (1 - asset_ratio[asset])] )
 
+
 		asset_vs = [asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1],
 					asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
 					asset_values['value'][-1], asset_values['convertiblebond'][-1], asset_values['SP500.SPI'][-1], \
 					asset_values['SPGSGCTR.SPI'][-1], asset_values['HSCI.HI'][-1]]
 		result_datas.append(asset_vs)
 		result_dates.append(d)
+
 
 		print d, asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1], \
 		asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \

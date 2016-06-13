@@ -120,7 +120,7 @@ def lowriskasset(dfr, his_week, interval):
 			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
 			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d')]
 
-			risk, returns, ws, sharpe = pf.markowitz_r(allocation_dfr, None)
+			risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
 			fund_codes = allocation_dfr.columns
 
 			for n in range(0, len(fund_codes)):
@@ -191,7 +191,7 @@ def highlowallocation(dfr, his_week, interval):
 			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
 			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d')]
 
-			risk, returns, ws, sharpe = pf.markowitz_r(allocation_dfr, None)
+			risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
 			fund_codes = allocation_dfr.columns
 
 			last_pv = portfolio_vs[-1]
@@ -259,9 +259,9 @@ def highlowriskasset():
 	highlowdf = highlowallocation(dfr, his_week, interval)
 
 
-	print "sharpe : ", fi.portfolio_sharpe(highlowdf['highlow_risk_asset'].values)
-	print "annual_return : ", fi.portfolio_return(highlowdf['highlow_risk_asset'].values)
-	print "maxdrawdown : ", fi.portfolio_maxdrawdown(highlowdf['highlow_risk_asset'].values)
+	print "sharpe : ", FundIndicator.portfolio_sharpe(highlowdf['highlow_risk_asset'].values)
+	print "annual_return : ", FundIndicator.portfolio_return(highlowdf['highlow_risk_asset'].values)
+	print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(highlowdf['highlow_risk_asset'].values)
 
 
 	highlowdf.to_csv('./tmp/highlowrisk_net_value.csv')
