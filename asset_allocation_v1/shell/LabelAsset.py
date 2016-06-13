@@ -328,6 +328,8 @@ def labelasset(start_date, end_date):
 
 	df.index.name = 'date'
 
+	df = df.dropna()
+
 	df.to_csv('./tmp/labelasset.csv')
 
 
