@@ -20,3 +20,7 @@ ratebondindex_code        = 'H11001.CSI'  #中证国债指数
 credictbondindex_code     = 'H11073.CSI'  #中证信用债指数
 convertiblebondindex_code = '000832.SH'   #中证可转债指数
 
+
+sp500_code                = 'SP500.SPI'   #标普500指数
+gold_code                 = 'SPGSGCTR.SPI'#黄金指数
+hs_code                   = 'HSCI.HI'     #恒生指数

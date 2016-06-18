@@ -5,6 +5,9 @@ import string
 import pandas as pd
 import time
 from datetime import datetime
+import sys
+sys.path.append('shell')
+import AllocationData
 
 
 def equalriskasset():
@@ -98,3 +101,5 @@ def equalriskasset():
 
 	result_df.index.name = 'date'
 	result_df.to_csv('./tmp/equalriskasset.csv')
+
+	AllocationData.equal_risk_asset_df = result_df

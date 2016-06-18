@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import Financial as fin
 import FundIndicator as fi
-
+import AllocationData
 
 
 #大盘适应度
@@ -892,7 +892,6 @@ def hmmeasure(funddf, indexdf):
 	return hm
 
 
-
 #输出每一个基金的标签
 def tagstockfund(start_date, end_date, codes):
 
@@ -1140,10 +1139,90 @@ def tagstockfund(start_date, end_date, codes):
 	fund_tags['valuefitness'] = codes
 
 
+	indicator_datas = []
+	indicator_codes = []
+	tag_columns = ['high_position_prefer','low_position_prefer','largecap_prefer','smallcap_prefer','growth_prefer','value_prefer','largecap_fitness','smallcap_fitness','rise_fitness','decline_fitness','oscillation_fitness','growth_fitness','value_fitness']
+
+	for code in final_codes:
+
+		indicator_codes.append(code)
+		labels = []
+
+		if code in positionprefer_set:
+			labels.append(1)
+			labels.append(0)
+		else:
+			labels.append(0)
+			labels.append(1)
+		
+		if code in largecapprefer_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+		
+		if code in smallcapprefer_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in growthcapprefer_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in valuecapprefer_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in largecapfitness_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in smallcapfitness_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in risefitness_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in declinefitness_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in oscillation_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in growthfitness_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in valuefitness_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		indicator_datas.append(labels)
+
+	indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=tag_columns)
+        indicator_df.index.name = 'code'
+        indicator_df.to_csv('./tmp/stock_label_' + end_date + '.csv')
+
+	AllocationData.stock_fund_label[end_date] = indicator_df
+
 	return list(final_codes) , fund_tags
 
 
 def tagbondfund(start_date, end_date, codes):
+
 
 	funddf = Data.bond_value(start_date, end_date)
 	funddf = funddf[codes]
@@ -1227,6 +1306,7 @@ def tagbondfund(start_date, end_date, codes):
 
 	fund_tags = {}
 
+
         codes = []
         for code in risefitness_set:
                 if code in final_codes:
@@ -1264,8 +1344,41 @@ def tagbondfund(start_date, end_date, codes):
         fund_tags['convertiblebond'] = codes
 
 
-	return list(final_codes), fund_tags
+	indicator_datas = []
+	indicator_codes = []
+	tag_columns = ['ratebond','creditbond','convertiblebond']
 
+
+	for code in final_codes:
+
+		indicator_codes.append(code)
+		labels = []
+
+		if code in ratebondprefer_set:
+			labels.append(1)
+		else:
+			labels.append(0)	
+
+		if code in creditbondprefer_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+
+		if code in convertiblebondprefer_set:
+			labels.append(1)
+		else:
+			labels.append(0)
+	
+		indicator_datas.append(labels)
+
+
+	indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=tag_columns)
+        indicator_df.index.name = 'code'
+        indicator_df.to_csv('./tmp/bond_label_' + end_date + '.csv')
+
+	AllocationData.bond_fund_label[end_date] = indicator_df
+	
+	return list(final_codes), fund_tags
 
 
 if __name__ == '__main__':

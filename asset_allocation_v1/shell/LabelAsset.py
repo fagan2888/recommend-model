@@ -16,6 +16,7 @@ import FundSelector
 import Const
 import pandas as pd
 import time
+import AllocationData
 
 
 def stockLabelAsset(dates, interval, funddf, indexdf):
@@ -72,7 +73,7 @@ def stockLabelAsset(dates, interval, funddf, indexdf):
 			selectcodes = fund_code
 
 
-			print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']
+			#print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']
 			#print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']
 
 
@@ -114,7 +115,11 @@ def stockLabelAsset(dates, interval, funddf, indexdf):
 	select_df.to_csv('./tmp/stockselectasset.csv')
 
 	fund_df = pd.DataFrame(fund_datas , index = fund_dates, columns=['largecap', 'smallcap', 'rise', 'oscillation', 'decline', 'growth', 'value'])
-	fund_df.to_csv('./tmp/stock_position.csv')
+	fund_df.index.name = 'date'
+	fund_df.to_csv('./tmp/stock_fund.csv')
+
+
+	AllocationData.stock_fund_df = fund_df
 
 	return result_df
 
@@ -140,6 +145,9 @@ def bondLabelAsset(dates, interval, funddf, indexdf):
 	columns = []
 	result_datas = []
 
+
+	fund_dates = []
+	fund_datas = []
 
 	select_datas = []
 
@@ -193,6 +201,10 @@ def bondLabelAsset(dates, interval, funddf, indexdf):
 			# print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']
 
 
+			fund_dates.append(end_date)
+			fund_datas.append([tag['ratebond'] , tag['creditbond'], tag['convertiblebond']])
+
+
 		d = dates[i]
 		result_dates.append(d)
 		result_datas.append(
@@ -229,6 +241,12 @@ def bondLabelAsset(dates, interval, funddf, indexdf):
 	select_df.to_csv('./tmp/bondselectasset.csv')
 
 
+	fund_df = pd.DataFrame(fund_datas , index = fund_dates, columns=['ratebond', 'creditbond','convertiblebond'])
+	fund_df.index.name = 'date'
+	fund_df.to_csv('./tmp/bond_fund.csv')
+	
+	AllocationData.bond_fund_df = fund_df
+
 	return result_df
 
 
@@ -256,7 +274,6 @@ def moneyLabelAsset(dates, interval, funddf, indexdf):
 		# print tag
 		# print fund_codes
 
-
 		d = dates[i]
 		result_dates.append(d)
 		result_datas.append(
@@ -264,9 +281,7 @@ def moneyLabelAsset(dates, interval, funddf, indexdf):
 
 		print d.strftime('%Y-%m-%d'), ',', funddfr.loc[d, tag['money']]
 
-	result_df = pd.DataFrame(result_datas, index=result_dates,
-							 columns=['money'])
-
+	result_df = pd.DataFrame(result_datas, index=result_dates,columns=['money'])
 	result_df.to_csv('./tmp/moneylabelasset.csv')
 
 	return result_df
@@ -293,9 +308,7 @@ def otherLabelAsset(dates, interval, funddf, indexdf):
 	result_df = pd.DataFrame(result_datas, index=result_dates,
 							 columns=['SP500.SPI', 'SPGSGCTR.SPI', 'HSCI.HI'])
 
-
 	result_df.to_csv('./tmp/otherlabelasset.csv')
-
 	return result_df
 
 
@@ -329,6 +342,8 @@ def labelasset(start_date, end_date):
 	df.index.name = 'date'
 
 	df = df.dropna()
+
+	AllocationData.label_asset_df = df
 
 	df.to_csv('./tmp/labelasset.csv')
 

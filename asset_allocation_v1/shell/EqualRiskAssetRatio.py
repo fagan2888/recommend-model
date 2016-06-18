@@ -6,6 +6,9 @@ import pandas as pd
 import numpy as np
 import FundIndicator
 from datetime import datetime
+import sys
+sys.path.append('shell')
+import AllocationData
 
 
 def riskmeanstd(risks):
@@ -101,10 +104,11 @@ def equalriskassetratio():
 			result_dates.append(d)
 
 
-	result_df = pd.DataFrame(result_datas, index=result_dates,
-									 columns=assetlabels)
+	result_df = pd.DataFrame(result_datas, index=result_dates, columns=assetlabels)
 	result_df.index.name = 'date'
+
 
 	result_df.to_csv('./tmp/equalriskassetratio.csv')
 
+	AllocationData.equal_risk_asset_ratio_df = result_df
 

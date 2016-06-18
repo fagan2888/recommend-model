@@ -1,13 +1,12 @@
 #coding=utf8
 
-
-
 import string
 import pandas as pd
 import numpy as np
 import FundIndicator
 from datetime import datetime
 import Portfolio as PF
+import AllocationData
 
 
 def highriskasset(dfr, his_week, interval):
@@ -76,13 +75,17 @@ def highriskasset(dfr, his_week, interval):
 	result_df = pd.DataFrame(result_datas, index=result_dates,
 								 columns=['high_risk_asset'])
 
-
+	result_df.index.name = 'date'
 	result_df.to_csv('./tmp/highriskasset.csv')
 
 
 
 	highriskposition_df = pd.DataFrame(position_datas, index=position_dates, columns=dfr.columns)
+	highriskposition_df.index.name = 'date'
 	highriskposition_df.to_csv('./tmp/highriskposition.csv')
+
+	AllocationData.high_risk_position_df = highriskposition_df
+	AllocationData.high_risk_asset_df     = result_df
 
 	return result_df
 
@@ -154,14 +157,20 @@ def lowriskasset(dfr, his_week, interval):
 	result_df = pd.DataFrame(result_datas, index=result_dates,
 							 columns=['low_risk_asset'])
 
+	result_df.index.name = 'date'
 	result_df.to_csv('./tmp/lowriskasset.csv')
 
 
 	lowriskposition_df = pd.DataFrame(position_datas, index=position_dates, columns=dfr.columns)
+	lowriskposition_df.index.name = 'date'
 	lowriskposition_df.to_csv('./tmp/lowriskposition.csv')
 
 
+	AllocationData.low_risk_position_df = lowriskposition_df
+	AllocationData.low_risk_asset_df    = result_df
+
 	return result_df
+
 
 
 def highlowallocation(dfr, his_week, interval):
@@ -221,12 +230,19 @@ def highlowallocation(dfr, his_week, interval):
 	result_df = pd.DataFrame(result_datas, index=result_dates,
 							 columns=['highlow_risk_asset'])
 
+	result_df.index.name = 'date'
 	result_df.to_csv('./tmp/highlowriskasset.csv')
 
 
 	highlowriskposition_df = pd.DataFrame(position_datas, index=position_dates, columns=dfr.columns)
+
+	highlowriskposition_df.index.name = 'date'
+
 	highlowriskposition_df.to_csv('./tmp/highlowriskposition.csv')
 
+
+	AllocationData.highlow_risk_position_df = highlowriskposition_df
+	AllocationData.highlow_risk_asset_df    = result_df
 
 	return result_df
 
