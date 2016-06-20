@@ -257,7 +257,7 @@ def ratio_filter(measure, ratio):
 
 
 
-def stockfundfilter(start_date, end_date):
+def stockfundfilter(allocationdata, start_date, end_date):
 
 	indicator = {}
 
@@ -403,7 +403,7 @@ def stockfundfilter(start_date, end_date):
 	indicator_df.to_csv('./tmp/stock_indicator_' + end_date + '.csv')
 
 
-	AllocationData.stock_fund_measure[end_date] = indicator_df
+	allocationdata.stock_fund_measure[end_date] = indicator_df
 
 
 	'''
@@ -420,7 +420,7 @@ def stockfundfilter(start_date, end_date):
 
 
 
-def bondfundfilter(start_date, end_date):
+def bondfundfilter(allocationdata, start_date, end_date):
 
 	indicator = {}
 
@@ -573,7 +573,7 @@ def bondfundfilter(start_date, end_date):
 	indicator_df.to_csv('./tmp/bond_indicator_' + end_date + '.csv')
 
 
-	AllocationData.bond_fund_measure[end_date] = indicator_df
+	allocationdata.bond_fund_measure[end_date] = indicator_df
 
 
 	'''

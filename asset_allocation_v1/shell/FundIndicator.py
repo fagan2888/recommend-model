@@ -349,8 +349,8 @@ if __name__ == '__main__':
 			codes.append(code)
 
 
-	print 'code, sharpe, jensen, sortino, ppw, stability'	
-	for code in codes:
-		print code, ',', sharpe_dict[code], ',', jensen_dict[code],',', sortino_dict[code] ,',', ppw_dict[code],',' ,stability_dict[code]	
+	#print 'code, sharpe, jensen, sortino, ppw, stability'	
+	#for code in codes:
+	#	print code, ',', sharpe_dict[code], ',', jensen_dict[code],',', sortino_dict[code] ,',', ppw_dict[code],',' ,stability_dict[code]	
 
 			

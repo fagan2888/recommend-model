@@ -893,7 +893,7 @@ def hmmeasure(funddf, indexdf):
 
 
 #输出每一个基金的标签
-def tagstockfund(start_date, end_date, codes):
+def tagstockfund(allocationdata, start_date, end_date, codes):
 
 
 	funddf = Data.fund_value(start_date, end_date)
@@ -1216,12 +1216,12 @@ def tagstockfund(start_date, end_date, codes):
         indicator_df.index.name = 'code'
         indicator_df.to_csv('./tmp/stock_label_' + end_date + '.csv')
 
-	AllocationData.stock_fund_label[end_date] = indicator_df
+	allocationdata.stock_fund_label[end_date] = indicator_df
 
 	return list(final_codes) , fund_tags
 
 
-def tagbondfund(start_date, end_date, codes):
+def tagbondfund(allocationdata, start_date, end_date, codes):
 
 
 	funddf = Data.bond_value(start_date, end_date)
@@ -1376,7 +1376,7 @@ def tagbondfund(start_date, end_date, codes):
         indicator_df.index.name = 'code'
         indicator_df.to_csv('./tmp/bond_label_' + end_date + '.csv')
 
-	AllocationData.bond_fund_label[end_date] = indicator_df
+	allocationdata.bond_fund_label[end_date] = indicator_df
 	
 	return list(final_codes), fund_tags
 

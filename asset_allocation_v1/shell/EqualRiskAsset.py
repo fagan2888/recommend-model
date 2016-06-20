@@ -7,18 +7,22 @@ import time
 from datetime import datetime
 import sys
 sys.path.append('shell')
-import AllocationData
 
 
-def equalriskasset():
+def equalriskasset(allocationdata):
+
 
 	rf = 0.03 / 52
 
-	ratio_df         = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date', parse_dates = 'date' )
+
+	ratio_df         = allocationdata.equal_risk_asset_ratio_df
+	#ratio_df         = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date', parse_dates = 'date' )
 	ratio_dates      = ratio_df.index
 	start_date = ratio_dates[0]
 
-	dfr              = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
+
+	dfr              = allocationdata.label_asset_df
+	#dfr              = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
 	dfr              = dfr[dfr.index >= start_date]
 
 	dates = dfr.index
@@ -36,7 +40,6 @@ def equalriskasset():
 		asset_values.setdefault(asset, [1.0])
 		asset_ratio.setdefault(asset, 0)
 		asset_combination.setdefault(asset, [[0.0, 0,0]])
-
 
 
 	result_dates = []
@@ -84,10 +87,10 @@ def equalriskasset():
 		result_dates.append(d)
 
 
-		print d, asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1], \
-		asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
-			asset_values['value'][-1], asset_values['convertiblebond'][-1], asset_values['SP500.SPI'][-1], \
-			asset_values['SPGSGCTR.SPI'][-1], asset_values['HSCI.HI'][-1]
+		#print d, asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1], \
+		#asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
+		#	asset_values['value'][-1], asset_values['convertiblebond'][-1], asset_values['SP500.SPI'][-1], \
+		#	asset_values['SPGSGCTR.SPI'][-1], asset_values['HSCI.HI'][-1]
 
 
 		if d in ratio_dates:
@@ -102,4 +105,4 @@ def equalriskasset():
 	result_df.index.name = 'date'
 	result_df.to_csv('./tmp/equalriskasset.csv')
 
-	AllocationData.equal_risk_asset_df = result_df
+	allocationdata.equal_risk_asset_df = result_df

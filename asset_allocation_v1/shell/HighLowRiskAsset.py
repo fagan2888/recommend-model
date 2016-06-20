@@ -9,7 +9,7 @@ import Portfolio as PF
 import AllocationData
 
 
-def highriskasset(dfr, his_week, interval):
+def highriskasset(allocationdata, dfr, his_week, interval):
 
 
 	interval = 26
@@ -68,7 +68,7 @@ def highriskasset(dfr, his_week, interval):
 		portfolio_vs.append(pv)
 		result_dates.append(d)
 
-		print d , pv
+		#print d , pv
 
 
 	result_datas  = portfolio_vs
@@ -84,14 +84,14 @@ def highriskasset(dfr, his_week, interval):
 	highriskposition_df.index.name = 'date'
 	highriskposition_df.to_csv('./tmp/highriskposition.csv')
 
-	AllocationData.high_risk_position_df = highriskposition_df
-	AllocationData.high_risk_asset_df     = result_df
+	allocationdata.high_risk_position_df = highriskposition_df
+	allocationdata.high_risk_asset_df     = result_df
 
 	return result_df
 
 
 
-def lowriskasset(dfr, his_week, interval):
+def lowriskasset(allocationdata, dfr, his_week, interval):
 
 
 	interval = 26
@@ -150,7 +150,7 @@ def lowriskasset(dfr, his_week, interval):
 		portfolio_vs.append(pv)
 		result_dates.append(d)
 
-		print d , pv
+		#print d , pv
 
 
 	result_datas  = portfolio_vs
@@ -166,14 +166,14 @@ def lowriskasset(dfr, his_week, interval):
 	lowriskposition_df.to_csv('./tmp/lowriskposition.csv')
 
 
-	AllocationData.low_risk_position_df = lowriskposition_df
-	AllocationData.low_risk_asset_df    = result_df
+	allocationdata.low_risk_position_df = lowriskposition_df
+	allocationdata.low_risk_asset_df    = result_df
 
 	return result_df
 
 
 
-def highlowallocation(dfr, his_week, interval):
+def highlowallocation(allocationdata, dfr, his_week, interval):
 
 	result_dates = []
 	result_datas = []
@@ -223,7 +223,7 @@ def highlowallocation(dfr, his_week, interval):
 		portfolio_vs.append(pv)
 		result_dates.append(d)
 
-		print d , pv
+		#print d , pv
 
 
 	result_datas  = portfolio_vs
@@ -241,38 +241,43 @@ def highlowallocation(dfr, his_week, interval):
 	highlowriskposition_df.to_csv('./tmp/highlowriskposition.csv')
 
 
-	AllocationData.highlow_risk_position_df = highlowriskposition_df
-	AllocationData.highlow_risk_asset_df    = result_df
+	allocationdata.highlow_risk_position_df = highlowriskposition_df
+	allocationdata.highlow_risk_asset_df    = result_df
+
 
 	return result_df
 
 
-def highlowriskasset():
 
 
-	highriskassetdf  = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date', parse_dates = 'date' )
+def highlowriskasset(allocationdata):
+
+
+	highriskassetdf  = allocationdata.equal_risk_asset_df
+	#highriskassetdf  = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date', parse_dates = 'date' )
 	highriskassetdfr = highriskassetdf.pct_change().fillna(0.0)
 
 
 	lowassetlabel    = ['ratebond','creditbond']
-	lowriskassetdfr  = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
+	lowriskassetdfr  = allocationdata.label_asset_df
+	#lowriskassetdfr  = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
 	lowriskassetdfr  = lowriskassetdfr[lowassetlabel]
 	lowriskassetdfr  = lowriskassetdfr.loc[highriskassetdfr.index]
 
 
-	his_week = 26
-	interval = 26
+	his_week = 13
+	interval = 13
 
 
-	highdf = highriskasset(highriskassetdfr, his_week, interval)
-	lowdf  = lowriskasset(lowriskassetdfr, his_week, interval)
+	highdf = highriskasset(allocationdata, highriskassetdfr, his_week, interval)
+	lowdf  = lowriskasset(allocationdata, lowriskassetdfr, his_week, interval)
 
 
 	df  = pd.concat([highdf, lowdf], axis = 1, join_axes=[highdf.index])
 	dfr = df.pct_change().fillna(0.0)
 
 
-	highlowdf = highlowallocation(dfr, his_week, interval)
+	highlowdf = highlowallocation(allocationdata, dfr, his_week, interval)
 
 
 	print "sharpe : ", FundIndicator.portfolio_sharpe(highlowdf['highlow_risk_asset'].values)

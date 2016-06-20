@@ -8,7 +8,6 @@ import FundIndicator
 from datetime import datetime
 import sys
 sys.path.append('shell')
-import AllocationData
 
 
 def riskmeanstd(risks):
@@ -29,16 +28,17 @@ def riskmeanstd(risks):
 
 
 
-def equalriskassetratio():
+def equalriskassetratio(allocationdata):
 
 	assetlabels = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','SPGSGCTR.SPI','HSCI.HI']
 
-	dfr         = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
+	dfr         = allocationdata.label_asset_df
+	#dfr         = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
 	dates = dfr.index
 
 
 	interval = 5
-	his_week = 104
+	his_week = 13
 
 	result_dates = []
 	result_datas  = []
@@ -50,7 +50,7 @@ def equalriskassetratio():
 
 		if i % interval == 0:
 
-			start_date = dates[i - 104].strftime('%Y-%m-%d')
+			start_date = dates[i - his_week].strftime('%Y-%m-%d')
 			end_date   = dates[i].strftime('%Y-%m-%d')
 			allocation_start_date = dates[i - interval].strftime('%Y-%m-%d')
 
@@ -97,7 +97,7 @@ def equalriskassetratio():
 				ratio_data.append(position)
 
 
-				print d, asset, position
+				#print d, asset, position
 
 
 			result_datas.append(ratio_data)
@@ -107,8 +107,8 @@ def equalriskassetratio():
 	result_df = pd.DataFrame(result_datas, index=result_dates, columns=assetlabels)
 	result_df.index.name = 'date'
 
-
 	result_df.to_csv('./tmp/equalriskassetratio.csv')
 
-	AllocationData.equal_risk_asset_ratio_df = result_df
+	allocationdata.equal_risk_asset_ratio_df = result_df
+
 
