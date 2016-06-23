@@ -7,6 +7,7 @@ import numpy as np
 import FundIndicator
 from datetime import datetime
 import sys
+import os
 sys.path.append('shell')
 
 
@@ -58,7 +59,8 @@ def equalriskassetratio(df):
 			start_date = dates[i - his_week].strftime('%Y-%m-%d')
 			end_date   = dates[i].strftime('%Y-%m-%d')
 			allocation_date = dates[i - interval].strftime("%Y-%m-%d")
-
+			print allocation_date
+			os._exit(0)
 			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
 			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(allocation_date, '%Y-%m-%d')]
 

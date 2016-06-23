@@ -22,6 +22,8 @@ if __name__ == '__main__':
 
 	df = pd.read_csv('./data/gaopeng.csv', index_col = 'date', parse_dates = 'date')
 	#df = pd.read_csv('./data/kunge.csv', index_col = 'date', parse_dates = 'date')
+        #风险修正仓位
 	EqualRiskAssetRatio.equalriskassetratio(df)
+        #修正后资产净值
 	EqualRiskAsset.equalriskasset(df)
 	HighLowRiskAsset.highlowriskasset()
