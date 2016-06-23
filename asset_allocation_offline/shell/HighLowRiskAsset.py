@@ -1,7 +1,6 @@
 #coding=utf8
 
 
-
 import string
 import pandas as pd
 import numpy as np
@@ -11,8 +10,7 @@ import Portfolio as PF
 import AllocationData
 
 
-
-def highriskasset(dfr, his_week, interval):
+def highriskasset(dfr, his_week, interval, risk_week):
 
 
 	result_dates = []
@@ -24,7 +22,7 @@ def highriskasset(dfr, his_week, interval):
 	dates        = dfr.index
 
 	portfolio_vs = [1]
-	result_dates.append(dates[his_week])
+	#result_dates.append(dates[his_week])
 
 
 	risk_drawdown = []
@@ -78,14 +76,17 @@ def highriskasset(dfr, his_week, interval):
 			vs.append(fund_last_v)
 			pv = pv + vs[-1]
 		portfolio_vs.append(pv)
-		result_dates.append(d)
 
 
-		risk_dates.append(d)
-		risk_datas.append(risk_position)
+		if i - his_week - 1 >= risk_week:
 
+			result_dates.append(d)
+			result_datas.append(portfolio_vs[-1] / portfolio_vs[risk_week])
+			
+			risk_dates.append(d)
+			risk_datas.append(risk_position)
 
-		print d , pv, risk_position
+			print d , pv / portfolio_vs[risk_week], risk_position
 
 
                	if i - risk_index >= 4:
@@ -96,11 +97,14 @@ def highriskasset(dfr, his_week, interval):
                	risk_drawdown.append(drawdown)
                	risk_drawdown.sort()
 
+
 		#print d,drawdown, risk_drawdown
+
 
 		#print risk_drawdown
 
-               	if len(risk_drawdown) >= 13:
+
+               	if len(risk_drawdown) >= risk_week:
 			if drawdown > risk_drawdown[(int)(0.8 * len(risk_drawdown))]:
 				risk_position = risk_position * 0.2
                                	risk_index    = i
@@ -115,7 +119,10 @@ def highriskasset(dfr, his_week, interval):
 					risk_position = 0.2
 
 
-	result_datas  = portfolio_vs
+	#print len(result_dates)
+	#print len(result_datas)
+
+
 	result_df = pd.DataFrame(result_datas, index=result_dates,
 								 columns=['high_risk_asset'])
 
@@ -138,11 +145,11 @@ def highriskasset(dfr, his_week, interval):
 	risk_df.index.name = 'date'
 	risk_df.to_csv('./tmp/risk_position.csv')
 
-
 	return result_df
 
 
-def lowriskasset(dfr, his_week, interval):
+
+def lowriskasset(dfr, his_week, interval, risk_week):
 
 
 	result_dates = []
@@ -155,8 +162,9 @@ def lowriskasset(dfr, his_week, interval):
 
 	dates        = dfr.index
 
+
 	portfolio_vs = [1]
-	result_dates.append(dates[his_week])
+	#result_dates.append(dates[his_week])
 
 	fund_values  = {}
 	fund_codes   = []
@@ -172,7 +180,6 @@ def lowriskasset(dfr, his_week, interval):
 			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
 			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d')]
 			allocation_dfr = allocation_dfr.dropna()
-
 			risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
 			fund_codes = allocation_dfr.columns
 
@@ -198,12 +205,17 @@ def lowriskasset(dfr, his_week, interval):
 			vs.append(fund_last_v)
 			pv = pv + vs[-1]
 		portfolio_vs.append(pv)
-		result_dates.append(d)
-
 		#print d , pv
 
 
-	result_datas  = portfolio_vs
+		if i - his_week - 1 >= risk_week:
+
+			result_dates.append(d)
+			result_datas.append(portfolio_vs[-1] / portfolio_vs[risk_week])
+
+			print d , pv / portfolio_vs[risk_week]
+
+
 	result_df = pd.DataFrame(result_datas, index=result_dates,
 							 columns=['low_risk_asset'])
 
@@ -328,10 +340,10 @@ def highlowriskasset():
 	#print highriskassetdf
 
 
-	df  = pd.read_csv('./data/kunge.csv', index_col = 'date', parse_dates = 'date' )
+	df  = pd.read_csv('./data/gaopeng.csv', index_col = 'date', parse_dates = 'date' )
 	lowriskassetdf  = df[df.columns[3:5]] #gaopeng
 
-	print lowriskassetdf
+	#print lowriskassetdf
 	#lowriskassetdf  = df[df.columns[4:6]] #kunge
 
 	#print lowriskassetdf
@@ -347,12 +359,13 @@ def highlowriskasset():
 	lowriskassetdfr  = lowriskassetdfr.loc[highriskassetdfr.index]
 
 
-	his_week = 13
-	interval = 13
+	his_week  = 13
+	interval  = 13
+	risk_week = 13
 
 
-	highdf = highriskasset(highriskassetdfr, his_week, interval)
-	lowdf  = lowriskasset(lowriskassetdfr, his_week, interval)
+	highdf = highriskasset(highriskassetdfr, his_week, interval, risk_week)
+	lowdf  = lowriskasset(lowriskassetdfr, his_week, interval, risk_week)
 
 
 	df  = pd.concat([highdf, lowdf], axis = 1, join_axes=[highdf.index])
