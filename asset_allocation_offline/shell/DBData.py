@@ -440,10 +440,10 @@ if __name__ == '__main__':
 	#df = stock_fund_value('2004-01-03', '2016-06-03')
 	#df = bond_fund_value('2014-01-03', '2016-06-03')
 	#df = money_fund_value('2014-01-03', '2016-06-03')
-	df =  index_value('2010-01-28', '2016-06-03')
+	#df =  index_value('2010-01-28', '2016-06-03')
 	#f =  other_fund_value('2014-01-03', '2016-06-03')
 	#df =  position()
 	#df =  scale()
 	print df
-	df.to_csv('./tmp/index.csv')
+	#df.to_csv('./tmp/index.csv')
 	#print trade_dates('2014-01-03', '2016-06-03')

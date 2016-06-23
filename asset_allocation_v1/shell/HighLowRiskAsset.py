@@ -10,7 +10,6 @@ import Portfolio as PF
 import AllocationData
 
 
-
 def highriskasset(allocationdata, dfr, his_week, interval):
 
 
@@ -92,7 +91,6 @@ def highriskasset(allocationdata, dfr, his_week, interval):
 	allocationdata.high_risk_asset_df     = result_df
 
 	return result_df
-
 
 
 def lowriskasset(allocationdata, dfr, his_week, interval):
