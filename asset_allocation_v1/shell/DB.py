@@ -470,9 +470,9 @@ def asset_allocation(allocationdata):
 	dates = high_risk_asset_df.index.values
 	dates.sort()
 
-	print dates
+	#print dates
 	high_position_dates = set(high_risk_position_df.index.values)
-	print high_position_dates
+	#print high_position_dates
 
 	#print high_risk_position_df
 
@@ -480,18 +480,20 @@ def asset_allocation(allocationdata):
 		#print high_risk_asset_df
 		net_value = high_risk_asset_df.loc[d, 'high_risk_asset']
 		navs.append(net_value)
-		if d in high_position_dates:
-			largecap_ratio = high_risk_position_df.loc[d, 'largecap']
-			smallcap_ratio = high_risk_position_df.loc[d, 'smallcap']
-			rise_ratio = high_risk_position_df.loc[d, 'rise']
-			oscillation_ratio = high_risk_position_df.loc[d, 'oscillation']
-			decline_ratio = high_risk_position_df.loc[d, 'decline']
-			growth_ratio = high_risk_position_df.loc[d, 'growth']
-			value_ratio = high_risk_position_df.loc[d, 'value']
+
+		str_d = d.strftime('%Y-%m-%d')	
+		if str_d in high_position_dates:
+			largecap_ratio = high_risk_position_df.loc[str_d, 'largecap']
+			smallcap_ratio = high_risk_position_df.loc[str_d, 'smallcap']
+			rise_ratio = high_risk_position_df.loc[str_d, 'rise']
+			oscillation_ratio = high_risk_position_df.loc[str_d, 'oscillation']
+			decline_ratio = high_risk_position_df.loc[str_d, 'decline']
+			growth_ratio = high_risk_position_df.loc[str_d, 'growth']
+			value_ratio = high_risk_position_df.loc[str_d, 'value']
 			#convertible_ratio = high_risk_position_df.loc[d, 'convertiblebond']
-			SP500_SPI_ratio = high_risk_position_df.loc[d, 'SP500.SPI']
-			SPGSGCTR_SPI_ratio = high_risk_position_df.loc[d, 'GLNC']
-			HSCI_HI_ratio = high_risk_position_df.loc[d, 'HSCI.HI']
+			SP500_SPI_ratio = high_risk_position_df.loc[str_d, 'SP500.SPI']
+			SPGSGCTR_SPI_ratio = high_risk_position_df.loc[str_d, 'GLNC']
+			HSCI_HI_ratio = high_risk_position_df.loc[str_d, 'HSCI.HI']
 
 
 		#print base_sql
@@ -531,9 +533,10 @@ def asset_allocation(allocationdata):
 		#print high_risk_asset_df
 		net_value = low_risk_asset_df.loc[d, 'low_risk_asset']
 		navs.append(net_value)
-		if d in low_position_dates:
-			rate_bond_ratio   = low_risk_position_df.loc[d, 'ratebond']
-			credit_bond_ratio = low_risk_position_df.loc[d, 'creditbond']
+		str_d = d.strftime('%Y-%m-%d')
+		if str_d in low_position_dates:
+			rate_bond_ratio   = low_risk_position_df.loc[str_d, 'ratebond']
+			credit_bond_ratio = low_risk_position_df.loc[str_d, 'creditbond']
 
 
 		#print base_sql
@@ -572,9 +575,10 @@ def asset_allocation(allocationdata):
 		#print high_risk_asset_df
 		net_value = highlow_risk_asset_df.loc[d, 'highlow_risk_asset']
 		navs.append(net_value)
+		str_d = d.strftime('%Y-%m-%d')
 		if d in low_position_dates:
-			highrisk_ratio   =  highlow_risk_position_df.loc[d, 'high_risk_asset']
-			lowrisk_ratio    =  highlow_risk_position_df.loc[d, 'low_risk_asset']
+			highrisk_ratio   =  highlow_risk_position_df.loc[str_d, 'high_risk_asset']
+			lowrisk_ratio    =  highlow_risk_position_df.loc[str_d, 'low_risk_asset']
 
 
 		#print base_sql
