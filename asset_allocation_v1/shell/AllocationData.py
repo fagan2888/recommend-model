@@ -3,6 +3,7 @@
 
 import MySQLdb
 from datetime import datetime
+import DBData
 
 
 class allocationdata:
@@ -11,8 +12,10 @@ class allocationdata:
 	fund_id_code_dict = {}
 	fund_code_id_dict = {}
 
+	
 
 	def __init__(self):
+
 
 		conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='mofang', charset='utf8')
 
@@ -36,6 +39,7 @@ class allocationdata:
 
 		conn.commit()
 		conn.close()
+
 
 
 	start_date                              = '2010-01-01'
@@ -90,3 +94,53 @@ class allocationdata:
 
 
 
+	#stock_df = None
+	#bond_df  = None
+	#money_df = None
+	#other_df = None
+	#index_df = None
+	data_start_date = None	
+	#position_df = None
+	#scale_df    = None
+
+
+	def all_dates(self):
+
+		dates = DBData.trade_dates('1900-01-01',self.start_date)
+		start_n = len(dates) - self.fund_measure_lookback    - self.fixed_risk_asset_risk_lookback  - 2 * self.allocation_lookback 
+		self.data_start_date = dates[len(dates) - self.fund_measure_lookback	- self.fixed_risk_asset_risk_lookback  - 2 * self.allocation_lookback]
+		dates = dates[start_n  : len(dates)]
+
+		print self.data_start_date
+
+		#self.stock_df    = DBData.stock_fund_value(self.data_start_date, self.end_date)
+		#print 'load stock done'	
+		#self.bond_df     = DBData.bond_fund_value(self.data_start_date, self.end_date)
+		#print 'load bond done'	
+		#self.money_df    = DBData.money_fund_value(self.data_start_date, self.end_date)
+		#print 'load money done'	
+		#self.other_df    = DBData.other_fund_value(self.data_start_date, self.end_date)
+		#print 'load other done'	
+		#self.index_df    = DBData.index_value(self.data_start_date, self.end_date)
+		#print 'load index done'	
+		#self.position_df = DBData.position()
+		#print 'position done'	
+		#self.scale_df    = DBData.scale()
+		#print 'scale done'	
+		#print 'load data done'
+
+		#self.stock_df.to_csv('./tmp/stock.csv')	
+		#self.bond_df.to_csv('./tmp/bond.csv')	
+		#self.money_df.to_csv('./tmp/money.csv')	
+		#self.other_df.to_csv('./tmp/other.csv')	
+		#self.index_df.to_csv('./tmp/index.csv')	
+		#self.position_df.to_csv('./tmp/position.csv')	
+		#self.scale_df.to_csv('./tmp/scale.csv')	
+
+		return 0
+	
+
+	def get_date_df(df, start_date, end_date):
+		_df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
+        	_df = _df[ _df.index >= datetime.strptime(start_date,'%Y-%m-%d')]	
+		return _df

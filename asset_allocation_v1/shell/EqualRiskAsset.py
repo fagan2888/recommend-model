@@ -9,6 +9,7 @@ import sys
 sys.path.append('shell')
 
 
+
 def equalriskasset(allocationdata):
 
 
@@ -28,8 +29,9 @@ def equalriskasset(allocationdata):
 	dates = dfr.index
 	ratio_dates = ratio_df.index
 
-	assetlabels  = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','SPGSGCTR.SPI','HSCI.HI']
+	#assetlabels  = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']
 
+	assetlabels  = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']
 	asset_values = {}
 	asset_combination = {}
 	asset_ratio  = {}
@@ -79,18 +81,25 @@ def equalriskasset(allocationdata):
 				cvs.append( [vs[-1] * asset_ratio[asset], vs[-1] * (1 - asset_ratio[asset])] )
 
 
+		#asset_vs = [asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1],
+		#			asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
+		#			asset_values['value'][-1], asset_values['convertiblebond'][-1], asset_values['SP500.SPI'][-1], \
+		#			asset_values['GLNC'][-1], asset_values['HSCI.HI'][-1]]
+		#result_datas.append(asset_vs)
+		#result_dates.append(d)
+
 		asset_vs = [asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1],
 					asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
-					asset_values['value'][-1], asset_values['convertiblebond'][-1], asset_values['SP500.SPI'][-1], \
-					asset_values['SPGSGCTR.SPI'][-1], asset_values['HSCI.HI'][-1]]
+					asset_values['value'][-1], asset_values['SP500.SPI'][-1], \
+					asset_values['GLNC'][-1], asset_values['HSCI.HI'][-1]]
 		result_datas.append(asset_vs)
 		result_dates.append(d)
 
 
-		#print d, asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1], \
-		#asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
-		#	asset_values['value'][-1], asset_values['convertiblebond'][-1], asset_values['SP500.SPI'][-1], \
-		#	asset_values['SPGSGCTR.SPI'][-1], asset_values['HSCI.HI'][-1]
+		print d, asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1], \
+		asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
+			asset_values['value'][-1], asset_values['convertiblebond'][-1], asset_values['SP500.SPI'][-1], \
+			asset_values['GLNC'][-1], asset_values['HSCI.HI'][-1]
 
 
 		if d in ratio_dates:
@@ -98,9 +107,8 @@ def equalriskasset(allocationdata):
 				asset_ratio[asset] = ratio_df.loc[d, asset]
 
 
-
-	result_df = pd.DataFrame(result_datas, index=result_dates,
-										 columns=assetlabels)
+	new_assetlabels  = ['largecap','smallcap','rise','oscillation','decline','growth','value','SP500.SPI','GLNC','HSCI.HI']
+	result_df = pd.DataFrame(result_datas, index=result_dates, columns=new_assetlabels)
 
 	result_df.index.name = 'date'
 	result_df.to_csv('./tmp/equalriskasset.csv')

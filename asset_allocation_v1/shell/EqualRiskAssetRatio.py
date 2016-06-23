@@ -30,15 +30,15 @@ def riskmeanstd(risks):
 
 def equalriskassetratio(allocationdata):
 
-	assetlabels = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','SPGSGCTR.SPI','HSCI.HI']
+	assetlabels = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']
 
 	dfr         = allocationdata.label_asset_df
 	#dfr         = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
 	dates = dfr.index
 
 
-	interval = 5
-	his_week = 13
+	interval = allocationdata.fixed_risk_asset_risk_adjust_period
+	his_week = allocationdata.fixed_risk_asset_risk_lookback
 
 	result_dates = []
 	result_datas  = []
@@ -54,11 +54,11 @@ def equalriskassetratio(allocationdata):
 			end_date   = dates[i].strftime('%Y-%m-%d')
 			allocation_start_date = dates[i - interval].strftime('%Y-%m-%d')
 
-			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
-			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(allocation_start_date, '%Y-%m-%d')]
+			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d').date()]
+			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(allocation_start_date, '%Y-%m-%d').date()]
 
-			his_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
-			his_dfr = his_dfr[his_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d')]
+			his_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d').date()]
+			his_dfr = his_dfr[his_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d').date()]
 
 			j = 0
 			risks = {}
