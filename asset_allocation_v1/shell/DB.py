@@ -616,7 +616,7 @@ def risk_allocation_list(risk_value, risk_begin_date):
         cursor = conn.cursor()
 
 
-        base_sql = "replace into risk_asset_allocation_list (ra_value, ra_begin_date) values (%f, %s)"
+        base_sql = "replace into risk_asset_allocation_list (ra_risk, ra_date) values (%f, %s)"
 	sql = base_sql % (risk_value, risk_begin_date)
 	cursor.execute(sql)
 	conn.commit()
@@ -625,7 +625,7 @@ def risk_allocation_list(risk_value, risk_begin_date):
 def risk_allocation_ratio(df, lid):
         conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
         cursor = conn.cursor()
-	base_sql = "replace into risk_asset_allocation_list (ra_list_id, ra_transfer_date, ra_fund_code, ra_fund_ratio) values (%d, %s, %s, %f)"
+	base_sql = "replace into risk_asset_allocation_list (ra_alloc_id, ra_transfer_date, ra_fund_code, ra_fund_ratio) values (%d, %s, %s, %f)"
 
 	dates = table.index.unique()
 
