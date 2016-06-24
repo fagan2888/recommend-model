@@ -53,7 +53,7 @@ def equalriskassetratio(df):
 
 		d = dates[i]
 
-		if i % interval == 0:
+		if (i - his_week) % interval == 0:
 
 			start_date = dates[i - his_week].strftime('%Y-%m-%d')
 			end_date   = dates[i].strftime('%Y-%m-%d')
