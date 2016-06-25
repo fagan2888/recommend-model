@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+
 import string
 import MySQLdb
 from datetime import datetime
@@ -11,6 +12,7 @@ sys.path.append('shell')
 import Const
 
 
+
 db_params = {
             "host": "127.0.0.1",
             "port": 3306,
@@ -19,6 +21,7 @@ db_params = {
             "db":"mofang",
             "charset": "utf8"
         }
+
 
 
 def trade_dates():
@@ -118,6 +121,7 @@ def stock_fund_value(start_date, end_date):
 
 
 	return df
+
 
 
 def bond_fund_value(start_date, end_date):
@@ -289,11 +293,13 @@ def index_value(start_date, end_date):
 		nav_values.append(vs)
 		#print code , len(vs)	
 
+	#print nav_values
 	df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)	
 
 	df = df.fillna(method='pad')
 
 	return df
+
 
 
 def other_fund_value(start_date, end_date):
@@ -439,11 +445,11 @@ if __name__ == '__main__':
 	#trade_dates()	
 	#df = stock_fund_value('2004-01-03', '2016-06-03')
 	#df = bond_fund_value('2014-01-03', '2016-06-03')
-	#df = money_fund_value('2014-01-03', '2016-06-03')
-	df =  index_value('2010-01-28', '2016-06-03')
+	df = money_fund_value('2015-01-03', '2016-06-03')
+	#df =  index_value('2010-01-28', '2016-06-03')
 	#f =  other_fund_value('2014-01-03', '2016-06-03')
 	#df =  position()
 	#df =  scale()
 	print df
-	df.to_csv('./tmp/index.csv')
+	df.to_csv('./tmp/money.csv')
 	#print trade_dates('2014-01-03', '2016-06-03')

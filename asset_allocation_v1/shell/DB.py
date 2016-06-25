@@ -25,6 +25,7 @@ def fund_measure(allocationdata):
 	base_sql = 'replace into fund_measure (fm_start_date, fm_end_date, fm_adjust_period, fm_look_back, fm_fund_type, fm_fund_code, fm_jensen, fm_ppw, fm_stability, fm_sortino, fm_sharpe, fm_high_postion_prefer, fm_low_position_prefer, fm_largecap_prefer, fm_smallcap_prefer, fm_growth_prefer, fm_value_prefer, fm_largecap_fitness, fm_smallcap_fitness, fm_rise_fitness, fm_decline_fitness, fm_oscillation_fitness, fm_growth_fitness, fm_value_fitness, fm_ratebond, fm_creditbond, fm_convertiblebond, fm_sp500, fm_gold, fm_hs, created_at, updated_at) values ("%s","%s",%d, %d, "%s","%s", %f,%f,%f,%f,%f, %d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d, "%s","%s")'
 
 
+
 	stock_fund_measure = allocationdata.stock_fund_measure
 	stock_fund_label   = allocationdata.stock_fund_label
 	bond_fund_measure  = allocationdata.bond_fund_measure
@@ -34,13 +35,16 @@ def fund_measure(allocationdata):
 	dates = list(stock_fund_measure.keys())
 	dates.sort()
 
-
 	for date in dates:
 
 		stock_measure_df = stock_fund_measure[date]
 		stock_label_df   = stock_fund_label[date]
 
+
 		for code in stock_fund_measure[date].index:
+
+			#if code == '240002':
+			#	print date
 
 			jensen                 = 0
 			ppw                    = 0
@@ -78,6 +82,7 @@ def fund_measure(allocationdata):
 			if not np.isnan(stock_measure_df.loc[code,'sharpe']):
 				sharpe = stock_measure_df.loc[code,'sharpe']
 
+
 			if code in set(stock_label_df.index):
 				if not np.isnan(stock_label_df.loc[code,'high_position_prefer']):
 					high_position_prefer = stock_label_df.loc[code,'high_position_prefer']
@@ -105,7 +110,6 @@ def fund_measure(allocationdata):
 					growth_fitness = stock_label_df.loc[code,'growth_fitness']
 				if not np.isnan(stock_label_df.loc[code,'value_fitness']):
 					value_fitness = stock_label_df.loc[code,'value_fitness']
-
 
 
 			sql = base_sql % (allocationdata.start_date, date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback,'stock' ,code , jensen, ppw, stability, sortino, sharpe, high_position_prefer, low_position_prefer, largecap_prefer, smallcap_prefer, growth_prefer, value_prefer, largecap_fitness, smallcap_fitness, rise_fitness, decline_fitness, oscillation_fitness, growth_fitness, value_fitness, 0, 0, 0, 0, 0, 0 ,datetime.now(), datetime.now())
@@ -211,7 +215,7 @@ def label_asset(allocationdata):
 
 
 
-	stock_tags        = ['largecap','smallcap','rise','oscillation','decline','growth','value']
+	stock_tags        = ['largecap','smallcap','rise','oscillation','decline','growth','value', 'SP500.SPI','GLNC','HSCI.HI']
 	#origin_bond_tags  = ['ratebond','creditbond','convertiblebond']
 	origin_bond_tags  = ['ratebond','creditbond']
 	#bond_tags         = ['convertiblebond']
@@ -238,7 +242,7 @@ def label_asset(allocationdata):
 
 
 		for i in range(0 ,len(sfdd)):
-			if sfdd[i] > start_date:
+			if sfdd[i] > start_date and (label not in set(other_tags)) :
 				fund = stock_fund_df.loc[sfdd[i-1].strftime('%Y-%m-%d')	,label]
 				break
 
@@ -246,9 +250,11 @@ def label_asset(allocationdata):
 
 		for d in dates:
 
-			if d.strftime('%Y-%m-%d') in stock_fund_df_dates:
+			if (d.strftime('%Y-%m-%d') in stock_fund_df_dates) and (label not in set(other_tags)):
 				fund = stock_fund_df.loc[d.strftime('%Y-%m-%d'), label]
-
+			if label in set(other_tags):
+				fund = label
+				
 			net_value = label_asset_df.loc[d, label]
 
 			navs.append(net_value)
@@ -270,13 +276,23 @@ def label_asset(allocationdata):
 
 			#print base_sql
 			#print fund
-			sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'stock', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
+			if label in set(other_tags):
+				if label == 'SP500.SPI':
+					fund = '513500'	
+				if label == 'HSCI.HI':
+					fund = '513600'	
+				if label == 'GLNC':
+					fund = '518880'	
+				sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'other', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
+			else:
+				sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'stock', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
 			#print net_value
-			#print sql
 			cursor.execute(sql)
 
 
+
 	for label in stock_tags:
+
 
 		fund = ''
 		position = 0.0
@@ -285,7 +301,7 @@ def label_asset(allocationdata):
 		start_date = dates[0]
 
 		for i in range(0 ,len(sfdd)):
-			if sfdd[i] > start_date:
+			if (sfdd[i] > start_date) and (label not in set(other_tags)):
 				fund = stock_fund_df.loc[sfdd[i-1].strftime('%Y-%m-%d')	,label]
 				break
 
@@ -293,11 +309,76 @@ def label_asset(allocationdata):
 
 		for d in dates:
 
-			if d.strftime('%Y-%m-%d') in stock_fund_df_dates:
+			if (d.strftime('%Y-%m-%d') in stock_fund_df_dates) and (label not in set(other_tags)):
 				fund = stock_fund_df.loc[d.strftime('%Y-%m-%d'), label]
 			if d in equal_risk_asset_ratio_dates:
 				position = equal_risk_asset_ratio_df.loc[d, label]
+
 			net_value = equal_risk_asset_df.loc[d, label]
+
+			navs.append(net_value)
+
+			sharpe = FundIndicator.portfolio_sharpe(navs)
+			returns= FundIndicator.portfolio_return(navs)
+			risk   = FundIndicator.portfolio_risk(navs)
+			maxdrawdown = FundIndicator.portfolio_maxdrawdown(navs)
+
+
+			if np.isnan(sharpe) or np.isinf(sharpe):
+				sharpe = 0
+			if np.isnan(returns) or np.isinf(returns):
+				returns = 0
+			if np.isnan(risk) or np.isnan(risk):
+				risk = 0
+			if np.isnan(maxdrawdown) or np.isnan(maxdrawdown):
+				maxdrawdown = 0
+
+
+			#print fund
+			#print base_sql
+			if label in set(other_tags):
+				if label == 'SP500.SPI':
+					fund = '513500'	
+				if label == 'HSCI.HI':
+					fund = '513600'	
+				if label == 'GLNC':
+					fund = '518880'	
+				sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'other', fund, 'fixed_risk', position, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
+			else:
+				sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'stock', fund, 'fixed_risk', position, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
+
+			#print net_value
+			#print sql
+			cursor.execute(sql)
+
+
+	bond_fund_df_dates = set(bond_fund_df.index.values)
+	dfdd = []
+	for d in bond_fund_df_dates:
+		dfdd.append(datetime.strptime(d, '%Y-%m-%d').date())
+	dfdd.sort()
+
+
+	for label in origin_bond_tags:
+
+		fund = ''
+		dates = label_asset_df.index.values
+		dates.sort()
+
+		start_date = dates[0]
+		for i in range(0 ,len(dfdd)):
+			if dfdd[i] > start_date:
+				fund = bond_fund_df.loc[dfdd[i-1].strftime('%Y-%m-%d'),label]
+				break
+
+		navs = []
+
+		for d in dates:
+
+			if d.strftime('%Y-%m-%d') in bond_fund_df_dates:
+				fund = bond_fund_df.loc[d.strftime('%Y-%m-%d'), label]
+
+			net_value = label_asset_df.loc[d, label]
 
 			navs.append(net_value)
 
@@ -317,10 +398,12 @@ def label_asset(allocationdata):
 
 			#print fund
 			#print base_sql
-			sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'stock', fund, 'fixed_risk', position, label, net_value, d, returns, sharpe, risk, maxdrawdown, datetime.now(), datetime.now())
+			sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'bond', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown, datetime.now(), datetime.now())
+
 			#print net_value
 			#print sql
 			cursor.execute(sql)
+
 
 
 	bond_fund_df_dates = set(bond_fund_df.index.values)
@@ -376,6 +459,7 @@ def label_asset(allocationdata):
 			#print sql
 			cursor.execute(sql)
 
+
 	'''
 
 	for label in bond_tags:
@@ -428,6 +512,7 @@ def label_asset(allocationdata):
 
 
 	print 'label asset done'
+
 
 
 def asset_allocation(allocationdata):
@@ -568,6 +653,9 @@ def asset_allocation(allocationdata):
 	dates.sort()
 	highlow_position_dates = set(highlow_risk_position_df.index.values)
 
+	
+
+
 	#print high_risk_position_df
 
 	for d in dates:
@@ -576,10 +664,12 @@ def asset_allocation(allocationdata):
 		net_value = highlow_risk_asset_df.loc[d, 'highlow_risk_asset']
 		navs.append(net_value)
 		str_d = d.strftime('%Y-%m-%d')
-		if d in low_position_dates:
+
+
+		if str_d in highlow_position_dates:
+			#print 'hehe'
 			highrisk_ratio   =  highlow_risk_position_df.loc[str_d, 'high_risk_asset']
 			lowrisk_ratio    =  highlow_risk_position_df.loc[str_d, 'low_risk_asset']
-
 
 		#print base_sql
 
@@ -598,12 +688,9 @@ def asset_allocation(allocationdata):
 			risk = 0
 		if np.isnan(maxdrawdown) or np.isnan(maxdrawdown):
 			maxdrawdown = 0
-sql = base_sql % (allocationdata.start_date, d, allocationdata.allocation_lookback, allocationdata.allocation_adjust_period, net_value, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, highrisk_ratio, lowrisk_ratio, sharpe, returns, risk, maxdrawdown, 'highlowrisk', datetime.now(), datetime.now())
+		sql = base_sql % (allocationdata.start_date, d, allocationdata.allocation_lookback, allocationdata.allocation_adjust_period, net_value, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, highrisk_ratio, lowrisk_ratio, sharpe, returns, risk, maxdrawdown, 'highlowrisk', datetime.now(), datetime.now())
 
-
-		#print sql
 		cursor.execute(sql)
-
 
 	conn.commit()
 	conn.close()
@@ -611,6 +698,9 @@ sql = base_sql % (allocationdata.start_date, d, allocationdata.allocation_lookba
 	print 'asset allocation done'
 
 	return 0
+
+
+
 def risk_allocation_list(risk_value, risk_begin_date):
         conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
         cursor = conn.cursor()
@@ -622,6 +712,9 @@ def risk_allocation_list(risk_value, risk_begin_date):
 	conn.commit()
 	conn.close()
 	print "insert one row into risk_allocation_list"
+
+
+
 def risk_allocation_ratio(df, lid):
         conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
         cursor = conn.cursor()
@@ -641,12 +734,12 @@ def risk_allocation_ratio(df, lid):
 				value = values[ite]
 			fcode = value[0]
 			fratio = value[1]
-			base_sql = "replace into risk_asset_allocation_list (ra_value, ra_begin_date) values (%f, %s)"
 			sql = base_sql % (lid, date, fcode, fratio)
 			cursor.execute(sql)
         conn.commit()
         conn.close()
         print "insert one row into risk_allocation_list"
+
 
 if __name__ == '__main__':
 

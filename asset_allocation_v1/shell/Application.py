@@ -26,37 +26,34 @@ app = Flask(__name__)
 
 def asset_allocation(allocationdata, uid):
 
-	#try:
+	try:
+		allocationdata.all_dates()
+		LabelAsset.labelasset(allocationdata)
+		EqualRiskAssetRatio.equalriskassetratio(allocationdata)
+		EqualRiskAsset.equalriskasset(allocationdata)
+		HighLowRiskAsset.highlowriskasset(allocationdata)
+		DB.fund_measure(allocationdata)
+		DB.label_asset(allocationdata)
+		DB.asset_allocation(allocationdata)
 
-	allocationdata.all_dates()
-	LabelAsset.labelasset(allocationdata)
-	EqualRiskAssetRatio.equalriskassetratio(allocationdata)
-	EqualRiskAsset.equalriskasset(allocationdata)
-	HighLowRiskAsset.highlowriskasset(allocationdata)
-	DB.fund_measure(allocationdata)
-	DB.label_asset(allocationdata)
-	DB.asset_allocation(allocationdata)
+		conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
+		cursor = conn.cursor()
 
+		sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('complete', uid)
 
-	conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
-	cursor = conn.cursor()
+		cursor.execute(sql)
+		conn.commit()
+		conn.close()
 
-	sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('complete', uid)
+	except:
 
-	cursor.execute(sql)
-	conn.commit()
-	conn.close()
+		conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
+		cursor = conn.cursor()
 
-
-	#except:
-		
-	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
-	#cursor = conn.cursor()
-
-	#sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('error', uid)
-	#cursor.execute(sql)
-	#conn.commit()
-	#conn.close()
+		sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('error', uid)
+		cursor.execute(sql)
+		conn.commit()
+		conn.close()
 
 
 	return 0

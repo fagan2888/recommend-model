@@ -333,15 +333,15 @@ def highlowriskasset():
 
 	#highriskassetdf  = allocationdata.equal_risk_asset_df
 	df  = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date', parse_dates = 'date' )
-	highriskassetdf = df[df.columns[0:9]] #gaopeng
+	highriskassetdf = df[df.columns[0:4]] #gaopeng
 
 	#highriskassetdf = df[df.columns[0:4]]  #kunge
 
 	#print highriskassetdf
 
 
-	df  = pd.read_csv('./data/shengyitao.csv', index_col = 'date', parse_dates = 'date' )
-	lowriskassetdf  = df[df.columns[9:11]] #gaopeng
+	df  = pd.read_csv('./data/laopan.csv', index_col = 'date', parse_dates = 'date' )
+	lowriskassetdf  = df[df.columns[4:6]] #gaopeng
 
 	#print lowriskassetdf
 	#lowriskassetdf  = df[df.columns[4:6]] #kunge

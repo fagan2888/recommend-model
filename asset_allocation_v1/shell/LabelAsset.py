@@ -72,7 +72,6 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 			#print
 			#print time.time()
 
-
 			codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[[Const.hs300_code]])
 			#print time.time()
 			fund_pool, fund_tags = ST.tagstockfund(allocationdata, label_stock_df[codes], this_index_df)
@@ -337,6 +336,9 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
 			allocationdf   = DFUtil.get_date_df(label_money_df, allocation_start_date, end_date)
 			fund_codes, tag   = FundSelector.select_money(allocationdf)
 
+			#fund_sharpe       = fi.fund_sharp_annual(label_money_df)
+
+							
 		#print tag
 		# print tag
 		# print fund_codes
