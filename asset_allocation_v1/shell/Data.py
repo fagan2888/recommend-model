@@ -14,6 +14,7 @@ import Const
 #index_col = '000300.SH'
 
 
+
 def funds():
 	df = pd.read_csv('./csvdata/fund_value.csv', index_col = 'date', parse_dates = 'date' )
 	return df

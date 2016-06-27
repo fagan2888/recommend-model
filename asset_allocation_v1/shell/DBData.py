@@ -23,7 +23,6 @@ db_params = {
         }
 
 
-
 def trade_dates():
 
 	conn  = MySQLdb.connect(**db_params)
@@ -58,7 +57,6 @@ def trade_dates(start_date, end_date):
 	conn.close()
 
 	return dates
-
 
 
 
@@ -440,6 +438,7 @@ def scale():
 	return df	
 
 
+
 if __name__ == '__main__':
 
 	#trade_dates()	
@@ -453,3 +452,4 @@ if __name__ == '__main__':
 	print df
 	df.to_csv('./tmp/money.csv')
 	#print trade_dates('2014-01-03', '2016-06-03')
+

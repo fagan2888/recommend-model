@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+
 import string
 import pandas as pd
 import numpy as np
@@ -10,10 +11,11 @@ import Portfolio as PF
 import AllocationData
 
 
+
 def highriskasset(allocationdata, dfr, his_week, interval):
 
 
-	interval = 26
+	#interval = 26
 
 	result_dates = []
 	result_datas = []
@@ -82,7 +84,6 @@ def highriskasset(allocationdata, dfr, his_week, interval):
 	result_df.to_csv('./tmp/highriskasset.csv')
 
 
-
 	highriskposition_df = pd.DataFrame(position_datas, index=position_dates, columns=dfr.columns)
 	highriskposition_df.index.name = 'date'
 	highriskposition_df.to_csv('./tmp/highriskposition.csv')
@@ -96,7 +97,7 @@ def highriskasset(allocationdata, dfr, his_week, interval):
 def lowriskasset(allocationdata, dfr, his_week, interval):
 
 
-	interval = 26
+	#interval = 26
 
 	result_dates = []
 	result_datas = []
@@ -271,8 +272,6 @@ def highlowallocation(allocationdata, dfr, his_week, interval):
 
 
 	return result_df
-
-
 
 
 def highlowriskasset(allocationdata):
