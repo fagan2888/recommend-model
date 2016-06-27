@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+
 import string
 import json
 import sys
@@ -26,37 +27,37 @@ app = Flask(__name__)
 
 def asset_allocation(allocationdata, uid):
 
-	try:
-		allocationdata.all_dates()
-		LabelAsset.labelasset(allocationdata)
-		EqualRiskAssetRatio.equalriskassetratio(allocationdata)
-		EqualRiskAsset.equalriskasset(allocationdata)
-		HighLowRiskAsset.highlowriskasset(allocationdata)
-		DB.fund_measure(allocationdata)
-		DB.label_asset(allocationdata)
-		DB.asset_allocation(allocationdata)
+	#try:
+	allocationdata.all_dates()
+	LabelAsset.labelasset(allocationdata)
+	EqualRiskAssetRatio.equalriskassetratio(allocationdata)
+	EqualRiskAsset.equalriskasset(allocationdata)
+	HighLowRiskAsset.highlowriskasset(allocationdata)
+	DB.fund_measure(allocationdata)
+	DB.label_asset(allocationdata)
+	DB.asset_allocation(allocationdata)
 
-		conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
-		cursor = conn.cursor()
+	conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
+	cursor = conn.cursor()
 
-		sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('complete', uid)
+	sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('complete', uid)
 
-		cursor.execute(sql)
-		conn.commit()
-		conn.close()
+	cursor.execute(sql)
+	conn.commit()
+	conn.close()
 
-	except:
+	#except:
 
-		conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
-		cursor = conn.cursor()
+	#	conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
+	#	cursor = conn.cursor()
 
-		sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('error', uid)
-		cursor.execute(sql)
-		conn.commit()
-		conn.close()
+	#	sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('error', uid)
+	#	cursor.execute(sql)
+	#	conn.commit()
+	#	conn.close()
 
 
-	return 0
+	#return 0
 
 
 #资产配置接口
@@ -71,7 +72,7 @@ def asset_allocation_v1():
 	args = request.form
 
 	allocationdata.start_date                            = args.get('start_date')
-	#allocationdata.start_date                            = '2015-12-01'
+	allocationdata.start_date                            = '2015-12-01'
 	allocationdata.fund_measure_lookback                 = string.atoi(args.get('fund_measure_lookback'))
 	allocationdata.fund_measure_adjust_period            = string.atoi(args.get('fund_measure_adjust_period'))		
 	allocationdata.jensen_ratio                          = string.atof(args.get('jensen_ratio'))		
@@ -86,6 +87,8 @@ def asset_allocation_v1():
 
 
 	json_args                             = json.dumps(args)
+
+	print json_args
 
 	conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
 	cursor = conn.cursor()

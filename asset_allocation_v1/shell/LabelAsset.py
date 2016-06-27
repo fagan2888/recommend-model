@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+
 import numpy as np
 import string
 import sys
@@ -21,16 +22,10 @@ import DBData
 import DFUtil
 
 
+
 def stockLabelAsset(allocationdata, dates, his_week, interval):
 
-
-	#df       = Data.funds()
-	#df       = allocationdata.stock_df
-	#dfr      = df.pct_change().fillna(0.0)
-	#funddfr  = funddf.pct_change().fillna(0.0)
-
 	indexdf   = DBData.index_value(dates[0], dates[-1])
-	#indexdfr  = indexdf.pct_change().fillna(0.0)
 
 	tag = {}
 
@@ -48,14 +43,16 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 	selectcodes = []
 
 
-
 	for i in range(his_week, len(dates)):
 
+
 		if (i - his_week) % interval == 0:
+
 
 			start_date                    = dates[i - his_week].strftime('%Y-%m-%d')
 			end_date                      = dates[i].strftime('%Y-%m-%d')
 			allocation_start_date         = dates[i - interval].strftime('%Y-%m-%d')
+
 			#label_start_date             = dates[i - interval].strftime('%Y-%m-%d')
 
 			last_end_date = dates[-1]
@@ -71,6 +68,8 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 			#print
 			#print time.time()
+
+			label_stock_df.to_csv('./tmp/stock_' + dates[i].strftime('%Y-%m-%d') + '.csv')
 
 			codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[[Const.hs300_code]])
 			#print time.time()
@@ -91,6 +90,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 			#print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']
 			#print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']
 
+
 			f = open('./tmp/stock_pool_codes_' + end_date +'.txt','w')
 			for code in poolcodes:
 				f.write(str(code) + "\n")
@@ -99,7 +99,6 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 			fund_dates.append(end_date)
 			fund_datas.append([tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']])
-
 
 
 		d = dates[i]
@@ -150,21 +149,18 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 def bondLabelAsset(allocationdata, dates, his_week, interval):
 
+
 	#df  = Data.bonds()
 	#dfr = df.pct_change().fillna(0.0)
-
 
 	#funddfr = funddf.pct_change().fillna(0.0)
 	#indexdfr = indexdf.pct_change().fillna(0.0)
 
-
 	indexdf   = DBData.index_value(dates[0], dates[-1])
-
 
 	pre_ratebond        = ''
 	pre_creditbond      = ''
 	pre_convertiblebond = ''
-
 
 	tag = {}
 	result_dates = []
@@ -187,22 +183,18 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 
 		if (i - his_week) % interval == 0:
 
-
 			start_date = dates[i - 52].strftime('%Y-%m-%d')
 			end_date = dates[i].strftime('%Y-%m-%d')
 			allocation_start_date = dates[i - interval].strftime('%Y-%m-%d')
-
 
 			last_end_date = dates[-1]
                         if i + interval < len(dates):
                                  last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
 
-
                         bond_df = DBData.bond_fund_value(start_date, last_end_date)
                         label_bond_df = DFUtil.get_date_df(bond_df, start_date, end_date)
                         this_index_df = DFUtil.get_date_df(indexdf, start_date, end_date)
                         funddfr = bond_df.pct_change().fillna(0.0)
-
 
 
 			codes, indicator     = FundFilter.bondfundfilter(allocationdata, label_bond_df, indexdf[[Const.csibondindex_code]])
@@ -240,17 +232,18 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 			fund_datas.append([tag['ratebond'] , tag['creditbond'], tag['convertiblebond']])
 
 
-			f = open('./tmp/bond_pool_codes_' + end_date + '.txt','w')
-			for code in poolcodes:
-				f.write(str(code) + "\n")
-			f.close()
+			#f = open('./tmp/bond_pool_codes_' + end_date + '.txt','w')
+			#for code in poolcodes:
+			#	f.write(str(code) + "\n")
+			#f.close()
 
 
 		d = dates[i]
 		result_dates.append(d)
 		result_datas.append(
 			[funddfr.loc[d, tag['ratebond']], funddfr.loc[d, tag['creditbond']], funddfr.loc[d, tag['convertiblebond']]])
-		print d.strftime('%Y-%m-%d'), funddfr.loc[d, tag['ratebond']], funddfr.loc[d, tag['creditbond']], funddfr.loc[d, tag['convertiblebond']]
+
+		print d.strftime('%Y-%m-%d'), tag['ratebond'], funddfr.loc[d, tag['ratebond']], funddfr.loc[d, tag['creditbond']], funddfr.loc[d, tag['convertiblebond']]
 
 
 		allcode_r = 0
@@ -304,10 +297,15 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
 	result_dates = []
 	columns = []
 	result_datas = []
+	fund_dates   = []
+	fund_datas   = []
+
 
 	for i in range(his_week, len(dates)):
 
+
 		if (i - his_week) % interval == 0:
+
 
 			#start_date = dates[i - 52].strftime('%Y-%m-%d')
 			#end_date = dates[i].strftime('%Y-%m-%d')
@@ -327,18 +325,27 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
                                  last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
 
 
+
                         money_df = DBData.money_fund_value(start_date, last_end_date)
                         label_money_df = DFUtil.get_date_df(money_df, start_date, end_date)
                         #this_index_df = DFUtil.get_date_df(indexdf, start_date, end_date)
                         funddfr = money_df.pct_change().fillna(0.0)
 
 
-			allocationdf   = DFUtil.get_date_df(label_money_df, allocation_start_date, end_date)
+			allocationdf      = DFUtil.get_date_df(label_money_df, allocation_start_date, end_date)
 			fund_codes, tag   = FundSelector.select_money(allocationdf)
 
-			#fund_sharpe       = fi.fund_sharp_annual(label_money_df)
 
-							
+			fund_sharpe       = FundIndicator.fund_sharp_annual(label_money_df)
+
+
+			fund_dates.append(dates[i])
+			fund_datas.append(fund_sharpe[0][1])		
+
+
+			#print fund_sharpe[0][0]	
+					
+			
 		#print tag
 		# print tag
 		# print fund_codes
@@ -350,11 +357,19 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
 
 		print d.strftime('%Y-%m-%d'), ',', funddfr.loc[d, tag['money']]
 
+
 	result_df = pd.DataFrame(result_datas, index=result_dates,columns=['money'])
 	result_df.to_csv('./tmp/moneylabelasset.csv')
 
 
+	fund_df = pd.DataFrame(fund_datas, index=fund_dates, columns=['money'])
+	fund_df.index.name = 'date'
+
+	fund_df.to_csv('./tmp/money_fund_sharpe.csv')
+	allocationdata.money_fund_sharpe_df = fund_df
+
 	print 'money label asset done'
+
 
 	return result_df
 
@@ -368,9 +383,13 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
 	funddf     = DBData.other_fund_value(start_date, end_date)
 	funddfr    = funddf.pct_change().fillna(0.0)
 
+
 	result_dates = []
 	columns = []
 	result_datas = []
+
+	fund_dates   = []
+	fund_datas   = []
 
 	for i in range(his_week, len(dates)):
 
@@ -382,14 +401,41 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
 
 		print d.strftime('%Y-%m-%d'), ',', funddfr.loc[d, 'SP500.SPI'], ',', funddfr.loc[d, 'GLNC'], ',' , funddfr.loc[d, 'HSCI.HI']
 
+		if (i - his_week) % interval == 0:
+
+			start_date = dates[i - 52].strftime('%Y-%m-%d')
+			end_date = dates[i].strftime('%Y-%m-%d')
+
+                        label_other_df = DFUtil.get_date_df(funddf, start_date, end_date)
+			
+			fund_sharpe       = FundIndicator.fund_sharp_annual(label_other_df)
+
+			sharpe_dict = {}
+			for record in fund_sharpe:
+				sharpe_dict[record[0]] = record[1]
+
+			fund_datas.append([sharpe_dict['SP500.SPI'], sharpe_dict['GLNC'], sharpe_dict['HSCI.HI']])
+			fund_dates.append(dates[i])
+
+
+
 	result_df = pd.DataFrame(result_datas, index=result_dates,
 							 columns=['SP500.SPI', 'GLNC', 'HSCI.HI'])
 
 	result_df.to_csv('./tmp/otherlabelasset.csv')
 
+
+	fund_df = pd.DataFrame(fund_datas, index=fund_dates, columns=['SP500.SPI', 'GLNC', 'HSCI.HI'])
+	fund_df.index.name = 'date'
+	allocationdata.other_fund_sharpe_df = fund_df
+
+	fund_df.to_csv('./tmp/other_fund_sharpe.csv')
+
+
 	print 'other label asset done'
 
 	return result_df
+
 
 
 def labelasset(allocationdata):
@@ -405,6 +451,7 @@ def labelasset(allocationdata):
 
 	indexdf = DBData.index_value(allocationdata.data_start_date, allocationdata.end_date)[[Const.hs300_code]]
 	dates = indexdf.pct_change().index
+
 
 	#allfunddf = Data.funds()
 
@@ -430,7 +477,7 @@ def labelasset(allocationdata):
 
 	df.index.name = 'date'
 
-	df = df.dropna()
+	#df = df.dropna()
 
 	allocationdata.label_asset_df = df
 

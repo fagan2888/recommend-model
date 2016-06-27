@@ -32,7 +32,6 @@ def highriskasset(allocationdata, dfr, his_week, interval):
 	fund_codes   = []
 
 
-
 	for i in range(his_week + 1, len(dates)):
 
 
@@ -175,8 +174,8 @@ def lowriskasset(allocationdata, dfr, his_week, interval):
 	return result_df
 
 
-
 def highlowallocation(allocationdata, dfr, his_week, interval):
+
 
 	result_dates = []
 	result_datas = []
@@ -197,60 +196,86 @@ def highlowallocation(allocationdata, dfr, his_week, interval):
 	fund_values  = {}
 	fund_codes   = []
 
-	for i in range(his_week + 1, len(dates)):
+
+	for m in range(1, 11):
+
+		columns = dfr.columns
+		portfolio_vs = [1]
+
+		ws = 1.0 * m / 10
+		
+
+		for i in range(1, len(dates)):
+
+			
+			date    = dates[i]
+
+			columns = dfr.columns
+																	
+															
 
 
-		if (i - his_week - 1 ) % interval == 0:
 
-			start_date = dates[i- his_week].strftime('%Y-%m-%d')
-			end_date   = dates[i - 1].strftime('%Y-%m-%d')
+										
+							
+			'''
+			if (i - his_week - 1 ) % interval == 0:
 
-			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d').date()]
-			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d').date()]
+				start_date = dates[i- his_week].strftime('%Y-%m-%d')
+				end_date   = dates[i - 1].strftime('%Y-%m-%d')
 
-			risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
-			fund_codes = allocation_dfr.columns
+				allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d').date()]
+				allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d').date()]
 
-			#ws[0] = ws[0] * risk_position
-			#ws[1] = 1.0 - ws[0]
+				#risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
+				fund_codes = allocation_dfr.columns
 
-			last_pv = portfolio_vs[-1]
-			fund_values = {}
+				#ws[0] = ws[0] * risk_position
+				#ws[1] = 1.0 - ws[0]
+
+				last_pv = portfolio_vs[-1]
+				fund_values = {}
+				fund_values[0] = last_pv * (1.0 * (m - 1) / 10.0)
+				fund_values[1] = last_pv * ((10.0 - (m - 1)) / 10.0)
+				for n in range(0, len(fund_codes)):
+					fund_values[n] = [last_pv * ws[n]]
+
+				position_dates.append(end_date)
+				position_datas.append(ws)
+
+			pv = 0
+			d = dates[i]
 			for n in range(0, len(fund_codes)):
-				fund_values[n] = [last_pv * ws[n]]
-
-			position_dates.append(end_date)
-			position_datas.append(ws)
-
-		pv = 0
-		d = dates[i]
-		for n in range(0, len(fund_codes)):
-			vs = fund_values[n]
-			code = fund_codes[n]
-			fund_last_v = vs[-1]
-			fund_last_v = fund_last_v + fund_last_v * dfr.loc[d, code] * risk_position + fund_last_v * 0.03 / 52 * ( 1.0 - risk_position)
-			vs.append(fund_last_v)
-			pv = pv + vs[-1]
-		portfolio_vs.append(pv)
-		result_dates.append(d)
+				vs = fund_values[n]
+				code = fund_codes[n]
+				fund_last_v = vs[-1]
+				fund_last_v = fund_last_v + fund_last_v * dfr.loc[d, code] * risk_position + fund_last_v * 0.03 / 52 * ( 1.0 - risk_position)
+				vs.append(fund_last_v)
+				pv = pv + vs[-1]
+			portfolio_vs.append(pv)
+			result_dates.append(d)
 
 
-		print d , pv
+			print d , pv
 
-		if i - risk_index >= 4:
-			risk_position = 1
+			if i - risk_index >= 4:
+				risk_position = 1
 
 
-		drawdown = FundIndicator.portfolio_drawdown(portfolio_vs)
-		risk_drawdown.append(drawdown)
-		risk_drawdown.sort()
-		if len(risk_drawdown) >= 26:
-			if drawdown > risk_drawdown[(int)(0.6 * len(risk_drawdown))]:
-				risk_position = risk_position * 0.6
-				risk_index    = i						
+			drawdown = FundIndicator.portfolio_drawdown(portfolio_vs)
+			risk_drawdown.append(drawdown)
+			risk_drawdown.sort()
+			if len(risk_drawdown) >= 26:
+				if drawdown > risk_drawdown[(int)(0.6 * len(risk_drawdown))]:
+					risk_position = risk_position * 0.6
+					risk_index    = i						
 
-		#print risk_drawdown
-				
+			#print risk_drawdown
+			'''	
+
+
+
+
 
 	result_datas  = portfolio_vs
 	result_df = pd.DataFrame(result_datas, index=result_dates,

@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+
 import numpy as np
 import string
 import sys
@@ -12,6 +13,7 @@ from numpy import isnan
 from datetime import datetime
 import pandas as pd
 import FundFilter as ff
+
 
 
 def fund_maxsemivariance(funddf):

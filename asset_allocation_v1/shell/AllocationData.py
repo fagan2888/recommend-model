@@ -79,7 +79,8 @@ class allocationdata:
 	label_asset_df = None
 	stock_fund_df  = None
 	bond_fund_df   = None
-
+	money_fund_sharpe_df  = None
+	other_fund_sharpe_df  = None
 
 	equal_risk_asset_ratio_df = None
 	equal_risk_asset_df       = None

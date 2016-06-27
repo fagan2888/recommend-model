@@ -12,11 +12,13 @@ import os
 import DB
 
 
+
 if __name__ == '__main__':
 
 
 	start_date = '2010-01-05'
 	end_date = '2016-04-22'
+
 
 	LabelAsset.labelasset(start_date, end_date)
 	EqualRiskAssetRatio.equalriskassetratio()

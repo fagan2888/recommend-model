@@ -25,11 +25,12 @@ def fund_measure(allocationdata):
 	base_sql = 'replace into fund_measure (fm_start_date, fm_end_date, fm_adjust_period, fm_look_back, fm_fund_type, fm_fund_code, fm_jensen, fm_ppw, fm_stability, fm_sortino, fm_sharpe, fm_high_postion_prefer, fm_low_position_prefer, fm_largecap_prefer, fm_smallcap_prefer, fm_growth_prefer, fm_value_prefer, fm_largecap_fitness, fm_smallcap_fitness, fm_rise_fitness, fm_decline_fitness, fm_oscillation_fitness, fm_growth_fitness, fm_value_fitness, fm_ratebond, fm_creditbond, fm_convertiblebond, fm_sp500, fm_gold, fm_hs, created_at, updated_at) values ("%s","%s",%d, %d, "%s","%s", %f,%f,%f,%f,%f, %d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d, "%s","%s")'
 
 
-
-	stock_fund_measure = allocationdata.stock_fund_measure
-	stock_fund_label   = allocationdata.stock_fund_label
-	bond_fund_measure  = allocationdata.bond_fund_measure
-	bond_fund_label    = allocationdata.bond_fund_label
+	stock_fund_measure    = allocationdata.stock_fund_measure
+	stock_fund_label      = allocationdata.stock_fund_label
+	bond_fund_measure     = allocationdata.bond_fund_measure
+	bond_fund_label       = allocationdata.bond_fund_label
+	money_fund_sharpe_df  = allocationdata.money_fund_sharpe_df
+	other_fund_sharpe_df  = allocationdata.other_fund_sharpe_df
 
 
 	dates = list(stock_fund_measure.keys())
@@ -39,7 +40,6 @@ def fund_measure(allocationdata):
 
 		stock_measure_df = stock_fund_measure[date]
 		stock_label_df   = stock_fund_label[date]
-
 
 		for code in stock_fund_measure[date].index:
 
@@ -163,8 +163,37 @@ def fund_measure(allocationdata):
 			#print sql
 			cursor.execute(sql)
 
+
+	dates = list(money_fund_sharpe_df.index)
+	dates.sort()
+
+	for date in dates:
+		money_sharpe = money_fund_sharpe_df.loc[date, 'money']
+		sql = base_sql % (allocationdata.start_date, date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback,'money' ,'213009' , 0, 0, 0, 0, money_sharpe, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,datetime.now(), datetime.now())
+		cursor.execute(sql)
+
+
+	dates = list(other_fund_sharpe_df.index)
+	dates.sort()
+	for date in dates:
+
+		SP500_sharpe = other_fund_sharpe_df.loc[date,'SP500.SPI']
+		GLNC_sharpe  = other_fund_sharpe_df.loc[date,'GLNC']
+		HSCI_sharpe = other_fund_sharpe_df.loc[date,'HSCI.HI']
+
+		sql = base_sql % (allocationdata.start_date, date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback,'other' ,'513500' , 0, 0, 0, 0, SP500_sharpe , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,datetime.now(), datetime.now())
+		cursor.execute(sql)		
+
+		sql = base_sql % (allocationdata.start_date, date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback,'other' ,'159934' , 0, 0, 0, 0, GLNC_sharpe , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,datetime.now(), datetime.now())
+		cursor.execute(sql)		
+
+		sql = base_sql % (allocationdata.start_date, date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback,'other' ,'513600' , 0, 0, 0, 0, HSCI_sharpe , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,datetime.now(), datetime.now())
+		cursor.execute(sql)		
+
+
 	conn.commit()
 	conn.close()
+
 
 	print 'fund measure done'
 
