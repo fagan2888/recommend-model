@@ -199,10 +199,14 @@ def highlowallocation(allocationdata, dfr, his_week, interval):
 
 	for m in range(1, 11):
 
+
 		columns = dfr.columns
 		portfolio_vs = [1]
 
-		ws = 1.0 * m / 10
+
+		ws = []
+		ws.append(1.0 * m / 10.0)
+		ws.append(1 - ws[0])
 		
 
 		for i in range(1, len(dates)):
@@ -212,11 +216,13 @@ def highlowallocation(allocationdata, dfr, his_week, interval):
 
 			columns = dfr.columns
 																	
-															
+			pv = portfolio_vs[-1]
+			pv = pv	* dfr.loc[date, 'high_risk_asset'] * ws[0] + pv * dfr.loc[date, 'low_risk_asset'] * ws[1]
+			#print pv
+			portfolio_vs.append(pv)
 
 
 
-										
 							
 			'''
 			if (i - his_week - 1 ) % interval == 0:
@@ -325,6 +331,7 @@ def highlowriskasset(allocationdata):
 	df  = pd.concat([highdf, lowdf], axis = 1, join_axes=[highdf.index])
 	dfr = df.pct_change().fillna(0.0)
 
+	print dfr
 
 	highlowdf = highlowallocation(allocationdata, dfr, his_week, interval)
 
