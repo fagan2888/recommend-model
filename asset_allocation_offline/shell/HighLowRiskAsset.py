@@ -328,20 +328,20 @@ def highlowallocation(dfr, his_week, interval):
 
 
 
-def highlowriskasset():
+def highlowriskasset(sep, length):
 
 
 	#highriskassetdf  = allocationdata.equal_risk_asset_df
 	df  = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date', parse_dates = 'date' )
-	highriskassetdf = df[df.columns[0:4]] #gaopeng
+	highriskassetdf = df[df.columns[0:sep]] #gaopeng
 
 	#highriskassetdf = df[df.columns[0:4]]  #kunge
 
 	#print highriskassetdf
 
 
-	df  = pd.read_csv('./data/laopan.csv', index_col = 'date', parse_dates = 'date' )
-	lowriskassetdf  = df[df.columns[4:6]] #gaopeng
+	df  = pd.read_csv('./data/funds.csv', index_col = 'date', parse_dates = 'date' )
+	lowriskassetdf  = df[df.columns[sep:length]] #gaopeng
 
 	#print lowriskassetdf
 	#lowriskassetdf  = df[df.columns[4:6]] #kunge

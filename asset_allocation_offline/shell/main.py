@@ -22,7 +22,9 @@ if __name__ == '__main__':
 
 	#df = pd.read_csv('./data/gaopeng.csv', index_col = 'date', parse_dates = 'date')
 	#df = pd.read_csv('./data/kunge.csv', index_col = 'date', parse_dates = 'date')
-	df = pd.read_csv('./data/laopan.csv', index_col = 'date', parse_dates = 'date')
+	sep = 4
+	length = 6
+	df = pd.read_csv('./data/funds.csv', index_col = 'date', parse_dates = 'date')
 	EqualRiskAssetRatio.equalriskassetratio(df)
 	EqualRiskAsset.equalriskasset(df)
-	HighLowRiskAsset.highlowriskasset()
+	HighLowRiskAsset.highlowriskasset(sep = 4, length = 6)

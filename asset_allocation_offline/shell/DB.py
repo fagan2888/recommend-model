@@ -389,7 +389,16 @@ def label_asset(allocationdata):
 
 	print 'label asset done'
 
-
+def get_fund_value(fund_ids):
+	conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='mofang', charset='utf8')
+        cursor = conn.cursor()
+	base_sql = "select wf_fund_id, wf_fund_code,  wf_time, wf_nav_value from wind_fund_value where wf_fund_id in %s"
+	sql = base_sql % fund_ids
+	ret = cursor.execute(base_sql, fund_ids)
+	ret = cursor.fetchall()
+	conn.commit()
+	conn.close()
+	print ret
 def asset_allocation(allocationdata):
 
 	
