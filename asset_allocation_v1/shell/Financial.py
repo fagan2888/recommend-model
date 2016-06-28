@@ -153,7 +153,6 @@ def efficient_frontier_index(return_rate):
 		return risks, returns, portfolios
 
 
-
 #计算有效前沿
 def efficient_frontier_fund(return_rate):
 
@@ -196,6 +195,7 @@ def efficient_frontier_fund(return_rate):
 	return risks, returns, portfolios
 
 
+
 #计算下方差
 def semivariance(portfolio):
 	mean       =        np.mean(portfolio)
@@ -212,6 +212,7 @@ def semivariance(portfolio):
 		var = 0.0
 	return     var
 			
+
 		
 #jensen测度
 '''
@@ -230,19 +231,21 @@ def jensen(portfolio, market, rf):
 	m = []		
 	for i in range(0, len(portfolio)):
 		#print portfolio[i], market[i]	
-		p.append(round(float(portfolio[i]) - rf, 8))
-		m.append(round(float(market[i]) - rf, 8))
+		p.append(portfolio[i] - rf)
+		m.append(market[i] - rf)
 
 	p = np.array(p)
 	m = np.array(m)
 
 	clf       = linear_model.LinearRegression()
 	clf.fit(m.reshape(len(m),1), p.reshape(len(p), 1))
+	#clf.fit(m, p)
 	alpha = clf.intercept_[0]
 	beta  = clf.coef_[0]
 
-	if np.isnan(alpha) or np.isinf(alpha):
-		alpha = 0.0
+	#if np.isnan(alpha) or np.isinf(alpha):
+	#	alpha = 0.0
+
 	return alpha
 
 

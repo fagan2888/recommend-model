@@ -14,7 +14,7 @@ import Financial as fin
 import FundIndicator as fi
 
 
-def select_stock(funddf, fund_tags):
+def select_stock(funddf, fund_tags, indexdf):
 
 	largecap_codes             = fund_tags['largecap']
 	smallcap_codes             = fund_tags['smallcap']
@@ -33,7 +33,9 @@ def select_stock(funddf, fund_tags):
 	need_growthfitness      = True
 	need_valuefitness       = True
 
-	fund_sharpe  = fi.fund_sharp_annual(funddf)
+	#fund_sharpe  = fi.fund_sharp_annual(funddf)
+	fund_sharpe  = fi.fund_jensen(funddf, indexdf)
+
 	codes = []
 	tag   = {}
 	for i in range(0, len(fund_sharpe)):
@@ -89,7 +91,7 @@ def select_stock(funddf, fund_tags):
 	return codes, tag
 
 
-def select_bond(funddf, fund_tags):
+def select_bond(funddf, fund_tags, indexdf):
 
 	ratebond_codes             = fund_tags['ratebond']
 	credit_codes               = fund_tags['creditbond']
@@ -100,7 +102,8 @@ def select_bond(funddf, fund_tags):
 	need_convertible      = True
 
 
-	fund_sharpe  = fi.fund_sharp_annual(funddf)
+	#fund_sharpe  = fi.fund_sharp_annual(funddf)
+	fund_sharpe  = fi.fund_jensen(funddf, indexdf)
 	codes = []
 	tag   = {}
 	for i in range(0, len(fund_sharpe)):
