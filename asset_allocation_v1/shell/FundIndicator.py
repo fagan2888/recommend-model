@@ -157,6 +157,9 @@ def fund_sharp_annual(funddf):
 		for r in funddfr[code].values:
 			rs.append(r)
 
+		#if code == '000165':
+		#print rs
+
 		fundsharp[code] = fin.sharp_annual(rs, Const.rf)
 
 	x = fundsharp
@@ -276,6 +279,39 @@ def fund_maxdrawdown(funddf):
 	return 0	
 
 
+def fund_jensen(funddf, indexdf):
+
+	rf = 0.03 / 52
+
+	funddfr = funddf.pct_change().fillna(0.0)
+	indexdfr = indexdf.pct_change().fillna(0.0)
+
+	jensen = {}
+	cols = funddfr.columns
+	for col in cols:
+		p = []
+		m = []
+		rs = funddfr[col].values
+		#print col, rs
+		indexrs = indexdfr.values
+		for i in range(0, len(rs)):
+			if isnan(rs[i]):
+				continue
+			else:
+				p.append(rs[i])
+				m.append(indexrs[i])
+
+		jensen[col] = fin.jensen(p, m, rf)
+
+
+	x = jensen
+        sorted_x       = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+        sorted_measure = sorted_x
+
+
+	return sorted_measure
+	
+	
 
 if __name__ == '__main__':
 
@@ -306,7 +342,6 @@ if __name__ == '__main__':
 
         stability_data = sf.stabilityfilter(funddf, 3.0 / 3)
 
-        sharpe_data    = fi.fund_sharp_annual(funddf)
 	
 	jensen_dict = {}
         for k,v in jensen_data:

@@ -72,7 +72,7 @@ def asset_allocation_v1():
 	args = request.form
 
 	allocationdata.start_date                            = args.get('start_date')
-	allocationdata.start_date                            = '2015-12-01'
+	#allocationdata.start_date                            = '2015-12-01'
 	allocationdata.fund_measure_lookback                 = string.atoi(args.get('fund_measure_lookback'))
 	allocationdata.fund_measure_adjust_period            = string.atoi(args.get('fund_measure_adjust_period'))		
 	allocationdata.jensen_ratio                          = string.atof(args.get('jensen_ratio'))		
@@ -161,7 +161,6 @@ def risk_asset_allocation():
 @app.route("/")
 def hello():
 	return 'Hello World'
-
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ db_params = {
         }
 
 
-def trade_dates():
+def all_trade_dates():
 
 	conn  = MySQLdb.connect(**db_params)
 	cur   = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -83,7 +83,7 @@ def stock_fund_value(start_date, end_date):
 	
 	cur.execute(sql)
 
-	
+
 	records = cur.fetchall()
 
 	for record in records:
@@ -114,6 +114,7 @@ def stock_fund_value(start_date, end_date):
 	
 
 	df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)	
+
 
 	df = df.fillna(method='pad')
 
@@ -240,7 +241,9 @@ def money_fund_value(start_date, end_date):
 	return df
 
 
+
 def index_value(start_date, end_date):
+
 
 	dates = trade_dates(start_date, end_date)
 	dates.sort()
@@ -260,7 +263,6 @@ def index_value(start_date, end_date):
 	sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
 
 
-	
 	cur.execute(sql)
 
 	
@@ -358,10 +360,11 @@ def other_fund_value(start_date, end_date):
 	return df
 
 
+
 def position():
 
 
-	dates = set()
+	#dates = set()
 	
 	conn  = MySQLdb.connect(**db_params)
 	cur   = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -375,19 +378,20 @@ def position():
 
 	position_dict = {}
 
+	code_position = {}	
+
+
 	for record in records:
 
 		code      = record['wf_fund_code']
 		position  = record['wf_stock_value']
-		date      = record['wf_time']
-
-		dates.add(date)
-
-		ps = position_dict.setdefault(code, {})
-		ps[date]  = float(position)
+		ps        = code_position.setdefault(code, [])
+		ps.append(position)
 
 	conn.close()
 
+	for code in code_position.keys():
+		position_dict[code] = np.mean(code_position[code])
 
 
 	dates = list(dates)
@@ -442,14 +446,14 @@ def scale():
 if __name__ == '__main__':
 
 	#trade_dates()	
-	#df = stock_fund_value('2004-01-03', '2016-06-03')
+	#df = stock_fund_value('2014-01-03', '2016-06-03')
 	#df = bond_fund_value('2014-01-03', '2016-06-03')
-	df = money_fund_value('2015-01-03', '2016-06-03')
+	#df = money_fund_value('2015-01-03', '2016-06-03')
 	#df =  index_value('2010-01-28', '2016-06-03')
 	#f =  other_fund_value('2014-01-03', '2016-06-03')
-	#df =  position()
+	df =  position()
 	#df =  scale()
 	print df
-	df.to_csv('./tmp/money.csv')
+	#df.to_csv('./tmp/money.csv')
 	#print trade_dates('2014-01-03', '2016-06-03')
 

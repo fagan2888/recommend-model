@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+
 import numpy as np
 import string
 import sys
@@ -16,6 +17,7 @@ import AllocationData
 
 
 rf = Const.rf
+
 
 
 #按照基金成立时间过滤
@@ -44,9 +46,9 @@ def fundsetuptimefilter(codes, start_date, indicator_df):
 #按照jensen测度过滤
 def jensenmeasure(funddf, indexdf, rf):
 
+
 	funddfr = funddf.pct_change().fillna(0.0)
 	indexdfr = indexdf.pct_change().fillna(0.0)
-
 
 	jensen = {}
 	cols = funddfr.columns
@@ -57,11 +59,11 @@ def jensenmeasure(funddf, indexdf, rf):
 		#print col, rs
 		indexrs = indexdfr.values
 		for i in range(0, len(rs)):
-			#if isnan(rs[i]):
-			#	continue
-			#else:
-			p.append(float(rs[i]))
-			m.append(float(indexrs[i]))
+			if isnan(rs[i]):
+				continue
+			else:
+				p.append(rs[i])
+				m.append(indexrs[i])
 
 		jensen[col] = fin.jensen(p, m, rf)
 
@@ -72,7 +74,6 @@ def jensenmeasure(funddf, indexdf, rf):
 #按照sortino测度过滤
 def sortinomeasure(funddf, rf):
 
-
 	funddfr = funddf.pct_change().fillna(0.0)
 	indexdfr = funddf.pct_change().fillna(0.0)
 
@@ -82,10 +83,10 @@ def sortinomeasure(funddf, rf):
 		p = []
 		rs = funddfr[col].values
 		for i in range(0, len(rs)):
-			#if isnan(rs[i]):
-			#	continue
-			#else:
-			p.append(float(rs[i]))
+			if isnan(rs[i]):
+				continue
+			else:
+				p.append(rs[i])
 		sortino_value = fin.sortino(p,rf)
 		#if np.isinf(sortino_value):
 		#	continue
@@ -115,9 +116,9 @@ def ppwmeasure(funddf, indexdf, rf):
 	indexdfr = indexdf.pct_change()
 	'''
 
-
 	funddfr = funddf.pct_change().fillna(0.0)
 	indexdfr = indexdf.pct_change().fillna(0.0)
+
 
 	ppw = {}
 	cols = funddfr.columns
@@ -127,12 +128,13 @@ def ppwmeasure(funddf, indexdf, rf):
 		rs = funddfr[col].values
 		indexrs = indexdfr.values
 		for i in range(0, len(rs)):
-			#if isnan(rs[i]):
-			#	continue
-			#else:
-				p.append(float(rs[i]) - rf)
-				m.append(float(indexrs[i]) - rf)
-
+			if isnan(rs[i]):
+				continue
+			else:
+				p.append(rs[i] - rf)
+				m.append(indexrs[i] - rf)
+		#print p
+		#print m
 
 		ppw[col] = fin.ppw(p, m)
 
@@ -219,9 +221,9 @@ def stabilitymeasure(funddf):
 	return final_fund_stability
 
 
-
 #按照规模过滤
 def scalefilter(ratio):
+
 
 	fund_scale_df =  Data.scale_data()
 	stock_codes   =  Data.stock_fund_code()
@@ -241,18 +243,22 @@ def scalefilter(ratio):
 	#print 'scale 000457 : ' ,scale['000457.OF']
 
 
+
 def ratio_filter(measure, ratio):
 
+
 	x = measure
-	sorted_x       = sorted(x.iteritems(), key=lambda x : x[1], reverse=False)
+	sorted_x       = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
 	sorted_measure = sorted_x
+
 
 	result = []
 	for i in range(0, (int)(len(sorted_measure) * ratio)):
 		result.append(sorted_measure[i])
 
-	return result
 
+
+	return result
 
 
 
@@ -295,11 +301,13 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 	#按照ppw测度过滤
 	ppw_measure    = ppwmeasure(funddf, indexdf, rf)
 	ppw_data       = ratio_filter(ppw_measure, 0.5)
+
 	#ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 1.0)
 	#print ppw_data
 
 	stability_measure = stabilitymeasure(funddf)
 	stability_data    = ratio_filter(stability_measure, 2.0 / 3)
+
 	#stability_data = sf.stabilityfilter(funddf, 1.0)
 
 	sharpe_data    = fi.fund_sharp_annual(funddf)
@@ -376,10 +384,10 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 
 	for code in codes:
 		ind = indicator.setdefault(code, {})
-		if np.isinf(sharpe_dict[code]):
-			continue
-		if np.isinf(sortino_dict[code]):
-			continue
+		#if np.isinf(sharpe_dict[code]):
+		#	continue
+		#if np.isinf(sortino_dict[code]):
+		#	continue
 		ind['sharpe']    = sharpe_dict[code]
 		ind['jensen']    = jensen_dict[code]
 		ind['sortino']   = sortino_dict[code]
@@ -422,8 +430,8 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 	return codes, indicator
 
 
-
 def bondfundfilter(allocationdata, funddf, indexdf):
+
 
   	dates = funddf.index.values
 	dates.sort()
@@ -432,6 +440,7 @@ def bondfundfilter(allocationdata, funddf, indexdf):
 
 
 	indicator = {}
+
 
 	#funddf  = Data.bond_value(start_date, end_date)
 	#indexdf = Data.bond_index_value(start_date, end_date, 'H11001.CSI')
