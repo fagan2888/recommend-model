@@ -12,7 +12,7 @@ import EqualRiskAsset
 import HighLowRiskAsset
 import os
 import DB
-import thread 
+import thread
 import MySQLdb
 from datetime import datetime
 import AllocationData
@@ -49,7 +49,7 @@ def asset_allocation(allocationdata, uid):
 
 
 	#except:
-		
+
 	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
 	#cursor = conn.cursor()
 
@@ -76,15 +76,15 @@ def asset_allocation_v1():
 	allocationdata.start_date                            = args.get('start_date')
 	#allocationdata.start_date                            = '2015-06-01'
 	allocationdata.fund_measure_lookback                 = string.atoi(args.get('fund_measure_lookback'))
-	allocationdata.fund_measure_adjust_period            = string.atoi(args.get('fund_measure_adjust_period'))		
-	allocationdata.jensen_ratio                          = string.atof(args.get('jensen_ratio'))		
-	allocationdata.sortino_ratio                         = string.atof(args.get('sortino_ratio'))		
-	allocationdata.ppw_ratio                             = string.atof(args.get('ppw_ratio'))		
-	allocationdata.stability_ratio                       = string.atof(args.get('stability_ratio'))	
-	allocationdata.fixed_risk_asset_lookback             = string.atoi(args.get('fixed_risk_asset_risk_lookback'))	
-	allocationdata.fixed_risk_asset_risk_adjust_period   = string.atoi(args.get('fixed_risk_asset_risk_adjust_period'))	
+	allocationdata.fund_measure_adjust_period            = string.atoi(args.get('fund_measure_adjust_period'))
+	allocationdata.jensen_ratio                          = string.atof(args.get('jensen_ratio'))
+	allocationdata.sortino_ratio                         = string.atof(args.get('sortino_ratio'))
+	allocationdata.ppw_ratio                             = string.atof(args.get('ppw_ratio'))
+	allocationdata.stability_ratio                       = string.atof(args.get('stability_ratio'))
+	allocationdata.fixed_risk_asset_lookback             = string.atoi(args.get('fixed_risk_asset_risk_lookback'))
+	allocationdata.fixed_risk_asset_risk_adjust_period   = string.atoi(args.get('fixed_risk_asset_risk_adjust_period'))
 	allocationdata.allocation_lookback                   = string.atoi(args.get('allocation_lookback'))
-	allocationdata.allocation_adjust_period              = string.atoi(args.get('allocation_adjust_period'))	
+	allocationdata.allocation_adjust_period              = string.atoi(args.get('allocation_adjust_period'))
 	uid                                   = string.atoi(args.get('uid'))
 
 
@@ -112,7 +112,7 @@ def asset_allocation_v1():
 	ret['message'] = 'Success'
 	ret['result']  = result
 
-	
+
 	return json.dumps(ret)
 
 
@@ -137,7 +137,7 @@ def risk_asset_allocation():
 	result['ratio'] = ratio
 	result['nav']   = nav
 
-	
+
 	#sql = "insert into risk_asset_allocation (raa_start_date, raa_risk, raa_result, raa_status, created_at, updated_at) values('%s', '%f', '%s', '%s', '%s', '%s')" % (start_date, risk,  json.dumps(result) ,'complete', datetime.now() ,datetime.now())
 	#print sql
 	#cursor.execute(sql)
@@ -157,7 +157,11 @@ def risk_asset_allocation():
 
 	return json.dumps(ret)
 
-
+@app.route("/alloc/query")
+def alloc_query_controller():
+	args           =   request.args
+        start_date     =   args.get('start_date')
+        risk           =   string.atof(args.get('risk'))
 @app.route("/")
 def hello():
 	return 'Hello World'
