@@ -1,0 +1,15 @@
+#!/bin/bash
+pydir=$1
+fname=$2
+hnum=$3
+lnum=$4
+debug="n"
+#echo $fname, $hnum, $lnum, $debug,"$USER"
+export PATH="/home/bae/anaconda2/bin:$PATH"
+cd $pydir
+lpy=`which python`
+$lpy ./shell/RiskAssetAllocation.py $fname $hnum $lnum $debug
+rm "/tmp/assets/"${fname}"position.csv"
+rm "/tmp/assets/"${fname}"equal_risk_asset.csv"
+rm "/tmp/assets/"${fname}"equal_risk_ratio.csv"
+rm "/tmp/assets/"${fname}"risk_position.csv"

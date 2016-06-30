@@ -9,10 +9,10 @@ import sys
 sys.path.append('shell')
 
 
-def equalriskasset(equal_ratio_df, dfr):
+def equalriskasset(equal_ratio_df, dfr, pname='', debug='y'):
 
 	rf = 0.03 / 250
-
+	print pname, debug
 	#ratio_df         = allocationdata.equal_risk_asset_ratio_df
 
 	#ratio_df         = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date', parse_dates = 'date' )
@@ -108,7 +108,10 @@ def equalriskasset(equal_ratio_df, dfr):
 
 
 	result_df.index.name = 'date'
-	result_df.to_csv('./tmp/equalriskasset.csv')
+	if debug == 'y':
+		result_df.to_csv('./result/equalriskasset.csv')
+	#else:
+	#	result_df.to_csv('/tmp/' + pname + 'equalriskasset.csv')
 
 
 	return result_df
