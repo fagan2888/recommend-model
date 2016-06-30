@@ -3,7 +3,7 @@ import xlrd
 import pandas as pd
 import os
 COLUMNS = [u"证券代码",u"买卖方向",u"成交数量",\
-                    u"成交价格", u"佣金", u"成交金额", u"成交数量"]
+                    u"成交价格", u"佣金", u"成交金额", u"业务标志", u"交易类别", u"证券类别"]
 filename1 = u"20130101（马丽）.xls"
 filename2 = u"20140101（马丽）.xls"
 filename3 = u"20150101（马丽）.xlsx"
