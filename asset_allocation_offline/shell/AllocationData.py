@@ -143,4 +143,3 @@ class allocationdata:
 		return _df
 
 
-	
