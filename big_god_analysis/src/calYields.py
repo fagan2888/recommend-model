@@ -129,7 +129,7 @@ if __name__ == '__main__':
         user_info[dDate]['stocks'] = json.loads(json.dumps(vf.holdingStocks))
         user_ratio.append([dDate, user_info[dDate]['returns'], user_info[dDate]['ratio'], \
             user_info[dDate]['balance'], user_info[dDate]['holdings'], user_info[dDate]['total_assets'],\
-            user_info[dDate]['origin'], user_info[dDate]['total_returns'], user_info[dDate]['total_ratio']])
+            user_info[dDate]['origin'], user_info[dDate]['total_returns'], user_info[dDate]['total_ratio'], user_info[dDate]['stocks']])
         #print user_info
         #os._exit(0)
         #if oneDay == 20130110:
@@ -152,7 +152,7 @@ if __name__ == '__main__':
 
     urf = pd.DataFrame(user_ratio, columns = \
         ['日期', '当日收益', '当日收益率(%)', '账户可用金额', '当日持仓金额', \
-        '当日总资产', '截止当日总投入本金', '截止当日总回报', '戴上当日总回报率(%)'])
+        '当日总资产', '截止当日总投入本金', '截止当日总回报', '戴上当日总回报率(%)', '当前持仓'])
     #['dates', 'returns', 'ratio', 'balance', 'holdings', 'total_assets', 'invest', 'total_returns', 'total_ratio'])
     urf.to_csv('../outputs/user_daily_ratio_'+fileName, encoding="utf8")
     #print user_info[20151201]
