@@ -28,7 +28,7 @@ def riskmeanstd(risks):
 
 
 
-def equalriskassetratio(dfr):
+def equalriskassetratio(dfr, pname='', debug='y'):
 
 	#assetlabels = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']
 	assetlabels = dfr.columns
@@ -111,8 +111,10 @@ def equalriskassetratio(dfr):
 
 	result_df = pd.DataFrame(result_datas, index=result_dates, columns=assetlabels)
 	result_df.index.name = 'date'
-
-	result_df.to_csv('./tmp/equalriskassetratio.csv')
+	if debug == 'y':
+		result_df.to_csv('./result/equalriskassetratio.csv')
+	#else:
+	#	result_df.to_csv('/tmp/' + pname + 'equalriskassetratio.csv')
 
 	
 	return result_df
