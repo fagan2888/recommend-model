@@ -230,6 +230,15 @@ def portfolio_sharpe(pvs):
 	return (returns - 0.03) / risk
 
 
+def portfolio_sharpe_day(pvs):
+	rs = []
+	for i in range(1, len(pvs)):
+		rs.append(pvs[i] / pvs[i-1] - 1)
+	returns = np.mean(rs) * 250
+	risk    = np.std(rs) * (250 ** 0.5)
+	return (returns - 0.03) / risk
+
+
 def portfolio_return(pvs):
 	#print pvs
 	#print pvs[0]
@@ -239,6 +248,14 @@ def portfolio_return(pvs):
 		rs.append(pvs[i] / pvs[i-1] - 1)
 	return np.mean(rs) * 52
 	#return pvs[len(pvs) - 1] / pvs[0] - 1
+
+
+def portfolio_return_day(pvs):
+
+	rs = []
+	for i in range(1, len(pvs)):
+		rs.append(pvs[i] / pvs[i-1] - 1)
+	return np.mean(rs) * 250
 
 
 def portfolio_risk(pvs):
