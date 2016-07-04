@@ -7,6 +7,7 @@ import numpy as np
 import FundIndicator
 from datetime import datetime
 import sys
+import os
 sys.path.append('shell')
 
 
@@ -37,7 +38,6 @@ def equalriskassetratio(dfr, pname='', debug='y'):
 	#dfr         = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
 	dates = dfr.index
 
-
 	interval = 5
 	his_week = 30 #kunge
 	#his_week = 13   #gaopeng
@@ -45,17 +45,19 @@ def equalriskassetratio(dfr, pname='', debug='y'):
 
 	result_dates = []
 	result_datas  = []
-
-
-	for i in range(his_week, len(dates)):
+	#print dates
+	#print dates[0]
+	#os._exit(0)
+	# len(dates) = 89
+	for i in range(his_week-1, len(dates)):
 
 		d = dates[i]
 
-		if (i - his_week) % interval == 0:
+		if (i - his_week + 1) % (interval - 1) == 0:
 
-			start_date = dates[i - his_week].strftime('%Y-%m-%d')
-			end_date   = dates[i].strftime('%Y-%m-%d')
-			allocation_date = dates[i - interval].strftime("%Y-%m-%d")
+			start_date = dates[i - his_week + 1].strftime('%Y-%m-%d')
+			end_date   = dates[i - 1].strftime('%Y-%m-%d') # is the index equal to i-1
+			allocation_date = dates[i - interval + 1].strftime("%Y-%m-%d")
 
 			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
 			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(allocation_date, '%Y-%m-%d')]
