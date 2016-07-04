@@ -29,6 +29,7 @@ class virFund:
     def set_total_returns(self, returns):
         self.total_returns = returns
     def sell(self, code, amount, price):
+        isSuccess = False
         if not self.holdingStocks.has_key(code):
             print "has no " + code +" in holdings"
         else:
@@ -39,12 +40,15 @@ class virFund:
                 del self.holdingStocks[code]
                 #self.holdings = self.holdings - curAmount * price
                 self.balance += curAmount * price
+                isSuccess = True
             else:
                 self.holdingStocks[code]['amount'] = curAmount - amount
                 if self.holdingStocks[code]['amount'] == 0.0:
                     del self.holdingStocks[code]
                 #self.holdings = self.holdings - amount * price
                 self.balance += amount * price
+                isSuccess = True
+        return isSuccess
     def buy(self,code, amount, price):
         money = amount * price
         if self.balance < money:
@@ -58,6 +62,7 @@ class virFund:
             self.holdingStocks[code]['amount'] = amount
         else:
             self.holdingStocks[code]['amount'] += amount
+        return True
     def setHoldings(self, holdings):
         self.holdings = holdings
     def __repr__(self):
