@@ -21,7 +21,6 @@ import DBData
 import DFUtil
 
 
-
 def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 	indexdf   = DBData.index_value(dates[0], dates[-1])
@@ -144,7 +143,6 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 	print 'stock label asset done'
 
 	return result_df
-
 
 
 def bondLabelAsset(allocationdata, dates, his_week, interval):

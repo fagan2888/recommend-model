@@ -2,3 +2,4 @@
 
 #rm ./tmp/*.csv
 python ./shell/main.py
+

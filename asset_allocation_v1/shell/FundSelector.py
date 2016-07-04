@@ -135,7 +135,6 @@ def select_bond(funddf, fund_tags, indexdf):
 	return codes, tag
 
 
-
 def select_money(funddf):
 
 	fund_sharpe  = fi.fund_sharp_annual(funddf)

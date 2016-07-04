@@ -770,9 +770,42 @@ def risk_allocation_ratio(df, lid):
         print "insert one row into risk_allocation_list"
 
 
+def riskhighlowriskasset():
+
+	start_date = '2010-01-01'
+
+	df = pd.read_csv('./tmp/risk_portfolio.csv', index_col = 'date', parse_dates = ['date'])
+
+        conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
+        cursor = conn.cursor()
+
+	for risk in df.columns:
+		col = risk
+		risk = string.atoi(risk) / 10.0
+
+        	sql = "replace into risk_asset_allocation_list (ra_risk, ra_date, created_at, updated_at) values (%f, '%s', '%s', '%s')" % (risk, start_date, datetime.now(), datetime.now())
+		cursor.execute(sql)
+		sql = 'select id from risk_asset_allocation_list where ra_risk = %f' % (risk)
+		cursor.execute(sql)
+		record = cursor.fetchone()
+		risk_id = record[0]
+
+
+		for date in df.index:
+			sql = "replace into risk_asset_allocation_nav (ra_alloc_id, ra_date, ra_nav, created_at, updated_at) values (%d, '%s', %f, '%s', '%s')" % (risk_id, date, df.loc[date, col], datetime.now(), datetime.now())
+			print sql
+			cursor.execute(sql)
+
+
+
+	conn.commit()
+	conn.close()
+
+
 if __name__ == '__main__':
 
 
+	'''
 	allocationdata = AllocationData.allocationdata()
 	df = pd.read_csv('./tmp/stock_indicator_2015-07-10.csv', index_col = 'code')
 	allocationdata.stock_fund_measure['2015-07-10'] = df
@@ -811,3 +844,7 @@ if __name__ == '__main__':
 
 
 	asset_allocation(allocationdata)
+
+	'''
+
+	riskhighlowriskasset()

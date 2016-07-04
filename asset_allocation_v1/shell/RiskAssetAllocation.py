@@ -17,7 +17,7 @@ import MySQLdb
 from datetime import datetime
 import AllocationData
 import time
-
+import RiskHighLowRiskAsset
 
 
 
@@ -25,13 +25,14 @@ def risk_asset_allocation():
 
 
 	allocationdata = AllocationData.allocationdata()
+	allocationdata.start_date                            = '2010-01-01'
 	allocationdata.all_dates()
 
 	#allocationdata.all_dates()
 
 	#allocationdata.start_date                            = args.get('start_date')
 	#allocationdata.start_date                            = '2010-01-01'
-	allocationdata.start_date                            = '2016-01-01'
+	#allocationdata.start_date                            = '2016-01-01'
 	allocationdata.fund_measure_lookback                 = 52
 	allocationdata.fund_measure_adjust_period            = 26
 	allocationdata.jensen_ratio                          = 0.5
@@ -48,10 +49,7 @@ def risk_asset_allocation():
 	LabelAsset.labelasset(allocationdata)
 	EqualRiskAssetRatio.equalriskassetratio(allocationdata)
 	EqualRiskAsset.equalriskasset(allocationdata)
-	HighLowRiskAsset.highlowriskasset(allocationdata)
-	
-
-		
+	RiskHighLowRiskAsset.highlowriskasset(allocationdata)
 	
 
 

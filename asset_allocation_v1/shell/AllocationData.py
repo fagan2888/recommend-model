@@ -95,7 +95,7 @@ class allocationdata:
 	low_risk_asset_df        = None
 	highlow_risk_asset_df    = None
 
-
+	riskhighlowriskasset     = None
 
 	#stock_df = None
 	#bond_df  = None
