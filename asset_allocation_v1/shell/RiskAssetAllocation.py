@@ -49,8 +49,8 @@ def risk_asset_allocation():
 	LabelAsset.labelasset(allocationdata)
 	EqualRiskAssetRatio.equalriskassetratio(allocationdata)
 	EqualRiskAsset.equalriskasset(allocationdata)
-	RiskHighLowRiskAsset.highlowriskasset(allocationdata)
-	
+	#RiskHighLowRiskAsset.highlowriskasset(allocationdata)
+	HighLowRiskAsset.highlowriskasset(allocationdata)
 
 
 	#DB.fund_measure(allocationdata)
