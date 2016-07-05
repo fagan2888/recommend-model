@@ -10,6 +10,7 @@ import Const
 import Data
 from numpy import isnan
 from datetime import datetime
+from datetime import timedelta
 import pandas as pd
 import AllocationData
 import DBData
@@ -20,20 +21,12 @@ import DFUtil
 import MySQLdb
 
 
-host     = 'rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com'
-port     = 3306
-user     = 'jiaoyang'
-password = 'wgOdGq9SWruwATrVWGwi'
-db       = 'asset_allocation'
-
-
 def stock_fund_measure(allocationdata, start_date, end_date):
 
 
 	fund_code_id_dict = allocationdata.fund_code_id_dict
 
-	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
         cursor = conn.cursor()
 
 	lookback  = 52
@@ -104,8 +97,7 @@ def bond_fund_measure(allocationdata, start_date, end_date):
 
 	base_sql = "replace into fund_pool (fp_date, fp_look_back, fp_fund_type, fp_fund_code,fp_fund_id, fp_jensen, fp_ppw, fp_stability, fp_sortino, fp_sharpe, fp_ratebond, fp_creditbond, fp_convertiblebond, created_at, updated_at) values ('%s',%d, %d, '%s', %d , %f, %f, %f, %f, %f, %d, %d, %d, '%s', '%s')"
 	
-	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
         cursor = conn.cursor()
 
 	lookback  = 52
@@ -157,8 +149,7 @@ def money_fund_measure(allocationdata, start_date, end_date):
 
 	base_sql = "replace into fund_pool (fp_date, fp_look_back, fp_fund_type, fp_fund_code, fp_fund_id, fp_sharpe, created_at, updated_at) values ('%s',%d, %d, '%s', %d, %f ,'%s', '%s')"
 
-	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
         cursor = conn.cursor()
 
 	lookback  = 52
@@ -188,8 +179,7 @@ def other_fund_measure(allocationdata, start_date, end_date):
 
 	base_sql = "replace into fund_pool (fp_date, fp_look_back, fp_fund_type, fp_fund_code, fp_fund_id, fp_sharpe, created_at, updated_at) values ('%s',%d, %d, '%s', %d, %f ,'%s', '%s')"
 
-	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
         cursor = conn.cursor()
 
 	lookback  = 52
@@ -225,17 +215,55 @@ def other_fund_measure(allocationdata, start_date, end_date):
 
 if __name__ == '__main__':
 
+
 	lookback = 52
 	dates = DBData.all_trade_dates()
-	
 
 	start_date = dates[-1 * lookback]	
 
 	allocationdata = AllocationData.allocationdata()
 	last_friday = DFUtil.last_friday()
+
+	last_friday_date = datetime.strptime(last_friday, '%Y-%m-%d').date()
+
+	for n in range(0, 500):
+
+		last_friday_date = last_friday_date - 7 * timedelta(days=1)
+
+		index = 0
+
+		for i in range(0, len(dates)):
+			d = datetime.strptime(dates[i], '%Y-%m-%d').date()
+			if d == last_friday_date:
+				index = i
+				break
+			elif d > last_friday_date:
+				index = i - 1
+				break
+
+		#print last_friday_date, dates[index]		
+
+		start_date = dates[index - 52]		
+
+		print start_date, last_friday_date
+
+		stock_fund_measure(allocationdata, start_date, last_friday_date.strftime('%Y-%m-%d'))
+		bond_fund_measure(allocationdata, start_date, last_friday_date.strftime('%Y-%m-%d'))
+		money_fund_measure(allocationdata, start_date, last_friday_date.strftime('%Y-%m-%d'))
+		other_fund_measure(allocationdata, start_date, last_friday_date.strftime('%Y-%m-%d'))
+		
+		#print last_friday_date	
+
+
+	#print dates
+
+
+	'''
+	print start_date, last_friday
+
 	stock_fund_measure(allocationdata, start_date, last_friday)
 	bond_fund_measure(allocationdata, start_date, last_friday)
 	money_fund_measure(allocationdata, start_date, last_friday)
 	other_fund_measure(allocationdata, start_date, last_friday)
 
-	
+	'''	

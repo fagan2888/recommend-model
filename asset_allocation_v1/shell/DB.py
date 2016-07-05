@@ -1,7 +1,5 @@
 #coding=utf8
 
-
-
 import sys
 sys.path.append('shell')
 import MySQLdb
@@ -12,7 +10,7 @@ from datetime import datetime
 import FundIndicator
 import AllocationData
 import os
-
+import RiskPosition
 
 
 def fund_measure(allocationdata):
@@ -770,9 +768,96 @@ def risk_allocation_ratio(df, lid):
         print "insert one row into risk_allocation_list"
 
 
+
+def riskhighlowriskasset(allocationdata):
+
+	start_date = '2010-01-01'
+
+	df = pd.read_csv('./tmp/risk_portfolio.csv', index_col = 'date', parse_dates = ['date'])
+
+        conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
+        cursor = conn.cursor()
+
+	for risk in df.columns:
+		col = risk
+		risk = string.atoi(risk) / 10.0
+
+        	sql = "replace into risk_asset_allocation_list (ra_risk, ra_date, created_at, updated_at) values (%f, '%s', '%s', '%s')" % (risk, start_date, datetime.now(), datetime.now())
+		cursor.execute(sql)
+		sql = 'select id from risk_asset_allocation_list where ra_risk = %f' % (risk)
+		cursor.execute(sql)
+		record = cursor.fetchone()
+		risk_id = record[0]
+
+		for date in df.index:
+			sql = "replace into risk_asset_allocation_nav (ra_alloc_id, ra_date, ra_nav, created_at, updated_at) values (%d, '%s', %f, '%s', '%s')" % (risk_id, date, df.loc[date, col], datetime.now(), datetime.now())
+			#print sql
+			cursor.execute(sql)
+
+	all_code_position = RiskPosition.risk_position()
+
+	allriskposition      = {}
+
+	for record in all_code_position:
+		risk_rank = record[0]
+		date      = record[1]
+		code      = record[2]
+		f_id      = allocationdata.fund_code_id_dict[code]
+		ratio     = record[3]
+
+	 	dateposition = allriskposition.setdefault(risk_rank, {})
+		ps           = dateposition.setdefault(date,{})
+		ps[f_id]     = ratio
+
+
+
+	#dates = list(allriskposition.keys())
+	#dates.sort()
+	#ps = allriskpositions[dates[0]]
+
+
+	for risk_rank in allriskposition.keys():
+
+		sql       = 'select id from risk_asset_allocation_list where ra_risk = %f' % (risk_rank)
+		cursor.execute(sql)
+		record    = cursor.fetchone()
+		list_id   = record[0]
+
+		dateposition = allriskposition[risk_rank]
+		dates = list(dateposition.keys())
+		dates.sort()
+		ps = dateposition[dates[0]]
+		last_date = dates[0]
+
+		for i in range(1, len(dates)):	
+
+			d = dates[i]
+			current_ps = dateposition[d]
+			if not current_ps == ps:
+				for f_id in ps.keys():
+					ratio = ps[f_id]
+					sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
+					#print sql
+					cursor.execute(sql)
+				ps = current_ps
+				last_date = d
+
+		for f_id in ps.keys():
+			ratio = ps[f_id]
+			sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
+			#print sql
+			cursor.execute(sql)
+
+	#print all_code_position
+
+	conn.commit()
+	conn.close()
+
+
 if __name__ == '__main__':
 
 
+	'''
 	allocationdata = AllocationData.allocationdata()
 	df = pd.read_csv('./tmp/stock_indicator_2015-07-10.csv', index_col = 'code')
 	allocationdata.stock_fund_measure['2015-07-10'] = df
@@ -811,3 +896,8 @@ if __name__ == '__main__':
 
 
 	asset_allocation(allocationdata)
+
+	'''
+
+	allocationdata = AllocationData.allocationdata()
+	riskhighlowriskasset(allocationdata)

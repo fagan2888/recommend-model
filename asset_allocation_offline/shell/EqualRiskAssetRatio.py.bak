@@ -28,20 +28,18 @@ def riskmeanstd(risks):
 
 
 
-def equalriskassetratio(df):
-
+def equalriskassetratio(dfr):
 
 	#assetlabels = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']
-
-	assetlabels = df.columns
-	dfr         = df.pct_change().fillna(0.0)
+	assetlabels = dfr.columns
+	#dfr         = df.pct_change().fillna(0.0)
 
 	#dfr         = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
 	dates = dfr.index
 
 
 	interval = 5
-	his_week = 26 #kunge
+	his_week = 30 #kunge
 	#his_week = 13   #gaopeng
 
 
@@ -62,10 +60,11 @@ def equalriskassetratio(df):
 			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
 			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(allocation_date, '%Y-%m-%d')]
 
-
 			#print dfr.index
 			his_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
+			#his_dfr = dfr[dfr.index <= datetime.strptime(allocation_date, '%Y-%m-%d')]
 			his_dfr = his_dfr[his_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d')]
+
 
 			j = 0
 			risks = {}
@@ -103,7 +102,6 @@ def equalriskassetratio(df):
 					position = mean / asset_std
 				ratio_data.append(position)
 
-
 				#print d, asset, position
 
 
@@ -116,4 +114,5 @@ def equalriskassetratio(df):
 
 	result_df.to_csv('./tmp/equalriskassetratio.csv')
 
-
+	
+	return result_df

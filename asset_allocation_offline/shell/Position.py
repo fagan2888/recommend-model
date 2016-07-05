@@ -4,7 +4,6 @@
 import pandas as pd
 
 
-
 def position(equal_risk_df, asset_position_df, risk_position_df):
 
 	#print equal_risk_df.index
