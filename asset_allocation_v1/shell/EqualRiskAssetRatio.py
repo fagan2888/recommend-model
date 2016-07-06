@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+
 import string
 import pandas as pd
 import numpy as np
@@ -8,6 +9,7 @@ import FundIndicator
 from datetime import datetime
 import sys
 sys.path.append('shell')
+
 
 
 def riskmeanstd(risks):
@@ -25,7 +27,7 @@ def riskmeanstd(risks):
 		rerisk.append(risk)
 
 	return np.mean(rerisk), np.std(rerisk)
-
+	#return np.mean(risk), np.std(risk)
 
 
 def equalriskassetratio(allocationdata):

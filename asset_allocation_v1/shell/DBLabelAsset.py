@@ -25,6 +25,3 @@ import DFUtil
 
 
 #def stockLabelAsset():
-	
-	
-

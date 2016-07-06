@@ -315,85 +315,10 @@ def fund_jensen(funddf, indexdf):
 
 if __name__ == '__main__':
 
-	start_date = '2015-04-20'
-	end_date   = '2016-04-22'
 
-	funddf     =  data.fund_value(start_date, end_date)
-	indexdf = data.index_value(start_date, end_date, '000300.SH')	
+	df = pd.read_csv('./tmp/highriskasset.csv', index_col = 'date', parse_dates = ['date'])
 
-	#df = funddf['000398.OF']
+	print "sharpe : ", portfolio_sharpe(df['high_risk_asset'].values)
+	print "annual_return : ", portfolio_return(df['high_risk_asset'].values)
+	print "maxdrawdown : ", portfolio_maxdrawdown(df['high_risk_asset'].values)
 
-	#print np.mean(df.pct_change()) * 52	
-	#按照规模过滤
-        scale_data     = sf.scalefilter(3.0 / 3)
-
-        #按照基金创立时间过滤
-        setuptime_data = sf.fundsetuptimefilter(funddf.columns, start_date, data.establish_data())
-
-        #按照jensen测度过滤
-        jensen_data    = sf.jensenfilter(funddf, indexdf, const.rf, 1.0)
-
-        #按照索提诺比率过滤
-        sortino_data   = sf.sortinofilter(funddf, const.rf, 1.0)
-
-        #按照ppw测度过滤
-        ppw_data       = sf.ppwfilter(funddf, indexdf, const.rf, 1.0)
-        #print ppw_data
-
-        stability_data = sf.stabilityfilter(funddf, 3.0 / 3)
-
-	
-	jensen_dict = {}
-        for k,v in jensen_data:
-                jensen_dict[k] = v
-                #print k, v
-
-        #print
-        #print 'sortino'
-
-        sortino_dict = {}
-        for k,v in sortino_data:
-                sortino_dict[k] = v
-                #print k,v
-
-        #print
-        #print 'ppw'
-        ppw_dict = {}
-        for k,v in ppw_data:
-                ppw_dict[k] = v
-                #print k,v
-
-
-        #print
-        #print 'statbility'
-        stability_dict = {}
-        for k,v in stability_data:
-                stability_dict[k] = v
-                #print k,v
-
-
-        sharpe_dict = {}
-        for k,v in sharpe_data:
-                sharpe_dict[k] = v
-	
-
-
-	scale_set = set()
-        for k, v in scale_data:
-                scale_set.add(k)
-
-        setuptime_set = set(setuptime_data)
-
-
-
-	codes = []
-	for code in scale_set:
-		if code in setuptime_set:
-			codes.append(code)
-
-
-	#print 'code, sharpe, jensen, sortino, ppw, stability'	
-	#for code in codes:
-	#	print code, ',', sharpe_dict[code], ',', jensen_dict[code],',', sortino_dict[code] ,',', ppw_dict[code],',' ,stability_dict[code]	
-
-			

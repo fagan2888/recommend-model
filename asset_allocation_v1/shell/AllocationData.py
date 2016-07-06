@@ -7,17 +7,24 @@ from datetime import datetime
 import DBData
 
 
+db_params = {
+            "host": "dev.mofanglicai.com.cn",
+            "port": 3306,
+            "user": "jiaoyang",
+            "passwd": "q36wx5Td3Nv3Br2OPpH7",
+            "db":"asset_allocation",
+            "charset": "utf8"
+        }
+
 
 class allocationdata:
 
 
 	fund_id_code_dict = {}
 	fund_code_id_dict = {}
-
 	
 
 	def __init__(self):
-
 
 		conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='mofang', charset='utf8')
 

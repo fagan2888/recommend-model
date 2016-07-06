@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+
 import string
 import pandas as pd
 import numpy as np
@@ -8,6 +9,7 @@ import FundIndicator
 from datetime import datetime
 import Portfolio as PF
 import AllocationData
+
 
 
 def highriskasset(allocationdata, dfr, his_week, interval):
@@ -227,6 +229,7 @@ def highlowallocation(allocationdata, dfr, his_week, interval):
 			code = fund_codes[n]
 			fund_last_v = vs[-1]
 			fund_last_v = fund_last_v + fund_last_v * dfr.loc[d, code] * risk_position + fund_last_v * 0.03 / 52 * ( 1.0 - risk_position)
+			#fund_last_v = fund_last_v + fund_last_v * dfr.loc[d, code]
 			vs.append(fund_last_v)
 			pv = pv + vs[-1]
 		portfolio_vs.append(pv)
