@@ -71,42 +71,46 @@ def allocation_asset(ratio_df, dfr):
 	dates             = dfr.index
 
 	portfolio_vs = [1]
+	d = dates[0]
+	portfolio_dates = [d]
 
 	assetlabels   = dfr.columns	
-	asset_values = {}
-
-	#print ratio_dates
-	#print dates
-
+	asset_ratio = {}
 	for asset in assetlabels:
-		asset_values.setdefault(asset, [0.0])
+		asset_ratio[asset] = ratio_df.loc[d, asset]
 
-	ratio_index = 0
-	for i in range(0, len(dates)):
+
+
+	ratio_index = 1
+
+	for i in range(1, len(dates)):
 
 		d = dates[i]
+
 		pv = 0
 		for asset in assetlabels:
-			vs = asset_values[asset]
-			v  = vs[-1] * (1 + dfr.loc[d, asset])
-			vs.append(v)	
-			pv = pv + v
+			r  = asset_ratio.setdefault(asset, 0.0) * dfr.loc[d, asset]
+			pv = portfolio_vs[-1] * ( 1 + r )
 
-		if pv != 0:
-			portfolio_vs.append(pv)
-		
+		portfolio_vs.append(pv)
+		portfolio_dates.append(d)
 	
-		#if d >= ratio_dates[ratio_index] and ratio_index < len(ratio_dates):
 		if ratio_index < len(ratio_dates) and d >= ratio_dates[ratio_index]:
 			for asset in assetlabels:
-				pv = portfolio_vs[-1]
-				asset_values[asset].append(pv * ratio_df.loc[ratio_dates[ratio_index], asset])
+				asset_ratio[asset] = ratio_df.loc[d, asset]
 			ratio_index = ratio_index + 1
 
 
-	asset_df = pd.DataFrame(portfolio_vs, index=dates, columns=['nav'])
+	#print len(portfolio_vs)
+	#print len(dates)
+
+	asset_df = pd.DataFrame(portfolio_vs, index = portfolio_dates, columns=['nav'])
 	asset_df.index.name = 'date'
 
+
+	print "sharpe : ", FundIndicator.portfolio_sharpe_day(asset_df['nav'].values)
+	print "annual_return : ", FundIndicator.portfolio_return_day(asset_df['nav'].values)
+	print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(asset_df['nav'].values)
 
 	return asset_df	
 

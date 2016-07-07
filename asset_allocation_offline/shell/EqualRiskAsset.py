@@ -9,31 +9,21 @@ import sys
 sys.path.append('shell')
 
 
-def equalriskasset(equal_ratio_df, dfr, pname='', debug='y'):
+def equalriskasset(equal_ratio_df, dfr):
 
 	rf = 0.03 / 250
-	print pname, debug
-	#ratio_df         = allocationdata.equal_risk_asset_ratio_df
 
-	#ratio_df         = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date', parse_dates = 'date' )
 	ratio_df         = equal_ratio_df
 	ratio_dates      = ratio_df.index
 	start_date = ratio_dates[0]
 
 
-	#dfr              = allocationdata.label_asset_df
-	#dfr              = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
-	#dfr               = df.pct_change().fillna(0.0)
 	dfr               = dfr[dfr.index >= start_date]
 
-	#print start_date
 	dates = dfr.index
-	#print dates
-	#assetlabels  = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']
 
 
 	assetlabels   = dfr.columns	
-	#assetlabels  = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']
 	asset_values = {}
 	asset_combination = {}
 	asset_ratio  = {}
@@ -51,8 +41,6 @@ def equalriskasset(equal_ratio_df, dfr, pname='', debug='y'):
 	result_dates = []
 	result_datas  = []
 
-
-	#print dfr.columns
 
 	for i in range(0, len(dates)):
 
@@ -72,7 +60,6 @@ def equalriskasset(equal_ratio_df, dfr, pname='', debug='y'):
 
 
 		if ratio_index < len(ratio_dates) and d >= ratio_dates[ratio_index]:
-			#print d, ratio_dates[ratio_index]
 			for asset in assetlabels:
 				asset_ratio[asset] = ratio_df.loc[ratio_dates[ratio_index], asset]
 				vs = asset_values[asset]
@@ -90,29 +77,11 @@ def equalriskasset(equal_ratio_df, dfr, pname='', debug='y'):
 		result_dates.append(d)
 
 
-		#print d,
-		#for label in assetlabels:
-		#	print asset_values[label][-1],
-		#print 
-
-
-
-		'''
-		if d >= ratio_dates[ratio_index]:
-			for asset in assetlabels:
-				asset_ratio[asset] = ratio_df.loc[ratio_dates[ratio_index], asset]
-			ratio_index = ratio_index + 1
-		'''
-
 	result_df = pd.DataFrame(result_datas, index=result_dates, columns=assetlabels)
 
 
 	result_df.index.name = 'date'
-	if debug == 'y':
-		result_df.to_csv('./result/equalriskasset.csv')
-	#else:
-	#	result_df.to_csv('/tmp/' + pname + 'equalriskasset.csv')
-
+	result_df.to_csv('./result/equalriskasset.csv')
 
 	return result_df
 

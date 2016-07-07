@@ -177,7 +177,14 @@ def markowitz_r(funddfr, bounds):
 		if sharp > final_sharp:
 			final_risk = risks[j]
 			final_return = returns[j]
-			final_ws = ws[j]
+			f_ws = []
+			for w in ws[j]:
+				if w < 0.01:
+					w = 0.0
+				if w > 0.99:
+					w = 1.0	
+				f_ws.append(w)
+			final_ws = f_ws
 			final_sharp = sharp
 
 	return final_risk, final_return, final_ws, final_sharp
