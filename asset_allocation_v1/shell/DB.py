@@ -317,11 +317,11 @@ def label_asset(allocationdata):
 			#print fund
 			if label in set(other_tags):
 				if label == 'SP500.SPI':
-					fund = '513500'	
+					fund = '096001'	
 				if label == 'HSCI.HI':
-					fund = '513600'	
+					fund = '000071'	
 				if label == 'GLNC':
-					fund = '518880'	
+					fund = '000216'	
 				sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'other', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
 			else:
 				sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'stock', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
