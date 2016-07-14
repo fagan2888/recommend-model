@@ -47,43 +47,43 @@ def select_stock(funddf, fund_tags, indexdf):
 			need_largecap = False
 			tag['largecap'] = code
 			#print code, i
-			continue
+			#continue
 		if code in set(smallcap_codes) and need_smallcap:
 			codes.append(code)
 			need_smallcap = False
 			tag['smallcap'] = code
 			#print code, i
-			continue
+			#continue
 		if code in set(risefitness_codes) and need_risefitness:
 			codes.append(code)
 			need_risefitness = False
 			tag['rise'] = code
 			#print code, i
-			continue
+			#continue
 		if code in set(declinefitness_codes) and need_declinefitness:
 			codes.append(code)
 			need_declinefitness = False
 			tag['decline'] = code
 			#print code, i
-			continue
+			#continue
 		if code in set(oscillationfitness_codes) and need_oscillationfitness:
 			codes.append(code)
 			need_oscillationfitness = False
 			tag['oscillation'] = code
 			#print code, i
-			continue
+			#continue
 		if code in set(growthfitness_codes) and need_growthfitness:
 			codes.append(code)
 			need_growthfitness = False
 			tag['growth'] = code
 			#print code, i
-			continue
+			#continue
 		if code in set(valuefitness_codes) and need_valuefitness:
 			codes.append(code)
 			need_valuefitness = False
 			tag['value'] = code
 			#print code, i
-			continue
+			#continue
 
 	#print fund_sharpe
 	#print codes
