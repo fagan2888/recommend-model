@@ -130,17 +130,18 @@ def risk_position():
                         low_w = 1 - high_w
 
 			#print highriskposition.keys()
+			ws = {}
 			for col in highriskposition.keys():
 
 
 				code = None
 
 				if col == 'GLNC':
-					code = 159937
+					code = 216
 				elif col == 'HSCI.HI':
-					code = 513600
+					code = 000071
 				elif col == 'SP500.SPI':
-					code = 513500
+					code = 96001
 				else:
 					code = fund_codes[col]
 
@@ -148,17 +149,25 @@ def risk_position():
 				risk_ratio = equalrisk_ratio[col]
 				#print d, code , highriskratio * risk_ratio * high_w
 				#print risk_rank / 10.0, d, code , highriskratio * risk_ratio * high_w
-				all_code_position.append((risk_rank / 10.0, d, code ,highriskratio * risk_ratio * high_w))	
-			
+				#all_code_position.append((risk_rank / 10.0, d, code ,highriskratio * risk_ratio * high_w))
+				#print d, code, highriskratio * risk_ratio * high_w		
+				weight   = ws.setdefault(code, 0.0)
+				ws[code] = weight + highriskratio * risk_ratio * high_w
+	
 			for col in lowriskposition.keys():
 
 				lowriskratio = lowriskposition[col]
 				code         = bond_fund_codes[col]
 				#print risk_rank / 10.0, d, code, lowriskratio * low_w
-				all_code_position.append((risk_rank / 10.0, d, code, lowriskratio * low_w))
+				#all_code_position.append((risk_rank / 10.0, d, code, lowriskratio * low_w))
 				#print col,
 				
+				weight   = ws.setdefault(code, 0.0)
+				ws[code] = weight  + lowriskratio * low_w
 
+			for code in ws.keys():
+				w = ws[code]		
+				all_code_position.append((risk_rank / 10.0, d, code, w))
 		#print
 	#print risk_portfolio_df
 	#print fund_df
@@ -172,7 +181,9 @@ def risk_position():
 if __name__ == '__main__':
 
 	all_code_position = risk_position()
-	#print all_code_position
+	for tmp in all_code_position:
+		if tmp[0] == 0.8:
+			print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
 
 	'''
 	fund_df                   = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
