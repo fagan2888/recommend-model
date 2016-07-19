@@ -1,15 +1,24 @@
 # -*- coding: UTF-8 -*-
 class virFund:
+    #截止到当天用户原始投入资金
     origin = 0.0
+    #当天可用现金(卖出、赎回的钱)
     balance = 0.0
+    #当天持仓资产(金额)
     holdings = 0.0
+    #用户当天总资产
     total_assets = balance + holdings
+    #当天回报
     returns = 0.0
+    #截止到当天总回报(金额)
     total_returns = 0.0
+    #当天收益率
     ratio = 0.0
+    #截止到当天收益率
     total_ratio = 0.0
     startTime = None
     endTime = None
+    #当天持仓股票
     holdingStocks = {}
     def __init(self):
         self.origin = 0.0
@@ -31,10 +40,12 @@ class virFund:
     def sell(self, code, amount, price):
         isSuccess = False
         if not self.holdingStocks.has_key(code):
+            #卖出没有持仓的股票
             print "has no " + code +" in holdings"
         else:
             curAmount = self.holdingStocks[code]['amount']
             if curAmount < amount:
+                #卖出份额比持有的多
                 print "sell:this stock by before, all will be sold " + code
                 self.holdingStocks[code]['amount'] = 0
                 del self.holdingStocks[code]
@@ -42,7 +53,9 @@ class virFund:
                 self.balance += curAmount * price
                 isSuccess = True
             else:
+                #正常卖出
                 self.holdingStocks[code]['amount'] = curAmount - amount
+                #删除持仓为0的股票
                 if self.holdingStocks[code]['amount'] == 0.0:
                     del self.holdingStocks[code]
                 #self.holdings = self.holdings - amount * price
