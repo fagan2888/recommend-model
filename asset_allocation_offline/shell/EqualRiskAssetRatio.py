@@ -49,15 +49,15 @@ def equalriskassetratio(dfr, pname='', debug='y'):
 	#print dates[0]
 	#os._exit(0)
 	# len(dates) = 89
-	for i in range(his_week-1, len(dates)):
+	for i in range(his_week, len(dates)):### his_week to hisweek-1
 
 		d = dates[i]
 
-		if (i - his_week + 1) % (interval - 1) == 0:
+		if (i - his_week) % (interval) == 0:### i - his_week to i - his_week + 1
 
-			start_date = dates[i - his_week + 1].strftime('%Y-%m-%d')
-			end_date   = dates[i - 1].strftime('%Y-%m-%d') # is the index equal to i-1
-			allocation_date = dates[i - interval + 1].strftime("%Y-%m-%d")
+			start_date = dates[i - his_week].strftime('%Y-%m-%d')### i - his_week to i - his_week + 1
+			end_date   = dates[i].strftime('%Y-%m-%d') ### i to i - 1
+			allocation_date = dates[i - interval].strftime("%Y-%m-%d")### i - interval to i - interval + 1
 
 			allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
 			allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(allocation_date, '%Y-%m-%d')]
@@ -66,14 +66,16 @@ def equalriskassetratio(dfr, pname='', debug='y'):
 			his_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
 			#his_dfr = dfr[dfr.index <= datetime.strptime(allocation_date, '%Y-%m-%d')]
 			his_dfr = his_dfr[his_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d')]
-
+			print start_date,end_date
+			print his_dfr,len(his_dfr)
 
 			j = 0
 			risks = {}
+			#每只基金每5周的标准差
 			while j <= len(his_dfr.index):
 
 				riskdfr = his_dfr.iloc[j:j + interval]
-				#print riskdfr
+				print riskdfr
 
 				risk_data = {}
 				for code in riskdfr.columns:
@@ -85,7 +87,9 @@ def equalriskassetratio(dfr, pname='', debug='y'):
 
 				j = j + interval
 
-
+			print risk_data
+			print risks
+			os._exit(0)
 			ratio_data = []
 			for asset in assetlabels:
 				mean, std = riskmeanstd(risks[asset])
@@ -118,5 +122,4 @@ def equalriskassetratio(dfr, pname='', debug='y'):
 	#else:
 	#	result_df.to_csv('/tmp/' + pname + 'equalriskassetratio.csv')
 
-	
 	return result_df

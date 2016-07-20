@@ -1,0 +1,15 @@
+#!/bin/bash
+pydir="/home/data/yitao/recommend-model/recommend_model/asset_allocation_offline"
+fname="funds20160701142249"
+hnum=2
+lnum=0
+debug="n"
+#echo $fname, $hnum, $lnum, $debug,"$USER"
+export PATH="/home/bae/anaconda2/bin:$PATH"
+cd $pydir
+lpy=`which python`
+$lpy ./shell/RiskAssetAllocation.py $fname $hnum $lnum $debug
+#rm "/tmp/assets/"${fname}"position.csv"
+#rm "/tmp/assets/"${fname}"equal_risk_asset.csv"
+#rm "/tmp/assets/"${fname}"equal_risk_ratio.csv"
+#rm "/tmp/assets/"${fname}"risk_position.csv"
