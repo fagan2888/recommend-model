@@ -4,3 +4,6 @@ tmp/
 *.swo
 *.csv
 data/
+*.pyc
+*.swp
+*.swo
