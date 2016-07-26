@@ -12,11 +12,11 @@ import Const
 
 
 db_params = {
-            "host": "127.0.0.1",
+            "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
             "port": 3306,
-            "user": "root",
+            "user": "koudai",
             "passwd": "Mofang123",
-            "db":"mofang",
+            "db":"mofang_api",
             "charset": "utf8"
         }
 

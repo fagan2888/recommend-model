@@ -16,19 +16,27 @@ import RiskPosition
 
 
 db_params = {
-            "host": "dev.mofanglicai.com.cn",
-            "port": 3306,
-            "user": "jiaoyang",
-            "passwd": "q36wx5Td3Nv3Br2OPpH7",
-            "db":"asset_allocation",
-            "charset": "utf8"
-        }
+            #"host": "dev.mofanglicai.com.cn",
+            #"port": 3306,
+            #"user": "jiaoyang",
+            #"passwd": "q36wx5Td3Nv3Br2OPpH7",
+            #"db":"asset_allocation",
+            #"charset": "utf8"
+}
+host     = 'rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com'
+port     = 3306
+user     = 'jiaoyang'
+password = 'wgOdGq9SWruwATrVWGwi'
+db       = 'asset_allocation'
+
+
 
 
 def fund_measure(allocationdata):
 
 
-	conn = MySQLdb.connect(**db_params)
+	# nconn = MySQLdb.connect(**db_params)
+	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
 	cursor = conn.cursor()
 
 
@@ -212,7 +220,8 @@ def fund_measure(allocationdata):
 def label_asset(allocationdata):
 
 
-	conn = MySQLdb.connect(**db_params)
+	# conn = MySQLdb.connect(**db_params)
+	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
 	cursor = conn.cursor()
 
 
@@ -557,7 +566,8 @@ def label_asset(allocationdata):
 def asset_allocation(allocationdata):
 
 
-	conn = MySQLdb.connect(**db_params)
+	# conn = MySQLdb.connect(**db_params)
+	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
 	cursor = conn.cursor()
 
 
@@ -742,7 +752,8 @@ def asset_allocation(allocationdata):
 
 def risk_allocation_list(risk_value, risk_begin_date):
 
-	conn = MySQLdb.connect(**db_params)
+	# conn = MySQLdb.connect(**db_params)
+	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
         cursor = conn.cursor()
 
 
@@ -756,7 +767,8 @@ def risk_allocation_list(risk_value, risk_begin_date):
 
 
 def risk_allocation_ratio(df, lid):
-	conn = MySQLdb.connect(**db_params)
+	#conn = MySQLdb.connect(**db_params)
+	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
         cursor = conn.cursor()
 	base_sql = "replace into risk_asset_allocation_list (ra_alloc_id, ra_transfer_date, ra_fund_code, ra_fund_ratio) values (%d, %s, %s, %f)"
 

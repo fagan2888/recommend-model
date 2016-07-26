@@ -8,15 +8,20 @@ import DBData
 
 
 db_params = {
-            "host": "dev.mofanglicai.com.cn",
+            #"host": "dev.mofanglicai.com.cn",
+            #"port": 3306,
+            #"user": "jiaoyang",
+            #"passwd": "q36wx5Td3Nv3Br2OPpH7",
+            #"db":"asset_allocation",
+            #"charset": "utf8"
+
+            "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
             "port": 3306,
-            "user": "jiaoyang",
-            "passwd": "q36wx5Td3Nv3Br2OPpH7",
-            "db":"asset_allocation",
+            "user": "koudai",
+            "passwd": "Mofang123",
+            "db":"mofang_api",
             "charset": "utf8"
         }
-
-
 class allocationdata:
 
 
@@ -26,8 +31,11 @@ class allocationdata:
 
 	def __init__(self):
 
-		conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='mofang', charset='utf8')
+		# conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='mofang', charset='utf8')
 
+		conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+
+		conn  = MySQLdb.connect(**db_params)
         	cursor = conn.cursor()
 		sql = "select fi_globalid, fi_code from fund_infos"
 

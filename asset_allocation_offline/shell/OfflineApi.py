@@ -8,7 +8,6 @@ import EqualRiskAssetRatio
 import EqualRiskAsset
 import HighLowRiskAsset
 import os
-import DB
 
 if __name__ == '__main__':
 	fpath = sys.argv[1]
