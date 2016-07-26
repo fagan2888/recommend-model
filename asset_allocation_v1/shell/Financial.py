@@ -1,7 +1,6 @@
 #coding=utf8
 
 
-
 import string
 import math
 from math import sqrt

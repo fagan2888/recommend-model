@@ -24,44 +24,49 @@ import time
 
 app = Flask(__name__)
 
-
-host     = 'rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com'
-port     = 3306
-user     = 'jiaoyang'
-password = 'wgOdGq9SWruwATrVWGwi'
-db       = 'asset_allocation'
-
+db_params = {
+            "host": "rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com",
+            "port": 3306,
+            "user": "jiaoyang",
+            "passwd": "wgOdGq9SWruwATrVWGwi",
+            "db":"asset_allocation",
+            "charset": "utf8"
+        }
 
 def asset_allocation(allocationdata, uid):
 
-	#try:
-	allocationdata.all_dates()
-	LabelAsset.labelasset(allocationdata)
-	EqualRiskAssetRatio.equalriskassetratio(allocationdata)
-	EqualRiskAsset.equalriskasset(allocationdata)
-	HighLowRiskAsset.highlowriskasset(allocationdata)
-	DB.fund_measure(allocationdata)
-	DB.label_asset(allocationdata)
-	DB.asset_allocation(allocationdata)
+	try:
+		allocationdata.all_dates()
+		LabelAsset.labelasset(allocationdata)
+		EqualRiskAssetRatio.equalriskassetratio(allocationdata)
+		EqualRiskAsset.equalriskasset(allocationdata)
+		HighLowRiskAsset.highlowriskasset(allocationdata)
+		DB.fund_measure(allocationdata)
+		DB.label_asset(allocationdata)
+		DB.asset_allocation(allocationdata)
 
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
-	cursor = conn.cursor()
+		conn = MySQLdb.connect(**db_params)
+		#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
+		cursor = conn.cursor()
 
-	sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('complete', uid)
+		sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('complete', uid)
 
-	cursor.execute(sql)
-	conn.commit()
-	conn.close()
+		cursor.execute(sql)
+		conn.commit()
+		conn.close()
 
-	#except:
+	except Exception as e:
 
-	#	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
-	#	cursor = conn.cursor()
+		print e
 
-	#	sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('error', uid)
-	#	cursor.execute(sql)
-	#	conn.commit()
-	#	conn.close()
+		conn = MySQLdb.connect(**db_params)
+		#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
+		cursor = conn.cursor()
+
+		sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('error', uid)
+		cursor.execute(sql)
+		conn.commit()
+		conn.close()
 
 
 	return 0
@@ -97,7 +102,8 @@ def asset_allocation_v1():
 
 	print json_args
 
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(**db_params)
+	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
 	cursor = conn.cursor()
 	sql = "insert into user_job_status (ujs_uid, ujs_args, ujs_status, created_at, updated_at) values(%d, '%s', '%s', '%s', '%s')" % (uid,json_args, 'running', datetime.now() ,datetime.now())
 	cursor.execute(sql)
@@ -131,7 +137,8 @@ def risk_asset_allocation():
 	start_date     =   args.get('start_date')
 	risk           =   string.atof(args.get('risk'))
 
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(**db_params)
+	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
 	cursor = conn.cursor()
 
 

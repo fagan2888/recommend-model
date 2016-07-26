@@ -744,9 +744,5 @@ if __name__ == '__main__':
 	#df =  position()
 	#df =  scale()
 	#df  = bond_day_fund_value('2014-01-03', '2016-06-03')
-	df  = stock_fund_value('2015-01-01', '2016-06-03')
-	print df
-	dfr = df.pct_change().fillna(0.0)
-	dfr.to_csv('./tmp/stock.csv')
 	#print trade_dates('2014-01-03', '2016-06-03')
 

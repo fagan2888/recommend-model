@@ -22,6 +22,10 @@ db_params = {
             "db":"mofang_api",
             "charset": "utf8"
         }
+
+
+
+
 class allocationdata:
 
 
@@ -36,6 +40,7 @@ class allocationdata:
 		conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
 
 		conn  = MySQLdb.connect(**db_params)
+
         	cursor = conn.cursor()
 		sql = "select fi_globalid, fi_code from fund_infos"
 
