@@ -16,6 +16,7 @@ import FundIndicator as fi
 
 def select_stock(funddf, fund_tags, indexdf):
 
+
 	largecap_codes             = fund_tags['largecap']
 	smallcap_codes             = fund_tags['smallcap']
 	risefitness_codes          = fund_tags['risefitness']
@@ -33,6 +34,7 @@ def select_stock(funddf, fund_tags, indexdf):
 	need_growthfitness      = True
 	need_valuefitness       = True
 
+	#print fund_tags
 	#fund_sharpe  = fi.fund_sharp_annual(funddf)
 	fund_sharpe  = fi.fund_jensen(funddf, indexdf)
 
@@ -41,7 +43,6 @@ def select_stock(funddf, fund_tags, indexdf):
 	for i in range(0, len(fund_sharpe)):
 
 		code = fund_sharpe[i][0]
-
 		if code in set(largecap_codes) and need_largecap:
 			codes.append(code)
 			need_largecap = False
@@ -87,11 +88,12 @@ def select_stock(funddf, fund_tags, indexdf):
 
 	#print fund_sharpe
 	#print codes
-
+	#print tag
 	return codes, tag
 
 
 def select_bond(funddf, fund_tags, indexdf):
+
 
 	ratebond_codes             = fund_tags['ratebond']
 	credit_codes               = fund_tags['creditbond']
@@ -104,15 +106,15 @@ def select_bond(funddf, fund_tags, indexdf):
 
 	#fund_sharpe  = fi.fund_sharp_annual(funddf)
 	fund_sharpe  = fi.fund_jensen(funddf, indexdf)
+
 	codes = []
 	tag   = {}
 	for i in range(0, len(fund_sharpe)):
 
 		code = fund_sharpe[i][0]
-
 		if code in set(ratebond_codes) and need_rate:
 			codes.append(code)
-			need_largecap = False
+			need_rate = False
 			tag['ratebond'] = code
 			#print code, i
 			continue
@@ -131,7 +133,6 @@ def select_bond(funddf, fund_tags, indexdf):
 
 	#print fund_sharpe
 	#print codes
-
 	return codes, tag
 
 

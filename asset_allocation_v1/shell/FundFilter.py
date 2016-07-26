@@ -141,84 +141,78 @@ def ppwmeasure(funddf, indexdf, rf):
 	return ppw
 
 
-
 #基金稳定性测度
 def stabilitymeasure(funddf):
 
+        length = len(funddf.index)
+        tran_index = []
+        for i in range(0, length):
+                if i % 4 == 0:
+                        tran_index.append(i)
 
-	length = len(funddf.index)
-	tran_index = []
-	for i in range(0, length):
-		if i % 4 == 0:
-			tran_index.append(i)
+        funddf = funddf.iloc[tran_index]
+        funddfr = funddf.pct_change().fillna(0.0)
 
-	funddf = funddf.iloc[tran_index]
-	funddfr = funddf.pct_change()
+        length = len(funddfr)
 
-	length = len(funddfr)
+        fundstab = {}
+        fundscore = {}
 
-	fundstab = {}
-	fundscore = {}
+        for i in range(1, length):
 
-	for i in range(1, length):
+                fr = {}
+                for code in funddfr.columns:
+                        r = funddfr[code].values[i]
+                        fr[code] = r
 
-		fr = {}
-		for code in funddfr.columns:
-			r = funddfr[code].values[i]
-			fr[code] = r
+                x = fr
+                sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+                sorted_fr = sorted_x
 
-
-		x = fr
-		sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-		sorted_fr = sorted_x
-
-		l = len(sorted_fr)
-		frank = {}
+                l = len(sorted_fr)
+                frank = {}
 
 
-		for i in range(0, l):
-			k,v = sorted_fr[i]
-			if i <= 0.2 * l:
-				frank[k] = 5
-			elif i > 0.2 * l and i <= 0.4 * l:
-				frank[k] = 4
-			elif i > 0.4 * l and i <= 0.6 * l:
-				frank[k] = 3
-			elif i > 0.6 * l and i <= 0.8 * l:
-				frank[k] = 2
-			else:
-				frank[k] = 1
+                for i in range(0, l):
+                        k,v = sorted_fr[i]
+                        if i <= 0.2 * l:
+                                frank[k] = 5
+                        elif i > 0.2 * l and i <= 0.4 * l:
+                                frank[k] = 4
+                        elif i > 0.4 * l and i <= 0.6 * l:
+                                frank[k] = 3
+                        elif i > 0.6 * l and i <= 0.8 * l:
+                                frank[k] = 2
+                        else:
+                                frank[k] = 1
+
+                for code in frank.keys():
+                        stab = fundstab.setdefault(code, [])
+                        score = fundscore.setdefault(code, [])
+
+                        rank = frank[code]
+
+                        if len(stab) == 0:
+                                stab.append(rank)
+                                score.append(0)
+                                continue
+
+                        lastrank = stab[-1]
+                        lastscore = score[-1]
+
+                        if rank >= lastrank:
+                                score.append(5)
+                        else:
+                                score.append(lastscore - (lastrank - rank))
+
+                        stab.append(rank)
 
 
-		for code in frank.keys():
-			stab = fundstab.setdefault(code, [])
-			score = fundscore.setdefault(code, [])
+        final_fund_stability = {}
+        for k, v in fundscore.items():
+                final_fund_stability[k] = np.sum(v)
 
-			rank = frank[code]
-
-			if len(stab) == 0:
-				stab.append(rank)
-				score.append(0)
-				continue
-
-			lastrank = stab[len(stab) - 1]
-			lastscore = score[len(score) - 1]
-
-
-			if rank >= lastrank:
-				score.append(5)
-			else:
-				score.append(lastscore - (lastrank - rank))
-
-			stab.append(rank)
-
-
-	final_fund_stability = {}
-	for k, v in fundscore.items():
-		final_fund_stability[k] = np.sum(v)
-
-
-	return final_fund_stability
+        return final_fund_stability
 
 
 #按照规模过滤
@@ -305,6 +299,7 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 	#ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 1.0)
 	#print ppw_data
 
+	#funddf.to_csv('./stock_filter.csv')
 	stability_measure = stabilitymeasure(funddf)
 	stability_data    = ratio_filter(stability_measure, 2.0 / 3)
 

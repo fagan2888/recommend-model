@@ -3,6 +3,7 @@
 
 
 import pandas as pd
+import time
 
 
 
@@ -182,6 +183,8 @@ def risk_position():
 def clean_same(re):
 	tmp = {}
 	key_list = {}
+	sum_list = {}
+	times_list = {}
 	for i in re:
 		if tmp.has_key(str(i[0])+'--'+str(i[1])):
 			tmp[str(i[0])+'--'+str(i[1])][str(i[2])] = i[3]
@@ -203,14 +206,46 @@ def clean_same(re):
 				if is_same(tmp[str(k)+'--'+str(i)],t):
 					continue
 				else:
+					t1  = time.strptime(str(i),"%Y-%m-%d %H:%M:%S")
+					t2  = time.strptime("2011-07-01 00:00:00","%Y-%m-%d %H:%M:%S")
+					if t1>t2:	
+						if sum_list.has_key(str(k)):
+							sum_list[str(k)] += float(change_sum(tmp[str(k)+'--'+str(i)],t))
+						else:
+							sum_list[str(k)] = float(change_sum(tmp[str(k)+'--'+str(i)],t))
+						if times_list.has_key(str(k)):
+							times_list[str(k)][str(i)] = 1
+						else:
+							times_list[str(k)] = {str(i):1}
 					t = tmp[str(k)+'--'+str(i)]
 					day_list[str(k)+'--'+str(i)]=1
 	result = []
 	for i in re:
 		if day_list.has_key(str(i[0])+'--'+str(i[1])):
 			result.append(i) 
+	times_list_tmp  = sorted(times_list.iteritems(),key=lambda asd:asd[1],reverse=False)
+	for (k,v) in times_list_tmp:
+		print k,len(v)
+	print sorted(sum_list.iteritems(),key=lambda asd:asd[1],reverse=False)
 	return result
 				
+def change_sum(tmp1,tmp2):
+	flag = 0.03
+	change = 0
+	for k,v in tmp1.items():
+		if tmp2.has_key(k):
+			change += abs(v-tmp2[k])
+		else:
+			change += v
+	for k,v in tmp2.items():
+		if tmp1.has_key(k):
+			pass
+		else:
+			change += v
+	if change < flag:
+		return 0 
+	else:
+		return change 
 				 
 def is_same(tmp1,tmp2):
 	flag = 0.03
@@ -275,7 +310,8 @@ if __name__ == '__main__':
 	all_code_position = risk_position()
 	for tmp in all_code_position:
 		if tmp[0] == 0.8:
-			print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
+			pass
+	#		print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
 
 	'''
 	fund_df                   = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
