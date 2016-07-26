@@ -9,17 +9,10 @@ import numpy as np
 import sys
 sys.path.append('shell')
 import Const
+import dbconfig
 
 
-db_params = {
-            "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
-            "port": 3306,
-            "user": "koudai",
-            "passwd": "Mofang123",
-            "db":"mofang_api",
-            "charset": "utf8"
-        }
-
+db_params = dbconfig.db_mofang
 
 
 def all_trade_dates():

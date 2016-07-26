@@ -5,16 +5,9 @@
 import MySQLdb
 from datetime import datetime
 import DBData
+import dbconfig
 
-
-db_params = {
-            "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
-            "port": 3306,
-            "user": "koudai",
-            "passwd": "Mofang123",
-            "db":"mofang_api",
-            "charset": "utf8"
-        }
+db_params = dbconfig.db_mofang
 
 
 

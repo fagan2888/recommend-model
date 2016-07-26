@@ -4,7 +4,6 @@
 import sys
 sys.path.append("windshell")
 import main
-import Data
 import Const
 import string
 from numpy import *

@@ -12,17 +12,10 @@ import FundIndicator
 import AllocationData
 import os
 import RiskPosition
+import dbconfig
 
 
-
-db_params = {
-            "host": "rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com",
-            "port": 3306,
-            "user": "jiaoyang",
-            "passwd": "wgOdGq9SWruwATrVWGwi",
-            "db":"asset_allocation",
-            "charset": "utf8"
-        }
+db_params = dbconfig.db_assetallocation
 
 
 def fund_measure(allocationdata):

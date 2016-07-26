@@ -7,7 +7,6 @@ import sys
 sys.path.append("windshell")
 import Financial as FIN
 import StockTag as ST
-import Data
 from numpy import *
 import datetime
 import FundFilter
@@ -103,7 +102,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 		d = dates[i]
 		result_dates.append(d)
 		result_datas.append([funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]] )
-		#print d.strftime('%Y-%m-%d'), funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]
+		print d.strftime('%Y-%m-%d'), funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]
 
 
 		allcode_r = 0
