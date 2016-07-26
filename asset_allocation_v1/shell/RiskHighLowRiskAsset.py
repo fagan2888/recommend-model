@@ -10,6 +10,94 @@ import Portfolio as PF
 import AllocationData
 
 
+def internalasset(allocationdata, dfr, his_week, interval):
+
+
+	result_dates = []
+	result_datas = []
+
+	position_dates = []
+	position_datas = []
+
+	dates        = dfr.index
+
+	portfolio_vs = [1]
+	result_dates.append(dates[his_week])
+
+	fund_values  = {}
+	fund_codes   = []
+
+
+	for i in range(his_week + 1, len(dates)):
+
+
+		if (i - his_week - 1 ) % interval == 0:
+
+			start_date = dates[i- his_week].strftime('%Y-%m-%d')
+			end_date   = dates[i - 1].strftime('%Y-%m-%d')
+
+			allocation_dfr = dfr[dfr.index <= end_date]
+			allocation_dfr = allocation_dfr[allocation_dfr.index >= start_date]
+
+
+			uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+			downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+			#risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
+			risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, [downlimit, uplimit])
+			#risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
+			fund_codes = allocation_dfr.columns
+
+
+			#for n in range(0, len(fund_codes)):
+			#	ws[n] = 1.0 / len(fund_codes)
+
+
+			last_pv = portfolio_vs[-1]
+			fund_values = {}
+			for n in range(0, len(fund_codes)):
+				fund_values[n] = [last_pv * ws[n]]
+
+			position_dates.append(end_date)
+			position_datas.append(ws)
+
+
+		pv = 0
+		d = dates[i]
+		for n in range(0, len(fund_codes)):
+			vs = fund_values[n]
+			code = fund_codes[n]
+			fund_last_v = vs[-1]
+			fund_last_v = fund_last_v + fund_last_v * dfr.loc[d, code]
+			vs.append(fund_last_v)
+			pv = pv + vs[-1]
+		portfolio_vs.append(pv)
+		result_dates.append(d)
+
+		print d , pv
+
+
+	result_datas  = portfolio_vs
+	result_df = pd.DataFrame(result_datas, index=result_dates,
+								 columns=['internal_risk_asset'])
+
+	result_df.index.name = 'date'
+	result_df.to_csv('./tmp/internalriskasset.csv')
+
+
+	highriskposition_df = pd.DataFrame(position_datas, index=position_dates, columns=dfr.columns)
+	highriskposition_df.index.name = 'date'
+	highriskposition_df.to_csv('./tmp/internalriskposition.csv')
+
+
+	print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(result_df['internal_risk_asset'].values)
+
+	allocationdata.high_risk_position_df = highriskposition_df
+	allocationdata.high_risk_asset_df     = result_df
+
+	return result_df
+
+
 
 def highriskasset(allocationdata, dfr, his_week, interval):
 
@@ -43,8 +131,8 @@ def highriskasset(allocationdata, dfr, his_week, interval):
 			allocation_dfr = allocation_dfr[allocation_dfr.index >= start_date]
 
 
-			uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3]
-			downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+			uplimit   = [1.0, 1.0, 0.3]
+			downlimit = [0.0, 0.0, 0.0]
 
 			#risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
 			risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, [downlimit, uplimit])
@@ -99,6 +187,7 @@ def highriskasset(allocationdata, dfr, his_week, interval):
 	allocationdata.high_risk_asset_df     = result_df
 
 	return result_df
+
 
 
 
@@ -237,20 +326,30 @@ def highlowallocation(allocationdata, dfr):
 def highlowriskasset(allocationdata):
 
 
-	highriskassetdf  = allocationdata.equal_risk_asset_df
+	his_week = allocationdata.allocation_lookback
+	interval = allocationdata.allocation_adjust_period
+
+	equal_risk_asset_df = allocationdata.equal_risk_asset_df
+	equal_risk_asset_dfr = equal_risk_asset_df.pct_change().fillna(0.0)
+
 	#highriskassetdf  = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date', parse_dates = 'date' )
-	highriskassetdfr = highriskassetdf.pct_change().fillna(0.0)
+
+	#print highriskassetdfr.columns
+	internalriskassetdfr = equal_risk_asset_dfr[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value']]
+	internalriskassetdfr = internalriskassetdfr.fillna(0.0)
+
+	internaldf = internalasset(allocationdata, internalriskassetdfr, his_week, interval)
+	internaldfr = internaldf.pct_change().fillna(0.0)
 
 	df = allocationdata.label_asset_df
-	#print highriskassetdfr.columns
-	highriskassetdfr = highriskassetdfr[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value']]
-
 	df = df[['SP500.SPI','GLNC']]
+
 	#df.to_csv('./tmp/df.csv')
-	highriskassetdfr = pd.concat([highriskassetdfr, df], axis = 1, join_axes=[highriskassetdfr.index])
+
+	highriskassetdfr = pd.concat([internaldfr, df], axis = 1, join_axes=[internaldfr.index])
 	highriskassetdfr = highriskassetdfr.fillna(0.0)	
 
-	highriskassetdfr.to_csv('./tmp/highriskassetdfr.csv')
+	#highriskassetdfr.to_csv('./tmp/highriskassetdfr.csv')
 
 
 	lowassetlabel    = ['ratebond','creditbond']
@@ -261,8 +360,6 @@ def highlowriskasset(allocationdata):
 	lowriskassetdfr  = lowriskassetdfr.fillna(0.0)
 
 
-	his_week = allocationdata.allocation_lookback
-	interval = allocationdata.allocation_adjust_period
 
 
 	highdf = highriskasset(allocationdata, highriskassetdfr, his_week, interval)
