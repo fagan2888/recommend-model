@@ -7,7 +7,6 @@ import sys
 sys.path.append("windshell")
 import Financial as fin
 import Const
-import Data
 from numpy import *
 from datetime import datetime
 

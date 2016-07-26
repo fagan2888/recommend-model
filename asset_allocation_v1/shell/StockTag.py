@@ -3,7 +3,6 @@
 
 import sys
 sys.path.append("windshell")
-import Data
 import Const
 import string
 from numpy import *
@@ -12,6 +11,7 @@ import pandas as pd
 import Financial as fin
 import FundIndicator as fi
 import AllocationData
+import Data
 
 
 #大盘适应度
