@@ -269,7 +269,6 @@ def clean_min(re):
 	return result
 			
 			
->>>>>>> first master
 
 if __name__ == '__main__':
 

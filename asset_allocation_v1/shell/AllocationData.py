@@ -8,13 +8,6 @@ import DBData
 
 
 db_params = {
-            #"host": "dev.mofanglicai.com.cn",
-            #"port": 3306,
-            #"user": "jiaoyang",
-            #"passwd": "q36wx5Td3Nv3Br2OPpH7",
-            #"db":"asset_allocation",
-            #"charset": "utf8"
-
             "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
             "port": 3306,
             "user": "koudai",
@@ -34,10 +27,6 @@ class allocationdata:
 	
 
 	def __init__(self):
-
-		# conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='mofang', charset='utf8')
-
-		conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
 
 		conn  = MySQLdb.connect(**db_params)
 

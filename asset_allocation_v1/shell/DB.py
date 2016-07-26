@@ -16,20 +16,6 @@ import RiskPosition
 
 
 db_params = {
-            #"host": "dev.mofanglicai.com.cn",
-            #"port": 3306,
-            #"user": "jiaoyang",
-            #"passwd": "q36wx5Td3Nv3Br2OPpH7",
-            #"db":"asset_allocation",
-            #"charset": "utf8"
-}
-host     = 'rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com'
-port     = 3306
-user     = 'jiaoyang'
-password = 'wgOdGq9SWruwATrVWGwi'
-db       = 'asset_allocation'
-
-db_params = {
             "host": "rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com",
             "port": 3306,
             "user": "jiaoyang",
@@ -39,11 +25,9 @@ db_params = {
         }
 
 
-
 def fund_measure(allocationdata):
 
 
-	# nconn = MySQLdb.connect(**db_params)
 	conn = MySQLdb.connect(**db_params)
 	cursor = conn.cursor()
 
@@ -333,11 +317,11 @@ def label_asset(allocationdata):
 			#print fund
 			if label in set(other_tags):
 				if label == 'SP500.SPI':
-					fund = '096001'	
+					fund = '513500'	
 				if label == 'HSCI.HI':
-					fund = '000071'	
+					fund = '513600'	
 				if label == 'GLNC':
-					fund = '000216'	
+					fund = '518880'	
 				sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'other', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
 			else:
 				sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'stock', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
@@ -573,7 +557,7 @@ def label_asset(allocationdata):
 def asset_allocation(allocationdata):
 
 
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(**db_params)
 	cursor = conn.cursor()
 
 
@@ -758,7 +742,7 @@ def asset_allocation(allocationdata):
 
 def risk_allocation_list(risk_value, risk_begin_date):
 
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(**db_params)
         cursor = conn.cursor()
 
 
@@ -772,7 +756,7 @@ def risk_allocation_list(risk_value, risk_begin_date):
 
 
 def risk_allocation_ratio(df, lid):
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(**db_params)
         cursor = conn.cursor()
 	base_sql = "replace into risk_asset_allocation_list (ra_alloc_id, ra_transfer_date, ra_fund_code, ra_fund_ratio) values (%d, %s, %s, %f)"
 
@@ -863,18 +847,30 @@ def riskhighlowriskasset(allocationdata):
 			d = dates[i]
 			current_ps = dateposition[d]
 			if not current_ps == ps:
+				current_ratio = 0.0
 				for f_id in ps.keys():
 					ratio = ps[f_id]
+					current_ratio += ratio
 					sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
 					#print sql
+					cursor.execute(sql)
+				money_ratio = 1.0 - current_ratio
+				if money_ratio > 0.00000099:
+					sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, 30003446, money_ratio, datetime.now(), datetime.now())
 					cursor.execute(sql)
 				ps = current_ps
 				last_date = d
 
+		current_ratio = 0.0
 		for f_id in ps.keys():
 			ratio = ps[f_id]
+			current_ratio += ratio
 			sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
 			#print sql
+			cursor.execute(sql)
+		money_ratio = 1.0 - current_ratio
+		if money_ratio > 0.00000099:
+			sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, 30003446, money_ratio, datetime.now(), datetime.now())
 			cursor.execute(sql)
 
 	#print all_code_position

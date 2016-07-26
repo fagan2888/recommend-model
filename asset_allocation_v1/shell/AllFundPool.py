@@ -21,11 +21,6 @@ import DFUtil
 import MySQLdb
 
 
-db_params = {
-            "host": "dev.mofanglicai.com.cn",
-            "port": 3306,
-            "user": "jiaoyang",
-            "passwd": "q36wx5Td3Nv3Br2OPpH7",
 #db_params = {
 #            "host": "dev.mofanglicai.com.cn",
 #            "port": 3306,

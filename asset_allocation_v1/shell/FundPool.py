@@ -41,7 +41,9 @@ def stock_fund_measure(allocationdata, start_date, end_date):
 
 	fund_code_id_dict = allocationdata.fund_code_id_dict
 
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
+	#conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(**db_params)
         cursor = conn.cursor()
 
 	lookback  = 52
@@ -114,7 +116,7 @@ def bond_fund_measure(allocationdata, start_date, end_date):
 	
 	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
 	#conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(**db_params)
         cursor = conn.cursor()
 
 	lookback  = 52
@@ -168,7 +170,7 @@ def money_fund_measure(allocationdata, start_date, end_date):
 
 	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
 	#conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(**db_params)
         cursor = conn.cursor()
 
 	lookback  = 52
@@ -200,7 +202,7 @@ def other_fund_measure(allocationdata, start_date, end_date):
 
 	#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
 	#conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
-	conn = MySQLdb.connect(host= host, port = port, user = user, passwd = password, db= db, charset='utf8')
+	conn = MySQLdb.connect(**db_params)
         cursor = conn.cursor()
 
 	lookback  = 52
