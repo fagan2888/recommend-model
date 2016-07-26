@@ -7,13 +7,16 @@ import time
 from datetime import datetime
 import sys
 sys.path.append('shell')
+import AllocationData
 
+
+rf = 0.03 / 252
 
 
 def equalriskasset(allocationdata):
 
 
-    rf = 0.03 / 52
+	#rf = 0.03 / 52
 
 
     ratio_df         = allocationdata.equal_risk_asset_ratio_df
@@ -88,12 +91,13 @@ def equalriskasset(allocationdata):
         #result_datas.append(asset_vs)
         #result_dates.append(d)
 
-        asset_vs = [asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1],
-                    asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
-                    asset_values['value'][-1], asset_values['SP500.SPI'][-1], \
-                    asset_values['GLNC'][-1], asset_values['HSCI.HI'][-1]]
-        result_datas.append(asset_vs)
-        result_dates.append(d)
+
+		asset_vs = [asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1],
+					asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
+					asset_values['value'][-1], asset_values['SP500.SPI'][-1], \
+					asset_values['GLNC'][-1], asset_values['HSCI.HI'][-1]]
+		result_datas.append(asset_vs)
+		result_dates.append(d)
 
 
         print d, asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1], \
@@ -110,7 +114,19 @@ def equalriskasset(allocationdata):
     new_assetlabels  = ['largecap','smallcap','rise','oscillation','decline','growth','value','SP500.SPI','GLNC','HSCI.HI']
     result_df = pd.DataFrame(result_datas, index=result_dates, columns=new_assetlabels)
 
-    result_df.index.name = 'date'
-    result_df.to_csv('./tmp/equalriskasset.csv')
+	result_df.index.name = 'date'
 
-    allocationdata.equal_risk_asset_df = result_df
+	result_df = result_df.resample('W-FRI').last()
+	result_df = result_df.fillna(method='pad')
+	result_df.to_csv('./tmp/equalriskasset.csv')
+	allocationdata.equal_risk_asset_df = result_df
+
+
+if __name__ == '__main__':
+
+	df = pd.read_csv('./tmp/labelasset.csv', index_col = 'date' ,parse_dates = ['date'])
+	allocationdata = AllocationData.allocationdata()
+	allocationdata.label_asset_df = df
+	df = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date' ,parse_dates = ['date'])
+	allocationdata.equal_risk_asset_ratio_df = df
+	equalriskasset(allocationdata)
