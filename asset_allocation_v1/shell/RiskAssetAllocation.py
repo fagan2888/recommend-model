@@ -18,6 +18,8 @@ from datetime import datetime
 import AllocationData
 import time
 import RiskHighLowRiskAsset
+import FixRisk
+import WeekFund2DayNav
 
 
 
@@ -43,12 +45,15 @@ def risk_asset_allocation():
 	allocationdata.fixed_risk_asset_lookback             = 52	
 	allocationdata.fixed_risk_asset_risk_adjust_period   = 5	
 	allocationdata.allocation_lookback                   = 26 
-	allocationdata.allocation_adjust_period              = 13	
+	allocationdata.allocation_adjust_period              = 13
 
 
 
 	LabelAsset.labelasset(allocationdata)
-	EqualRiskAssetRatio.equalriskassetratio(allocationdata)
+	WeekFund2DayNav.week2day(allocationdata)
+	FixRisk.fixrisk(allocationdata)
+
+	#EqualRiskAssetRatio.equalriskassetratio(allocationdata)
 	EqualRiskAsset.equalriskasset(allocationdata)
 	RiskHighLowRiskAsset.highlowriskasset(allocationdata)
 	#HighLowRiskAsset.highlowriskasset(allocationdata)
@@ -58,6 +63,7 @@ def risk_asset_allocation():
 	#DB.label_asset(allocationdata)
 	#DB.asset_allocation(allocationdata)
 	#DB.riskhighlowriskasset(allocationdata)
+
 
 
 

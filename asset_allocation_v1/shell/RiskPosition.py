@@ -3,7 +3,6 @@
 
 
 import pandas as pd
-import time
 
 
 
@@ -17,6 +16,8 @@ def risk_position():
 	highriskposition_ratio_df = pd.read_csv('./tmp/highriskposition.csv', index_col = 'date', parse_dates = ['date'])
 	lowriskposition_ratio_df  = pd.read_csv('./tmp/lowriskposition.csv', index_col = 'date', parse_dates = ['date'])
 	risk_portfolio_df         = pd.read_csv('./tmp/risk_portfolio.csv' , index_col  = 'date', parse_dates = ['date'])
+	label_asset_df            = pd.read_csv('./tmp/labelasset.csv' , index_col  = 'date', parse_dates = ['date'])
+
 
 	#print equalrisk_ratio_df
 	#print highriskposition_ratio_df
@@ -35,28 +36,32 @@ def risk_position():
 	start_date = highriskposition_ratio_df.index[0]
 	#print start_date
 	equalrisk_ratio_df = equalrisk_ratio_df[equalrisk_ratio_df.index >= start_date]
+	#
 	dates = risk_portfolio_df.index
+	start_date = dates[0]	
 
+	label_asset_df = label_asset_df[label_asset_df.index >= start_date]
+	dates = label_asset_df.index
 
 	#print start_date 
 	#print dates[0]			
+
 
 	fund_codes       = {}
 	bond_fund_codes  = {}
 	equalrisk_ratio  = {}
 	highriskposition = {}
 	lowriskposition = {}
-	
-	#print fund_df
 
+	#print fund_df
 	for i in range(0, len(fund_df.index) - 1):
 		if fund_df.index[i + 1] >= start_date:
 			for j in range(0, len(fund_df.columns)):
 				fund_codes[fund_df.columns[j]] = fund_df.iloc[i, j]
 			fund_df = fund_df[fund_df.index > fund_df.index[i]]
 			break
+	
 	#print fund_df
-
 	for i in range(0, len(bond_fund_df.index) - 1):
 		if bond_fund_df.index[i + 1] >= start_date:
 			for j in range(0, len(bond_fund_df.columns)):
@@ -71,6 +76,7 @@ def risk_position():
 				equalrisk_ratio[equalrisk_ratio_df.columns[j]] = equalrisk_ratio_df.iloc[i, j]
 			equalrisk_ratio_df = equalrisk_ratio_df[equalrisk_ratio_df.index > equalrisk_ratio_df.index[i]]
 			break
+
 
 	#print equalrisk_ratio
 	#print fund_codes
@@ -91,29 +97,34 @@ def risk_position():
 
 		if fund_df_index < len(fund_df.index) and d >= fund_df.index[fund_df_index]:
 			for label in fund_df.columns:
-				fund_codes[label] = fund_df.loc[d, label]
+				tmp_d = fund_df.index[fund_df_index]
+				fund_codes[label] = fund_df.loc[tmp_d, label]
 			fund_df_index = fund_df_index + 1
 
 
 		if bond_fund_df_index < len(bond_fund_df.index) and d >= bond_fund_df.index[bond_fund_df_index]:
 			for label in bond_fund_df.columns:
-				bond_fund_codes[label] = bond_fund_df.loc[d, label]
+				tmp_d = bond_fund_df.index[bond_fund_df_index]
+				bond_fund_codes[label] = bond_fund_df.loc[tmp_d, label]
 			bond_fund_df_index = bond_fund_df_index + 1
 
 
 		if equalrisk_ratio_index < len(equalrisk_ratio_df.index) and d >= equalrisk_ratio_df.index[equalrisk_ratio_index]:
 			for label in equalrisk_ratio_df.columns:
-				equalrisk_ratio[label] = equalrisk_ratio_df.loc[d, label]
+				tmp_d = equalrisk_ratio_df.index[equalrisk_ratio_index]
+				equalrisk_ratio[label] = equalrisk_ratio_df.loc[tmp_d, label]
 			equalrisk_ratio_index = equalrisk_ratio_index + 1
 
 		if highriskposition_ratio_index < len(highriskposition_ratio_df.index) and d >= highriskposition_ratio_df.index[highriskposition_ratio_index]:
 			for label in highriskposition_ratio_df.columns:
-				highriskposition[label] = highriskposition_ratio_df.loc[d, label]
+				tmp_d = highriskposition_ratio_df.index[highriskposition_ratio_index]
+				highriskposition[label] = highriskposition_ratio_df.loc[tmp_d, label]
 			highriskposition_ratio_index = highriskposition_ratio_index + 1
 
 		if lowriskposition_ratio_index < len(lowriskposition_ratio_df.index) and d >= lowriskposition_ratio_df.index[lowriskposition_ratio_index]:
 			for label in lowriskposition_ratio_df.columns:
-				lowriskposition[label] = lowriskposition_ratio_df.loc[d, label]
+				tmp_d = lowriskposition_ratio_df.index[lowriskposition_ratio_index]
+				lowriskposition[label] = lowriskposition_ratio_df.loc[tmp_d, label]
 			lowriskposition_ratio_index = lowriskposition_ratio_index + 1
 
 
@@ -176,142 +187,15 @@ def risk_position():
 	#print all_code_position
 
 
-	all_code_position = clean_min(all_code_position)
-	all_code_position = clean_same(all_code_position)
 	return all_code_position
 
-def clean_same(re):
-	tmp = {}
-	key_list = {}
-	sum_list = {}
-	times_list = {}
-	for i in re:
-		if tmp.has_key(str(i[0])+'--'+str(i[1])):
-			tmp[str(i[0])+'--'+str(i[1])][str(i[2])] = i[3]
-		else:
-			tmp[str(i[0])+'--'+str(i[1])] = {}
-			tmp[str(i[0])+'--'+str(i[1])][str(i[2])] = i[3]
-		if key_list.has_key(str(i[0])):
-			key_list[str(i[0])].append(str(i[1]))
-		else:
-			key_list[str(i[0])] = [str(i[1])]
-	day_list = {}
-	for k,v in key_list.items():
-		t = {}
-		for i in v:
-			if t == {}:
-				t = tmp[str(k)+'--'+str(i)]
-				day_list[str(k)+'--'+str(i)]=1
-			else:
-				if is_same(tmp[str(k)+'--'+str(i)],t):
-					continue
-				else:
-					t1  = time.strptime(str(i),"%Y-%m-%d %H:%M:%S")
-					t2  = time.strptime("2011-07-01 00:00:00","%Y-%m-%d %H:%M:%S")
-					if t1>t2:	
-						if sum_list.has_key(str(k)):
-							sum_list[str(k)] += float(change_sum(tmp[str(k)+'--'+str(i)],t))
-						else:
-							sum_list[str(k)] = float(change_sum(tmp[str(k)+'--'+str(i)],t))
-						if times_list.has_key(str(k)):
-							times_list[str(k)][str(i)] = 1
-						else:
-							times_list[str(k)] = {str(i):1}
-					t = tmp[str(k)+'--'+str(i)]
-					day_list[str(k)+'--'+str(i)]=1
-	result = []
-	for i in re:
-		if day_list.has_key(str(i[0])+'--'+str(i[1])):
-			result.append(i) 
-	times_list_tmp  = sorted(times_list.iteritems(),key=lambda asd:asd[1],reverse=False)
-	for (k,v) in times_list_tmp:
-		print k,len(v)
-	print sorted(sum_list.iteritems(),key=lambda asd:asd[1],reverse=False)
-	return result
-				
-def change_sum(tmp1,tmp2):
-	flag = 0.03
-	change = 0
-	for k,v in tmp1.items():
-		if tmp2.has_key(k):
-			change += abs(v-tmp2[k])
-		else:
-			change += v
-	for k,v in tmp2.items():
-		if tmp1.has_key(k):
-			pass
-		else:
-			change += v
-	if change < flag:
-		return 0 
-	else:
-		return change 
-				 
-def is_same(tmp1,tmp2):
-	flag = 0.03
-	change = 0
-	for k,v in tmp1.items():
-		if tmp2.has_key(k):
-			change += abs(v-tmp2[k])
-		else:
-			change += v
-	for k,v in tmp2.items():
-		if tmp1.has_key(k):
-			pass
-		else:
-			change += v
-	if change < flag:
-		return True
-	else:
-		return False
-
-		
-
-def clean_min(re):
-	tmp = {}
-	tmp1 = {}
-	tmp_list = []
-	for i in re:
-		if i[3] < 0.01:	
-			if tmp.has_key(str(i[0])+'--'+str(i[1])):
-				tmp[str(i[0])+'--'+str(i[1])] += i[3]
-			else:
-				tmp[str(i[0])+'--'+str(i[1])] = i[3]
-		else:
-			if tmp1.has_key(str(i[0])+'--'+str(i[1])):
-				tmp1[str(i[0])+'--'+str(i[1])] +=1
-			else:
-				tmp1[str(i[0])+'--'+str(i[1])] =1
-			tmp_list.append(i)
-	result = []
-	kk = {}
-	for i in tmp_list:
-		c = list(i)
-		if tmp.has_key(str(i[0])+'--'+str(i[1])):
-			tmp1[str(i[0])+'--'+str(i[1])] -=1
-			if tmp1[str(i[0])+'--'+str(i[1])] <= 0: 
-				if kk.has_key(str(i[0])+'--'+str(i[1])):
-					c[3] = round(i[3] + round(tmp[str(i[0])+'--'+str(i[1])]-kk[str(i[0])+'--'+str(i[1])],6)	,6)		
-				else:
-					c[3] = round(i[3] * 1 / (1-tmp[str(i[0])+'--'+str(i[1])]) ,6)
-			else:
-				c[3] = round(i[3]* 1 / (1-tmp[str(i[0])+'--'+str(i[1])]) ,6)
-				if kk.has_key(str(i[0])+'--'+str(i[1])):
-					kk[str(i[0])+'--'+str(i[1])] += round(c[3]-i[3],6)
-				else:
-					kk[str(i[0])+'--'+str(i[1])] = round(c[3]-i[3],6)
-		result.append(tuple(c))
-	return result
-			
-			
 
 if __name__ == '__main__':
 
 	all_code_position = risk_position()
 	for tmp in all_code_position:
 		if tmp[0] == 0.8:
-			pass
-	#		print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
+			print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
 
 	'''
 	fund_df                   = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
