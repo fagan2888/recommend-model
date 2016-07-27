@@ -261,12 +261,12 @@ def highlowriskasset(allocationdata):
 	lowriskassetdfr  = lowriskassetdfr.fillna(0.0)
 
 
-    his_week = allocationdata.allocation_lookback
-    interval = allocationdata.allocation_adjust_period
+	his_week = allocationdata.allocation_lookback
+	interval = allocationdata.allocation_adjust_period
+	print interval
 
-
-    highdf = highriskasset(allocationdata, highriskassetdfr, his_week, interval)
-    lowdf  = lowriskasset(allocationdata, lowriskassetdfr, his_week, interval)
+	highdf = highriskasset(allocationdata, highriskassetdfr, his_week, interval)
+	lowdf  = lowriskasset(allocationdata, lowriskassetdfr, his_week, interval)
 
 
     df  = pd.concat([highdf, lowdf], axis = 1, join_axes=[highdf.index])
