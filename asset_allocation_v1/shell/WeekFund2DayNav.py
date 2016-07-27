@@ -115,15 +115,31 @@ def week2day(allocationdata):
 
 	df = pd.DataFrame(rs, index = r_dates, columns = ['largecap','smallcap','rise', 'oscillation', 'decline', 'growth','value', 'ratebond', 'creditbond','convertiblebond','money', 'SP500.SPI', 'GLNC','HSCI.HI'])
 	df.index.name = 'date'
-	df.to_csv('./tmp/labelasset.csv')
+
+
+	dfr = df
+	values = []
+	for col in dfr.columns:
+		rs = dfr[col].values
+		vs = [1]
+		for i in range(1, len(rs)):
+			r = rs[i]
+			v = vs[-1] * ( 1.0 + r )	
+			vs.append(v)
+		values.append(vs)
 	
-	allocationdata.label_asset_df = df	
+	alldf = pd.DataFrame(np.matrix(values).T, index = dfr.index, columns = dfr.columns)
+
+	allocationdata.label_asset_df = alldf	
+	alldf.to_csv('./tmp/labelasset.csv')
+
+	week_df = alldf.resample('W-FRI').last()
+	week_df = week_df.fillna(method = 'pad')
+	week_df.to_csv('./tmp/labelassetweek.csv')
+
 		#print start_date, d, end_date			
 	#print df
 
 
 if __name__ == '__main__':
-
-
-	allocationdata = AllocationData.allocationdata()
-	week2day(allocationdata)
+	print

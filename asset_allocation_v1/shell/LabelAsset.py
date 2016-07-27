@@ -53,7 +53,6 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 
 		if (i - his_week) % interval == 0:
-			print dates[i]
 			start_date                    = dates[i - his_week].strftime('%Y-%m-%d')
 			end_date                      = dates[i - 1].strftime('%Y-%m-%d')
 
@@ -499,40 +498,24 @@ def labelasset(allocationdata):
     df.index.name = 'date'
 
 	#df = df.dropna()
+
+	dfr = df
+	values = []
+	for col in dfr.columns:
+		rs = dfr[col].values
+		vs = [1]
+		for i in range(1, len(rs)):
+			r = rs[i]
+			v = vs[-1] * ( 1.0 + r )	
+			vs.append(v)
+		values.append(vs)
 	
+	alldf = pd.DataFrame(np.matrix(values).T, index = dfr.index, columns = dfr.columns)
+
+	allocationdata.label_asset_df = alldf	
+	alldf.to_csv('./tmp/labelasset.csv')
+
 	allocationdata.label_asset_df = df
 
-    df.to_csv('./tmp/labelasset.csv')
-
-
-
 if __name__ == '__main__':
-
-
-    start_date = '2007-01-05'
-    end_date = '2016-04-22'
-
-	indexdf = Data.index_value(start_date, end_date, '000300.SH')
-	dates = indexdf.pct_change().index
-
-    allfunddf = data.funds()
-
-    #his_week = 156
-    interval = 26
-
-	#stock_df = stockLabelAsset(dates, interval, allfunddf, indexdf)
-
-	#bondindexdf = data.bond_index_value(start_date, end_date, const.csibondindex_code)
-	#allbonddf   = data.bonds()
-	#bond_df = bondLabelAsset(dates, interval, allbonddf, bondindexdf)
-
-    allmoneydf  = data.moneys()
-    #print allmoneydf
-    money_df = moneyLabelAsset(dates, interval, allmoneydf, None)
-
-    allotherdf  = data.others()
-    other_df = otherLabelAsset(dates, interval, allotherdf, None)
-
-    df = pd.concat([stock_df, bond_df, money_df, other_df], axis = 1, join_axes=[stock_df.index])
-
-	df.to_csv('./tmp/labelasset.csv')
+	print 

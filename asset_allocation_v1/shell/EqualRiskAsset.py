@@ -25,9 +25,9 @@ def equalriskasset(allocationdata):
     start_date = ratio_dates[0]
 
 
-    dfr              = allocationdata.label_asset_df
-    #dfr              = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
-    dfr              = dfr[dfr.index >= start_date]
+	dfr              = allocationdata.label_asset_df.pct_change().fillna(0.0)
+	#dfr              = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
+	dfr              = dfr[dfr.index >= start_date]
 
     dates = dfr.index
     ratio_dates = ratio_df.index

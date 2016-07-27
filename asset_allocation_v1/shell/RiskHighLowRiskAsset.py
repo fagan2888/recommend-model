@@ -241,7 +241,8 @@ def highlowriskasset(allocationdata):
     #highriskassetdf  = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date', parse_dates = 'date' )
     highriskassetdfr = highriskassetdf.pct_change().fillna(0.0)
 
-	df = allocationdata.label_asset_df
+	df = allocationdata.label_asset_df.resample('W-FRI').last().pct_change().fillna(method='pad')
+
 	#print highriskassetdfr.columns
 	highriskassetdfr = highriskassetdfr[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value']]
 
@@ -254,7 +255,8 @@ def highlowriskasset(allocationdata):
 
 
 	lowassetlabel    = ['ratebond','creditbond']
-	lowriskassetdfr  = allocationdata.label_asset_df
+	df = allocationdata.label_asset_df.resample('W-FRI').last().pct_change().fillna(method='pad')
+	lowriskassetdfr  = df
 	#lowriskassetdfr  = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
 	lowriskassetdfr  = lowriskassetdfr[lowassetlabel]
 	lowriskassetdfr  = lowriskassetdfr.loc[highriskassetdfr.index]
@@ -296,9 +298,7 @@ if __name__ == '__main__':
 	allocationdata = AllocationData.allocationdata()
 	df  = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date', parse_dates = 'date' )
 	allocationdata.equal_risk_asset_df = df
-	df  = pd.read_csv('./tmp/label_asset_value.csv', index_col = 'date', parse_dates = 'date' )
-	df  = df.resample('W-FRI').last()
-	dfr = df.pct_change().fillna(0.0)
-	allocationdata.label_asset_df = dfr
+	df  = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
+	allocationdata.label_asset_df = df
 
 	highlowriskasset(allocationdata)
