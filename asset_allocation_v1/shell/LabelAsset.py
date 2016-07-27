@@ -1,7 +1,6 @@
 #coding=utf8
 
 
-
 import numpy as np
 import string
 import sys
@@ -21,6 +20,13 @@ import AllocationData
 import DBData
 import DFUtil
 
+
+def mean_r(d, funddfr, codes):
+	r   = 0.0
+	num = 1.0 * (len(codes))
+	for code in codes:
+		r = r + funddfr.loc[d, code] / num
+	return r
 
 
 def stockLabelAsset(allocationdata, dates, his_week, interval):
@@ -44,6 +50,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 
     for i in range(his_week, len(dates)):
+
 
 		if (i - his_week) % interval == 0:
 			print dates[i]
@@ -71,11 +78,16 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
             #print
             #print time.time()
 
-            label_stock_df.to_csv('./tmp/stock_' + dates[i].strftime('%Y-%m-%d') + '.csv')
-
-            codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[Const.hs300_code])
-            #print time.time()
-            fund_pool, fund_tags = ST.tagstockfund(allocationdata, label_stock_df[codes], this_index_df)
+			codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[Const.hs300_code])
+			
+			#print time.time()
+			fund_pool, fund_tags = ST.tagstockfund(allocationdata, label_stock_df[codes], this_index_df)
+			#print end_date, fund_tags
+			#print time.time()
+			#print
+			allocationdf   = DFUtil.get_date_df(label_stock_df[fund_pool], allocation_start_date, end_date)
+			#fund_code, tag = FundSelector.select_stock(allocationdf, fund_tags)
+			fund_code, tag = FundSelector.select_stock(label_stock_df, fund_tags, this_index_df[Const.hs300_code])
 
             #print time.time()
             #print
@@ -105,8 +117,8 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 		d = dates[i]
 		result_dates.append(d)
-		result_datas.append([funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]] )
-		print d.strftime('%Y-%m-%d'), funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]
+		result_datas.append([ mean_r(d, funddfr, tag['largecap']), mean_r(d, funddfr , tag['smallcap']), mean_r( d, funddfr, tag['rise']), mean_r( d, funddfr, tag['oscillation']) , mean_r(d, funddfr, tag['decline']), mean_r(d, funddfr, tag['growth']), mean_r( d, funddfr, tag['value'])])
+		print d.strftime('%Y-%m-%d'), mean_r(d, funddfr, tag['largecap']), mean_r(d, funddfr , tag['smallcap']), mean_r( d, funddfr, tag['rise']), mean_r( d, funddfr, tag['oscillation']) , mean_r(d, funddfr, tag['decline']), mean_r(d, funddfr, tag['growth']), mean_r( d, funddfr, tag['value'])
 
 
 
@@ -241,14 +253,16 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
             #    f.write(str(code) + "\n")
             #f.close()
 
+		d = dates[i]
+		result_dates.append(d)
+		result_datas.append(
+			[mean_r(d, funddfr, tag['ratebond']), mean_r(d, funddfr, tag['creditbond']), mean_r(d, funddfr, tag['convertiblebond'])])
 
-        d = dates[i]
-        result_dates.append(d)
-        result_datas.append(
-            [funddfr.loc[d, tag['ratebond']], funddfr.loc[d, tag['creditbond']], funddfr.loc[d, tag['convertiblebond']]])
+		print d.strftime('%Y-%m-%d'), mean_r(d, funddfr, tag['ratebond']), mean_r(d, funddfr, tag['creditbond']), mean_r(d, funddfr, tag['convertiblebond'])
 
-        print d.strftime('%Y-%m-%d'),  funddfr.loc[d, tag['ratebond']], funddfr.loc[d, tag['creditbond']], funddfr.loc[d, tag['convertiblebond']]
-
+		allcode_r = 0
+		for code in allcodes:
+			allcode_r = allcode_r + 1.0 / len(allcodes) * funddfr.loc[d, code]
 
         allcode_r = 0
         for code in allcodes:
@@ -521,5 +535,4 @@ if __name__ == '__main__':
 
     df = pd.concat([stock_df, bond_df, money_df, other_df], axis = 1, join_axes=[stock_df.index])
 
-    df.to_csv('./tmp/labelasset.csv')
-
+	df.to_csv('./tmp/labelasset.csv')
