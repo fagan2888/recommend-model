@@ -509,7 +509,7 @@ def labelasset(allocationdata):
 			v = vs[-1] * ( 1.0 + r )	
 			vs.append(v)
 		values.append(vs)
-	
+
 	alldf = pd.DataFrame(np.matrix(values).T, index = dfr.index, columns = dfr.columns)
 
 	allocationdata.label_asset_df = alldf	
