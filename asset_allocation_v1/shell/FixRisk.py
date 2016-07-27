@@ -55,22 +55,7 @@ def fixrisk(allocationdata):
 	long_period  = 252
 
 
-	dfr = allocationdata.label_asset_df
-	values = []
-	for col in dfr.columns:
-		rs = dfr[col].values
-		vs = [1]
-		for i in range(1, len(rs)):
-			r = rs[i]
-			v = vs[-1] * ( 1.0 + r )	
-			vs.append(v)
-		values.append(vs)
-	
-	alldf = pd.DataFrame(np.matrix(values).T, index = dfr.index, columns = dfr.columns)
-
-	week_df = alldf.resample('W-FRI').last()
-	week_df = week_df.fillna(method = 'pad')
-	week_df.to_csv('./tmp/label_asset_value.csv')
+	alldf = allocationdata.label_asset_df
 
 	position_datas = []
 	position_dates = []
