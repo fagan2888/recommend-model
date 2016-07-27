@@ -263,7 +263,7 @@ def highlowriskasset(allocationdata):
 
 	his_week = allocationdata.allocation_lookback
 	interval = allocationdata.allocation_adjust_period
-
+	print interval
 
 	highdf = highriskasset(allocationdata, highriskassetdfr, his_week, interval)
 	lowdf  = lowriskasset(allocationdata, lowriskassetdfr, his_week, interval)
