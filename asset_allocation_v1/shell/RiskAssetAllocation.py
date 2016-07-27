@@ -44,7 +44,7 @@ def risk_asset_allocation():
 	allocationdata.stability_ratio                       = 0.5	
 	allocationdata.fixed_risk_asset_lookback             = 52	
 	allocationdata.fixed_risk_asset_risk_adjust_period   = 5	
-	allocationdata.allocation_lookback                   = 26 
+	allocationdata.allocation_lookback                   = 13
 	allocationdata.allocation_adjust_period              = 13
 
 
