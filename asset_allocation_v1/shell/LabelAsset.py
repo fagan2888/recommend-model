@@ -164,9 +164,9 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 
 	indexdf   = DBData.index_value(dates[0], dates[-1])
 
-	pre_ratebond        = ''
-	pre_creditbond      = ''
-	pre_convertiblebond = ''
+	pre_ratebond        = None
+	pre_creditbond      = None
+	pre_convertiblebond = None
 
 	tag = {}
 	result_dates = []
@@ -206,30 +206,34 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 			codes, indicator     = FundFilter.bondfundfilter(allocationdata, label_bond_df, indexdf[Const.csibondindex_code])
 			fund_pool, fund_tags = ST.tagbondfund(allocationdata, label_bond_df[codes] ,this_index_df)
 
-
 			allocationdf   = DFUtil.get_date_df(label_bond_df[fund_pool], allocation_start_date, end_date)
 			#fund_code, tag = FundSelector.select_bond(allocationdf, fund_tags)
 			fund_code, tag = FundSelector.select_bond(label_bond_df, fund_tags, this_index_df[Const.csibondindex_code])
+
+			if len(codes) == 1:
+				fund_pool = codes
+				fund_code = codes
+				tag['ratebond']        = codes
+				tag['creditbond']      = codes
+				tag['convertiblebond'] = codes
 
 			allcodes    = label_bond_df.columns
 			filtercodes = codes
 			poolcodes   = fund_pool
 			selectcodes = fund_code
 
-
-			if not tag.has_key('ratebond'):
+			if not tag.has_key('ratebond') or len(tag['ratebond']) == 0:
 				tag['ratebond'] = pre_ratebond
 			else:
 				pre_ratebond    = tag['ratebond']
-			if not tag.has_key('creditbond'):
+			if not tag.has_key('creditbond') or len(tag['creditbond']) == 0:
 				tag['creditbond'] = pre_creditbond
 			else:
 				pre_creditbond  = tag['creditbond']
-			if not tag.has_key('convertiblebond'):
+			if not tag.has_key('convertiblebond') or len(tag['convertiblebond']) == 0:
 				tag['convertiblebond'] = pre_convertiblebond
 			else:
 				pre_convertiblebond = tag['convertiblebond']
-
 
 			#print tag['ratebond'], tag['creditbond'], tag['convertiblebond']
 			# print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']
@@ -243,7 +247,6 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 			#for code in poolcodes:
 			#	f.write(str(code) + "\n")
 			#f.close()
-
 
 		d = dates[i]
 		result_dates.append(d)
@@ -503,6 +506,7 @@ def labelasset(allocationdata):
 	alldf.to_csv('./tmp/labelasset.csv')
 
 	allocationdata.label_asset_df = df
+
 
 if __name__ == '__main__':
 	print 
