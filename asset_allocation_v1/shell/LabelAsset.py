@@ -43,9 +43,9 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 	for i in range(his_week, len(dates)):
 
+
 		if (i - his_week) % interval == 0:
 
-			print dates[i]
 			start_date                    = dates[i - his_week].strftime('%Y-%m-%d')
 			end_date                      = dates[i - 1].strftime('%Y-%m-%d')
 
@@ -103,7 +103,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 		d = dates[i]
 		result_dates.append(d)
 		result_datas.append([funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]] )
-		#print d.strftime('%Y-%m-%d'), funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]
+		print d.strftime('%Y-%m-%d'), funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]
 
 
 		allcode_r = 0
@@ -198,10 +198,10 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 			codes, indicator     = FundFilter.bondfundfilter(allocationdata, label_bond_df, indexdf[Const.csibondindex_code])
 			fund_pool, fund_tags = ST.tagbondfund(allocationdata, label_bond_df[codes] ,this_index_df)
 
+
 			allocationdf   = DFUtil.get_date_df(label_bond_df[fund_pool], allocation_start_date, end_date)
 			#fund_code, tag = FundSelector.select_bond(allocationdf, fund_tags)
 			fund_code, tag = FundSelector.select_bond(label_bond_df, fund_tags, this_index_df[Const.csibondindex_code])
-			
 
 			allcodes    = label_bond_df.columns
 			filtercodes = codes
