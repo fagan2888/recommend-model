@@ -1,11 +1,11 @@
 #coding=utf8
 
 
-
 import scipy
-import statsmodels.formula.api as smf
 import pandas as pd
 import itertools
+import time
+from sklearn import datasets, linear_model
 
 
 
@@ -13,33 +13,37 @@ def stepwise_regression():
     return 0
 
 
-
 def max_sq_r(fund_dfr, factor_dfr):
 
-	factors = factor_dfr.columns
+
+	clf = linear_model.LinearRegression()
+
+	factors = list(factor_dfr.columns.values)
 
 	for i in range(1, len(factors)):
-
-		print list(itertools.combinations(['a', 'b', 'c'], 2))
-
+		for cols in list(itertools.combinations(factors, i)):
+			#print cols #clf.fit(factor_dfr[list[cols]], fund_dfr)
+			#print type(factor_dfr[list(cols)])
+			#print fund_dfr
+			print cols
+			reg = clf.fit(factor_dfr[list(cols)], fund_dfr.values)
+			print reg.score(factor_dfr[list(cols)], fund_dfr.values)
 
 
 if __name__ == '__main__':
 
 
 	factor_dfr = pd.read_excel('./data/factors.xlsx', index_col='Date')
+	factor_dfr = factor_dfr.fillna(0.0)
 	#print factor_dfr
-
 	fund_dfr = pd.read_excel('./data/ls.xlsx', index_col='Date')
+	fund_dfr = fund_dfr.fillna(0.0)
+
 	cols     = fund_dfr.columns
-
 	fund_dfr = fund_dfr[cols[0]]
-	print fund_dfr
-
+	max_sq_r(fund_dfr, factor_dfr)
 
 	#max_sq_r(None, None)
-
-
 	#print 'hehe'
 
 	'''
