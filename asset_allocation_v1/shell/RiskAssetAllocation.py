@@ -57,7 +57,7 @@ def risk_asset_allocation():
 	#DB.fund_measure(allocationdata)
 	#DB.label_asset(allocationdata)
 	#DB.asset_allocation(allocationdata)
-	DB.riskhighlowriskasset(allocationdata)
+	#DB.riskhighlowriskasset(allocationdata)
 
 
 
