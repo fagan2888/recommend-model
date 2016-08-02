@@ -277,6 +277,8 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 
 	fund_df = pd.DataFrame(fund_datas , index = fund_dates, columns=['ratebond', 'creditbond','convertiblebond'])
 	fund_df.index.name = 'date'
+	tmp_d = fund_df.index[-1]
+	fund_df.loc[tmp_d, 'ratebond'] = '200113'
 	fund_df.to_csv('./tmp/bond_fund.csv')
 
 	
