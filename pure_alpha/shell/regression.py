@@ -1,11 +1,13 @@
 #coding=utf8
 
 
+
 import scipy
 import pandas as pd
 import itertools
 import time
 from sklearn import datasets, linear_model
+import datetime
 
 
 
@@ -20,14 +22,17 @@ def max_sq_r(fund_dfr, factor_dfr):
 
 	factors = list(factor_dfr.columns.values)
 
-	for i in range(1, len(factors)):
-		for cols in list(itertools.combinations(factors, i)):
-			#print cols #clf.fit(factor_dfr[list[cols]], fund_dfr)
-			#print type(factor_dfr[list(cols)])
-			#print fund_dfr
-			print cols
-			reg = clf.fit(factor_dfr[list(cols)], fund_dfr.values)
-			print reg.score(factor_dfr[list(cols)], fund_dfr.values)
+	#for i in range(1, len(factors)):
+	for cols in list(itertools.combinations(factors, 6)):
+		#print cols #clf.fit(factor_dfr[list[cols]], fund_dfr)
+		#print type(factor_dfr[list(cols)])
+		#print fund_dfr
+		print datetime.datetime.now().microsecond
+		reg   = clf.fit(factor_dfr[list(cols)], fund_dfr.values)
+		score = reg.score(factor_dfr[list(cols)], fund_dfr.values)
+		print datetime.datetime.now().microsecond
+		print 
+
 
 
 if __name__ == '__main__':
@@ -45,6 +50,7 @@ if __name__ == '__main__':
 
 	#max_sq_r(None, None)
 	#print 'hehe'
+
 
 	'''
     url = "http://data.princeton.edu/wws509/datasets/salary.dat"
