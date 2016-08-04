@@ -47,15 +47,15 @@ lines = open('./data/funds','r').readlines()
 
 fundvs = {}
 for line in lines:
-	vec = line.split()
-	code = string.atoi(vec[0].strip())
-	d    = vec[1].strip()
-	date = datetime.strptime(vec[1].strip(),'%Y-%m-%d')
-	if (date < datetime.strptime(start_date, '%Y-%m-%d')) or (date > datetime.strptime(end_date,'%Y-%m-%d') or (d not in dates)):
-		continue
-	v    = string.atof(vec[2].strip())
-	vs   = fundvs.setdefault(code, [])
-	vs.append(v)
+    vec = line.split()
+    code = string.atoi(vec[0].strip())
+    d    = vec[1].strip()
+    date = datetime.strptime(vec[1].strip(),'%Y-%m-%d')
+    if (date < datetime.strptime(start_date, '%Y-%m-%d')) or (date > datetime.strptime(end_date,'%Y-%m-%d') or (d not in dates)):
+        continue
+    v    = string.atof(vec[2].strip())
+    vs   = fundvs.setdefault(code, [])
+    vs.append(v)
 
 
 
@@ -67,12 +67,12 @@ dates.sort()
 
 fundrs = {}
 for code in fundvs.keys():
-	vs = fundvs[code]
-	rs = []
-	for i in range(1, len(vs)):
-		rs.append(vs[i] / vs[i-1] - 1)
-	fundrs[code] = rs
-#print fundrs	
+    vs = fundvs[code]
+    rs = []
+    for i in range(1, len(vs)):
+        rs.append(vs[i] / vs[i-1] - 1)
+    fundrs[code] = rs
+#print fundrs    
 
 
 df = pd.read_csv('./data/index_weekly', index_col='date', parse_dates=[0])
@@ -81,26 +81,26 @@ df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
 indexvs = df['hs_300'].values
 
 
-		
+        
 indexrs = []
 for i in range(1, len(indexvs)):
-	indexrs.append(indexvs[i] / indexvs[i-1] - 1)
-	
+    indexrs.append(indexvs[i] / indexvs[i-1] - 1)
+    
 
 
 rf = 0.025 / 52
 jensen = {}
 sortino = {}
 for code in fundrs.keys():
-	rs = fundrs[code]
+    rs = fundrs[code]
 
-	if len(rs) < len(indexrs):
-		continue
+    if len(rs) < len(indexrs):
+        continue
 
-	jensen[code] = fin.jensen(rs, indexrs, rf)
-	sortino[code] = fin.sortino(rs, rf)
-	#print jensen[codes[i]]
-	#print sortino[codes[i]]
+    jensen[code] = fin.jensen(rs, indexrs, rf)
+    sortino[code] = fin.sortino(rs, rf)
+    #print jensen[codes[i]]
+    #print sortino[codes[i]]
 
 #print jensen
 #print sortino
@@ -120,19 +120,19 @@ sorted_sortino = sorted_x
 
 jenson_set = set()
 for i in range(0, len(sorted_jensen) / 2):
-	k,v = sorted_jensen[i]
-	jenson_set.add(k)
+    k,v = sorted_jensen[i]
+    jenson_set.add(k)
 
 
 sortino_set = set()
 for i in range(0, len(sorted_sortino) / 2):
-	k,v = sorted_sortino[i]
-	sortino_set.add(k)
+    k,v = sorted_sortino[i]
+    sortino_set.add(k)
 
 
 
 for code in jenson_set:
-	if code in sortino_set:
-		print code
+    if code in sortino_set:
+        print code
 
 

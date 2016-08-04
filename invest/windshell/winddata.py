@@ -31,10 +31,10 @@ df = pd.concat([df1, df2, df3, df4, df5], axis = 1)
 
 '''
 for col in df.columns:
-	values = df[col]
-	for i in range(1, len(values)):
-		if np.isnan(values[i]):
-			values[i] = values[i -1]		
+    values = df[col]
+    for i in range(1, len(values)):
+        if np.isnan(values[i]):
+            values[i] = values[i -1]        
 '''
 #print df
 df = df.fillna(method='pad')
@@ -47,9 +47,9 @@ df.to_csv('./wind/data.csv')
 f = open('./wind/data.csv', 'r')
 lines = f.readlines()
 for line in lines:
-	line = line.strip()
-	line = line.replace('-','')
-	line = line.replace('\'','')
-	#print line
+    line = line.strip()
+    line = line.replace('-','')
+    line = line.replace('\'','')
+    #print line
 
 f.close()

@@ -38,7 +38,7 @@ for line in lines:
         date = datetime.strptime(vec[1].strip(),'%Y-%m-%d')
         if (date < datetime.strptime(start_date, '%Y-%m-%d')) or (date > datetime.strptime(end_date,'%Y-%m-%d')):
                 continue
-	#print date
+    #print date
         v    = string.atof(vec[2].strip())
         vs   = fundvs.setdefault(code, [])
         vs.append(v)
@@ -46,18 +46,18 @@ for line in lines:
 
 lines = open('./data/weights','r')
 codes = []
-ws = []	
+ws = []    
 
 
 for line in lines:
-	vec = line.strip().split()
-	codes.append(string.atoi(vec[0]))
-	ws.append(string.atof(vec[1]))
+    vec = line.strip().split()
+    codes.append(string.atoi(vec[0]))
+    ws.append(string.atof(vec[1]))
 
 
 values = []
 for code in codes:
-	values.append(fundvs[code])
+    values.append(fundvs[code])
 
 
 pvs = []
@@ -70,12 +70,12 @@ for i in range(0, num):
 
 base = pvs[0]
 for  i in range(0, len(pvs)):
-	pvs[i] = pvs[i] / base	
+    pvs[i] = pvs[i] / base    
 
 
 prs = []
 for i in range(1, len(pvs)):
-	prs.append(pvs[i] / pvs[i-1] - 1)
+    prs.append(pvs[i] / pvs[i-1] - 1)
 
 
 rf = 0.02
@@ -93,14 +93,14 @@ allrisks = []
 
 for k , v in fundvs.items():
 
-	rs = []
-	for i in range(1, len(v)):
-		rs.append(v[i] / v[i-1] - 1)
+    rs = []
+    for i in range(1, len(v)):
+        rs.append(v[i] / v[i-1] - 1)
 
-	allsharps.append((np.mean(rs) * 52 - rf) / (np.std(rs) *  (52 ** 0.5)))
-	#print k, np.mean(rs)
-	allreturns.append(np.mean(rs))
-	allrisks.append(np.std(rs))
+    allsharps.append((np.mean(rs) * 52 - rf) / (np.std(rs) *  (52 ** 0.5)))
+    #print k, np.mean(rs)
+    allreturns.append(np.mean(rs))
+    allrisks.append(np.std(rs))
 
 
 allsharps.sort()

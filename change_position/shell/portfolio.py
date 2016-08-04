@@ -11,38 +11,38 @@ dates = []
 
 risks = {}
 for i in range(1,11):
-	risks.setdefault(i,[])
+    risks.setdefault(i,[])
 
 f = open('./data/change_position.csv','r')
 lines = f.readlines()
 for line in lines:
-	line = line.strip()
-	vec = line.split(',')
-	date_str = vec[0].strip()
-	d = datetime.datetime.strptime(date_str, '%Y/%m/%d')
-	date_str = d.strftime('%Y-%m-%d')
-	dates.append(date_str)
-	risks[1].append(vec[1:4])			
-	risks[2].append(vec[4:7])			
-	risks[3].append(vec[7:10])			
-	risks[4].append(vec[10:13])			
-	risks[5].append(vec[13:16])			
-	risks[6].append(vec[16:19])			
-	risks[7].append(vec[19:22])			
-	risks[8].append(vec[22:25])			
-	risks[9].append(vec[25:28])			
-	risks[10].append(vec[28:31])	
+    line = line.strip()
+    vec = line.split(',')
+    date_str = vec[0].strip()
+    d = datetime.datetime.strptime(date_str, '%Y/%m/%d')
+    date_str = d.strftime('%Y-%m-%d')
+    dates.append(date_str)
+    risks[1].append(vec[1:4])            
+    risks[2].append(vec[4:7])            
+    risks[3].append(vec[7:10])            
+    risks[4].append(vec[10:13])            
+    risks[5].append(vec[13:16])            
+    risks[6].append(vec[16:19])            
+    risks[7].append(vec[19:22])            
+    risks[8].append(vec[22:25])            
+    risks[9].append(vec[25:28])            
+    risks[10].append(vec[28:31])    
 
 
 def normalized(ws):
-	s = 0.0
-	weights = []
-	for w in ws:
-		s = s + w	
-	for w in ws:
-		weights.append( 1.0 * w / s )
-	return weights		
-	
+    s = 0.0
+    weights = []
+    for w in ws:
+        s = s + w    
+    for w in ws:
+        weights.append( 1.0 * w / s )
+    return weights        
+    
 
 #print dates
 
@@ -66,7 +66,7 @@ def funds_values(funds, start_date, end_date):
     conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='mofang', charset='utf8')
     cur = conn.cursor()
     for fid in funds:
-	#print fid
+    #print fid
         cur.execute("select fi_globalid, fi_name from fund_infos where fi_code = '%d'" % fid)
         record = cur.fetchone()
         fids.append(record[0])
@@ -146,57 +146,57 @@ final_values = {}
 
 for i in range(1, 11):
 
-	risk = risks[i]
-	weight = [0, 0, 0, 0, 0]
-	r_w = risk[0]
-	weight[0] =	string.atof(r_w[1].strip()) * 0.2 
-	weight[1] =	string.atof(r_w[1].strip()) * 0.3
-	weight[2] =	string.atof(r_w[1].strip()) * 0.5 
-	weight[3] =	string.atof(r_w[2].strip()) * 1.0 
-	weight[4] =	string.atof(r_w[0].strip()) * 1.0 
-	weight   =    	normalized(weight)
+    risk = risks[i]
+    weight = [0, 0, 0, 0, 0]
+    r_w = risk[0]
+    weight[0] =    string.atof(r_w[1].strip()) * 0.2 
+    weight[1] =    string.atof(r_w[1].strip()) * 0.3
+    weight[2] =    string.atof(r_w[1].strip()) * 0.5 
+    weight[3] =    string.atof(r_w[2].strip()) * 1.0 
+    weight[4] =    string.atof(r_w[0].strip()) * 1.0 
+    weight   =        normalized(weight)
 
-	values = []	
-	values.append(1)
+    values = []    
+    values.append(1)
 
-	for j in range(1, len(keys)):
+    for j in range(1, len(keys)):
 
-		key = keys[j]
-		try:
-			if dates.index(key) >= 0:
-				index = dates.index(key)
-				r_w = risk[index]
-				weight[0] =	string.atof(r_w[1].strip()) * 0.2 
-				weight[1] =	string.atof(r_w[1].strip()) * 0.3
-				weight[2] =	string.atof(r_w[1].strip()) * 0.5 
-				weight[3] =	string.atof(r_w[2].strip()) * 1.0 
-				weight[4] =	string.atof(r_w[0].strip()) * 1.0 
-				weight   =    	normalized(weight)
+        key = keys[j]
+        try:
+            if dates.index(key) >= 0:
+                index = dates.index(key)
+                r_w = risk[index]
+                weight[0] =    string.atof(r_w[1].strip()) * 0.2 
+                weight[1] =    string.atof(r_w[1].strip()) * 0.3
+                weight[2] =    string.atof(r_w[1].strip()) * 0.5 
+                weight[3] =    string.atof(r_w[2].strip()) * 1.0 
+                weight[4] =    string.atof(r_w[0].strip()) * 1.0 
+                weight   =        normalized(weight)
 
-		except:
-			pass
+        except:
+            pass
 
 
-		today           = keys[j]
-		yesterday 	= keys[j-1]
-		
-		today_value     = full_values[today]		
-		yesterday_value = full_values[yesterday]
-		
-		p = 0
-		for n in range(0, len(today_value) - 1):
-			p = p + (today_value[n] / yesterday_value[n] - 1) * weight[n]		
-		v = values[len(values) -1]
-		values.append(v * (1 + p))	
-	 	
-	final_values[i] = values	
+        today           = keys[j]
+        yesterday     = keys[j-1]
+        
+        today_value     = full_values[today]        
+        yesterday_value = full_values[yesterday]
+        
+        p = 0
+        for n in range(0, len(today_value) - 1):
+            p = p + (today_value[n] / yesterday_value[n] - 1) * weight[n]        
+        v = values[len(values) -1]
+        values.append(v * (1 + p))    
+         
+    final_values[i] = values    
 
-	#print risk
+    #print risk
 
 #for key in final_values.keys():
-#	print key
-#	print risks[key]
-#	print final_values[key]
+#    print key
+#    print risks[key]
+#    print final_values[key]
 
 
 conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='recommend', charset='utf8')
@@ -213,60 +213,60 @@ weight_base_sql = "replace into portfolio_weights (pw_portfolio_id, pw_portfolio
 
 for i in range(0, 11):
 
-	risk = []	
-	weight = [0, 0, 0, 0, 0, 0]
+    risk = []    
+    weight = [0, 0, 0, 0, 0, 0]
 
-	if i > 0:
-		risk      =     risks[i]
-		r_w  	  =     risk[0]	
-		weight[0] =	string.atof(r_w[1].strip()) * 0.2 
-		weight[1] =	string.atof(r_w[1].strip()) * 0.3
-		weight[2] =	string.atof(r_w[1].strip()) * 0.5 
-		weight[3] =	string.atof(r_w[2].strip()) * 1.0 
-		weight[4] =	string.atof(r_w[0].strip()) * 1.0 
-		weight    =    	normalized(weight)
+    if i > 0:
+        risk      =     risks[i]
+        r_w        =     risk[0]    
+        weight[0] =    string.atof(r_w[1].strip()) * 0.2 
+        weight[1] =    string.atof(r_w[1].strip()) * 0.3
+        weight[2] =    string.atof(r_w[1].strip()) * 0.5 
+        weight[3] =    string.atof(r_w[2].strip()) * 1.0 
+        weight[4] =    string.atof(r_w[0].strip()) * 1.0 
+        weight    =        normalized(weight)
 
 
-	for j in range(0, len(dates)):
+    for j in range(0, len(dates)):
 
-		date_time = datetime.datetime.strptime(dates[j],'%Y-%m-%d')
-		date_time_threshold = datetime.datetime.strptime('2014-10-01','%Y-%m-%d') 					
-		if(date_time < date_time_threshold):
-			continue				
-		date_str = datetime.datetime.strptime(dates[j],'%Y-%m-%d').strftime('%Y%m%d')
-		name = 'risk' + str(i) +'_' + dates[j] 
-		sql = portfolio_base_sql % (name, 1.0 * i / 10, dates[j],'reason','focus', '固定周期调仓，优化资产配置比例。', 0.07, 0.10,0.05, datetime.datetime.now(), datetime.datetime.now())
-		cur = conn.cursor()
-		cur.execute(sql)
-		cur.close()
-		conn.commit()
-		
-		sql = select_pid_base_sql % (name)	
-		cur = conn.cursor()
-		cur.execute(sql)		
-		record = cur.fetchone()
-		pid = record[0]
-		cur.close()
-		conn.commit()	
-	
-		if i > 0:
-			r_w = risk[j]
-			weight = [0, 0, 0, 0, 0]
-			weight[0] =	string.atof(r_w[1].strip()) * 0.2 
-			weight[1] =	string.atof(r_w[1].strip()) * 0.3
-			weight[2] =	string.atof(r_w[1].strip()) * 0.5 
-			weight[3] =	string.atof(r_w[2].strip()) * 1.0 
-			weight[4] =	string.atof(r_w[0].strip()) * 1.0 
-			weight   =    normalized(weight)
-		else:
-			weight = [0,0,0,0,0,1]
+        date_time = datetime.datetime.strptime(dates[j],'%Y-%m-%d')
+        date_time_threshold = datetime.datetime.strptime('2014-10-01','%Y-%m-%d')                     
+        if(date_time < date_time_threshold):
+            continue                
+        date_str = datetime.datetime.strptime(dates[j],'%Y-%m-%d').strftime('%Y%m%d')
+        name = 'risk' + str(i) +'_' + dates[j] 
+        sql = portfolio_base_sql % (name, 1.0 * i / 10, dates[j],'reason','focus', '固定周期调仓，优化资产配置比例。', 0.07, 0.10,0.05, datetime.datetime.now(), datetime.datetime.now())
+        cur = conn.cursor()
+        cur.execute(sql)
+        cur.close()
+        conn.commit()
+        
+        sql = select_pid_base_sql % (name)    
+        cur = conn.cursor()
+        cur.execute(sql)        
+        record = cur.fetchone()
+        pid = record[0]
+        cur.close()
+        conn.commit()    
+    
+        if i > 0:
+            r_w = risk[j]
+            weight = [0, 0, 0, 0, 0]
+            weight[0] =    string.atof(r_w[1].strip()) * 0.2 
+            weight[1] =    string.atof(r_w[1].strip()) * 0.3
+            weight[2] =    string.atof(r_w[1].strip()) * 0.5 
+            weight[3] =    string.atof(r_w[2].strip()) * 1.0 
+            weight[4] =    string.atof(r_w[0].strip()) * 1.0 
+            weight   =    normalized(weight)
+        else:
+            weight = [0,0,0,0,0,1]
 
-		cur = conn.cursor()	
-		for n in range(0, len(weight)):
-			sql = weight_base_sql % (pid, name, fids[n], weight[n], 1.0 * i / 10, datetime.datetime.now(), datetime.datetime.now())	
-			cur.execute(sql)
-		cur.close()
-		conn.commit()					
+        cur = conn.cursor()    
+        for n in range(0, len(weight)):
+            sql = weight_base_sql % (pid, name, fids[n], weight[n], 1.0 * i / 10, datetime.datetime.now(), datetime.datetime.now())    
+            cur.execute(sql)
+        cur.close()
+        conn.commit()                    
 
 
 keys = full_values.keys()
@@ -276,13 +276,13 @@ values_base_sql = "replace into portfolio_values (pv_risk, pv_date, pv_value, pv
 
 cur = conn.cursor()
 for i in range(1, 11):
-	values = final_values[i]
-	for j in range(0 ,len(keys)):
-		ratio = 0.0
-		if j > 0:
-			ratio = values[j] / values[j-1] - 1 		
-		sql = values_base_sql % (1.0 * i / 10, keys[j], values[j], ratio, datetime.datetime.now(), datetime.datetime.now())	
-		cur.execute(sql)	
+    values = final_values[i]
+    for j in range(0 ,len(keys)):
+        ratio = 0.0
+        if j > 0:
+            ratio = values[j] / values[j-1] - 1         
+        sql = values_base_sql % (1.0 * i / 10, keys[j], values[j], ratio, datetime.datetime.now(), datetime.datetime.now())    
+        cur.execute(sql)    
 
 cur.close()
 conn.commit()
@@ -291,17 +291,17 @@ conn.commit()
 cur = conn.cursor()
 for j in range(0, len(keys)):
 
-	today_vs = full_values[keys[j]]
-	today_v  = today_vs[len(today_vs) - 1]	
+    today_vs = full_values[keys[j]]
+    today_v  = today_vs[len(today_vs) - 1]    
 
-	ratio = 0.0
-	if j > 0:
+    ratio = 0.0
+    if j > 0:
 
-		yestoday_vs = full_values[keys[j - 1]]
-		yestoday_v  = today_vs[len(yestoday_vs) - 1]	
-		ratio = today_v / yestoday_v - 1 		
-	sql = values_base_sql % (0.0 * i / 10, keys[j], today_v, ratio, datetime.datetime.now(), datetime.datetime.now())	
-	cur.execute(sql)	
+        yestoday_vs = full_values[keys[j - 1]]
+        yestoday_v  = today_vs[len(yestoday_vs) - 1]    
+        ratio = today_v / yestoday_v - 1         
+    sql = values_base_sql % (0.0 * i / 10, keys[j], today_v, ratio, datetime.datetime.now(), datetime.datetime.now())    
+    cur.execute(sql)    
 cur.close()
 conn.commit()
 
@@ -311,8 +311,8 @@ cur = conn.cursor()
 sql = update_copywrite_base_sql % ('全仓配置货币基金，享受安全稳健收益。', '2015-09-11', 0.0)
 cur.execute(sql)
 for i in range(1,11):
-	sql = update_copywrite_base_sql % ('根据市场行情对配置方案进行调整，平衡收益和风险。', '2015-09-11', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('根据市场行情对配置方案进行调整，平衡收益和风险。', '2015-09-11', 1.0 * i / 10)
+    cur.execute(sql)
 
 cur.close()
 conn.commit()
@@ -320,23 +320,23 @@ conn.commit()
 update_copywrite_base_sql = "update portfolios set pf_position_record = '%s' where pf_date = '%s' and p_risk = '%f'"
 cur = conn.cursor()
 for i in range(0, 11):
-	sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2015-09-11', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2015-09-11', 1.0 * i / 10)
+    cur.execute(sql)
 
 for i in range(0, 11):
-	sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2015-06-19', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2015-06-19', 1.0 * i / 10)
+    cur.execute(sql)
 
 for i in range(0, 11):
-	sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2015-03-27', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2015-03-27', 1.0 * i / 10)
+    cur.execute(sql)
 
 for i in range(0, 11):
-	sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2014-12-31', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2014-12-31', 1.0 * i / 10)
+    cur.execute(sql)
 for i in range(0, 11):
-	sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2014-10-10', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('固定周期调仓，优化资产配置比例。', '2014-10-10', 1.0 * i / 10)
+    cur.execute(sql)
 cur.close()
 conn.commit()
 
@@ -345,23 +345,23 @@ conn.commit()
 update_copywrite_base_sql = "update portfolios set pf_focus = '%s' where pf_date = '%s' and p_risk = '%f'"
 cur = conn.cursor()
 for i in range(1, 11):
-	sql = update_copywrite_base_sql % ('A股市场持续震荡，逐渐筑底成功，市场信心逐步恢复市场人气逐步回暖。', '2015-09-11', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('A股市场持续震荡，逐渐筑底成功，市场信心逐步恢复市场人气逐步回暖。', '2015-09-11', 1.0 * i / 10)
+    cur.execute(sql)
 
 for i in range(1, 11):
-	sql = update_copywrite_base_sql % ('A股遭遇暴跌，市场信心遭受打击，市场流动性和资金面遭到严重考验，短期市场风险加大波动加剧。', '2015-06-19', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('A股遭遇暴跌，市场信心遭受打击，市场流动性和资金面遭到严重考验，短期市场风险加大波动加剧。', '2015-06-19', 1.0 * i / 10)
+    cur.execute(sql)
 
 for i in range(1, 11):
-	sql = update_copywrite_base_sql % ('A股牛市行情继续，国内货币政策持续宽松，宏观经济形势恶化，短期或风险加大波动加剧。', '2015-03-27', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('A股牛市行情继续，国内货币政策持续宽松，宏观经济形势恶化，短期或风险加大波动加剧。', '2015-03-27', 1.0 * i / 10)
+    cur.execute(sql)
 
 for i in range(1, 11):
-	sql = update_copywrite_base_sql % ('A股牛市曙光初现，债券市场继续走强。市场资金面持续宽松，风险偏好逐渐加强，板块轮动效应明显。', '2014-12-31', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('A股牛市曙光初现，债券市场继续走强。市场资金面持续宽松，风险偏好逐渐加强，板块轮动效应明显。', '2014-12-31', 1.0 * i / 10)
+    cur.execute(sql)
 for i in range(1, 11):
-	sql = update_copywrite_base_sql % ('京津冀污染持续升级，环保产业扶持力度将加大，持续关注板块和个股的机会。大盘逐渐走强，或出现短期结构性行情。', '2014-10-10', 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_copywrite_base_sql % ('京津冀污染持续升级，环保产业扶持力度将加大，持续关注板块和个股的机会。大盘逐渐走强，或出现短期结构性行情。', '2014-10-10', 1.0 * i / 10)
+    cur.execute(sql)
 sql = update_copywrite_base_sql % ('全仓配置货币基金，享受安全稳健收益。', '2015-09-11', 0)
 cur.execute(sql)
 sql = update_copywrite_base_sql % ('全仓配置货币基金，享受安全稳健收益。', '2015-06-19', 0)
@@ -378,24 +378,24 @@ conn.commit()
 
 
 cur = conn.cursor()
-update_return_base_sql = "update portfolios set	 pf_annual_returns = '%f', pf_expect_returns_max = '%f', pf_expect_returns_min = '%f' where pf_date = '%s' and p_risk = '%f'"
+update_return_base_sql = "update portfolios set     pf_annual_returns = '%f', pf_expect_returns_max = '%f', pf_expect_returns_min = '%f' where pf_date = '%s' and p_risk = '%f'"
 for key in final_values.keys():
-	values = final_values[key]
-	length = len(values)
-	p = values[-1] / values[0]
-	annual_return = p ** (1.0 / (1.0 * length / 250)) - 1
-	profits = []	
-	for i in range(1, len(values)):
-		profits.append(values[i] / values[i - 1] - 1)	 
-	sigma = np.std(profits)
-	u = np.mean(profits)
+    values = final_values[key]
+    length = len(values)
+    p = values[-1] / values[0]
+    annual_return = p ** (1.0 / (1.0 * length / 250)) - 1
+    profits = []    
+    for i in range(1, len(values)):
+        profits.append(values[i] / values[i - 1] - 1)     
+    sigma = np.std(profits)
+    u = np.mean(profits)
 
-	portfolio_p = e ** (u * 250)
-	portfolio_upper_p = portfolio_p * ( 1 + sigma * (250 ** 0.5)) 
-	annual_return_max = portfolio_p * ( 1 + sigma * (250 ** 0.5)) -	1
-	annual_return_min = portfolio_p * ( 1 - sigma * (250 ** 0.5)) -	1
-	sql = update_return_base_sql % (annual_return, annual_return_max, annual_return_min, '2015-09-11', 1.0 * key / 10)
-	cur.execute(sql)
+    portfolio_p = e ** (u * 250)
+    portfolio_upper_p = portfolio_p * ( 1 + sigma * (250 ** 0.5)) 
+    annual_return_max = portfolio_p * ( 1 + sigma * (250 ** 0.5)) -    1
+    annual_return_min = portfolio_p * ( 1 - sigma * (250 ** 0.5)) -    1
+    sql = update_return_base_sql % (annual_return, annual_return_max, annual_return_min, '2015-09-11', 1.0 * key / 10)
+    cur.execute(sql)
 
 
 
@@ -403,15 +403,15 @@ money_values = []
 keys = full_values.keys()
 keys.sort()
 for key in keys:
-	vs = full_values[key]
-	money_values.append(vs[len(vs) - 1])	 
+    vs = full_values[key]
+    money_values.append(vs[len(vs) - 1])     
 
 length = len(money_values)
 p = money_values[-1] / money_values[0]
 annual_return = p ** (1.0 / (1.0 * length / 250)) - 1
-profits = []	
+profits = []    
 for i in range(1, len(money_values)):
-	profits.append(money_values[i] / money_values[i - 1] - 1)	 
+    profits.append(money_values[i] / money_values[i - 1] - 1)     
 sigma = np.std(profits)
 u = np.mean(profits)
 
@@ -419,8 +419,8 @@ u = np.mean(profits)
 
 portfolio_p = e ** (u * 250)
 portfolio_upper_p = portfolio_p * ( 1 + sigma * (250 ** 0.5)) 
-annual_return_max = portfolio_p * ( 1 + sigma * (250 ** 0.5)) -	1
-annual_return_min = portfolio_p * ( 1 - sigma * (250 ** 0.5)) -	1
+annual_return_max = portfolio_p * ( 1 + sigma * (250 ** 0.5)) -    1
+annual_return_min = portfolio_p * ( 1 - sigma * (250 ** 0.5)) -    1
 sql = update_return_base_sql % (annual_return, annual_return_max, annual_return_min, '2015-09-11', 0.0)
 cur.execute(sql)
 
@@ -430,19 +430,19 @@ conn.commit()
 
 cur = conn.cursor()
 for key in final_values.keys():
-	values = final_values[key]
-	length = len(values)
-	month_num = 1.0 * length / 20	
-	month_returns = (values[length-1] / values[0]) ** (1.0 / month_num) - 1
-	sql = "update portfolios set pf_month_returns = '%f' where p_risk = '%f' and pf_date = '%s'" % (month_returns, 1.0 * key / 10, '2015-09-11')
-	cur.execute(sql)
+    values = final_values[key]
+    length = len(values)
+    month_num = 1.0 * length / 20    
+    month_returns = (values[length-1] / values[0]) ** (1.0 / month_num) - 1
+    sql = "update portfolios set pf_month_returns = '%f' where p_risk = '%f' and pf_date = '%s'" % (month_returns, 1.0 * key / 10, '2015-09-11')
+    cur.execute(sql)
 cur.close()
 conn.commit()
 
 
 
 length = len(money_values)
-month_num = 1.0 * length / 20	
+month_num = 1.0 * length / 20    
 month_returns = (money_values[length-1] / money_values[0]) ** (1.0 / month_num) - 1
 sql = "update portfolios set pf_month_returns = '%f' where p_risk = '%f' and pf_date = '%s'" % (month_returns, 1.0 * 0.0 / 10, '2015-09-11')
 cur = conn.cursor()

@@ -20,9 +20,9 @@ asset_v = {}
 
 
 for code in cols:
-	asset_w[code] = 0.0
+    asset_w[code] = 0.0
 for code in cols:
-	asset_v.setdefault(code, [1.0]):asset_w
+    asset_v.setdefault(code, [1.0]):asset_w
 
 data = {}
 
@@ -38,21 +38,21 @@ d_str = '%s, %f, %f, %f, %f\n'
 
 
 for i in range(0, len(allocation_dates)):
-	d = allocation_dates[i]
-	vs = []
-	vs.append(d)
+    d = allocation_dates[i]
+    vs = []
+    vs.append(d)
 
-	for code in cols:
-		r = allocation_dfr.loc[d, code] * asset_w[code]
-		v = asset_v[code][-1]
-		v = v * (1 + r)
-		asset_v[code].append(v)
-		vs.append(v)
+    for code in cols:
+        r = allocation_dfr.loc[d, code] * asset_w[code]
+        v = asset_v[code][-1]
+        v = v * (1 + r)
+        asset_v[code].append(v)
+        vs.append(v)
 
-		if d in set(ratio_dates):
-			asset_w[code] = ratio_df.loc[d, code]
+        if d in set(ratio_dates):
+            asset_w[code] = ratio_df.loc[d, code]
 
-	f.write(d_str % tuple(vs))
+    f.write(d_str % tuple(vs))
 
 f.flush()
 f.close()

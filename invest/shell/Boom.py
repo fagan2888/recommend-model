@@ -31,18 +31,18 @@ dates = df.index
 train = []
 
 for i in range(35, len(dates)):
-	tmp_df = df.loc[dates[i-35]:dates[i]]
-	record = []
-	for col in colnames:
-		values = tmp_df[col].values
-		_max    = values.max()
-		_min    = values.min()
-		v      = values[len(values) - 1]
-		if _max == _min:
-			record.append(0)
-		else:
-			record.append( (v - _min) * 2 / (_max - _min) - 1)
-	train.append(record)
+    tmp_df = df.loc[dates[i-35]:dates[i]]
+    record = []
+    for col in colnames:
+        values = tmp_df[col].values
+        _max    = values.max()
+        _min    = values.min()
+        v      = values[len(values) - 1]
+        if _max == _min:
+            record.append(0)
+        else:
+            record.append( (v - _min) * 2 / (_max - _min) - 1)
+    train.append(record)
 
 
 dates = dates[35:len(dates)]
@@ -61,11 +61,11 @@ zz500_net =  index_df['zz500'].values
 
 zz500_r = []
 for i in range(1, len(zz500_net)):
-	zz500_r.append(zz500_net[i] / zz500_net[i-1] - 1)	
+    zz500_r.append(zz500_net[i] / zz500_net[i-1] - 1)    
 
 hs300_r = []
 for i in range(1, len(hs300_net)):
-	hs300_r.append(hs300_net[i] / hs300_net[i-1] - 1)	
+    hs300_r.append(hs300_net[i] / hs300_net[i-1] - 1)    
 
 
 
@@ -74,32 +74,32 @@ y = []
 
 
 for v in zz500_r:
-	if v >= 0:
-		y.append(1)
-	else:
-		y.append(-1)
+    if v >= 0:
+        y.append(1)
+    else:
+        y.append(-1)
 
 
 
 n_samples = len(X)
 n = 0
 for i in range((int)(n_samples * 0.6), len(y)):
-	print y[i-1]
-	if(y[i - 1] == y[i]):
-		n = n + 1
+    print y[i-1]
+    if(y[i - 1] == y[i]):
+        n = n + 1
 
 print 1.0 * n / (len(y) - (int)(n_samples * 0.6)  - 1)
 
-'''			
+'''            
 for v in zz500_r:
-	y.append(v)
+    y.append(v)
 
 
 for v in hs300_r:
-	if v >= 0:
-		y.append(1)
-	else:
-		y.append(-1)
+    if v >= 0:
+        y.append(1)
+    else:
+        y.append(-1)
 '''
 
 
@@ -120,38 +120,38 @@ n_samples = len(X)
 #kf = KFold(n_samples, n_folds=5)
 
 #for train, test in kf:
-	#clf = svm.SVC(kernel='linear', C=1).fit(X[train], y[train])
-	#print clf.score(X[test], y[test])
+    #clf = svm.SVC(kernel='linear', C=1).fit(X[train], y[train])
+    #print clf.score(X[test], y[test])
 
 
 correct = 0
 error = 0
 net_value = 1
 for i in range((int)(n_samples * 0.6) , n_samples):
-	X_train = X[0: i]
-	y_train = y[0: i]
-	X_test  = X[i: i + 1]
-	y_test  = y[i: i + 1]
-	
-			
-	clf = svm.SVC(kernel='rbf', C=1).fit(X_train, y_train)
+    X_train = X[0: i]
+    y_train = y[0: i]
+    X_test  = X[i: i + 1]
+    y_test  = y[i: i + 1]
+    
+            
+    clf = svm.SVC(kernel='rbf', C=1).fit(X_train, y_train)
 
-	#svr = svm.SVR(kernel='rbf', C=1).fit(X_train, y_train)
+    #svr = svm.SVR(kernel='rbf', C=1).fit(X_train, y_train)
 
-	score = clf.score(X_test, y_test)
+    score = clf.score(X_test, y_test)
 
-	#score = svr.predict(X_test)	
+    #score = svr.predict(X_test)    
 
-	if score == 1:
-		correct = correct + 1
-	else:
-		error   = error   + 1
-		
-	if (score == 1 and y[i] == 1) or (score == 0 and y[i] == -1):
-		net_value = net_value * (1 + zz500_r[i])	
-	
-	#print net_value
-	print dates[i], score, y[i], zz500_r[i]
+    if score == 1:
+        correct = correct + 1
+    else:
+        error   = error   + 1
+        
+    if (score == 1 and y[i] == 1) or (score == 0 and y[i] == -1):
+        net_value = net_value * (1 + zz500_r[i])    
+    
+    #print net_value
+    print dates[i], score, y[i], zz500_r[i]
 
 
 print 1.0 * correct / (correct + error)
@@ -176,6 +176,6 @@ print train_df
 #print dir(res)
 
 #for i in range(0, len(train)):
-#	print train[i][2]	
+#    print train[i][2]    
 
 
