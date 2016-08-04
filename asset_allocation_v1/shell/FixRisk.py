@@ -139,7 +139,7 @@ def fixrisk(allocationdata):
 if __name__ == '__main__':
 
 
-	df = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = ['date'])
+	df = pd.read_csv('./data/hh.csv', index_col = 'date', parse_dates = ['date'])
 	allocationdata = AllocationData.allocationdata()
 	allocationdata.label_asset_df = df
 	fixrisk(allocationdata)
