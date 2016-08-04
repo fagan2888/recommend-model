@@ -1,0 +1,74 @@
+#coding=utf8
+
+import pandas as pd
+import numpy  as np
+import datetime
+
+rf = 0.03 / 252
+back = 252
+
+notna_stock_ratio = 0.95
+cmra_t = 12
+cmra_tau = 21
+
+
+def filter_nastock(dfr):
+
+    length = len(dfr) * 1.0
+    tmp_df = dfr.count()
+    cols = []
+    for col in tmp_df.index:
+        if tmp_df[col] / length > 0.95:
+            cols.append(col)
+    return cols
+
+
+ 
+def residual_volatility(df):
+
+    dfr = df.pct_change()
+
+    #########################################################################
+    ## daisy standard deviation
+    '''
+    std_df = pd.rolling_std(dfr.fillna(0.0), back)
+    dates = dfr.index
+    for i in range(back, len(dates)):
+        d  = dates[i]
+        cols = dfr.iloc[i - back :i , : ].dropna(axis = 1, thresh = (int)(notna_stock_ratio * back)).columns
+        tmp_std_df = std_df.loc[d, cols]
+        print d, tmp_std_df.median()
+    '''
+    #########################################################################
+
+    #########################################################################
+    ## cumulative range
+    dfr = np.log(df / df.shift(21))
+    
+
+    #########################################################################
+
+
+
+    #print dates[back]
+
+
+
+    
+    
+        #for col in std_df.columns:
+        #    if col not in set(cols):
+        #        std_df.loc[d, col] = np.nan
+        #print std_df.iloc[i, : ]
+    #print std_df
+
+    return 0
+
+
+if __name__ == '__main__':
+
+    #notna_stock_dict = notna_stock()
+    df = pd.read_csv('./data/stock_price.csv', index_col = 'date', parse_dates = ['date'])
+    #df = df.dropna(axis=1)
+    #print df
+    residual_volatility(df)
