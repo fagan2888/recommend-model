@@ -34,7 +34,7 @@ f.close()
 
 codes = set()
 for line in lines:
-	codes.add(string.atoi(line.strip()))
+    codes.add(string.atoi(line.strip()))
 
 
 
@@ -53,8 +53,8 @@ fundvs = {}
 for line in lines:
         vec = line.split()
         code = string.atoi(vec[0].strip())
-	if code not in codes:
-		continue
+    if code not in codes:
+        continue
         d    = vec[1].strip()
         date = datetime.strptime(vec[1].strip(),'%Y-%m-%d')
         if (date < datetime.strptime(start_date, '%Y-%m-%d')) or (date > datetime.strptime(end_date,'%Y-%m-%d') or (d not in dates)):
@@ -86,19 +86,19 @@ for i in range(1, len(indexvs)):
         indexrs.append(indexvs[i] / indexvs[i-1] - 1)
 hs300 = []
 for i in range(3,len(indexrs)):
-	n = 0
-	for j in range(0,4):
-		v = indexrs[i-j]
-		if v >= 0:
-			n = n + 1
-		else:
-			n = n - 1
-	if n == 0:
-		hs300.append(0)
-	if n > 0:
-		hs300.append(1)
-	if n < 0:
-		hs300.append(-1)
+    n = 0
+    for j in range(0,4):
+        v = indexrs[i-j]
+        if v >= 0:
+            n = n + 1
+        else:
+            n = n - 1
+    if n == 0:
+        hs300.append(0)
+    if n > 0:
+        hs300.append(1)
+    if n < 0:
+        hs300.append(-1)
 
 
 
@@ -109,19 +109,19 @@ for i in range(1, len(indexvs)):
         indexrs.append((dapanindexvs[i] / dapanindexvs[i-1] - 1) - (xiaopanindexvs[i] - xiaopanindexvs[i - 1] - 1))
 daxiaopan = []
 for i in range(3,len(indexrs)):
-	n = 0
-	for j in range(0,4):
-		v = string.atof(indexrs[i-j])
-		if v >= 0:
-			n = n + 1
-		else:
-			n = n - 1
-	if n == 0:
-		daxiaopan.append(0)
-	if n > 0:
-		daxiaopan.append(1)
-	if n < 0:
-		daxiaopan.append(-1)
+    n = 0
+    for j in range(0,4):
+        v = string.atof(indexrs[i-j])
+        if v >= 0:
+            n = n + 1
+        else:
+            n = n - 1
+    if n == 0:
+        daxiaopan.append(0)
+    if n > 0:
+        daxiaopan.append(1)
+    if n < 0:
+        daxiaopan.append(-1)
 
 
 
@@ -132,19 +132,19 @@ for i in range(1, len(indexvs)):
         indexrs.append((chengzhangindexvs[i] / chengzhangindexvs[i-1] - 1) - (jiazhiindexvs[i] - jiazhiindexvs[i - 1] - 1))
 chengzhangjiazhi = []
 for i in range(3,len(indexrs)):
-	n = 0
-	for j in range(0,4):
-		v = string.atof(indexrs[i-j])
-		if v >= 0:
-			n = n + 1
-		else:
-			n = n - 1
-	if n == 0:
-		chengzhangjiazhi.append(0)
-	if n > 0:
-		chengzhangjiazhi.append(1)
-	if n < 0:
-		chengzhangjiazhi.append(-1)
+    n = 0
+    for j in range(0,4):
+        v = string.atof(indexrs[i-j])
+        if v >= 0:
+            n = n + 1
+        else:
+            n = n - 1
+    if n == 0:
+        chengzhangjiazhi.append(0)
+    if n > 0:
+        chengzhangjiazhi.append(1)
+    if n < 0:
+        chengzhangjiazhi.append(-1)
 
 
 #print hs300
@@ -175,84 +175,84 @@ fundjiazhistd = {}
 rf = (0.025 / 52)
 
 for k,v  in fundrs.items():
-	code = k
-	rs = []
-	for j in range(3, len(v)):
-		rs.append(v[j])
-	
-	up       = []
-	down     = []
-	middle   = []
+    code = k
+    rs = []
+    for j in range(3, len(v)):
+        rs.append(v[j])
+    
+    up       = []
+    down     = []
+    middle   = []
 
 
-	dapan    = []
-	xiaopan  = []
-	
-	chengzhang = []
-	jiazhi     = []
+    dapan    = []
+    xiaopan  = []
+    
+    chengzhang = []
+    jiazhi     = []
 
 
-	for j in range(0, len(hs300)):
-		p = hs300[j]
-		if p == 1:
-			up.append(rs[j])	
-		elif p == 0:
-			middle.append(rs[j])
-		else:
-			down.append(rs[j])
+    for j in range(0, len(hs300)):
+        p = hs300[j]
+        if p == 1:
+            up.append(rs[j])    
+        elif p == 0:
+            middle.append(rs[j])
+        else:
+            down.append(rs[j])
 
 
-	for j in range(0, len(daxiaopan)):
-		p = daxiaopan[j]
-		if p >= 0:
-			dapan.append(rs[j])				
-		else:
-			xiaopan.append(rs[j])
-		
+    for j in range(0, len(daxiaopan)):
+        p = daxiaopan[j]
+        if p >= 0:
+            dapan.append(rs[j])                
+        else:
+            xiaopan.append(rs[j])
+        
 
-	for j in range(0, len(chengzhangjiazhi)):
-		p = chengzhangjiazhi[j]
-		if p >= 0 :
-			chengzhang.append(rs[j])
-		else:
-			jiazhi.append(rs[j])
+    for j in range(0, len(chengzhangjiazhi)):
+        p = chengzhangjiazhi[j]
+        if p >= 0 :
+            chengzhang.append(rs[j])
+        else:
+            jiazhi.append(rs[j])
 
-	#print rs	
-	#print code , 'up' , up
-	#print code , 'down', down
-	#print code , 'middle', middle	
-	#print code , 'dapan' , dapan
-	#print code , 'xiaopan', xiaopan
-	#print code , 'chengzhang', chengzhang
-	#print code , 'jiazhi'	,  jiazhi
+    #print rs    
+    #print code , 'up' , up
+    #print code , 'down', down
+    #print code , 'middle', middle    
+    #print code , 'dapan' , dapan
+    #print code , 'xiaopan', xiaopan
+    #print code , 'chengzhang', chengzhang
+    #print code , 'jiazhi'    ,  jiazhi
 
 
-	
-	print code , 'up' , (np.mean(up) - rf) /  np.std(up)
-	print code , 'down', (np.mean(down) - rf) / np.std(down)
-	print code , 'middle', (np.mean(middle) - rf) / np.std(middle)	
-	print code , 'dapan' , (np.mean(dapan) - rf) / np.std(dapan)
-	print code , 'xiaopan', (np.mean(xiaopan) - rf) / np.std(xiaopan)
-	print code , 'chengzhang', (np.mean(chengzhang) - rf) / np.std(chengzhang)
-	print code , 'jiazhi'	,  (np.mean(jiazhi) - rf) / np.std(jiazhi)
-		
-	fundup[code] = np.mean(up)
-	funddown[code] = np.mean(down)
-	fundmiddle[code] = np.mean(middle)
-	funddapan[code] = np.mean(dapan)
-	fundxiaopan[code] = np.mean(xiaopan)
-	fundchengzhang[code] = np.mean(chengzhang)
-	fundjiazhi[code] = np.mean(jiazhi)
+    
+    print code , 'up' , (np.mean(up) - rf) /  np.std(up)
+    print code , 'down', (np.mean(down) - rf) / np.std(down)
+    print code , 'middle', (np.mean(middle) - rf) / np.std(middle)    
+    print code , 'dapan' , (np.mean(dapan) - rf) / np.std(dapan)
+    print code , 'xiaopan', (np.mean(xiaopan) - rf) / np.std(xiaopan)
+    print code , 'chengzhang', (np.mean(chengzhang) - rf) / np.std(chengzhang)
+    print code , 'jiazhi'    ,  (np.mean(jiazhi) - rf) / np.std(jiazhi)
+        
+    fundup[code] = np.mean(up)
+    funddown[code] = np.mean(down)
+    fundmiddle[code] = np.mean(middle)
+    funddapan[code] = np.mean(dapan)
+    fundxiaopan[code] = np.mean(xiaopan)
+    fundchengzhang[code] = np.mean(chengzhang)
+    fundjiazhi[code] = np.mean(jiazhi)
 
-	fundupstd[code] = np.std(up)
-	funddownstd[code] = np.std(down)
-	fundmiddlestd[code] = np.std(middle)
-	funddapanstd[code]  = np.std(dapan)
-	fundxiaopanstd[code] = np.std(xiaopan)
-	fundchengzhangstd[code] = np.std(chengzhang)
-	fundjiazhistd[code]     = np.std(jiazhi)		
+    fundupstd[code] = np.std(up)
+    funddownstd[code] = np.std(down)
+    fundmiddlestd[code] = np.std(middle)
+    funddapanstd[code]  = np.std(dapan)
+    fundxiaopanstd[code] = np.std(xiaopan)
+    fundchengzhangstd[code] = np.std(chengzhang)
+    fundjiazhistd[code]     = np.std(jiazhi)        
 
-	
+    
 #print shangzheng
 #print daxiaopan
 #print chengzhangjiazhi

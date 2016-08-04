@@ -52,28 +52,28 @@ conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang'
 
 
 for i in range(0, 11):
-	name = 'risk' + str(i) +'_' + today
-	sql = portfolio_base_sql % (name, 1.0 * i / 10, today,'reason','focus', '固定周期调仓，优化资产配置比例。', 0.00, 0.00 , 0.00, datetime.datetime.now(), datetime.datetime.now())
-	cur = conn.cursor()
-	cur.execute(sql)
-	cur.close()
-	conn.commit()
+    name = 'risk' + str(i) +'_' + today
+    sql = portfolio_base_sql % (name, 1.0 * i / 10, today,'reason','focus', '固定周期调仓，优化资产配置比例。', 0.00, 0.00 , 0.00, datetime.datetime.now(), datetime.datetime.now())
+    cur = conn.cursor()
+    cur.execute(sql)
+    cur.close()
+    conn.commit()
 
-	sql = select_pid_base_sql % (name)
-	cur = conn.cursor()
-	cur.execute(sql)
-	record = cur.fetchone()
-	pid = record[0]
-	cur.close()
-	conn.commit()
+    sql = select_pid_base_sql % (name)
+    cur = conn.cursor()
+    cur.execute(sql)
+    record = cur.fetchone()
+    pid = record[0]
+    cur.close()
+    conn.commit()
 
-	weight = normalized(risk_weights[i])
-	cur = conn.cursor()
+    weight = normalized(risk_weights[i])
+    cur = conn.cursor()
         for n in range(0, len(weight)):
-		sql = weight_base_sql % (pid, name, fids[n], weight[n], 1.0 * i / 10, datetime.datetime.now(), datetime.datetime.now())
+        sql = weight_base_sql % (pid, name, fids[n], weight[n], 1.0 * i / 10, datetime.datetime.now(), datetime.datetime.now())
                 cur.execute(sql)
         cur.close()
-        conn.commit()				
+        conn.commit()                
 
 
 
@@ -118,8 +118,8 @@ cur = conn.cursor()
 values = {}
 ret = cur.execute(fund_value_sql)
 for record in cur.fetchall():
-	vs = values.setdefault(record[0],[])	
-	vs.append((float)(record[2]))	
+    vs = values.setdefault(record[0],[])    
+    vs.append((float)(record[2]))    
 
 cur.close()
 conn.commit()
@@ -159,8 +159,8 @@ prediction_annual_return = [0.0500, 0.0557, 0.0616, 0.0763, 0.0936, 0.1100, 0.12
 cur = conn.cursor()
 update_prediction_return_sql = "update portfolios set pf_prediction_month_returns = '%f', pf_prediction_annual_returns = '%f' where pf_date = '%s' and p_risk = '%f'"
 for i in range(0, 11):
-	sql = update_prediction_return_sql % (prediction_month_return[i], prediction_annual_return[i], today, 1.0 * i / 10)
-	cur.execute(sql)
+    sql = update_prediction_return_sql % (prediction_month_return[i], prediction_annual_return[i], today, 1.0 * i / 10)
+    cur.execute(sql)
 
 cur.close()
 conn.commit()

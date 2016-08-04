@@ -24,43 +24,43 @@ import RiskHighLowRiskAsset
 def risk_asset_allocation():
 
 
-	allocationdata = AllocationData.allocationdata()
-	allocationdata.start_date                            = '2010-01-01'
-	allocationdata.all_dates()
+    allocationdata = AllocationData.allocationdata()
+    allocationdata.start_date                            = '2010-01-01'
+    allocationdata.all_dates()
 
-	#allocationdata.all_dates()
+    #allocationdata.all_dates()
 
-	#allocationdata.start_date                            = args.get('start_date')
-	#allocationdata.start_date                            = '2010-01-01'
-	#allocationdata.start_date                            = '2016-01-01'
+    #allocationdata.start_date                            = args.get('start_date')
+    #allocationdata.start_date                            = '2010-01-01'
+    #allocationdata.start_date                            = '2016-01-01'
 
-	allocationdata.fund_measure_lookback                 = 52
-	allocationdata.fund_measure_adjust_period            = 26
-	allocationdata.jensen_ratio                          = 0.5
-	allocationdata.sortino_ratio                         = 0.5	
-	allocationdata.ppw_ratio                             = 0.5		
-	allocationdata.stability_ratio                       = 0.5	
-	allocationdata.fixed_risk_asset_lookback             = 52	
-	allocationdata.fixed_risk_asset_risk_adjust_period   = 5	
-	allocationdata.allocation_lookback                   = 26 
-	allocationdata.allocation_adjust_period              = 13	
-
-
-
-	LabelAsset.labelasset(allocationdata)
-	EqualRiskAssetRatio.equalriskassetratio(allocationdata)
-	EqualRiskAsset.equalriskasset(allocationdata)
-	RiskHighLowRiskAsset.highlowriskasset(allocationdata)
-	#HighLowRiskAsset.highlowriskasset(allocationdata)
+    allocationdata.fund_measure_lookback                 = 52
+    allocationdata.fund_measure_adjust_period            = 26
+    allocationdata.jensen_ratio                          = 0.5
+    allocationdata.sortino_ratio                         = 0.5    
+    allocationdata.ppw_ratio                             = 0.5        
+    allocationdata.stability_ratio                       = 0.5    
+    allocationdata.fixed_risk_asset_lookback             = 52    
+    allocationdata.fixed_risk_asset_risk_adjust_period   = 5    
+    allocationdata.allocation_lookback                   = 26 
+    allocationdata.allocation_adjust_period              = 13    
 
 
-	#DB.fund_measure(allocationdata)
-	#DB.label_asset(allocationdata)
-	#DB.asset_allocation(allocationdata)
-	#DB.riskhighlowriskasset(allocationdata)
+
+    LabelAsset.labelasset(allocationdata)
+    EqualRiskAssetRatio.equalriskassetratio(allocationdata)
+    EqualRiskAsset.equalriskasset(allocationdata)
+    RiskHighLowRiskAsset.highlowriskasset(allocationdata)
+    #HighLowRiskAsset.highlowriskasset(allocationdata)
+
+
+    #DB.fund_measure(allocationdata)
+    #DB.label_asset(allocationdata)
+    #DB.asset_allocation(allocationdata)
+    #DB.riskhighlowriskasset(allocationdata)
 
 
 
 if __name__ == '__main__':
 
-	risk_asset_allocation()
+    risk_asset_allocation()

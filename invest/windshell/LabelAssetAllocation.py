@@ -33,45 +33,45 @@ fund_codes   = []
 for i in range(his_week + 1, len(dates)):
 
 
-	if (i - his_week - 1 ) % interval == 0:
+    if (i - his_week - 1 ) % interval == 0:
 
-		start_date = dates[ i- his_week].strftime('%Y-%m-%d')
-		end_date   = dates[i - 1].strftime('%Y-%m-%d')
+        start_date = dates[ i- his_week].strftime('%Y-%m-%d')
+        end_date   = dates[i - 1].strftime('%Y-%m-%d')
 
-		allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
-		allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d')]
+        allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
+        allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d')]
 
-		risk, returns, ws, sharpe = pf.markowitz_r(allocation_dfr, None)
-		fund_codes = allocation_dfr.columns
-
-
-		last_pv = portfolio_vs[-1]
-		fund_values = {}
-		for n in range(0, len(fund_codes)):
-			fund_values[n] = [last_pv * ws[n]]
-
-		position_dates.append(end_date)
-		position_datas.append(ws)
+        risk, returns, ws, sharpe = pf.markowitz_r(allocation_dfr, None)
+        fund_codes = allocation_dfr.columns
 
 
-	pv = 0
-	d = dates[i]
-	for n in range(0, len(fund_codes)):
-		vs = fund_values[n]
-		code = fund_codes[n]
-		fund_last_v = vs[-1]
-		fund_last_v = fund_last_v + fund_last_v * dfr.loc[d, code]
-		vs.append(fund_last_v)
-		pv = pv + vs[-1]
-	portfolio_vs.append(pv)
-	result_dates.append(d)
+        last_pv = portfolio_vs[-1]
+        fund_values = {}
+        for n in range(0, len(fund_codes)):
+            fund_values[n] = [last_pv * ws[n]]
 
-	print d , pv
+        position_dates.append(end_date)
+        position_datas.append(ws)
+
+
+    pv = 0
+    d = dates[i]
+    for n in range(0, len(fund_codes)):
+        vs = fund_values[n]
+        code = fund_codes[n]
+        fund_last_v = vs[-1]
+        fund_last_v = fund_last_v + fund_last_v * dfr.loc[d, code]
+        vs.append(fund_last_v)
+        pv = pv + vs[-1]
+    portfolio_vs.append(pv)
+    result_dates.append(d)
+
+    print d , pv
 
 
 result_datas  = portfolio_vs
 result_df = pd.DataFrame(result_datas, index=result_dates,
-						 columns=['all_asset'])
+                         columns=['all_asset'])
 
 result_df.to_csv('./tmp/labelasset_net_value.csv')
 

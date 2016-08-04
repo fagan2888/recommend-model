@@ -25,33 +25,33 @@ rf = const.rf
 
 if __name__ == '__main__':
 
-	start_date = '2007-01-05'
-	end_date = '2016-04-22'
+    start_date = '2007-01-05'
+    end_date = '2016-04-22'
 
-	moneydf = data.bonds()
-	moneydfr = moneydf.pct_change().fillna(0.0)
+    moneydf = data.bonds()
+    moneydfr = moneydf.pct_change().fillna(0.0)
 
-	dates = moneydf.index
+    dates = moneydf.index
 
-	tag = {}
+    tag = {}
 
-	for i in range(156, len(dates)):
+    for i in range(156, len(dates)):
 
-		if (i - 156) % 13 == 0:
+        if (i - 156) % 13 == 0:
 
-			start_date = dates[i - 52].strftime('%Y-%m-%d')
-			allocation_start_date = dates[i - 13].strftime('%Y-%m-%d')
-			end_date = dates[i].strftime('%Y-%m-%d')
+            start_date = dates[i - 52].strftime('%Y-%m-%d')
+            allocation_start_date = dates[i - 13].strftime('%Y-%m-%d')
+            end_date = dates[i].strftime('%Y-%m-%d')
 
-			allocation_funddf = data.bond_value(allocation_start_date, end_date)
-			fund_codes, tag = fs.select_money(allocation_funddf)
+            allocation_funddf = data.bond_value(allocation_start_date, end_date)
+            fund_codes, tag = fs.select_money(allocation_funddf)
 
-			#print tag
-		#print tag
-		# print fund_codes
+            #print tag
+        #print tag
+        # print fund_codes
 
-		d = dates[i]
-		print d.strftime('%Y-%m-%d'), ',', moneydfr.loc[d, tag['sharpe1']], ',', moneydfr.loc[d, tag['sharpe2']]
+        d = dates[i]
+        print d.strftime('%Y-%m-%d'), ',', moneydfr.loc[d, tag['sharpe1']], ',', moneydfr.loc[d, tag['sharpe2']]
 
 
 # print tag

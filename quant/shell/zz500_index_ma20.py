@@ -12,12 +12,12 @@ lines = f.readlines()
 lines = lines[1:len(lines)]
 
 for line in lines:
-	vec = line.split(',')
-	d = datetime.datetime.strptime(vec[0].strip(),'%Y/%m/%d')
-	d_str = d.strftime('%Y-%m-%d')
-	content = (string.atof(vec[1]), string.atof(vec[2]), string.atof(vec[3]), string.atof(vec[4]), string.atof(vec[5]), string.atof(vec[6]))
-	data[d_str] = content
-	
+    vec = line.split(',')
+    d = datetime.datetime.strptime(vec[0].strip(),'%Y/%m/%d')
+    d_str = d.strftime('%Y-%m-%d')
+    content = (string.atof(vec[1]), string.atof(vec[2]), string.atof(vec[3]), string.atof(vec[4]), string.atof(vec[5]), string.atof(vec[6]))
+    data[d_str] = content
+    
 
 
 dates = data.keys()
@@ -25,23 +25,23 @@ dates.sort()
 
 close = {}
 for d in dates:
-	close[d] = data[d][3]
+    close[d] = data[d][3]
 
 
 mean_day = 20
 ma20 = {}
 for i in range(mean_day, len(dates)):
-	ma = 0.0
-	for j in range(1, mean_day + 1):
-		ma = ma + close[dates[i - j]]	
-	ma = 1.0 * ma / mean_day
+    ma = 0.0
+    for j in range(1, mean_day + 1):
+        ma = ma + close[dates[i - j]]    
+    ma = 1.0 * ma / mean_day
 
-	ma20[dates[i]] = ma
+    ma20[dates[i]] = ma
 
 
 ratio = {}
 for i in range(1, len(dates)):
-	ratio[dates[i]]	= close[dates[i]] / close[dates[i - 1]] - 1
+    ratio[dates[i]]    = close[dates[i]] / close[dates[i - 1]] - 1
 
 
 positions = {}
@@ -62,16 +62,16 @@ ds = ds[start_index : end_index + 1]
 flag = 0
 threshold = 0.02
 for d in ds:
-	close_value = close[d]
-	ma_value    = ma20[d]	
-	positions[d] = flag
-	if close_value >= ( 1 + threshold ) * ma_value:
-		flag = 1	
-	if close_value < ( 1 - threshold )  * ma_value:
-		flag = 0	
+    close_value = close[d]
+    ma_value    = ma20[d]    
+    positions[d] = flag
+    if close_value >= ( 1 + threshold ) * ma_value:
+        flag = 1    
+    if close_value < ( 1 - threshold )  * ma_value:
+        flag = 0    
 
 value = 1
 for d in ds:
-	flag = positions[d]
-	value = value * (1 + 1.0 * flag * ratio[d])
-	print d, flag ,value
+    flag = positions[d]
+    value = value * (1 + 1.0 * flag * ratio[d])
+    print d, flag ,value

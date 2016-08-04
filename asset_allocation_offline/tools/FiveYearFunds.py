@@ -23,32 +23,32 @@ i = 1
 
 while True:
 
-	start_date = dates[i]
-	end_date = dates[i]
-	if i + interval >= len(dates):
-		end_date   = dates[len(dates) - 1]
-	else:	
-		end_date   = dates[i + interval]
+    start_date = dates[i]
+    end_date = dates[i]
+    if i + interval >= len(dates):
+        end_date   = dates[len(dates) - 1]
+    else:    
+        end_date   = dates[i + interval]
 
-	df = DBData.stock_fund_value(start_date, end_date)
-	dfr = df.pct_change().fillna(0.0)
-	codes = dfr.columns
+    df = DBData.stock_fund_value(start_date, end_date)
+    dfr = df.pct_change().fillna(0.0)
+    codes = dfr.columns
 
-	
-	ds = dfr.index
-	for d in ds:
-		r = 0
-		for code in codes:
-			r = r + dfr.loc[d, code] * (1.0 / len(codes))
-		pvs.append(pvs[-1] * (1 + r))
-		portfolio_vs.append(pvs[-1])
-		portfolio_dates.append(d)
-		print d, pvs[-1]
-	
-	if i + interval >= len(dates):
-		break
+    
+    ds = dfr.index
+    for d in ds:
+        r = 0
+        for code in codes:
+            r = r + dfr.loc[d, code] * (1.0 / len(codes))
+        pvs.append(pvs[-1] * (1 + r))
+        portfolio_vs.append(pvs[-1])
+        portfolio_dates.append(d)
+        print d, pvs[-1]
+    
+    if i + interval >= len(dates):
+        break
 
-	i = i + interval
+    i = i + interval
 
 df  = pd.DataFrame(portfolio_vs, index = portfolio_dates, columns = ['nav'])
 print df

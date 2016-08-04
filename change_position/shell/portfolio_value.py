@@ -83,15 +83,15 @@ values_base_sql = "insert into portfolio_values (pv_risk, pv_date, pv_value, pv_
 f = open('./data/values.csv','r')
 v = 0
 for line in f.readlines():
-	vec = line.strip().split(',')
-	date = vec[0].strip()
-	value = string.atof(vec[1].strip())
-	if v == 0:
-		v = value
-	sql = values_base_sql % (0.1, date, value, value / v - 1, datetime.datetime.now(), datetime.datetime.now())
-	print sql
-	cur.execute(sql)
-	v = value
+    vec = line.strip().split(',')
+    date = vec[0].strip()
+    value = string.atof(vec[1].strip())
+    if v == 0:
+        v = value
+    sql = values_base_sql % (0.1, date, value, value / v - 1, datetime.datetime.now(), datetime.datetime.now())
+    print sql
+    cur.execute(sql)
+    v = value
 cur.close()
 conn.commit()
 
