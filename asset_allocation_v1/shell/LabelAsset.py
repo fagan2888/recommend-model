@@ -118,26 +118,25 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
         print d.strftime('%Y-%m-%d'), mean_r(d, funddfr, tag['largecap']), mean_r(d, funddfr , tag['smallcap']), mean_r( d, funddfr, tag['rise']), mean_r( d, funddfr, tag['oscillation']) , mean_r(d, funddfr, tag['decline']), mean_r(d, funddfr, tag['growth']), mean_r( d, funddfr, tag['value'])
 
 
-
         allcode_r = 0
         for code in allcodes:
             allcode_r = allcode_r + 1.0 / len(allcodes) * funddfr.loc[d, code]
 
 
-            filtercode_r = 0
-            for code in filtercodes:
-                filtercode_r = filtercode_r + 1.0 / len(filtercodes) * funddfr.loc[d, code]
+        filtercode_r = 0
+        for code in filtercodes:
+            filtercode_r = filtercode_r + 1.0 / len(filtercodes) * funddfr.loc[d, code]
 
 
-                poolcode_r = 0
-                for code in poolcodes:
-                    poolcode_r = poolcode_r + 1.0 / len(poolcodes) * funddfr.loc[d, code]
+        poolcode_r = 0
+        for code in poolcodes:
+            poolcode_r = poolcode_r + 1.0 / len(poolcodes) * funddfr.loc[d, code]
 
-                selectcode_r = 0
-                for code in selectcodes:
-                    selectcode_r = selectcode_r + 1.0 / len(selectcodes) * funddfr.loc[d, code]
+        selectcode_r = 0
+        for code in selectcodes:
+            selectcode_r = selectcode_r + 1.0 / len(selectcodes) * funddfr.loc[d, code]
 
-                select_datas.append([allcode_r, filtercode_r, poolcode_r, selectcode_r])
+        select_datas.append([allcode_r, filtercode_r, poolcode_r, selectcode_r])
 
 
     result_df = pd.DataFrame(result_datas, index = result_dates, columns=['largecap', 'smallcap', 'rise', 'oscillation', 'decline', 'growth', 'value'])
@@ -291,8 +290,8 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 
     fund_df = pd.DataFrame(fund_datas , index = fund_dates, columns=['ratebond', 'creditbond','convertiblebond'])
     fund_df.index.name = 'date'
-    tmp_d = fund_df.index[-1]
-    fund_df.loc[tmp_d, 'ratebond'] = '200113'
+    #tmp_d = fund_df.index[-1]
+    #fund_df.loc[tmp_d, 'ratebond'] = '200113'
     fund_df.to_csv('./tmp/bond_fund.csv')
 
 

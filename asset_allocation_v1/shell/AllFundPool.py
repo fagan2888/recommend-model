@@ -47,7 +47,7 @@ def stock_fund_measure(allocationdata, start_date, end_date):
     fund_code_id_dict = allocationdata.fund_code_id_dict
 
     conn = MySQLdb.connect(**db_params)
-        cursor = conn.cursor()
+    cursor = conn.cursor()
 
     lookback  = 52
     
