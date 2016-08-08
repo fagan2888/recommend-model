@@ -5,6 +5,7 @@ import pandas as pd
 import numpy  as np
 import datetime
 import statsmodels.api as sm
+import time
 
 
 rf = 0.03 / 252
@@ -148,7 +149,6 @@ def liquidity(df):
 
     ###########################################################################
     ##stoa
-    '''
     for i in range(stoa_back, len(dates)):
         d = dates[i]
         j = 0
@@ -163,16 +163,14 @@ def liquidity(df):
         tmp_df = np.log(tmp_df.dropna() / stoa_t)
         for code in tmp_df.index:
             print d, code , tmp_df[code]
-
-    '''
     ##########################################################################
     return 0.0
 
 
 if __name__ == '__main__':
 
-    df = pd.read_csv('./data/stock_price.csv', index_col = 'date', parse_dates = ['date'])
-    winda_df = pd.read_csv('./data/windA.csv', index_col = 'date', parse_dates = ['date'])
-    residual_volatility(df, winda_df)
-    #df = pd.read_csv('./data/stock_turnover.csv', index_col = 'date', parse_dates = ['date'])
-    #liquidity(df)
+    #df = pd.read_csv('./data/stock_price.csv', index_col = 'date', parse_dates = ['date'])
+    #winda_df = pd.read_csv('./data/windA.csv', index_col = 'date', parse_dates = ['date'])
+    #residual_volatility(df, winda_df)
+    df = pd.read_csv('./data/stock_turnover.csv', index_col = 'date', parse_dates = ['date'])
+    liquidity(df)
