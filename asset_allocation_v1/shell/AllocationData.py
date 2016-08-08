@@ -30,7 +30,7 @@ class allocationdata:
 
         conn  = MySQLdb.connect(**db_params)
 
-            cursor = conn.cursor()
+        cursor = conn.cursor()
         sql = "select fi_globalid, fi_code from fund_infos"
 
         cursor.execute(sql)
@@ -154,5 +154,5 @@ class allocationdata:
 
     def get_date_df(df, start_date, end_date):
         _df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
-            _df = _df[ _df.index >= datetime.strptime(start_date,'%Y-%m-%d')]    
+        _df = _df[ _df.index >= datetime.strptime(start_date,'%Y-%m-%d')]    
         return _df

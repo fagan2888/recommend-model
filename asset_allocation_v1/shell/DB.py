@@ -743,10 +743,10 @@ def asset_allocation(allocationdata):
 def risk_allocation_list(risk_value, risk_begin_date):
 
     conn = MySQLdb.connect(**db_params)
-        cursor = conn.cursor()
+    cursor = conn.cursor()
 
 
-        base_sql = "replace into risk_asset_allocation_list (ra_risk, ra_date) values (%f, %s)"
+    base_sql = "replace into risk_asset_allocation_list (ra_risk, ra_date) values (%f, %s)"
     sql = base_sql % (risk_value, risk_begin_date)
     cursor.execute(sql)
     conn.commit()
@@ -757,7 +757,7 @@ def risk_allocation_list(risk_value, risk_begin_date):
 
 def risk_allocation_ratio(df, lid):
     conn = MySQLdb.connect(**db_params)
-        cursor = conn.cursor()
+    cursor = conn.cursor()
     base_sql = "replace into risk_asset_allocation_list (ra_alloc_id, ra_transfer_date, ra_fund_code, ra_fund_ratio) values (%d, %s, %s, %f)"
 
     dates = table.index.unique()
@@ -789,13 +789,13 @@ def riskhighlowriskasset(allocationdata):
     df = pd.read_csv('./tmp/risk_portfolio.csv', index_col = 'date', parse_dates = ['date'])
 
     conn = MySQLdb.connect(**db_params)
-        cursor = conn.cursor()
+    cursor = conn.cursor()
 
     for risk in df.columns:
         col = risk
         risk = string.atoi(risk) / 10.0
 
-            sql = "replace into risk_asset_allocation_list (ra_risk, ra_date, created_at, updated_at) values (%f, '%s', '%s', '%s')" % (risk, start_date, datetime.now(), datetime.now())
+        sql = "replace into risk_asset_allocation_list (ra_risk, ra_date, created_at, updated_at) values (%f, '%s', '%s', '%s')" % (risk, start_date, datetime.now(), datetime.now())
         cursor.execute(sql)
         sql = 'select id from risk_asset_allocation_list where ra_risk = %f' % (risk)
         cursor.execute(sql)
@@ -818,7 +818,7 @@ def riskhighlowriskasset(allocationdata):
         f_id      = allocationdata.fund_code_id_dict[code]
         ratio     = record[3]
 
-         dateposition = allriskposition.setdefault(risk_rank, {})
+        dateposition = allriskposition.setdefault(risk_rank, {})
         ps           = dateposition.setdefault(date,{})
         ps[f_id]     = ratio
 

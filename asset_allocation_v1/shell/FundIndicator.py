@@ -163,12 +163,12 @@ def fund_sharp_annual(funddf):
         fundsharp[code] = fin.sharp_annual(rs, Const.rf)
 
     x = fundsharp
-        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-        sorted_sharp = sorted_x
+    sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+    sorted_sharp = sorted_x
 
-        result = []
-        for i in range(0, len(sorted_sharp)):
-                result.append(sorted_sharp[i])
+    result = []
+    for i in range(0, len(sorted_sharp)):
+            result.append(sorted_sharp[i])
 
 
     return result
@@ -190,12 +190,12 @@ def fund_return(funddf):
         #print code, fundreturn[code]
     
     x = fundreturn
-        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-        sorted_return = sorted_x
+    sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+    sorted_return = sorted_x
 
-        result = []
-        for i in range(0, len(sorted_return)):
-                result.append(sorted_return[i])
+    result = []
+    for i in range(0, len(sorted_return)):
+            result.append(sorted_return[i])
 
 
     return result
@@ -215,12 +215,12 @@ def fund_risk(funddf):
         fundrisk[code] = np.std(funddfr[code].values)
     
     x = fundrisk
-        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-        sorted_risk = sorted_x
+    sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+    sorted_risk = sorted_x
 
-        result = []
-        for i in range(0, len(sorted_risk)):
-                result.append(sorted_risk[i])
+    result = []
+    for i in range(0, len(sorted_risk)):
+            result.append(sorted_risk[i])
 
     return result
 
@@ -305,8 +305,8 @@ def fund_jensen(funddf, indexdf):
 
 
     x = jensen
-        sorted_x       = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-        sorted_measure = sorted_x
+    sorted_x       = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+    sorted_measure = sorted_x
 
 
     return sorted_measure

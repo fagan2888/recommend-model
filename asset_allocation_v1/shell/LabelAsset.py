@@ -186,13 +186,13 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
             allocation_start_date = dates[i - interval].strftime('%Y-%m-%d')
 
             last_end_date = dates[-1]
-                        if i + interval < len(dates):
-                                 last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
+            if i + interval < len(dates):
+                last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
 
-                        bond_df = DBData.bond_fund_value(start_date, last_end_date)
-                        label_bond_df = DFUtil.get_date_df(bond_df, start_date, end_date)
-                        this_index_df = DFUtil.get_date_df(indexdf, start_date, end_date)
-                        funddfr = bond_df.pct_change().fillna(0.0)
+            bond_df = DBData.bond_fund_value(start_date, last_end_date)
+            label_bond_df = DFUtil.get_date_df(bond_df, start_date, end_date)
+            this_index_df = DFUtil.get_date_df(indexdf, start_date, end_date)
+            funddfr = bond_df.pct_change().fillna(0.0)
 
 
             codes, indicator     = FundFilter.bondfundfilter(allocationdata, label_bond_df, indexdf[Const.csibondindex_code])
@@ -322,15 +322,15 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
 
 
             last_end_date = dates[-1]
-                        if i + interval < len(dates):
-                                 last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
+            if i + interval < len(dates):
+                last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
 
 
 
-                        money_df = DBData.money_fund_value(start_date, last_end_date)
-                        label_money_df = DFUtil.get_date_df(money_df, start_date, end_date)
-                        #this_index_df = DFUtil.get_date_df(indexdf, start_date, end_date)
-                        funddfr = money_df.pct_change().fillna(0.0)
+            money_df = DBData.money_fund_value(start_date, last_end_date)
+            label_money_df = DFUtil.get_date_df(money_df, start_date, end_date)
+            #this_index_df = DFUtil.get_date_df(indexdf, start_date, end_date)
+            funddfr = money_df.pct_change().fillna(0.0)
 
 
             allocationdf      = DFUtil.get_date_df(label_money_df, allocation_start_date, end_date)
@@ -407,7 +407,7 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
             start_date = dates[i - 52].strftime('%Y-%m-%d')
             end_date = dates[i].strftime('%Y-%m-%d')
 
-                        label_other_df = DFUtil.get_date_df(funddf, start_date, end_date)
+            label_other_df = DFUtil.get_date_df(funddf, start_date, end_date)
             
             fund_sharpe       = FundIndicator.fund_sharp_annual(label_other_df)
 

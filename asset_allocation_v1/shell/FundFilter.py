@@ -433,10 +433,10 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 def bondfundfilter(allocationdata, funddf, indexdf):
 
 
-      dates = funddf.index.values
+    dates = funddf.index.values
     dates.sort()
-        end_date   = dates[-1].strftime('%Y-%m-%d')
-        start_date = dates[0].strftime('%Y-%m-%d')
+    end_date   = dates[-1].strftime('%Y-%m-%d')
+    start_date = dates[0].strftime('%Y-%m-%d')
 
 
     indicator = {}
