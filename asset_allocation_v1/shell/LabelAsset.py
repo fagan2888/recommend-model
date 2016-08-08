@@ -187,7 +187,7 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 
             last_end_date = dates[-1]
             if i + interval < len(dates):
-                last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
+                 last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
 
             bond_df = DBData.bond_fund_value(start_date, last_end_date)
             label_bond_df = DFUtil.get_date_df(bond_df, start_date, end_date)
@@ -323,7 +323,7 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
 
             last_end_date = dates[-1]
             if i + interval < len(dates):
-                last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
+                 last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
 
 
 

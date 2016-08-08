@@ -204,10 +204,10 @@ def risefitness(funddf, indexdf, ratio):
     result = []
     for i in range(0, (int)(len(sorted_fitness) * ratio)):
         result.append(sorted_fitness[i])
-        
-        
+
+
     return result
-    
+
 
 
 #下跌适应度
@@ -334,7 +334,7 @@ def growthfitness(funddf, indexdf, ratio):
 
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
-    
+
 
     growthcaptag = {}
 
@@ -390,7 +390,7 @@ def growthfitness(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(len(sorted_fitness) * ratio)):
-                result.append(sorted_fitness[i])
+        result.append(sorted_fitness[i])
 
 
     return result
@@ -498,23 +498,23 @@ def largecapprefer(funddf, indexdf, ratio):
 
     cols = funddfr.columns
     for col in cols:
-            p = []
-            m = []
-            rs = funddfr[col].values
-            #print col, rs
-            indexrs = indexdfr.values
-            for i in range(0, len(rs)):
-                    if isnan(rs[i]) or isnan(indexrs[i]):
-                            continue
-                    else:
-                            p.append(rs[i])
-                            m.append(indexrs[i][0])
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        indexrs = indexdfr.values
+        for i in range(0, len(rs)):
+            if isnan(rs[i]) or isnan(indexrs[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexrs[i][0])
 
-            #print p
-    #print m
-    #print np.corrcoef(p,m)
-            largecapprefer[col] = np.corrcoef(p, m)[0][1]
-     
+        #print p
+        #print m
+        #print np.corrcoef(p,m)
+        largecapprefer[col] = np.corrcoef(p, m)[0][1]
+         
 
     x = largecapprefer
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
@@ -522,7 +522,7 @@ def largecapprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(len(sorted_largecapprefer) * ratio)):
-            result.append(sorted_largecapprefer[i])
+        result.append(sorted_largecapprefer[i])
 
     return result
                 
@@ -539,22 +539,22 @@ def smallcapprefer(funddf, indexdf, ratio):
 
     cols = funddfr.columns
     for col in cols:
-            p = []
-            m = []
-            rs = funddfr[col].values
-            #print col, rs
-            indexrs = indexdfr.values
-            for i in range(0, len(rs)):
-                    if isnan(rs[i]) or isnan(indexrs[i]):
-                            continue
-                    else:
-                            p.append(rs[i])
-                            m.append(indexrs[i][0])
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        indexrs = indexdfr.values
+        for i in range(0, len(rs)):
+            if isnan(rs[i]) or isnan(indexrs[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexrs[i][0])
 
-            #print p
-    #print m
-    #print np.corrcoef(p,m)
-            smallcapprefer[col] = np.corrcoef(p, m)[0][1]
+        #print p
+        #print m
+        #print np.corrcoef(p,m)
+        smallcapprefer[col] = np.corrcoef(p, m)[0][1]
 
 
     x = smallcapprefer
@@ -564,7 +564,7 @@ def smallcapprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(len(sorted_smallcapprefer) * ratio)):
-            result.append(sorted_smallcapprefer[i])
+        result.append(sorted_smallcapprefer[i])
 
     return result
 
@@ -587,20 +587,20 @@ def growthcapprefer(funddf, indexdf, ratio):
 
     cols = funddfr.columns
     for col in cols:
-            p = []
-            m = []
-            rs = funddfr[col].values
-            #print col, rs
-            for i in range(0, len(rs)):
-                    if isnan(rs[i]) or isnan(indexr[i]):
-                            continue
-                    else:
-                            p.append(rs[i])
-                            m.append(indexr[i])
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        for i in range(0, len(rs)):
+            if isnan(rs[i]) or isnan(indexr[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexr[i])
 
-            #print p
-    #print np.corrcoef(p,m)
-            growthcapprefer[col] = np.corrcoef(p, m)[0][1]
+        #print p
+        #print np.corrcoef(p,m)
+        growthcapprefer[col] = np.corrcoef(p, m)[0][1]
 
 
     x = growthcapprefer
@@ -610,7 +610,7 @@ def growthcapprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(len(sorted_growthcapprefer) * ratio)):
-            result.append(sorted_growthcapprefer[i])
+        result.append(sorted_growthcapprefer[i])
 
     return result
                 
@@ -634,22 +634,22 @@ def valuecapprefer(funddf, indexdf, ratio):
 
     cols = funddfr.columns
     for col in cols:
-            p = []
-            m = []
-            rs = funddfr[col].values
-            #print col, rs
-            indexrs = indexdfr.values
-            for i in range(0, len(rs)):
-                    if isnan(rs[i]) or isnan(indexr[i]):
-                            continue
-                    else:
-                            p.append(rs[i])
-                            m.append(indexr[i])
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        indexrs = indexdfr.values
+        for i in range(0, len(rs)):
+            if isnan(rs[i]) or isnan(indexr[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexr[i])
 
-            #print p
-    #print m
-    #print np.corrcoef(p,m)
-            valuecapprefer[col] = np.corrcoef(p, m)[0][1]
+        #print p
+        #print m
+        #print np.corrcoef(p,m)
+        valuecapprefer[col] = np.corrcoef(p, m)[0][1]
 
 
 
@@ -660,7 +660,7 @@ def valuecapprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(len(sorted_valuecapprefer) * ratio)):
-            result.append(sorted_valuecapprefer[i])
+        result.append(sorted_valuecapprefer[i])
 
 
     return result
@@ -685,22 +685,22 @@ def ratebondprefer(funddf, indexdf, ratio):
         #print col, rs
         indexrs = indexdfr.values
         for i in range(0, len(rs)):
-                if isnan(rs[i]) or isnan(indexr[i]):
-                        continue
-                else:
-                    p.append(rs[i])
-                    m.append(indexr[i])
+            if isnan(rs[i]) or isnan(indexr[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexr[i])
 
         #print p
-    #print m
-    #print np.corrcoef(p,m)
-    #print len(p)
-    #print len(m)
-    #print type(p)
-    #print type(m)
-    p = np.array(p).reshape(1, len(p))
-    m = np.array(m).reshape(1, len(m))
-    ratebondprefer[col] = np.corrcoef(p, m)[0][1]
+        #print m
+        #print np.corrcoef(p,m)
+        #print len(p)
+        #print len(m)
+        #print type(p)
+        #print type(m)
+        p = np.array(p).reshape(1, len(p))
+        m = np.array(m).reshape(1, len(m))
+        ratebondprefer[col] = np.corrcoef(p, m)[0][1]
 
 
     x = ratebondprefer
@@ -710,7 +710,7 @@ def ratebondprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(len(sorted_ratebondprefer) * ratio)):
-            result.append(sorted_ratebondprefer[i])
+        result.append(sorted_ratebondprefer[i])
 
     return result
 
@@ -728,24 +728,24 @@ def creditbondprefer(funddf, indexdf, ratio):
 
     cols = funddfr.columns
     for col in cols:
-            p = []
-            m = []
-            rs = funddfr[col].values
-            #print col, rs
-            indexrs = indexdfr.values
-            for i in range(0, len(rs)):
-                    if isnan(rs[i]) or isnan(indexr[i]):
-                            continue
-                    else:
-                        p.append(rs[i])
-                        m.append(indexr[i])
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        indexrs = indexdfr.values
+        for i in range(0, len(rs)):
+            if isnan(rs[i]) or isnan(indexr[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexr[i])
 
-            #print p
-    #print m
-    #print np.corrcoef(p,m)
-    p = np.array(p).reshape(1, len(p))
-    m = np.array(m).reshape(1, len(m))
-    creditbondprefer[col] = np.corrcoef(p, m)[0][1]
+        #print p
+        #print m
+        #print np.corrcoef(p,m)
+        p = np.array(p).reshape(1, len(p))
+        m = np.array(m).reshape(1, len(m))
+        creditbondprefer[col] = np.corrcoef(p, m)[0][1]
 
 
     x = creditbondprefer
@@ -754,7 +754,7 @@ def creditbondprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(len(sorted_creditbondprefer) * ratio)):
-            result.append(sorted_creditbondprefer[i])
+        result.append(sorted_creditbondprefer[i])
 
     return result
 
@@ -772,24 +772,24 @@ def convertiblebondprefer(funddf, indexdf, ratio):
 
     cols = funddfr.columns
     for col in cols:
-            p = []
-            m = []
-            rs = funddfr[col].values
-            #print col, rs
-            indexrs = indexdfr.values
-            for i in range(0, len(rs)):
-                    if isnan(rs[i]) or isnan(indexr[i]):
-                            continue
-                    else:
-                        p.append(rs[i])
-                        m.append(indexr[i])
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        indexrs = indexdfr.values
+        for i in range(0, len(rs)):
+            if isnan(rs[i]) or isnan(indexr[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexr[i])
 
-            #print p
-    #print m
-    #print np.corrcoef(p,m)
-    p = np.array(p).reshape(1, len(p))
-    m = np.array(m).reshape(1, len(m))
-    convertiblebondprefer[col] = np.corrcoef(p, m)[0][1]
+        #print p
+        #print m
+        #print np.corrcoef(p,m)
+        p = np.array(p).reshape(1, len(p))
+        m = np.array(m).reshape(1, len(m))
+        convertiblebondprefer[col] = np.corrcoef(p, m)[0][1]
 
     x = convertiblebondprefer
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
@@ -797,7 +797,7 @@ def convertiblebondprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(len(sorted_convertiblebondprefer) * ratio)):
-            result.append(sorted_convertiblebondprefer[i])
+        result.append(sorted_convertiblebondprefer[i])
 
     return result
 
@@ -813,19 +813,19 @@ def tmmeasure(funddf, indexdf):
     tm = {}
     cols = funddfr.columns
     for col in cols:
-            p = []
-            m = []
-            rs = funddfr[col].values
-            #print col, rs
-            indexrs = indexdfr.values
-            for i in range(0, len(rs)):
-                    if isnan(rs[i]):
-                            continue
-                    else:
-                            p.append(rs[i])
-                            m.append(indexrs[i][0])
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        indexrs = indexdfr.values
+        for i in range(0, len(rs)):
+            if isnan(rs[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexrs[i][0])
 
-            tm[col] = fin.tm(p, m, rf)
+        tm[col] = fin.tm(p, m, rf)
 
     return tm                                
 
@@ -842,20 +842,20 @@ def hmmeasure(funddf, indexdf):
     hm = {}
     cols = funddfr.columns
     for col in cols:
-            p = []
-            m = []
-            rs = funddfr[col].values
-            #print col, rs
-            indexrs = indexdfr.values
-            for i in range(0, len(rs)):
-                    if isnan(rs[i]):
-                            continue
-                    else:
-                            p.append(rs[i])
-                            m.append(indexrs[i][0])
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        indexrs = indexdfr.values
+        for i in range(0, len(rs)):
+            if isnan(rs[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexrs[i][0])
 
-            #print p
-            hm[col] = fin.hm(p, m, rf)
+        #print p
+        hm[col] = fin.hm(p, m, rf)
 
     return hm
 
@@ -892,7 +892,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
     largecapfitness_result    = largecapfitness(funddf, capindexdf, 0.5)
     smallcapfitness_result    = smallcapfitness(funddf, capindexdf, 0.5)
-    risefitness_result        = risefitness(funddf, hs300indexdf, 0.5)
+    risefitness_result    = risefitness(funddf, hs300indexdf, 0.5)
     declinefitness_result     = declinefitness(funddf, hs300indexdf, 0.5)    
     oscillationfitness_result = oscillationfitness(funddf, hs300indexdf,  0.5)
     growthfitness_result      = growthfitness(funddf, growthvalueindexdf, 0.5)
@@ -1225,40 +1225,40 @@ def tagbondfund(allocationdata, funddf, indexdf):
     #print 'rise'
     risefitness_set = set()
     for k,v in risefitness_result:
-            risefitness_set.add(k)
-            #print k, v
+        risefitness_set.add(k)
+        #print k, v
 
     #print
     declinefitness_set = set()
     #print 'decline'
     for k,v in declinefitness_result:
-            declinefitness_set.add(k)
-            #print k, v
+        declinefitness_set.add(k)
+        #print k, v
 
     #print
 
     #print 'oscillation'
     oscillationfitness_set = set()
     for k,v in oscillationfitness_result:
-            oscillationfitness_set.add(k)
-            #print k, v
+        oscillationfitness_set.add(k)
+        #print k, v
     #print
 
 
     #print 'ratebondprefer'
     ratebondprefer_set = set()
     for k,v in ratebondprefer_result:
-            ratebondprefer_set.add(k)
+        ratebondprefer_set.add(k)
 
     #print 'ratebondprefer'
     creditbondprefer_set = set()
     for k,v in creditbondprefer_result:
-            creditbondprefer_set.add(k)
+        creditbondprefer_set.add(k)
 
 
     convertiblebondprefer_set = set()
     for k,v in convertiblebondprefer_result:
-            convertiblebondprefer_set.add(k)
+        convertiblebondprefer_set.add(k)
 
     #print risefitness_set
     #print declinefitness_set
@@ -1272,10 +1272,10 @@ def tagbondfund(allocationdata, funddf, indexdf):
         final_codes.add(code)
 
     for code in declinefitness_set:
-            final_codes.add(code)        
+        final_codes.add(code)        
 
     for code in oscillationfitness_set:
-            final_codes.add(code)
+        final_codes.add(code)
 
     for code in ratebondprefer_set:
         final_codes.add(code)
@@ -1291,38 +1291,38 @@ def tagbondfund(allocationdata, funddf, indexdf):
 
     codes = []
     for code in risefitness_set:
-            if code in final_codes:
-                    codes.append(code)
+        if code in final_codes:
+            codes.append(code)
     fund_tags['risefitness'] = codes
 
     codes = []
     for code in declinefitness_set:
-            if code in final_codes:
-                    codes.append(code)
+        if code in final_codes:
+            codes.append(code)
     fund_tags['declinefitness'] = codes
 
     codes = []
     for code in oscillationfitness_set:
-            if code in final_codes:
-                    codes.append(code)
+        if code in final_codes:
+            codes.append(code)
     fund_tags['oscillationfitness'] = codes
 
     codes = []
     for code in ratebondprefer_set:
-            if code in final_codes:
-                    codes.append(code)
+        if code in final_codes:
+            codes.append(code)
     fund_tags['ratebond'] = codes
 
     codes = []
     for code in creditbondprefer_set:
-            if code in final_codes:
-                    codes.append(code)
+        if code in final_codes:
+            codes.append(code)
     fund_tags['creditbond'] = codes
 
     codes = []
     for code in convertiblebondprefer_set:
-            if code in final_codes:
-                    codes.append(code)
+        if code in final_codes:
+            codes.append(code)
     fund_tags['convertiblebond'] = codes
 
 
@@ -1381,10 +1381,10 @@ if __name__ == '__main__':
 
     '''        
     funddf = data.fund_value(train_start, train_end)
-        funddf = funddf[codes]    
+    funddf = funddf[codes]    
     
     
-    capindexdf         = data.index_value(train_start, train_end, ['399314.SZ', '399316.SZ'])
+    capindexdf     = data.index_value(train_start, train_end, ['399314.SZ', '399316.SZ'])
     largecapindexdf    = data.index_value(train_start, train_end, ['399314.SZ'])
     smallcapindexdf    = data.index_value(train_start, train_end, ['399316.SZ'])
     hs300indexdf       = data.index_value(train_start, train_end, ['000300.SH'])
@@ -1393,8 +1393,8 @@ if __name__ == '__main__':
     positiondf         = data.fund_position(train_start, train_end)
     positiondf         = positiondf[codes]
 
-        largecapfitness    = largecapfitness(funddf, capindexdf, 0.5)
-        smallcapfitness    = smallcapfitness(funddf, capindexdf, 0.5)
+    largecapfitness    = largecapfitness(funddf, capindexdf, 0.5)
+    smallcapfitness    = smallcapfitness(funddf, capindexdf, 0.5)
     risefitness        = risefitness(funddf, hs300indexdf, 0.5)    
     declinefitness     = declinefitness(funddf, hs300indexdf, 0.5)    
     oscillationfitness = oscillationfitness(funddf, hs300indexdf,  0.5)
@@ -1562,7 +1562,7 @@ if __name__ == '__main__':
 
     codes = list(final_codes)
     funddf = data.fund_value(train_start, train_end)
-        #funddf = funddf[codes]    
+    #funddf = funddf[codes]    
 
 
     funds = set()

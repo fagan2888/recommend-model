@@ -776,9 +776,9 @@ def risk_allocation_ratio(df, lid):
             fratio = value[1]
             sql = base_sql % (lid, date, fcode, fratio)
             cursor.execute(sql)
-        conn.commit()
-        conn.close()
-        print "insert one row into risk_allocation_list"
+    conn.commit()
+    conn.close()
+    print "insert one row into risk_allocation_list"
 
 
 

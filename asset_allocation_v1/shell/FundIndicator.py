@@ -168,7 +168,7 @@ def fund_sharp_annual(funddf):
 
     result = []
     for i in range(0, len(sorted_sharp)):
-            result.append(sorted_sharp[i])
+        result.append(sorted_sharp[i])
 
 
     return result
@@ -195,7 +195,7 @@ def fund_return(funddf):
 
     result = []
     for i in range(0, len(sorted_return)):
-            result.append(sorted_return[i])
+        result.append(sorted_return[i])
 
 
     return result
@@ -220,7 +220,7 @@ def fund_risk(funddf):
 
     result = []
     for i in range(0, len(sorted_risk)):
-            result.append(sorted_risk[i])
+        result.append(sorted_risk[i])
 
     return result
 
