@@ -275,7 +275,7 @@ if __name__ == '__main__':
     all_code_position = risk_position()
     risk_dict = {}
     for record in all_code_position:
-        print str(record[0]) + ',' + str(record[1]) + ',' + str(record[2]) + ',' + str(record[3])
+        print "%.1f,%s,%06d,%.6f" % (record[0], record[1].strftime("%Y-%m-%d"), record[2], record[3])
     # print all_code_position
     # for tmp in all_code_position:
     #     if tmp[0] == 0.8:
