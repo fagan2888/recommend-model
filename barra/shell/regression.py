@@ -74,6 +74,7 @@ def multi_factor(fund_df, factor_df):
     fund_dfr   = fund_df.pct_change().fillna(0.0)
     cols     = fund_dfr.columns
 
+    data = []
     for col in cols:
 
         tmp_fund_dfr = fund_dfr[col]
@@ -85,6 +86,11 @@ def multi_factor(fund_df, factor_df):
         score = df.loc[last_index, 'alpha'] * 0.25 + 1.0 / df.loc[last_index, 'rsq'] * 0.25 + np.mean(alphas) / np.std(alphas) * 0.5 
         fund_score[col] = score
         print col, score, df.loc[last_index, 'factor'], df.loc[last_index, 'weight']
+        data.append([col, score, df.loc[last_index, 'factor'], df.loc[last_index, 'weight'] ])
+
+    df = pd.DataFrame(data, index = cols, columns = ['code', 'score', 'factor', 'weight'])
+
+    return df
 
 if __name__ == '__main__':
 
@@ -97,6 +103,6 @@ if __name__ == '__main__':
     fund_df = fund_df[-52:]
     factor_df = pd.concat([barra_df, bond_df], axis = 1, join_axes = [fund_df.index[-52:]])
 
-    fund_score = multi_factor(fund_df, factor_df)
+    df = multi_factor(fund_df, factor_df)
 
-    print fund_score
+    df.to_csv('./tmp/multi_factor.csv')
