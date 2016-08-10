@@ -203,6 +203,7 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
             #fund_code, tag = FundSelector.select_bond(allocationdf, fund_tags)
             fund_code, tag = FundSelector.select_bond(label_bond_df, fund_tags, this_index_df[Const.csibondindex_code])
 
+
             allcodes    = label_bond_df.columns
             filtercodes = codes
             poolcodes   = fund_pool
@@ -210,15 +211,28 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 
 
             if not tag.has_key('ratebond'):
-                tag['ratebond'] = pre_ratebond
+                if  '' == pre_ratebond:
+                    tag['ratebond'] = codes[0]
+                else:
+                    tag['ratebond'] = pre_ratebond
             else:
                 pre_ratebond    = tag['ratebond']
+
+
             if not tag.has_key('creditbond'):
-                tag['creditbond'] = pre_creditbond
+                if '' == pre_creditbond:
+                    tag['creditbond'] = tag['ratebond']
+                else:
+                    tag['creditbond'] = pre_creditbond
             else:
                 pre_creditbond  = tag['creditbond']
+
+
             if not tag.has_key('convertiblebond'):
-                tag['convertiblebond'] = pre_convertiblebond
+                if '' == pre_convertiblebond:
+                    tag['convertiblebond'] = tag['ratebond']
+                else:
+                    tag['convertiblebond'] = pre_convertiblebond
             else:
                 pre_convertiblebond = tag['convertiblebond']
 
