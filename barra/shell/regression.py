@@ -84,11 +84,13 @@ def multi_factor(fund_df, factor_df):
         index = df.index
         last_index = index[-1]       
         score = df.loc[last_index, 'alpha'] * 0.25 + 1.0 / df.loc[last_index, 'rsq'] * 0.25 + np.mean(alphas) / np.std(alphas) * 0.5 
+        yj_score = np.mean(alphas) / np.std(alphas) - 1.0 / df.loc[last_index, 'rsq']
         fund_score[col] = score
-        print col, score, df.loc[last_index, 'factor'], df.loc[last_index, 'weight']
-        data.append([col, score, df.loc[last_index, 'factor'], df.loc[last_index, 'weight'] ])
+        fund_score[col] = score
+        print col, yj_score, score, df.loc[last_index, 'alpha'] , df.loc[last_index, 'rsq'] , np.mean(alphas)/ np.std(alphas) 
+        data.append([col, yj_score, score, df.loc[last_index, 'alpha'] , df.loc[last_index, 'rsq'] , np.mean(alphas)/ np.std(alphas), df.loc[last_index, 'factor'], df.loc[last_index, 'weight'] ])
 
-    df = pd.DataFrame(data, index = cols, columns = ['code', 'score', 'factor', 'weight'])
+    df = pd.DataFrame(data, index = cols, columns = ['code', 'yj_score', 'score', 'alpha', 'rsq', 'alpha_persistence','factor', 'weight'])
 
     return df
 
@@ -98,10 +100,11 @@ if __name__ == '__main__':
     barra_df = pd.read_csv('./data/diff.csv', index_col='date', parse_dates=['date'])
     industry_df = pd.read_csv('./data/industry.csv', index_col='date', parse_dates=['date'])
     bond_df = pd.read_csv('./data/bonds.csv', index_col='date', parse_dates=['date'])
+    winda_df = pd.read_csv('./data/windA.csv', index_col='date', parse_dates=['date'])
     fund_df = pd.read_csv('./data/stock.csv', index_col='date', parse_dates=['date'])
 
-    fund_df = fund_df[-52:]
-    factor_df = pd.concat([barra_df, bond_df], axis = 1, join_axes = [fund_df.index[-52:]])
+    #fund_df = fund_df[-52:]
+    factor_df = pd.concat([barra_df, bond_df, winda_df], axis = 1, join_axes = [fund_df.index])
 
     df = multi_factor(fund_df, factor_df)
 
