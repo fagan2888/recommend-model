@@ -9,6 +9,7 @@ import time
 from sklearn import datasets, linear_model
 import datetime
 import statsmodels.api as sm
+import string
 
 
 factor_num = 6
@@ -96,6 +97,8 @@ def multi_factor(fund_df, factor_df):
 
 if __name__ == '__main__':
 
+    back     = 52
+    interval = 5
 
     barra_df = pd.read_csv('./data/diff.csv', index_col='date', parse_dates=['date'])
     industry_df = pd.read_csv('./data/industry.csv', index_col='date', parse_dates=['date'])
@@ -103,9 +106,34 @@ if __name__ == '__main__':
     winda_df = pd.read_csv('./data/windA.csv', index_col='date', parse_dates=['date'])
     fund_df = pd.read_csv('./data/stock.csv', index_col='date', parse_dates=['date'])
 
-    #fund_df = fund_df[-52:]
-    factor_df = pd.concat([barra_df, bond_df, winda_df], axis = 1, join_axes = [fund_df.index])
 
-    df = multi_factor(fund_df, factor_df)
+    lines = open('./data/fund_pool.csv','r').readlines()
+    codes = []
+    for line in lines:
+        code = '%06d' % string.atoi(line.strip())
+        codes.append(code)
 
-    df.to_csv('./tmp/multi_factor.csv')
+    cs = []
+    for code in codes:
+        if code in set(fund_df.columns.values):
+            cs.append(code)
+
+    fund_df = fund_df[cs]
+    dates = fund_df.index
+
+
+    for i in range(back, len(dates)):
+
+        d = dates[i]
+        str_d = d.strftime('%Y-%m-%d')
+
+        if (i - back) % interval == 0:
+
+            tmp_fund_df = fund_df.iloc[i - back : i,]
+
+            factor_df = pd.concat([barra_df, bond_df, winda_df], axis = 1, join_axes = [tmp_fund_df.index])
+
+            df = multi_factor(tmp_fund_df, factor_df)
+            df = df.sort(['score'])
+
+            df.to_csv('./tmp/multi_factor_' + str_d + '.csv')
