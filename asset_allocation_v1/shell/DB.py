@@ -24,6 +24,16 @@ db_params = {
             "charset": "utf8"
         }
 
+db_params = {
+            "host": "localhost",
+            "port": 3306,
+            "user": "root",
+            "passwd": "Mofang123",
+            "db":"asset_allocation",
+            "charset": "utf8"
+        }
+
+
 
 def fund_measure(allocationdata):
 
@@ -748,7 +758,7 @@ def risk_allocation_list(risk_value, risk_begin_date):
 
     base_sql = "replace into risk_asset_allocation_list (ra_risk, ra_date) values (%f, %s)"
     sql = base_sql % (risk_value, risk_begin_date)
-    cursor.execute(sql)
+    # cursor.execute(sql)
     conn.commit()
     conn.close()
     print "insert one row into risk_allocation_list"
@@ -775,7 +785,7 @@ def risk_allocation_ratio(df, lid):
             fcode = value[0]
             fratio = value[1]
             sql = base_sql % (lid, date, fcode, fratio)
-            cursor.execute(sql)
+            # cursor.execute(sql)
     conn.commit()
     conn.close()
     print "insert one row into risk_allocation_list"
@@ -803,8 +813,8 @@ def riskhighlowriskasset(allocationdata):
         risk_id = record[0]
 
         for date in df.index:
-            sql = "replace into risk_asset_allocation_nav (ra_alloc_id, ra_date, ra_nav, created_at, updated_at) values (%d, '%s', %f, '%s', '%s')" % (risk_id, date, df.loc[date, col], datetime.now(), datetime.now())
-            #print sql
+            # sql = "replace into risk_asset_allocation_nav (ra_alloc_id, ra_date, ra_nav, created_at, updated_at) values (%d, '%s', %f, '%s', '%s')" % (risk_id, date, df.loc[date, col], datetime.now(), datetime.now())
+            # print sql
             cursor.execute(sql)
 
     all_code_position = RiskPosition.risk_position()
@@ -853,11 +863,11 @@ def riskhighlowriskasset(allocationdata):
                     current_ratio += ratio
                     sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
                     #print sql
-                    cursor.execute(sql)
+                    #cursor.execute(sql)
                 money_ratio = 1.0 - current_ratio
                 if money_ratio > 0.00000099:
                     sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, 30003446, money_ratio, datetime.now(), datetime.now())
-                    cursor.execute(sql)
+                    #cursor.execute(sql)
                 ps = current_ps
                 last_date = d
 
@@ -867,11 +877,11 @@ def riskhighlowriskasset(allocationdata):
             current_ratio += ratio
             sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
             #print sql
-            cursor.execute(sql)
+            #cursor.execute(sql)
         money_ratio = 1.0 - current_ratio
         if money_ratio > 0.00000099:
             sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, 30003446, money_ratio, datetime.now(), datetime.now())
-            cursor.execute(sql)
+           # cursor.execute(sql)
 
     #print all_code_position
 

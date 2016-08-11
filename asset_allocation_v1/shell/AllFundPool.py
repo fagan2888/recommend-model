@@ -40,6 +40,14 @@ db_params = {
             "charset": "utf8"
         }
 
+db_params = {
+            "host": "localhost",
+            "port": 3306,
+            "user": "root",
+            "passwd": "Mofang123",
+            "db":"asset_allocation",
+            "charset": "utf8"
+        }
 
 def stock_fund_measure(allocationdata, start_date, end_date):
 
@@ -199,7 +207,6 @@ def other_fund_measure(allocationdata, start_date, end_date):
 
     base_sql = "replace into fund_pool (fp_date, fp_look_back, fp_fund_type, fp_fund_code, fp_fund_id, fp_sharpe, created_at, updated_at) values ('%s',%d, %d, '%s', %d, %f ,'%s', '%s')"
 
-    #conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
     conn = MySQLdb.connect(**db_params)
     cursor = conn.cursor()
 
