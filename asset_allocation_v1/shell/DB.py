@@ -32,6 +32,14 @@ db_params = {
             "db":"asset_allocation",
             "charset": "utf8"
         }
+mofang_db_params = {
+            "host": "127.0.0.1",
+            "port": 3306,
+            "user": "root",
+            "passwd": "Mofang123",
+            "db":"mofang",
+            "charset": "utf8"
+        }
 
 
 
@@ -888,6 +896,146 @@ def riskhighlowriskasset(allocationdata):
     conn.commit()
     conn.close()
 
+def getFee(fund_id,fee_type,amount,day=0):
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    if fee_type == 0:
+        sql = 'select * from fund_fee where ff_code="%s" and ff_type=%s and ff_fee_type=1 order by ff_fee desc limit 1' % (fund_id.zfill(6),5)
+        cur.execute(sql)
+        result = cur.fetchone()
+        fee = 0.003
+        if result:
+            fee = float(result['ff_fee'])
+            if fee <= 0.003:
+                return fee*amount
+            else:
+                fee = fee*0.2
+                if fee>=0.003:
+                    return fee*amount
+                else:
+                    return 0.003*amount
+        else:
+            sql = 'select * from fund_fee where ff_code="%s" and ff_type=%s and ff_fee_type=2 order by ff_fee asc limit 1' % (fund_id.zfill(6),5)
+            cur.execute(sql)
+            result = cur.fetchone()
+            if result:
+                fee = float(result['ff_fee'])
+                return fee
+        fund_type = getFundType(fund_id)
+        if fund_type == 'huobi':
+            return 0
+        return fee*amount
+    elif fee_type == 1:
+        sql = 'select * from fund_fee where ff_code="%s" and ff_type=%s and ff_min_value<=%s and (ff_max_value>=%s or ff_max_value=null) order by ff_fee asc limit 1' % (fund_id.zfill(6),6,day,day)
+        cur.execute(sql)
+        result = cur.fetchone()
+        if result:
+            if result['ff_fee_type'] == 2:
+                return float(result['ff_fee'])
+            else:
+                fee = float(result['ff_fee'])
+                return fee*amount 
+        else:
+            fund_type = getFundType(fund_id)
+            if fund_type == 'huobi':
+                return 0
+            return 0.01*amount
+        
+def getCompany(fund_id):
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    sql = 'select * from fund_infos where fi_code="%s"' % fund_id.zfill(6)
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result:
+        return result['fi_company_id']
+    else:
+        return 0
+    
+def isChangeOut(fund_id):
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    sql = 'select * from fund_infos where fi_code="%s"' % fund_id.zfill(6)
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result:
+        if result['fi_yingmi_transfor_status'] in [0,2]:
+            return True
+    return False
+
+def isChangeIn(fund_id):
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    sql = 'select * from fund_infos where fi_code="%s"' % fund_id.zfill(6)
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result:
+        if result['fi_yingmi_transfor_status'] in [0,1]:
+            return True
+    return False
+        
+def getShare(fund_id,amount,day,count=0):
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    if count==0:
+        sql = 'select * from wind_fund_value where wf_fund_code="%s" and wf_time>="%s" order by wf_time asc limit 1' % (fund_id.zfill(6),day)
+    else:
+        sql = 'select * from (select * from wind_fund_value where wf_fund_code="%s" and wf_time>="%s" order by wf_time asc limit %s ) as a order by wf_time desc limit 1' % (fund_id.zfill(6),day,count)
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result:
+        return [result['wf_time'],amount/float(result['wf_nav_value'])]
+    return [day,amount]
+
+def getAmount(fund_id,share,day=0):
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    if day!=0:
+        sql = 'select * from wind_fund_value where wf_fund_code="%s" and wf_time<="%s" order by wf_time desc limit 1' % (fund_id.zfill(6),day)
+    else:
+        sql = 'select * from wind_fund_value where wf_fund_code="%s" order by wf_time desc limit 1' % fund_id.zfill(6)
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result:
+        return share * float(result['wf_nav_value'])
+    return share
+    
+def getNavValue(fund_id,day):
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    sql = 'select * from wind_fund_value where wf_fund_code="%s" and wf_time<="%s" order by wf_time desc limit 1' % (fund_id.zfill(6),day)
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result:
+        return float(result['wf_nav_value'])
+    return 1 
+
+def getFundType(fund_id):
+    type_list = {'zhishu':[2001010607,200101080102],'huobi':[20010104],'zhaiquan':[20010103,2001010203],'gupiao':[20010101,2001010201,2001010202,2001010204]}
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    sql = 'select * from wind_fund_type where wf_fund_code="%s" and wf_status=1' % fund_id.zfill(6)
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result:
+        for k,v in type_list.items():
+            for i in v:
+                if str(result['wf_type']).find(str(i)) >= 0:
+                    return k
+    print 'error---------------------------'+str(fund_id)
+
+def getBuyPoFee(fund_id):
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    sql = 'select * from fund_infos where fi_code="%s"' % fund_id.zfill(6)
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result:
+        return float(result['fi_yingmi_amount'])
+    return 1 
+    
+            
+    
 
 if __name__ == '__main__':
 
