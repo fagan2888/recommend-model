@@ -798,7 +798,7 @@ def riskhighlowriskasset(allocationdata):
         for date in df.index:
             sql = "replace into risk_asset_allocation_nav (ra_alloc_id, ra_date, ra_nav, created_at, updated_at) values (%d, '%s', %f, '%s', '%s')" % (risk_id, date, df.loc[date, col], datetime.now(), datetime.now())
             #print sql
-            cursor.execute(sql)
+            #cursor.execute(sql)
 
     all_code_position = RiskPosition.risk_position()
 
