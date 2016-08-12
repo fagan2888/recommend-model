@@ -226,6 +226,8 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
             poolcodes   = fund_pool
             selectcodes = fund_code
 
+
+            '''
             if not tag.has_key('ratebond') or len(tag['ratebond']) == 0:
                 tag['ratebond'] = pre_ratebond
             else:
@@ -238,6 +240,34 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
                 tag['convertiblebond'] = pre_convertiblebond
             else:
                 pre_convertiblebond = tag['convertiblebond']
+            '''
+
+            if not tag.has_key('ratebond'):
+                if  '' == pre_ratebond:
+                    tag['ratebond'] = codes[0]
+                else:
+                    tag['ratebond'] = pre_ratebond
+            else:
+                pre_ratebond    = tag['ratebond']
+
+
+            if not tag.has_key('creditbond'):
+                if '' == pre_creditbond:
+                    tag['creditbond'] = tag['ratebond']
+                else:
+                    tag['creditbond'] = pre_creditbond
+            else:
+                pre_creditbond  = tag['creditbond']
+
+
+            if not tag.has_key('convertiblebond'):
+                if '' == pre_convertiblebond:
+                    tag['convertiblebond'] = tag['ratebond']
+                else:
+                    tag['convertiblebond'] = pre_convertiblebond
+            else:
+                pre_convertiblebond = tag['convertiblebond']
+
 
             #print tag['ratebond'], tag['creditbond'], tag['convertiblebond']
             # print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']

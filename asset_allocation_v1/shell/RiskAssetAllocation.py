@@ -27,7 +27,8 @@ def risk_asset_allocation():
 
 
     allocationdata = AllocationData.allocationdata()
-    allocationdata.start_date                            = '2010-01-01'
+    #allocationdata.start_date                            = '2010-01-01'
+    allocationdata.start_date                            = '2007-01-01'
     allocationdata.all_dates()
 
     #allocationdata.all_dates()

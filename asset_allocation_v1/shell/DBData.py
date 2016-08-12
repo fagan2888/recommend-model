@@ -739,7 +739,7 @@ if __name__ == '__main__':
     #df =  position()
     #df =  scale()
     #df  = bond_day_fund_value('2014-01-03', '2016-06-03')
-    df  = bond_fund_value('2014-01-01', '2016-07-19')
-    df.to_csv('./tmp/bond.csv')
+    df  = bond_fund_value('2004-01-01', '2004-07-19')
+    print df
     #print trade_dates('2014-01-03', '2016-06-03')
 
