@@ -81,7 +81,6 @@ def risk_position():
             break
 
 
-    #print equalrisk_ratio
     #print fund_codes
 
     #print fund_df
@@ -96,7 +95,6 @@ def risk_position():
     for i in range(0, len(dates)):
 
         d = dates[i]
-        #print d
 
         if fund_df_index < len(fund_df.index) and d >= fund_df.index[fund_df_index]:
             for label in fund_df.columns:
@@ -140,6 +138,7 @@ def risk_position():
 
 
         for risk_rank in range(1, 11):
+        #for risk_rank in range(10, 11):
 
             high_w  = (risk_rank - 1) * 1.0 / 9
             low_w = 1 - high_w
@@ -188,6 +187,7 @@ def risk_position():
                 weight   = ws.setdefault(code, 0.0)
                 ws[code] = weight  + lowriskratio * low_w
 
+
             for code in ws.keys():
                 w = ws[code]
                 if type(code) == str:
@@ -200,9 +200,46 @@ def risk_position():
 
     #print all_code_position
 
+    dct = {}
+
+    for tmp in all_code_position:
+        risk_value = tmp[0]
+        date       = tmp[1]
+        code       = tmp[2]
+        weight     = tmp[3]
+
+        rws = dct.setdefault(date, {})
+        ws  = rws.setdefault(risk_value, {})
+        w   = ws.setdefault(code, 0.0)
+        ws[code] = w + weight
+
+
+    all_code_position = []
+    dates = dct.keys()
+    dates.sort()
+    for d in dates:
+        rws = dct[d]
+        rs  = rws.keys()
+        rs.sort()
+        for risk in rs:
+            ws = rws[risk]
+            total_w = 0
+            for k,v in ws.items():
+                if v <= 0.01:
+                    continue
+                all_code_position.append([risk, d, k, v])
+                total_w = total_w + v
+        all_code_position.append([risk, d, 213009, 1 - total_w])
+
+
+    #for tmp in all_code_position:
+    #    print tmp[0], tmp[1], tmp[2], tmp[3]
+
 
     all_code_position = clean_min(all_code_position)
     all_code_position = clean_same(all_code_position)
+
+
     return all_code_position
 
 def clean_same(re):
@@ -263,7 +300,7 @@ def clean_min(re):
     tmp1 = {}
     tmp_list = []
     for i in re:
-        if i[3] < 0.01:    
+        if i[3] < 0.01 and i[3]!=0:    
             if tmp.has_key(str(i[0])+'--'+str(i[1])):
                 tmp[str(i[0])+'--'+str(i[1])] += i[3]
             else:
@@ -293,19 +330,18 @@ def clean_min(re):
                     kk[str(i[0])+'--'+str(i[1])] = round(c[3]-i[3],6)
         result.append(tuple(c))
     return result
-            
-            
+
 
 if __name__ == '__main__':
 
     all_code_position = risk_position()
-    risk_dict = {}
-    for record in all_code_position:
-        print str(record[0]) + ',' + str(record[1]) + ',' + str(record[2]) + ',' + str(record[3])
+    #risk_dict = {}
+    #for record in all_code_position:
+    #    print str(record[0]) + ',' + str(record[1]) + ',' + str(record[2]) + ',' + str(record[3])
         # print all_code_position
-    # for tmp in all_code_position:
-    #     if tmp[0] == 0.8:
-    #         print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
+    #for tmp in all_code_position:
+    #    if tmp[0] == 1.0:
+    #        print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
 
     '''
     fund_df                   = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
