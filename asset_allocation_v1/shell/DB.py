@@ -844,12 +844,12 @@ def riskhighlowriskasset(allocationdata):
                 for f_id in ps.keys():
                     ratio = ps[f_id]
                     current_ratio += ratio
-                    sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
+                    sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio, ra_approve_status, created_at, updated_at) values (%d, "%s", %d, %f, 5, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
                     #print sql
                     cursor.execute(sql)
                 money_ratio = 1.0 - current_ratio
                 if money_ratio > 0.00000099:
-                    sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, 30003446, money_ratio, datetime.now(), datetime.now())
+                    sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio, ra_approve_status, created_at, updated_at) values (%d, "%s", %d, %f, 5,"%s", "%s")' % (list_id, last_date, 30003446, money_ratio, datetime.now(), datetime.now())
                     cursor.execute(sql)
                 ps = current_ps
                 last_date = d
@@ -858,16 +858,17 @@ def riskhighlowriskasset(allocationdata):
         for f_id in ps.keys():
             ratio = ps[f_id]
             current_ratio += ratio
-            sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
+            sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  ra_approve_status, created_at, updated_at) values (%d, "%s", %d, %f, 5, "%s", "%s")' % (list_id, last_date, f_id, ratio, datetime.now(), datetime.now())
             #print sql
             cursor.execute(sql)
         money_ratio = 1.0 - current_ratio
         if money_ratio > 0.00000099:
-            sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  created_at, updated_at) values (%d, "%s", %d, %f, "%s", "%s")' % (list_id, last_date, 30003446, money_ratio, datetime.now(), datetime.now())
+            sql       = 'replace into risk_asset_allocation_ratio (ra_alloc_id, ra_transfer_date, ra_fund_id, ra_fund_ratio,  ra_approve_status ,created_at, updated_at) values (%d, "%s", %d, %f, 5, "%s", "%s")' % (list_id, last_date, 30003446, money_ratio, datetime.now(), datetime.now())
             cursor.execute(sql)
 
     #print all_code_position
 
+    #sql = 'UPDATE `risk_asset_allocation_ratio` SET `ra_approve_status`=5 WHERE 1'
     conn.commit()
     conn.close()
 
