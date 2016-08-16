@@ -3,6 +3,7 @@
 
 
 import pandas as pd
+import TradeUtil
 
 
 
@@ -274,9 +275,9 @@ if __name__ == '__main__':
 
     all_code_position = risk_position()
     risk_dict = {}
-    for record in all_code_position:
-        print "%.1f,%s,%06d,%.6f" % (record[0], record[1].strftime("%Y-%m-%d"), record[2], record[3])
-    #TradeUtil.cost(all_code_position)
+   # for record in all_code_position:
+   #     print "%.1f,%s,%06d,%.6f" % (record[0], record[1].strftime("%Y-%m-%d"), record[2], record[3])
+    TradeUtil.getDailyNav(all_code_position)
     # print all_code_position
     # for tmp in all_code_position:
     #     if tmp[0] == 0.8:

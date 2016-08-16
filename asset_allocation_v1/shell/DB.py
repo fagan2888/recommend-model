@@ -25,7 +25,7 @@ db_params = {
         }
 
 db_params = {
-            "host": "localhost",
+            "host": "127.0.0.1",
             "port": 3306,
             "user": "root",
             "passwd": "Mofang123",
@@ -897,6 +897,7 @@ def riskhighlowriskasset(allocationdata):
     conn.close()
 
 def getFee(fund_id,fee_type,amount,day=0):
+    amount = float(amount)
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     if fee_type == 0:
@@ -939,7 +940,7 @@ def getFee(fund_id,fee_type,amount,day=0):
             fund_type = getFundType(fund_id)
             if fund_type == 'huobi':
                 return 0
-            return 0.01*amount
+            return 0.00*amount
         
 def getCompany(fund_id):
     conn = MySQLdb.connect(**mofang_db_params)
@@ -1034,6 +1035,49 @@ def getBuyPoFee(fund_id):
         return float(result['fi_yingmi_amount'])
     return 1 
     
+def getRiskPosition(status):
+    conn = MySQLdb.connect(**db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    if status==0:
+        sql = 'select * from risk_asset_allocation_ratio order by ra_alloc_id,ra_transfer_date asc'
+    else:
+        sql = 'select * from risk_asset_allocation_ratio where ra_approve_status=5 order by ra_alloc_id,ra_transfer_date asc'
+    cur.execute(sql)
+    result = cur.fetchall()
+    tmp = []
+    if result:
+        for i in result:
+            tmp.append(tuple([i['ra_alloc_id'],str(i['ra_transfer_date'])+' 00:00:00',getFundCode(str(i['ra_fund_id'])),float(i['ra_fund_ratio'])]))
+    return tmp
+     
+def getFundCode(fund_id):
+    conn = MySQLdb.connect(**mofang_db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    sql = 'select * from fund_infos where fi_globalid="%s"' % fund_id
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result:
+        return result['fi_code']
+
+def insertNav(risk,position,risk_type):
+    conn = MySQLdb.connect(**db_params)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    if len(position)>0:
+        if risk_type == 0:
+            sql = 'delete from risk_asset_allocation_nav where ra_type=2 and ra_alloc_id=%s' % risk
+            cur.execute(sql)
+            for i in position:
+                sql = 'insert into risk_asset_allocation_nav(ra_type,ra_alloc_id,ra_date,ra_nav,ra_inc) values(%s,%s,"%s",%s,%s)' % (2,risk,i['date'],round(i['nav'],6),round(i['inc'],4))
+                cur.execute(sql)
+        else:
+            sql = 'delete from risk_asset_allocation_nav where ra_type=8 and ra_alloc_id=%s' % risk
+            cur.execute(sql)
+            for i in position:
+                sql = 'insert into risk_asset_allocation_nav(ra_type,ra_alloc_id,ra_date,ra_nav,ra_inc) values(%s,%s,"%s",%s,%s)' % (8,risk,i['date'],round(i['nav'],6),round(i['inc'],4))
+                cur.execute(sql)
+    conn.commit()
+    conn.close()
+                
             
     
 
