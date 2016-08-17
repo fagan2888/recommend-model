@@ -21,7 +21,7 @@ if __name__ == '__main__':
                 while j < len(vs) and vs[j] == replace:
                     vs[j] = np.nan
                     j = j + 1
-                i = j 
+                i = j
         data.append(vs)
 
 

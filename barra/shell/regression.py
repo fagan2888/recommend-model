@@ -83,7 +83,7 @@ def multi_factor(fund_df, factor_df):
         df = df.sort(['rsq'])
         alphas = df['alpha'].values
         index = df.index
-        last_index = index[-1]       
+        last_index = index[-1]
         score = df.loc[last_index, 'alpha'] * 0.25 + 1.0 / df.loc[last_index, 'rsq'] * 0.25 + np.mean(alphas) / np.std(alphas) * 0.5 
         yj_score = np.mean(alphas) / np.std(alphas) - 1.0 / df.loc[last_index, 'rsq']
         fund_score[col] = score
