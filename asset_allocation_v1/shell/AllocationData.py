@@ -17,14 +17,14 @@ db_params = {
             "db":"mofang_api",
             "charset": "utf8"
         }
-db_params = {
-            "host": "localhost",
-            "port": 3306,
-            "user": "root",
-            "passwd": "Mofang123",
-            "db":"mofang",
-            "charset": "utf8"
-        }
+# db_params = {
+#             "host": "localhost",
+#             "port": 3306,
+#             "user": "root",
+#             "passwd": "Mofang123",
+#             "db":"mofang",
+#             "charset": "utf8"
+#         }
 
 
 
