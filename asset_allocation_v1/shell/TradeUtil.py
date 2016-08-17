@@ -404,6 +404,13 @@ if __name__ == '__main__':
     print 'startInsert'
     for i in result:
         DB.insertNav(i['risk'],i['data'],risk_type)
+    risk_type = 1
+    print 'getPositionSuccess'
+    risk_position = DB.getRiskPosition(risk_type)
+    result = getDailyNav(risk_position)
+    print 'startInsert'
+    for i in result:
+        DB.insertNav(i['risk'],i['data'],risk_type)
     #print getDelDay('2016-01-03','2016-01-01')
     #getFee(fund_id,fee_type,amount,day=0)
 
