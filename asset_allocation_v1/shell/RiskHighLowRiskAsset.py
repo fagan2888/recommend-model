@@ -180,7 +180,7 @@ def highlowriskasset():
 
 
     df       = pd.read_csv('./data/qieman.csv', index_col = 'date', parse_dates = 'date' ).fillna(method = 'pad')
-    df       = df.resample('W-FRI').last()
+    #df       = df.resample('W-FRI').last()
     dfr      = df.pct_change().fillna(0.0)
 
 
@@ -201,7 +201,7 @@ def highlowriskasset():
 
     cols = df.columns
     highdfr = dfr[cols[0:4]]
-    lowdfr  = dfr[cols[4:7]]
+    #lowdfr  = dfr[cols[4:7]]
 
     his_week = 13
     interval = 1
@@ -219,7 +219,7 @@ def highlowriskasset():
     #lowdf.to_csv('lowdf.csv')
 
     highdfr = dfr[cols[0:4]][-13:]
-    lowdfr  = dfr[cols[4:7]][-13:]
+    #lowdfr  = dfr[cols[4:7]][-13:]
 
     #print highdfr
     #print lowdfr
