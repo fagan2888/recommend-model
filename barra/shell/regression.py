@@ -95,6 +95,7 @@ def multi_factor(fund_df, factor_df):
 
     return df
 
+
 if __name__ == '__main__':
 
     back     = 52
