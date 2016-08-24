@@ -14,10 +14,11 @@ import Portfolio as PF
 df  = pd.read_csv('./data/fund.csv', index_col = 'date', parse_dates = 'date' )
 #df  = df.resample('W-FRI').last().fillna(method = 'pad')
 dfr = df.pct_change().fillna(0.0)
-print df
+#print df
+
 
 cols = df.columns
-highdfr = dfr[cols[0:3]]
+highdfr = dfr[cols[2:4]]
 #lowdfr  = dfr[cols[6:10]]
 
 
@@ -60,11 +61,11 @@ for i in range(his_week + 1, len(dates)):
         #print highws
 
 df = pd.DataFrame(rs, index = ds, columns = ['nav'])
-#print df
-df.to_csv('./wenjing.csv')
+print df
+df.to_csv('./zhanggaoqi.csv')
 
 position_df = pd.DataFrame(position_data, index = position_ds, columns = highdfr.columns)
-position_df.to_csv('./wenjing_position.csv')
+#position_df.to_csv('./zhanggaoqi.csv')
 
 
 '''

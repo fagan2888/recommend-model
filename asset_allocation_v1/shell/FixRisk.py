@@ -138,8 +138,8 @@ def fixrisk(allocationdata):
 if __name__ == '__main__':
 
 
-    df = pd.read_csv('./data/qieman.csv', index_col = 'date', parse_dates = ['date'])
-    #df = df.fillna(method ='pad')
+    df = pd.read_csv('./data/fund.csv', index_col = 'date', parse_dates = ['date'])
+    df = df.fillna(method ='pad')
     df = df.dropna()
 
 

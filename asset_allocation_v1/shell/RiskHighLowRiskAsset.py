@@ -91,7 +91,7 @@ def highriskasset(dfr, his_week, interval):
     highriskposition_df.to_csv('./tmp/highriskposition.csv')
 
 
-    print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(result_df['high_risk_asset'].values)
+    #print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(result_df['high_risk_asset'].values)
 
 
     return result_df
@@ -156,7 +156,7 @@ def lowriskasset(dfr, his_week, interval):
         portfolio_vs.append(pv)
         result_dates.append(d)
 
-        print d , pv
+        #print d , pv
 
 
     result_datas  = portfolio_vs
@@ -172,64 +172,79 @@ def lowriskasset(dfr, his_week, interval):
     lowriskposition_df.to_csv('./tmp/lowriskposition.csv')
 
 
-    print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(result_df['low_risk_asset'].values)
+    #print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(result_df['low_risk_asset'].values)
     return result_df
 
 
 def highlowriskasset():
 
 
-    df       = pd.read_csv('./data/qieman.csv', index_col = 'date', parse_dates = 'date' ).fillna(method = 'pad')
-    #df       = df.resample('W-FRI').last()
+    df       = pd.read_csv('./data/fund.csv', index_col = 'date', parse_dates = 'date' ).fillna(method = 'pad')
+    df       = df.resample('W-FRI').last()
     dfr      = df.pct_change().fillna(0.0)
 
 
-    #equaldf       = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date', parse_dates = 'date' )
+    equaldf       = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date', parse_dates = 'date' )
     #equaldf       = pd.read_csv('./tmp/equalriskassetday.csv', index_col = 'date', parse_dates = 'date')
-    #equaldfr      = equaldf.pct_change().fillna(0.0)
+    equaldfr      = equaldf.pct_change().fillna(0.0)
 
 
-    #equaldfr      = equaldfr[equaldfr.columns[0:2]]
-    #dfr           = dfr[dfr.columns[2:7]]
+    equaldfr      = equaldfr[equaldfr.columns[0:1]]
+    dfr           = dfr[dfr.columns[1:4]]
 
     #print equaldfr
     #print dfr
 
-    #dfr = pd.concat([equaldfr, dfr], axis = 1, join_axes=[equaldfr.index])
+    dfr = pd.concat([equaldfr, dfr], axis = 1, join_axes=[equaldfr.index])
+
+    dfr      = df.pct_change().fillna(0.0)
+    #print dfr
 
     #print dfr.columns
 
     cols = df.columns
-    highdfr = dfr[cols[0:4]]
-    #lowdfr  = dfr[cols[4:7]]
+    highdfr = dfr[cols[0:2]]
+    lowdfr  = dfr[cols[2:4]]
 
     his_week = 13
-    interval = 1
+    interval = 13
 
     #print highdfr.columns
     #print lowdfr.columns
 
-    #highdf = highriskasset(highdfr, his_week, interval)
+    highdf = highriskasset(highdfr, his_week, interval)
+    highdf = highdf[highdf.index >= datetime.strptime('2007-07-22', '%Y-%m-%d')]
     #print highdf
-    #lowdf  = lowriskasset(lowdfr, his_week, interval)
-    #print lowdf
+    print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(highdf['high_risk_asset'].values)
+    print "sharpe : ", FundIndicator.portfolio_sharpe(highdf['high_risk_asset'].values)
+    print "return : ", FundIndicator.portfolio_return(highdf['high_risk_asset'].values)
+    print "risk : ", FundIndicator.portfolio_risk(highdf['high_risk_asset'].values)
 
+    lowdf  = lowriskasset(lowdfr, his_week, interval)
+    lowdf  = lowdf[lowdf.index >= datetime.strptime('2007-07-22', '%Y-%m-%d')]
+    #print lowdf
+    print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(lowdf['low_risk_asset'].values)
+    print "sharpe : ", FundIndicator.portfolio_sharpe(lowdf['low_risk_asset'].values)
+    print "return : ", FundIndicator.portfolio_return(lowdf['low_risk_asset'].values)
+    print "risk : ", FundIndicator.portfolio_risk(lowdf['low_risk_asset'].values)
 
     #highdf.to_csv('highdf.csv')
     #lowdf.to_csv('lowdf.csv')
 
-    highdfr = dfr[cols[0:4]][-13:]
+    #highdfr = dfr[cols[0:4]][-13:]
     #lowdfr  = dfr[cols[4:7]][-13:]
 
     #print highdfr
     #print lowdfr
 
-    uplimit   = [1.0, 1.0, 1.0, 1.0]
-    downlimit = [0.0, 0.0, 0.0, 0.0]
+    #uplimit   = [1.0, 1.0, 1.0, 1.0]
+    #downlimit = [0.0, 0.0, 0.0, 0.0]
 
-    risk, returns, ws, sharpe = PF.markowitz_r(highdfr, [downlimit, uplimit])
+    #risk, returns, ws, sharpe = PF.markowitz_r(highdfr, [downlimit, uplimit])
 
-    print ws
+    #print ws
+
+
 
 if __name__ == '__main__':
 

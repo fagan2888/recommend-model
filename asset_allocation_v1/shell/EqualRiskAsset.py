@@ -27,11 +27,9 @@ def equalriskasset(allocationdata):
     ratio_dates      = ratio_df.index
     start_date = ratio_dates[0]
 
-
     dfr              = allocationdata.label_asset_df.pct_change().fillna(0.0)
     #dfr              = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
     dfr              = dfr[dfr.index >= start_date]
-
 
     dates = dfr.index
     ratio_dates = ratio_df.index
@@ -70,6 +68,7 @@ def equalriskasset(allocationdata):
             for asset in assetlabels:
                 asset_ratio[asset] = ratio_df.loc[d, asset]
 
+
         asset_vs = []
         for col in ratio_df.columns:
             asset_vs.append(asset_values[col][-1])
@@ -77,7 +76,7 @@ def equalriskasset(allocationdata):
         result_datas.append(asset_vs)
         result_dates.append(d)
 
-
+        #print d, asset_vs
 
     #new_assetlabels  = ['largecap','smallcap','rise','oscillation','decline','growth','value','SP500.SPI','GLNC','HSCI.HI']
     result_df = pd.DataFrame(result_datas, index=result_dates, columns=ratio_df.columns)
@@ -96,14 +95,14 @@ def equalriskasset(allocationdata):
 
 if __name__ == '__main__':
 
-    df  = pd.read_csv('./data/qieman.csv', index_col = 'date' ,parse_dates = ['date']).fillna(method = 'pad')
-    dfr = df.pct_change().fillna(0.0)
-    #allocationdata = AllocationData.allocationdata()
-    #allocationdata.label_asset_df = df
+    df  = pd.read_csv('./data/fund.csv', index_col = 'date' ,parse_dates = ['date']).fillna(method = 'pad')
+    #dfr = df.pct_change().fillna(0.0)
+    allocationdata = AllocationData.allocationdata()
+    allocationdata.label_asset_df = df
     ratio_df = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date' ,parse_dates = ['date'])
 
-    print ratio_df
+    #print ratio_df
     #rdf = dfr.shift(1) * ratio_df
     #print rdf
-    #allocationdata.equal_risk_asset_ratio_df = df
-    #equalriskasset(allocationdata)
+    allocationdata.equal_risk_asset_ratio_df = ratio_df
+    equalriskasset(allocationdata)
