@@ -125,6 +125,7 @@ def fixrisk(allocationdata):
                 position = 0
             elif (not (position <= p * 0.5 or position >= p * 2.0)) and (not (position <= p - 0.2 or position >= p + 0.2)):
                 position = p
+
             #if position < 0.1:
             #    position = 0.0
 
