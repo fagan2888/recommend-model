@@ -753,6 +753,6 @@ if __name__ == '__main__':
     #df =  scale()
     #df  = bond_day_fund_value('2014-01-03', '2016-06-03')
     df  = bond_fund_value('2014-01-01', '2016-07-19')
-    df.to_csv('./tmp/bond.csv')
+    df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/bond.csv')
     #print trade_dates('2014-01-03', '2016-06-03')
 

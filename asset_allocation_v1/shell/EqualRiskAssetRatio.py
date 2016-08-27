@@ -35,7 +35,7 @@ def equalriskassetratio(allocationdata):
     assetlabels = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']
 
     dfr         = allocationdata.label_asset_df
-    #dfr         = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
+    #dfr         = pd.read_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
     dates = dfr.index
 
 
@@ -111,7 +111,7 @@ def equalriskassetratio(allocationdata):
     result_df = pd.DataFrame(result_datas, index=result_dates, columns=assetlabels)
     result_df.index.name = 'date'
 
-    result_df.to_csv('./tmp/equalriskassetratio.csv')
+    result_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/equalriskassetratio.csv')
 
     allocationdata.equal_risk_asset_ratio_df = result_df
 

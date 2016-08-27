@@ -316,7 +316,7 @@ def fund_jensen(funddf, indexdf):
 if __name__ == '__main__':
 
 
-    df = pd.read_csv('./tmp/highriskasset.csv', index_col = 'date', parse_dates = ['date'])
+    df = pd.read_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/highriskasset.csv', index_col = 'date', parse_dates = ['date'])
 
     print "sharpe : ", portfolio_sharpe(df['high_risk_asset'].values)
     print "annual_return : ", portfolio_return(df['high_risk_asset'].values)

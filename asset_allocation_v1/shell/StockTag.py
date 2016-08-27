@@ -1186,7 +1186,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=tag_columns)
     indicator_df.index.name = 'code'
-    indicator_df.to_csv('./tmp/stock_label_' + end_date + '.csv')
+    indicator_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/stock_label_' + end_date + '.csv')
 
     allocationdata.stock_fund_label[end_date] = indicator_df
 
@@ -1356,7 +1356,7 @@ def tagbondfund(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=tag_columns)
     indicator_df.index.name = 'code'
-    indicator_df.to_csv('./tmp/bond_label_' + end_date + '.csv')
+    indicator_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/bond_label_' + end_date + '.csv')
 
     allocationdata.bond_fund_label[end_date] = indicator_df
     

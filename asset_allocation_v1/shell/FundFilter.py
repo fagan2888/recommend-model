@@ -411,14 +411,14 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=['sharpe', 'jensen', 'sortino', 'ppw', 'stability'])
     indicator_df.index.name = 'code'
-    indicator_df.to_csv('./tmp/stock_indicator_' + end_date + '.csv')
+    indicator_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/stock_indicator_' + end_date + '.csv')
 
 
     allocationdata.stock_fund_measure[end_date] = indicator_df
 
 
     '''
-    f = open('./tmp/stockfilter_codes_' + end_date + '.csv','w')
+    f = open('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/stockfilter_codes_' + end_date + '.csv','w')
     for code in codes:
         f.write(str(code) + '\n')
 
@@ -586,14 +586,14 @@ def bondfundfilter(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=['sharpe', 'jensen', 'sortino', 'ppw', 'stability'])
     indicator_df.index.name = 'code'
-    indicator_df.to_csv('./tmp/bond_indicator_' + end_date + '.csv')
+    indicator_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/bond_indicator_' + end_date + '.csv')
 
 
     allocationdata.bond_fund_measure[end_date] = indicator_df
 
 
     '''
-    f = open('./tmp/bondfilter_codes_' + end_date + '.csv','w')
+    f = open('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/bondfilter_codes_' + end_date + '.csv','w')
     for code in codes:
         f.write(str(code) + '\n')
 

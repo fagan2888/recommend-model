@@ -149,13 +149,13 @@ class allocationdata:
         #print 'scale done'    
         #print 'load data done'
 
-        #self.stock_df.to_csv('./tmp/stock.csv')    
-        #self.bond_df.to_csv('./tmp/bond.csv')    
-        #self.money_df.to_csv('./tmp/money.csv')    
-        #self.other_df.to_csv('./tmp/other.csv')    
-        #self.index_df.to_csv('./tmp/index.csv')    
-        #self.position_df.to_csv('./tmp/position.csv')    
-        #self.scale_df.to_csv('./tmp/scale.csv')    
+        #self.stock_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/stock.csv')    
+        #self.bond_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/bond.csv')    
+        #self.money_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/money.csv')    
+        #self.other_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/other.csv')    
+        #self.index_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/index.csv')    
+        #self.position_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/position.csv')    
+        #self.scale_df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/scale.csv')    
 
         return 0
     
