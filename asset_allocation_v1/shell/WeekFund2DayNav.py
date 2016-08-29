@@ -3,6 +3,7 @@
 
 import pandas as pd
 import numpy  as np
+import os
 import sys
 sys.path.append('shell')
 import datetime
@@ -10,7 +11,7 @@ import DBData
 import DFUtil
 import AllocationData
 import re
-
+from Const import datadir
 
 pattern = re.compile(r'\d+')
 
@@ -25,9 +26,9 @@ def codes_r(d, dfr, codes):
 def week2day(allocationdata):
 
 
-	stock_df = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
-	bond_df  = pd.read_csv('./tmp/bond_fund.csv',  index_col = 'date', parse_dates = ['date'])
-	money_df = pd.read_csv('./tmp/money_fund.csv', index_col = 'date', parse_dates = ['date'])
+	stock_df = pd.read_csv(os.path.join(datadir, 'stock_fund.csv'), index_col = 'date', parse_dates = ['date'])
+	bond_df  = pd.read_csv(os.path.join(datadir, 'bond_fund.csv'),  index_col = 'date', parse_dates = ['date'])
+	money_df = pd.read_csv(os.path.join(datadir, 'money_fund.csv'), index_col = 'date', parse_dates = ['date'])
 
 
 	#print stock_df
@@ -131,11 +132,11 @@ def week2day(allocationdata):
 	alldf = pd.DataFrame(np.matrix(values).T, index = dfr.index, columns = dfr.columns)
 
 	allocationdata.label_asset_df = alldf	
-	alldf.to_csv('./tmp/labelasset.csv')
+	alldf.to_csv(os.path.join(datadir, 'labelasset.csv'))
 
 	week_df = alldf.resample('W-FRI').last()
 	week_df = week_df.fillna(method = 'pad')
-	week_df.to_csv('./tmp/labelassetweek.csv')
+	week_df.to_csv(os.path.join(datadir, 'labelassetweek.csv'))
 
 		#print start_date, d, end_date			
 	#print df

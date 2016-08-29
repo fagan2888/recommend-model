@@ -17,7 +17,6 @@ def risk_position():
     highriskposition_ratio_df = pd.read_csv(os.path.join(datadir,'highriskposition.csv'), index_col = 'date', parse_dates = ['date'])
     lowriskposition_ratio_df  = pd.read_csv(os.path.join(datadir,'lowriskposition.csv'), index_col = 'date', parse_dates = ['date'])
     risk_portfolio_df         = pd.read_csv(os.path.join(datadir,'risk_portfolio.csv') , index_col  = 'date', parse_dates = ['date'])
-    risk_portfolio_df         = pd.read_csv(os.path.join(datadir,'risk_portfolio.csv') , index_col  = 'date', parse_dates = ['date'])
     label_asset_df            = pd.read_csv(os.path.join(datadir,'labelasset.csv') , index_col  = 'date', parse_dates = ['date'])
 
 

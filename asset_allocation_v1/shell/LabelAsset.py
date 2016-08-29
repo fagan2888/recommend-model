@@ -221,9 +221,9 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
             if len(codes) == 1:
                 fund_pool = codes
                 fund_code = codes
-                tag['ratebond']        = codes[0]
-                tag['creditbond']      = codes[0]
-                tag['convertiblebond'] = codes[0]
+                tag['ratebond']        = codes
+                tag['creditbond']      = codes
+                tag['convertiblebond'] = codes
 
             allcodes    = label_bond_df.columns
             filtercodes = codes
@@ -383,7 +383,7 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
     fund_df = pd.DataFrame(fund_datas, index=fund_dates, columns=['money'])
     fund_df.index.name = 'date'
 
-    fund_df.to_csv(os.path.join(datadir,'money_fund_sharpe.csv'))
+    fund_df.to_csv(os.path.join(datadir,'money_fund.csv'))
     allocationdata.money_fund_sharpe_df = fund_df
 
     print 'money label asset done'
@@ -516,6 +516,7 @@ def labelasset(allocationdata):
     allocationdata.label_asset_df = df
 
 
+if __name__ == '__main__':
     start_date = '2007-01-05'
     end_date = '2016-04-22'
 
