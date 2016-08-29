@@ -6,11 +6,13 @@ import MySQLdb
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import os
 import sys
 sys.path.append('shell')
 import Const
 import dbconfig
 
+from Const import datadir
 
 db_params = dbconfig.db_mofang
 
@@ -740,6 +742,6 @@ if __name__ == '__main__':
     #df =  scale()
     #df  = bond_day_fund_value('2014-01-03', '2016-06-03')
     df  = bond_fund_value('2014-01-01', '2016-07-19')
-    df.to_csv('./tmp/bond.csv')
+    df.to_csv(os.path.join(datadir,'bond.csv'))
     #print trade_dates('2014-01-03', '2016-06-03')
 

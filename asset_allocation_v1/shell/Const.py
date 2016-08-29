@@ -27,3 +27,8 @@ hs_code                   = 'HSCI.HI'     #恒生指数
 
 
 fund_num = 5
+
+# 定义全局变量
+version = '1.0'
+verbose = False
+datadir = "./tmp"

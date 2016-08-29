@@ -4,6 +4,7 @@
 
 import numpy as np
 import string
+import os
 import sys
 sys.path.append("windshell")
 import Financial as fin
@@ -13,6 +14,7 @@ from datetime import datetime
 import pandas as pd
 import FundFilter as ff
 
+from Const import datadir
 
 
 def fund_maxsemivariance(funddf):
@@ -315,7 +317,7 @@ def fund_jensen(funddf, indexdf):
 if __name__ == '__main__':
 
 
-    df = pd.read_csv('./tmp/highriskasset.csv', index_col = 'date', parse_dates = ['date'])
+    df = pd.read_csv(os.path.join(datadir,'highriskasset.csv'), index_col = 'date', parse_dates = ['date'])
 
     print "sharpe : ", portfolio_sharpe(df['high_risk_asset'].values)
     print "annual_return : ", portfolio_return(df['high_risk_asset'].values)

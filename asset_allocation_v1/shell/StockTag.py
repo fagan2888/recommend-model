@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+import os
 import sys
 sys.path.append("windshell")
 import Const
@@ -13,6 +14,7 @@ import FundIndicator as fi
 import AllocationData
 import Data
 
+from Const import datadir
 
 #大盘适应度
 def largecapfitness(funddf, indexdf, ratio):
@@ -1186,7 +1188,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=tag_columns)
     indicator_df.index.name = 'code'
-    indicator_df.to_csv('./tmp/stock_label_' + end_date + '.csv')
+    indicator_df.to_csv(os.path.join(datadir,'stock_label_' + end_date + '.csv'))
 
     allocationdata.stock_fund_label[end_date] = indicator_df
 
@@ -1356,7 +1358,7 @@ def tagbondfund(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=tag_columns)
     indicator_df.index.name = 'code'
-    indicator_df.to_csv('./tmp/bond_label_' + end_date + '.csv')
+    indicator_df.to_csv(os.path.join(datadir,'bond_label_' + end_date + '.csv'))
 
     allocationdata.bond_fund_label[end_date] = indicator_df
 

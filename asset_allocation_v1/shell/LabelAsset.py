@@ -3,6 +3,7 @@
 
 import numpy as np
 import string
+import os
 import sys
 sys.path.append("windshell")
 import Financial as FIN
@@ -20,6 +21,7 @@ import AllocationData
 import DBData
 import DFUtil
 
+from Const import datadir
 
 def mean_r(d, funddfr, codes):
     r   = 0.0
@@ -75,6 +77,8 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
             #print
             #print time.time()
 
+            label_stock_df.to_csv(os.path.join(datadir,'stock_' + dates[i].strftime('%Y-%m-%d') + '.csv'))
+
             codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[Const.hs300_code])
 
             #print time.time()
@@ -103,7 +107,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
             #print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']
 
 
-            f = open('./tmp/stock_pool_codes_' + end_date +'.txt','w')
+            f = open(os.path.join(datadir,'stock_pool_codes_' + end_date +'.txt'),'w')
             for code in poolcodes:
                 f.write(str(code) + "\n")
             f.close()
@@ -140,14 +144,14 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 
     result_df = pd.DataFrame(result_datas, index = result_dates, columns=['largecap', 'smallcap', 'rise', 'oscillation', 'decline', 'growth', 'value'])
-    result_df.to_csv('./tmp/stocklabelasset.csv')
+    result_df.to_csv(os.path.join(datadir,'stocklabelasset.csv'))
 
     select_df = pd.DataFrame(select_datas, index = result_dates, columns=['allcodes','filtercodes','poolcode','selectcode'])
-    select_df.to_csv('./tmp/stockselectasset.csv')
+    select_df.to_csv(os.path.join(datadir,'stockselectasset.csv'))
 
     fund_df = pd.DataFrame(fund_datas , index = fund_dates, columns=['largecap', 'smallcap', 'rise', 'oscillation', 'decline', 'growth', 'value'])
     fund_df.index.name = 'date'
-    fund_df.to_csv('./tmp/stock_fund.csv')
+    fund_df.to_csv(os.path.join(datadir,'stock_fund.csv'))
 
 
     allocationdata.stock_fund_df = fund_df
@@ -217,9 +221,9 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
             if len(codes) == 1:
                 fund_pool = codes
                 fund_code = codes
-                tag['ratebond']        = codes
-                tag['creditbond']      = codes
-                tag['convertiblebond'] = codes
+                tag['ratebond']        = codes[0]
+                tag['creditbond']      = codes[0]
+                tag['convertiblebond'] = codes[0]
 
             allcodes    = label_bond_df.columns
             filtercodes = codes
@@ -282,17 +286,17 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 
     result_df = pd.DataFrame(result_datas, index=result_dates,
                              columns=['ratebond', 'creditbond', 'convertiblebond'])
-    result_df.to_csv('./tmp/bondlabelasset.csv')
+    result_df.to_csv(os.path.join(datadir,'bondlabelasset.csv'))
 
     select_df = pd.DataFrame(select_datas, index = result_dates, columns=['allcodes','filtercodes','poolcode','selectcode'])
-    select_df.to_csv('./tmp/bondselectasset.csv')
+    select_df.to_csv(os.path.join(datadir,'bondselectasset.csv'))
 
 
     fund_df = pd.DataFrame(fund_datas , index = fund_dates, columns=['ratebond', 'creditbond','convertiblebond'])
     fund_df.index.name = 'date'
     #tmp_d = fund_df.index[-1]
     #fund_df.loc[tmp_d, 'ratebond'] = '200113'
-    fund_df.to_csv('./tmp/bond_fund.csv')
+    fund_df.to_csv(os.path.join(datadir,'bond_fund.csv'))
 
 
     allocationdata.bond_fund_df = fund_df
@@ -373,14 +377,13 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
 
 
     result_df = pd.DataFrame(result_datas, index=result_dates,columns=['money'])
-    result_df.to_csv('./tmp/moneylabelasset.csv')
+    result_df.to_csv(os.path.join(datadir,'moneylabelasset.csv'))
 
 
     fund_df = pd.DataFrame(fund_datas, index=fund_dates, columns=['money'])
     fund_df.index.name = 'date'
 
-
-    fund_df.to_csv('./tmp/money_fund.csv')
+    fund_df.to_csv(os.path.join(datadir,'money_fund_sharpe.csv'))
     allocationdata.money_fund_sharpe_df = fund_df
 
     print 'money label asset done'
@@ -437,14 +440,14 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
     result_df = pd.DataFrame(result_datas, index=result_dates,
                              columns=['SP500.SPI', 'GLNC', 'HSCI.HI'])
 
-    result_df.to_csv('./tmp/otherlabelasset.csv')
+    result_df.to_csv(os.path.join(datadir,'otherlabelasset.csv'))
 
 
     fund_df = pd.DataFrame(fund_datas, index=fund_dates, columns=['SP500.SPI', 'GLNC', 'HSCI.HI'])
     fund_df.index.name = 'date'
     allocationdata.other_fund_sharpe_df = fund_df
 
-    fund_df.to_csv('./tmp/other_fund.csv')
+    fund_df.to_csv(os.path.join(datadir,'other_fund.csv'))
 
 
     print 'other label asset done'
@@ -508,10 +511,36 @@ def labelasset(allocationdata):
     alldf = pd.DataFrame(np.matrix(values).T, index = dfr.index, columns = dfr.columns)
 
     allocationdata.label_asset_df = alldf
-    alldf.to_csv('./tmp/labelasset.csv')
+    alldf.to_csv(os.path.join(datadir,'labelasset.csv'))
 
     allocationdata.label_asset_df = df
 
 
-if __name__ == '__main__':
-        print
+    start_date = '2007-01-05'
+    end_date = '2016-04-22'
+
+    indexdf = data.index_value(start_date, end_date, '000300.SH')
+    dates = indexdf.pct_change().index
+
+    allfunddf = data.funds()
+
+    #his_week = 156
+    interval = 26
+
+    stock_df = stockLabelAsset(dates, interval, allfunddf, indexdf)
+
+    bondindexdf = data.bond_index_value(start_date, end_date, const.csibondindex_code)
+    allbonddf   = data.bonds()
+    bond_df = bondLabelAsset(dates, interval, allbonddf, bondindexdf)
+
+    allmoneydf  = data.moneys()
+    #print allmoneydf
+    money_df = moneyLabelAsset(dates, interval, allmoneydf, None)
+
+    allotherdf  = data.others()
+    other_df = otherLabelAsset(dates, interval, allotherdf, None)
+
+    df = pd.concat([stock_df, bond_df, money_df, other_df], axis = 1, join_axes=[stock_df.index])
+
+    df.to_csv(os.path.join(datadir,'labelasset.csv'))
+

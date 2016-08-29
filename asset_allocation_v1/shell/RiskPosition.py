@@ -1,25 +1,24 @@
 #coding=utf8
 
 
-
+import os
 import pandas as pd
 import string
 
-import re
-pattern = re.compile(r'\d+')
-
+from Const import datadir
 
 def risk_position():
 
 
-    fund_df                   = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
-    bond_fund_df              = pd.read_csv('./tmp/bond_fund.csv', index_col = 'date', parse_dates = ['date'])
-    equalrisk_ratio_df        = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date', parse_dates = ['date'])
-    #highriskposition_ratio_df = pd.read_csv('./tmp/highriskposition.csv', index_col = 'date', parse_dates = ['date'])
-    highriskposition_ratio_df = pd.read_csv('./tmp/highriskposition.csv', index_col = 'date', parse_dates = ['date'])
-    lowriskposition_ratio_df  = pd.read_csv('./tmp/lowriskposition.csv', index_col = 'date', parse_dates = ['date'])
-    risk_portfolio_df         = pd.read_csv('./tmp/risk_portfolio.csv' , index_col  = 'date', parse_dates = ['date'])
-    label_asset_df            = pd.read_csv('./tmp/labelasset.csv' , index_col  = 'date', parse_dates = ['date'])
+    fund_df                   = pd.read_csv(os.path.join(datadir,'stock_fund.csv'), index_col = 'date', parse_dates = ['date'])
+    bond_fund_df              = pd.read_csv(os.path.join(datadir,'bond_fund.csv'), index_col = 'date', parse_dates = ['date'])
+    equalrisk_ratio_df        = pd.read_csv(os.path.join(datadir,'equalriskassetratio.csv'), index_col = 'date', parse_dates = ['date'])
+    #highriskposition_ratio_df = pd.read_csv(os.path.join(datadir,'highriskposition.csv'), index_col = 'date', parse_dates = ['date'])
+    highriskposition_ratio_df = pd.read_csv(os.path.join(datadir,'highriskposition.csv'), index_col = 'date', parse_dates = ['date'])
+    lowriskposition_ratio_df  = pd.read_csv(os.path.join(datadir,'lowriskposition.csv'), index_col = 'date', parse_dates = ['date'])
+    risk_portfolio_df         = pd.read_csv(os.path.join(datadir,'risk_portfolio.csv') , index_col  = 'date', parse_dates = ['date'])
+    risk_portfolio_df         = pd.read_csv(os.path.join(datadir,'risk_portfolio.csv') , index_col  = 'date', parse_dates = ['date'])
+    label_asset_df            = pd.read_csv(os.path.join(datadir,'labelasset.csv') , index_col  = 'date', parse_dates = ['date'])
 
 
     #print equalrisk_ratio_df
@@ -344,13 +343,13 @@ if __name__ == '__main__':
     #        print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
 
     '''
-    fund_df                   = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
-    bond_fund_df              = pd.read_csv('./tmp/bond_fund.csv', index_col = 'date', parse_dates = ['date'])
-    equalrisk_ratio_df        = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date', parse_dates = ['date'])
-    #highriskposition_ratio_df = pd.read_csv('./tmp/highriskposition.csv', index_col = 'date', parse_dates = ['date'])
-    highriskposition_ratio_df = pd.read_csv('./tmp/highriskposition.csv', index_col = 'date', parse_dates = ['date'])
-    lowriskposition_ratio_df  = pd.read_csv('./tmp/lowriskposition.csv', index_col = 'date', parse_dates = ['date'])
-    risk_portfolio_df         = pd.read_csv('./tmp/risk_portfolio.csv' , index_col  = 'date', parse_dates = ['date'])
+    fund_df                   = pd.read_csv(os.path.join(datadir,'stock_fund.csv'), index_col = 'date', parse_dates = ['date'])
+    bond_fund_df              = pd.read_csv(os.path.join(datadir,'bond_fund.csv'), index_col = 'date', parse_dates = ['date'])
+    equalrisk_ratio_df        = pd.read_csv(os.path.join(datadir,'equalriskassetratio.csv'), index_col = 'date', parse_dates = ['date'])
+    #highriskposition_ratio_df = pd.read_csv(os.path.join(datadir,'highriskposition.csv'), index_col = 'date', parse_dates = ['date'])
+    highriskposition_ratio_df = pd.read_csv(os.path.join(datadir,'highriskposition.csv'), index_col = 'date', parse_dates = ['date'])
+    lowriskposition_ratio_df  = pd.read_csv(os.path.join(datadir,'lowriskposition.csv'), index_col = 'date', parse_dates = ['date'])
+    risk_portfolio_df         = pd.read_csv(os.path.join(datadir,'risk_portfolio.csv') , index_col  = 'date', parse_dates = ['date'])
 
     #print equalrisk_ratio_df
     #print highriskposition_ratio_df
