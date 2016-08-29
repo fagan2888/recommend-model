@@ -1,12 +1,14 @@
 #coding=utf8
 
 
+import os
 import string
 import pandas as pd
 from datetime import datetime
 from numpy import *
 import numpy as np
 import Const
+from Const import datadir
 
 
 #start_date = '2014-03-07'
@@ -130,7 +132,7 @@ def fund_value(start_date, end_date):
 
 
     fund_df = df[fund_cols]
-    #funddf['163001.OF'].to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/163001.csv')
+    #funddf['163001.OF'].to_csv(os.path.join(datadir,'163001.csv'))
     return fund_df
 
 
@@ -307,7 +309,7 @@ if __name__ == '__main__':
     #print stock_fund_code()
     #print fund_position('2011-01-02','2012-12-31')
     fund, df = fund_index_data('2009-10-10','2016-04-22', ['000300.SH','000905.SH'])
-    df.to_csv('/home/data/kun/wwwroot/recommend_model/asset_allocation_v1/tmp/index.csv')
+    df.to_csv(os.path.join(datadir,'index.csv'))
     #print df['000300.SH','000905.SH']
     #buysell()
 
