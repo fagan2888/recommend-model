@@ -23,6 +23,15 @@ import DFUtil
 
 from Const import datadir
 
+def mean_r(d, funddfr, codes):
+    r   = 0.0
+    num = 1.0 * (len(codes))
+    for code in codes:
+        r = r + funddfr.loc[d, code] / num
+
+    return r
+
+
 def stockLabelAsset(allocationdata, dates, his_week, interval):
 
     indexdf   = DBData.index_value(dates[0], dates[-1])
@@ -104,8 +113,8 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
         d = dates[i]
         result_dates.append(d)
-        result_datas.append([funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]] )
-        print d.strftime('%Y-%m-%d'), funddfr.loc[d, tag['largecap']], funddfr.loc[d, tag['smallcap']], funddfr.loc[d, tag['rise']], funddfr.loc[d, tag['oscillation']], funddfr.loc[d, tag['decline']], funddfr.loc[d, tag['growth']], funddfr.loc[d, tag['value']]
+        result_datas.append([ mean_r(d, funddfr, tag['largecap']), mean_r(d, funddfr , tag['smallcap']), mean_r( d, funddfr, tag['rise']), mean_r( d, funddfr, tag['oscillation']) , mean_r(d, funddfr, tag['decline']), mean_r(d, funddfr, tag['growth']), mean_r( d, funddfr, tag['value'])])
+        print d.strftime('%Y-%m-%d'), mean_r(d, funddfr, tag['largecap']), mean_r(d, funddfr , tag['smallcap']), mean_r( d, funddfr, tag['rise']), mean_r( d, funddfr, tag['oscillation']) , mean_r(d, funddfr, tag['decline']), mean_r(d, funddfr, tag['growth']), mean_r( d, funddfr, tag['value'])
 
 
         allcode_r = 0
@@ -208,9 +217,9 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
             if len(codes) == 1:
                 fund_pool = codes
                 fund_code = codes
-                tag['ratebond']        = codes[0]
-                tag['creditbond']      = codes[0]
-                tag['convertiblebond'] = codes[0]
+                tag['ratebond']        = codes
+                tag['creditbond']      = codes
+                tag['convertiblebond'] = codes
 
             allcodes    = label_bond_df.columns
             filtercodes = codes
@@ -242,9 +251,9 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
         d = dates[i]
         result_dates.append(d)
         result_datas.append(
-            [funddfr.loc[d, tag['ratebond']], funddfr.loc[d, tag['creditbond']], funddfr.loc[d, tag['convertiblebond']]])
+            [mean_r(d, funddfr, tag['ratebond']), mean_r(d, funddfr, tag['creditbond']), mean_r(d, funddfr, tag['convertiblebond'])])
 
-        print d.strftime('%Y-%m-%d'),  funddfr.loc[d, tag['ratebond']], funddfr.loc[d, tag['creditbond']], funddfr.loc[d, tag['convertiblebond']]
+        print d.strftime('%Y-%m-%d'), mean_r(d, funddfr, tag['ratebond']), mean_r(d, funddfr, tag['creditbond']), mean_r(d, funddfr, tag['convertiblebond'])
 
 
         allcode_r = 0
@@ -342,8 +351,8 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
             fund_sharpe       = FundIndicator.fund_sharp_annual(label_money_df)
 
 
-            fund_dates.append(dates[i])
-            fund_datas.append(fund_sharpe[0][1])        
+            fund_dates.append(end_date)
+            fund_datas.append(fund_codes[0])
 
 
             #print fund_sharpe[0][0]    
@@ -368,7 +377,7 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
     fund_df = pd.DataFrame(fund_datas, index=fund_dates, columns=['money'])
     fund_df.index.name = 'date'
 
-    fund_df.to_csv(os.path.join(datadir,'money_fund_sharpe.csv'))
+    fund_df.to_csv(os.path.join(datadir,'money_fund.csv'))
     allocationdata.money_fund_sharpe_df = fund_df
 
     print 'money label asset done'
@@ -417,7 +426,7 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
             for record in fund_sharpe:
                 sharpe_dict[record[0]] = record[1]
 
-            fund_datas.append([sharpe_dict['SP500.SPI'], sharpe_dict['GLNC'], sharpe_dict['HSCI.HI']])
+            fund_datas.append(['SP500.SPI', 'GLNC', 'HSCI.HI'])
             fund_dates.append(dates[i])
 
 
@@ -432,7 +441,7 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
     fund_df.index.name = 'date'
     allocationdata.other_fund_sharpe_df = fund_df
 
-    fund_df.to_csv(os.path.join(datadir,'other_fund_sharpe.csv'))
+    fund_df.to_csv(os.path.join(datadir,'other_fund.csv'))
 
 
     print 'other label asset done'
@@ -482,14 +491,26 @@ def labelasset(allocationdata):
 
     #df = df.dropna()
 
-    allocationdata.label_asset_df = df
+    dfr = df
+    values = []
+    for col in dfr.columns:
+        rs = dfr[col].values
+        vs = [1]
+        for i in range(1, len(rs)):
+            r = rs[i]
+            v = vs[-1] * ( 1.0 + r )
+            vs.append(v)
+        values.append(vs)
 
-    df.to_csv(os.path.join(datadir,'labelasset.csv'))
+    alldf = pd.DataFrame(np.matrix(values).T, index = dfr.index, columns = dfr.columns)
+
+    allocationdata.label_asset_df = alldf
+    alldf.to_csv(os.path.join(datadir,'labelasset.csv'))
+
+    allocationdata.label_asset_df = df
 
 
 if __name__ == '__main__':
-
-
     start_date = '2007-01-05'
     end_date = '2016-04-22'
 

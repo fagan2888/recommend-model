@@ -13,6 +13,7 @@ import pandas as pd
 import Financial as fin
 import FundIndicator as fi
 
+fund_num = Const.fund_num
 
 def select_stock(funddf, fund_tags, indexdf):
 
@@ -38,50 +39,62 @@ def select_stock(funddf, fund_tags, indexdf):
 
     codes = []
     tag   = {}
+
+    names = ['largecap','smallcap','rise','decline','oscillation','growth','value']
+    for name in names:
+        tag.setdefault(name, [])
+
     for i in range(0, len(fund_sharpe)):
 
         code = fund_sharpe[i][0]
-
-        if code in set(largecap_codes) and need_largecap:
+        if code in set(largecap_codes) and len(tag['largecap']) < fund_num:
             codes.append(code)
             need_largecap = False
-            tag['largecap'] = code
+            tmp = tag.setdefault('largecap', [])
+            tmp.append(code)
+            #tag['largecap'] = code
             #print code, i
             #continue
-        if code in set(smallcap_codes) and need_smallcap:
+        if code in set(smallcap_codes) and len(tag['smallcap']) < fund_num:
             codes.append(code)
             need_smallcap = False
-            tag['smallcap'] = code
+            tmp = tag.setdefault('smallcap', [])
+            tmp.append(code)
             #print code, i
             #continue
-        if code in set(risefitness_codes) and need_risefitness:
+        if code in set(risefitness_codes) and len(tag['rise']) < fund_num:
             codes.append(code)
             need_risefitness = False
-            tag['rise'] = code
+            tmp = tag.setdefault('rise', [])
+            tmp.append(code)
             #print code, i
             #continue
-        if code in set(declinefitness_codes) and need_declinefitness:
+        if code in set(declinefitness_codes) and len(tag['decline']) < fund_num:
             codes.append(code)
             need_declinefitness = False
-            tag['decline'] = code
+            tmp = tag.setdefault('decline', [])
+            tmp.append(code)
             #print code, i
             #continue
-        if code in set(oscillationfitness_codes) and need_oscillationfitness:
+        if code in set(oscillationfitness_codes) and len(tag['oscillation']) < fund_num:
             codes.append(code)
             need_oscillationfitness = False
-            tag['oscillation'] = code
+            tmp = tag.setdefault('oscillation', [])
+            tmp.append(code)
             #print code, i
             #continue
-        if code in set(growthfitness_codes) and need_growthfitness:
+        if code in set(growthfitness_codes) and len(tag['growth']) < fund_num:
             codes.append(code)
             need_growthfitness = False
-            tag['growth'] = code
+            tmp = tag.setdefault('growth', [])
+            tmp.append(code)
             #print code, i
             #continue
-        if code in set(valuefitness_codes) and need_valuefitness:
+        if code in set(valuefitness_codes) and len(tag['value']) < fund_num:
             codes.append(code)
             need_valuefitness = False
-            tag['value'] = code
+            tmp = tag.setdefault('value', [])
+            tmp.append(code)
             #print code, i
             #continue
 
@@ -97,9 +110,10 @@ def select_bond(funddf, fund_tags, indexdf):
     credit_codes               = fund_tags['creditbond']
     convertible_codes          = fund_tags['convertiblebond']
 
-    need_rate             = True
-    need_credit           = True
-    need_convertible      = True
+
+    ratebond_codes             = fund_tags['ratebond']
+    credit_codes               = fund_tags['creditbond']
+    convertible_codes          = fund_tags['convertiblebond']
 
 
     #fund_sharpe  = fi.fund_sharp_annual(funddf)
@@ -110,29 +124,44 @@ def select_bond(funddf, fund_tags, indexdf):
 
         code = fund_sharpe[i][0]
 
-        if code in set(ratebond_codes) and need_rate:
+    codes = []
+    tag   = {}
+
+    names = ['ratebond','creditbond','convertiblebond']
+    for name in names:
+        tag.setdefault(name, [])
+
+    for i in range(0, len(fund_sharpe)):
+
+        code = fund_sharpe[i][0]
+        #print code
+        if code in set(ratebond_codes) and len(tag['ratebond']) < fund_num:
             codes.append(code)
             need_rate = False
-            tag['ratebond'] = code
+            tmp = tag.setdefault('ratebond', [])
+            tmp.append(code)
             #print code, i
-            continue
-        if code in set(credit_codes) and need_credit:
+            #continue
+        if code in set(credit_codes) and len(tag['creditbond']) < fund_num:
             codes.append(code)
             need_credit = False
-            tag['creditbond'] = code
+            tmp = tag.setdefault('creditbond', [])
+            tmp.append(code)
             #print code, i
-            continue
-        if code in set(convertible_codes) and need_convertible:
+            #continue
+        if code in set(convertible_codes) and len(tag['convertiblebond']) < fund_num:
             codes.append(code)
             need_convertible = False
-            tag['convertiblebond'] = code
+            tmp = tag.setdefault('convertiblebond', [])
+            tmp.append(code)
             #print code, i
-            continue
+            #continue
 
     #print fund_sharpe
     #print codes
 
     return codes, tag
+
 
 
 def select_money(funddf):
@@ -146,6 +175,3 @@ def select_money(funddf):
     #codes.append(fund_sharpe[0][0])
 
     return codes, tag
-
-
-
