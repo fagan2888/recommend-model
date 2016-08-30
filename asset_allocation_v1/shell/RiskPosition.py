@@ -367,13 +367,13 @@ if __name__ == '__main__':
 
     print datadir
     all_code_position = risk_position()
-    #risk_dict = {}
-    #for record in all_code_position:
-    #    print str(record[0]) + ',' + str(record[1]) + ',' + str(record[2]) + ',' + str(record[3])
-        # print all_code_position
-    #for tmp in all_code_position:
-    #    if tmp[0] == 1.0:
-    #        print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
+    risk_dict = {}
+    for record in all_code_position:
+        print "%.1f,%s,%06d,%.6f" % (record[0], record[1].strftime("%Y-%m-%d"), record[2], record[3])
+    # print all_code_position
+    # for tmp in all_code_position:
+    #     if tmp[0] == 0.8:
+    #         print str(tmp[1]) + "\t" +  str(tmp[2]) + "\t" +  str(tmp[3])
 
     '''
     fund_df                   = pd.read_csv(os.path.join(datadir,'stock_fund.csv'), index_col = 'date', parse_dates = ['date'])
