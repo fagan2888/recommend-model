@@ -228,16 +228,12 @@ def clean_same(re):
                     t = tmp[str(k)+'--'+str(i)]
                     day_list[str(k)+'--'+str(i)]=1
     result = []
-    print re
-    print result
     for i in re:
-        key = str(i[0])+'--'+str(i[1])
-        if day_list.has_key(key):
-            for code,ratio in tmp[key].items():
-            	result.append((i[0],i[1],code,ratio)) 
+        if day_list.has_key(str(i[0])+'--'+str(i[1])):
+            result.append(i) 
     return result
-
-
+                
+                 
 def is_same(tmp1,tmp2):
     flag = 0.03
     change = 0
@@ -256,14 +252,14 @@ def is_same(tmp1,tmp2):
     else:
         return False
 
-
+        
 
 def clean_min(re):
     tmp = {}
     tmp1 = {}
     tmp_list = []
     for i in re:
-        if i[3] < 0.01 and i[3]!=0:    
+        if i[3] < 0.01:    
             if tmp.has_key(str(i[0])+'--'+str(i[1])):
                 tmp[str(i[0])+'--'+str(i[1])] += i[3]
             else:
@@ -370,18 +366,31 @@ def output_final_portfolio(all_code_position):
         for code in codes_used :
             positions.append((risk, date, code, ratio_used))
 
-    for record in positions:
-        risk, date, code, ratio = record
-        print "B:%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
+    # for record in positions:
+    #     risk, date, code, ratio = record
+    #     print "B:%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
 
     positions = merge_same_fund(positions)       
-    # positions = clean_min(positions) 
-    # positions = clean_same(positions)
+    positions = clean_min(positions) 
+    positions = clean_same(positions)
 
     for record in positions:
         risk, date, code, ratio = record
-        print "A:%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
+        print "%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
 
+    # #
+    # # 检查是否100%
+    # #
+    # positions = sorted(positions, key=itemgetter(0,1))
+    # for key, group in groupby(positions, key = itemgetter(0,1)) :
+    #     ratio = sum(e[3] for e in group)
+    #     print "T:%.1f,%s,%.4f" % (key[0], key[1].strftime("%Y-%m-%d"), ratio)
+
+
+
+#
+# 合并相同基金比例. 先按照risk,date,fund分组, 对同一组的ratio求和
+#
 def merge_same_fund(positions) :
     result = []
     
