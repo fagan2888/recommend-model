@@ -25,6 +25,7 @@ def select_stock(funddf, fund_tags, indexdf):
     growthfitness_codes        = fund_tags['growthfitness']
     valuefitness_codes         = fund_tags['valuefitness']
 
+
     need_largecap           = True
     need_smallcap           = True
     need_risefitness        = True

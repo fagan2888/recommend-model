@@ -742,7 +742,7 @@ def risk_allocation_list(risk_value, risk_begin_date):
 
     base_sql = "replace into risk_asset_allocation_list (ra_risk, ra_date) values (%f, %s)"
     sql = base_sql % (risk_value, risk_begin_date)
-    cursor.execute(sql)
+    # cursor.execute(sql)
     conn.commit()
     conn.close()
     print "insert one row into risk_allocation_list"
@@ -869,7 +869,6 @@ def riskhighlowriskasset(allocationdata):
 
     #print all_code_position
 
-    #sql = 'UPDATE `risk_asset_allocation_ratio` SET `ra_approve_status`=5 WHERE 1'
     conn.commit()
     conn.close()
 

@@ -87,7 +87,7 @@ def efficient_frontier(return_rate, bound):
     #print asset_mean
 
     cov        =     np.cov(return_rate)
-
+    
     S           =     matrix(cov)
     pbar       =     matrix(asset_mean)
 
@@ -184,11 +184,11 @@ def efficient_frontier(return_rate, bound):
 def efficient_frontier_index(return_rate):
 
         solvers.options['show_progress'] = False
-        
+    
         n_asset    =     len(return_rate)
 
         asset_mean = np.mean(return_rate, axis = 1)
-        #print asset_mean
+    #print asset_mean
 
         cov        =     np.cov(return_rate)
         S          =     matrix(cov)
