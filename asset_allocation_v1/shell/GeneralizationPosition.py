@@ -9,6 +9,7 @@ import pandas as pd
 import string
 
 from itertools import groupby
+from operator import itemgetter
 from Const import datadir
 
 def risk_position():
@@ -369,17 +370,27 @@ def output_final_portfolio(all_code_position):
         for code in codes_used :
             positions.append((risk, date, code, ratio_used))
 
+    for record in positions:
+        risk, date, code, ratio = record
+        print "B:%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
 
     positions = merge_same_fund(positions)       
     # positions = clean_min(positions) 
     # positions = clean_same(positions)
 
-    # for record in positions:
-    #     risk, date, code, ratio = record
-    #     print "%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
+    for record in positions:
+        risk, date, code, ratio = record
+        print "A:%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
 
 def merge_same_fund(positions) :
-    print groupby(positions, lambda p: p[0]) 
+    result = []
+    
+    positions = sorted(positions, key=itemgetter(0,1,2))
+    for key, group in groupby(positions, key = itemgetter(0,1,2)) :
+        ratio = sum(e[3] for e in group)
+        result.append(key + (ratio,))
+
+    return result
 
 
 if __name__ == '__main__':
