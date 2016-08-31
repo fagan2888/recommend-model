@@ -8,6 +8,7 @@ import sys
 import pandas as pd
 import string
 
+from itertools import groupby
 from Const import datadir
 
 def risk_position():
@@ -141,6 +142,7 @@ def risk_position():
             low_w = 1 - high_w
 
             #print highriskposition.keys()
+            total_weight = 0
             ws = {}
             for col in highriskposition.keys():
 
@@ -171,6 +173,7 @@ def risk_position():
                     risk_ratio = 1.0
 
                 weight   = highriskratio * risk_ratio * high_w
+                total_weight += weight
                 all_code_position.append((d, risk_rank / 10.0, col, weight, code))
 
             for col in lowriskposition.keys():
@@ -182,7 +185,14 @@ def risk_position():
                 #print col,
 
                 weight   = lowriskratio * low_w
+                total_weight += weight
                 all_code_position.append((d, risk_rank / 10.0, col, weight, code))
+
+            if total_weight < 1 :
+                code = "[u'213009']"
+                left_weight = 1 - total_weight
+                all_code_position.append((d, risk_rank / 10.0, col, left_weight, code))
+                
 
     # all_code_position = clean_min(all_code_position)
     # all_code_position = clean_same(all_code_position)
@@ -217,9 +227,13 @@ def clean_same(re):
                     t = tmp[str(k)+'--'+str(i)]
                     day_list[str(k)+'--'+str(i)]=1
     result = []
+    print re
+    print result
     for i in re:
-        if day_list.has_key(str(i[0])+'--'+str(i[1])):
-            result.append(i) 
+        key = str(i[0])+'--'+str(i[1])
+        if day_list.has_key(key):
+            for code,ratio in tmp[key].items():
+            	result.append((i[0],i[1],code,ratio)) 
     return result
 
 
@@ -279,45 +293,7 @@ def clean_min(re):
         result.append(tuple(c))
     return result
 
-
-if __name__ == '__main__':
-
-    #
-    # 处理命令行参数
-    #
-    try:
-        longopts = ['datadir=', 'verbose', 'help', ]
-        options, remainder = getopt.gnu_getopt(sys.argv[1:], 'hvd:', longopts)
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
-
-    for opt, arg in options:
-        if opt in ('-h', '--help'):
-            usage()
-            sys.exit(2)
-        elif opt in ('-d', '--datadir'):
-            datadir = arg
-        elif opt in ('-v', '--verbose'):
-            verbose = True
-        elif opt == '--version':
-            version = arg
-
-    #
-    # 确认数据目录存在
-    #
-    if not os.path.exists(datadir):
-        os.mkdir(datadir)
-    else:
-        if not os.path.isdir(datadir):
-            print "path [%s] not dir" % datadir
-            sys.exit(-1)
-
-    #
-    # 生成配置数据
-    #
-    all_code_position = risk_position()
-
+def output_category_portfolio(all_code_position):
     #
     # 输出配置数据
     #
@@ -345,4 +321,111 @@ if __name__ == '__main__':
         codes = ast.literal_eval(record[4])
         xtype = xtab[record[2]] if record[2] in xtab else 0
         print "%s,%.1f,%s,%.4f,%s" % (record[0].strftime("%Y-%m-%d"), record[1], xtype, record[3], ':'.join(codes))
+
+def output_final_portfolio(all_code_position):
+    #
+    # 输出配置数据
+    #
+    xtab = {
+        'largecap'        : 11, # 大盘
+        'smallcap'        : 12, # 小盘
+        'rise'            : 13, # 上涨
+        'oscillation'     : 14, # 震荡
+        'decline'         : 15, # 下跌
+        'growth'          : 16, # 成长
+        'value'           : 17, # 价值
+
+        'ratebond'        : 21, # 利率债
+        'creditbond'      : 22, # 信用债
+        'convertiblebond' : 23, # 可转债
+        
+        'money'           : 31, # 货币
+
+        'SP500.SPI'       : 41, # 标普
+        'GLNC'            : 42, # 黄金
+        'HSCI.HI'         : 43, # 恒生
+    }
+    
+    positions = []
+    for record in all_code_position:
+        date, risk, stype, ratio, codes, = record
+        codes = ast.literal_eval(codes)
+        xtype = xtab[stype] if stype in xtab else 0
+        # print "%s,%.1f,%s,%.4f,%s" % (date.strftime("%Y-%m-%d"), risk, xtype, ratio, ':'.join(codes))
+        if ratio > 0.60 :
+            count_used = min (5, len(codes))
+        elif ratio > 0.45 :
+            count_used = min (4, len(codes))
+        elif ratio > 0.30 :
+            count_used = min (3, len(codes))
+        elif ratio > 0.15 :
+            count_used = min (2, len(codes))
+        else :
+            count_used = 1;
+
+        codes_used = codes[0:count_used]
+        ratio_used = ratio / count_used
+        
+        for code in codes_used :
+            positions.append((risk, date, code, ratio_used))
+
+
+    positions = merge_same_fund(positions)       
+    # positions = clean_min(positions) 
+    # positions = clean_same(positions)
+
+    # for record in positions:
+    #     risk, date, code, ratio = record
+    #     print "%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
+
+def merge_same_fund(positions) :
+    print groupby(positions, lambda p: p[0]) 
+
+
+if __name__ == '__main__':
+
+    final = False
+    
+    #
+    # 处理命令行参数
+    #
+    try:
+        longopts = ['datadir=', 'verbose', 'help', 'final']
+        options, remainder = getopt.gnu_getopt(sys.argv[1:], 'hvd:', longopts)
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+
+    for opt, arg in options:
+        if opt in ('-h', '--help'):
+            usage()
+            sys.exit(2)
+        elif opt in ('-d', '--datadir'):
+            datadir = arg
+        elif opt in ('-v', '--verbose'):
+            verbose = True
+        elif opt == '--version':
+            version = arg
+        elif opt == '--final':
+            final = True
+
+    #
+    # 确认数据目录存在
+    #
+    if not os.path.exists(datadir):
+        os.mkdir(datadir)
+    else:
+        if not os.path.isdir(datadir):
+            print "path [%s] not dir" % datadir
+            sys.exit(-1)
+
+    #
+    # 生成配置数据
+    #
+    all_code_position = risk_position()
+
+    if final:
+        output_final_portfolio(all_code_position)
+    else:
+        output_category_portfolio(all_code_position)
 
