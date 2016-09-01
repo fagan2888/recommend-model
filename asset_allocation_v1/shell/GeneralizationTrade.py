@@ -7,7 +7,10 @@ def readFile(path):
     return tmp
 
 def loadDict(path):
-    tmp = readFile(path)
+    if type(path) == list: 
+        tmp == path
+    else:
+        tmp = readFile(path)
     result = {}
     day_list = {}
     risk_list = []
