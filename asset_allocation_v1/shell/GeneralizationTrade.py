@@ -8,7 +8,7 @@ def readFile(path):
 
 def loadDict(path):
     if type(path) == list: 
-        tmp == path
+        tmp = path
     else:
         tmp = readFile(path)
     result = {}
