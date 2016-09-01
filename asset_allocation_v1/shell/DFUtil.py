@@ -17,7 +17,7 @@ def get_date_df(df, start_date, end_date):
 def last_friday():
     date   = datetime.date.today()
     oneday = datetime.timedelta(days=1)
-    
+
     while date.weekday() != calendar.FRIDAY:
         date -= oneday
 

@@ -26,9 +26,9 @@ from Const import datadir
 def indexallocation(indexdf):
 
     indexdfr = indexdf.pct_change()
-        
-    indexdfr = indexdfr.fillna(0.0)    
-    
+
+    indexdfr = indexdfr.fillna(0.0)
+
     codes = indexdfr.columns
 
     return_rate = []
@@ -48,15 +48,15 @@ def indexallocation(indexdf):
 
     for i in range(0, len(risks)):
 
-        
-        sharp = (returns[i] - rf) / risks[i]    
+
+        sharp = (returns[i] - rf) / risks[i]
 
         if sharp > final_sharp:
 
                 final_risk = risks[i]
                 final_return = returns[i]
                 final_ws     = ws[i]
-                final_sharp  = sharp            
+                final_sharp  = sharp
 
     return final_risk, final_return, final_ws, final_sharp
 
@@ -76,21 +76,21 @@ def technicallocation(funddf, fund_rank):
     final_ws = []
     final_sharp = -10000000000000000.0
     final_codes = []
-        
+
     for i in range(2, min(11, len(fund_rank))):
 
         codes = fund_rank[0 : i]
         dfr = funddfr[codes]
 
         #dfr.fillna(0.0)
-        
+
         return_rate = []
         for code in codes:
             return_rate.append(dfr[code].values)
 
-        #print return_rate    
+        #print return_rate
         risks, returns, ws = fin.efficient_frontier_fund(return_rate)
- 
+
 
         for j in range(0, len(risks)):
 
@@ -100,8 +100,8 @@ def technicallocation(funddf, fund_rank):
                 final_risk = risks[i]
                 final_return = returns[i]
                 final_ws     = ws[i]
-                final_sharp  = sharp    
-            
+                final_sharp  = sharp
+
 
     return final_risk, final_return, final_ws, final_sharp
 
@@ -226,10 +226,10 @@ def strategicallocation(delta,    weq, V, tau, P, Q):
 
     tauV = tau * V
 
-    Omega = np.dot(np.dot(P,tauV),P.T) * np.eye(Q.shape[0])    
-    
-    res = fin.black_litterman(delta, weq, V, tau, P, Q, Omega)    
-    
+    Omega = np.dot(np.dot(P,tauV),P.T) * np.eye(Q.shape[0])
+
+    res = fin.black_litterman(delta, weq, V, tau, P, Q, Omega)
+
     return re
 
 
@@ -238,11 +238,11 @@ def largesmallcapfunds(fund_tags):
 
     largecap          =   fund_tags['largecap']
     smallcap          =   fund_tags['smallcap']
-    risefitness       =   fund_tags['risefitness']            
-    declinefitness    =   fund_tags['declinefitness']            
-    oscillationfitness=   fund_tags['oscillationfitness']            
-    growthfitness     =   fund_tags['growthfitness']            
-    valuefitness      =   fund_tags['valuefitness']            
+    risefitness       =   fund_tags['risefitness']
+    declinefitness    =   fund_tags['declinefitness']
+    oscillationfitness=   fund_tags['oscillationfitness']
+    growthfitness     =   fund_tags['growthfitness']
+    valuefitness      =   fund_tags['valuefitness']
 
 
     largecap_set      =   set(largecap)
@@ -250,7 +250,7 @@ def largesmallcapfunds(fund_tags):
 
     largecap_fund     =   []
     smallcap_fund     =   []
-    
+
     largecap_fund.append(largecap[0])
     smallcap_fund.append(smallcap[0])
 
@@ -264,7 +264,7 @@ def largesmallcapfunds(fund_tags):
         if code in largecap_set:
             largecap_fund.append(code)
             break
-    
+
 
     for code in oscillationfitness:
         if code in largecap_set:
@@ -291,7 +291,7 @@ def largesmallcapfunds(fund_tags):
         if code in smallcap_set:
             smallcap_fund.append(code)
             break
-    
+
 
     for code in oscillationfitness:
         if code in smallcap_set:
@@ -321,9 +321,9 @@ def boundlimit(n):
     bounds = []
 
     min_bound  = []
-    max_bound  = []                
+    max_bound  = []
     for i in range(0, n):
-        min_bound.append(0.05)    
+        min_bound.append(0.05)
         max_bound.append(0.4)
 
     bounds.append(min_bound)
@@ -334,7 +334,7 @@ def boundlimit(n):
 
 #资产配置
 def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
-#########################################################################    
+#########################################################################
 
     delta = 2.5
     tau = 0.05
@@ -343,7 +343,7 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
     for p in P:
         ps.append(np.array(p))
 
-    P = np.array(ps)    
+    P = np.array(ps)
 
     qs = []
     for q in Q:
@@ -367,11 +367,11 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
     #print type(sigma)
     #print sigma
     #print np.cov(indexrs)
-    #print indexdfr    
+    #print indexdfr
 
 
     weq = np.array([0.5, 0.5])
-    tauV = tau * sigma    
+    tauV = tau * sigma
     Omega = np.dot(np.dot(P,tauV),P.T) * np.eye(Q.shape[0])
     er, ws, lmbda = fin.black_litterman(delta, weq, sigma, tau, P, Q, Omega)
 
@@ -380,7 +380,7 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
     for w in ws:
         sum = sum + w
     for i in range(0, len(ws)):
-        ws[i] = 1.0 * ws[i] / sum        
+        ws[i] = 1.0 * ws[i] / sum
 
     #print er
     indexws = ws
@@ -392,7 +392,7 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
     #print smallcap_fund
 
 
-    funddf = data.fund_value(start_date, end_date)    
+    funddf = data.fund_value(start_date, end_date)
 
     bounds = boundlimit(len(largecap_fund))
 
@@ -403,7 +403,7 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
         code = largecap_fund[i]
         largecap_fund_w[code] = ws[i] * indexws[0]
 
-    
+
     bounds = boundlimit(len(smallcap_fund))
     risk, returns ,ws ,sharp = markowitz(funddf[smallcap_fund], bounds)
 
@@ -413,13 +413,13 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
         smallcap_fund_w[code] = ws[i] * indexws[1]
 
 
-    '''    
-    #平均分配            
+    '''
+    #平均分配
     largecap_fund_w = {}
     for code in largecap_fund:
         largecap_fund_w[code] = 1.0 / len(largecap_fund) * indexws[0]
 
-    
+
     smallcap_fund_w = {}
     for code in smallcap_fund:
         smallcap_fund_w[code] = 1.0 / len(smallcap_fund) * indexws[1]
@@ -428,26 +428,26 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
     fundws = {}
     for code in largecap_fund:
         w = fundws.setdefault(code, 0)
-        fundws[code] = w + largecap_fund_w[code]    
+        fundws[code] = w + largecap_fund_w[code]
     for code in smallcap_fund:
         w = fundws.setdefault(code, 0)
-        fundws[code] = w + smallcap_fund_w[code]    
+        fundws[code] = w + smallcap_fund_w[code]
 
 
 #######################################################################
 
-    #print largecap    
+    #print largecap
     #print smallcap
     #print risefitness
     #print declinefitness
     #print oscillafitness
     #print growthfitness
     #print valuefitness
-    #print 
+    #print
 
 
     fund_codes = []
-    ws         = []        
+    ws         = []
     for k, v in fundws.items():
         fund_codes.append(k)
         ws.append(v)

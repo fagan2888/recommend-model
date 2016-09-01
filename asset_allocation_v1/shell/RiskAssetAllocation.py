@@ -25,7 +25,7 @@ from datetime import datetime
 
 def usage():
     print
-    
+
 def risk_asset_allocation():
 
 
@@ -42,11 +42,11 @@ def risk_asset_allocation():
     allocationdata.fund_measure_lookback                 = 52
     allocationdata.fund_measure_adjust_period            = 26
     allocationdata.jensen_ratio                          = 0.5
-    allocationdata.sortino_ratio                         = 0.5	
-    allocationdata.ppw_ratio                             = 0.5		
-    allocationdata.stability_ratio                       = 0.5	
-    allocationdata.fixed_risk_asset_lookback             = 52	
-    allocationdata.fixed_risk_asset_risk_adjust_period   = 5	
+    allocationdata.sortino_ratio                         = 0.5
+    allocationdata.ppw_ratio                             = 0.5
+    allocationdata.stability_ratio                       = 0.5
+    allocationdata.fixed_risk_asset_lookback             = 52
+    allocationdata.fixed_risk_asset_risk_adjust_period   = 5
     allocationdata.allocation_lookback                   = 13
     allocationdata.allocation_adjust_period              = 13
 
@@ -104,13 +104,13 @@ if __name__ == '__main__':
             sys.exit(-1)
 
     print datadir
-            
+
     #
     # 运行资产配置程序
     #
     risk_asset_allocation()
     try:
-        
+
         pass
     except Exception as e:
         print "Unexpected error:", sys.exc_info()[0]

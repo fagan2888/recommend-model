@@ -41,13 +41,13 @@ def risk_position():
     equalrisk_ratio_df = equalrisk_ratio_df[equalrisk_ratio_df.index >= start_date]
     #
     dates = risk_portfolio_df.index
-    start_date = dates[0]    
+    start_date = dates[0]
 
     label_asset_df = label_asset_df[label_asset_df.index >= start_date]
     dates = label_asset_df.index
 
-    #print start_date 
-    #print dates[0]            
+    #print start_date
+    #print dates[0]
 
 
     fund_codes       = {}
@@ -271,7 +271,7 @@ def clean_same(re):
     result = []
     for i in re:
         if day_list.has_key(str(i[0])+'--'+str(i[1])):
-            result.append(i) 
+            result.append(i)
     return result
 
 
@@ -300,7 +300,7 @@ def clean_min(re):
     tmp1 = {}
     tmp_list = []
     for i in re:
-        if i[3] < 0.01 and i[3]!=0:    
+        if i[3] < 0.01 and i[3]!=0:
             if tmp.has_key(str(i[0])+'--'+str(i[1])):
                 tmp[str(i[0])+'--'+str(i[1])] += i[3]
             else:
@@ -317,9 +317,9 @@ def clean_min(re):
         c = list(i)
         if tmp.has_key(str(i[0])+'--'+str(i[1])):
             tmp1[str(i[0])+'--'+str(i[1])] -=1
-            if tmp1[str(i[0])+'--'+str(i[1])] <= 0: 
+            if tmp1[str(i[0])+'--'+str(i[1])] <= 0:
                 if kk.has_key(str(i[0])+'--'+str(i[1])):
-                    c[3] = round(i[3] + round(tmp[str(i[0])+'--'+str(i[1])]-kk[str(i[0])+'--'+str(i[1])],6)    ,6)        
+                    c[3] = round(i[3] + round(tmp[str(i[0])+'--'+str(i[1])]-kk[str(i[0])+'--'+str(i[1])],6)    ,6)
                 else:
                     c[3] = round(i[3] * 1 / (1-tmp[str(i[0])+'--'+str(i[1])]) ,6)
             else:
@@ -404,15 +404,15 @@ if __name__ == '__main__':
     dates = risk_portfolio_df.index
 
 
-    #print start_date 
-    #print dates[0]            
+    #print start_date
+    #print dates[0]
 
     fund_codes       = {}
     bond_fund_codes  = {}
     equalrisk_ratio  = {}
     highriskposition = {}
     lowriskposition = {}
-    
+
     #print fund_df
 
     for i in range(0, len(fund_df.index) - 1):
@@ -515,8 +515,8 @@ if __name__ == '__main__':
                 risk_ratio = equalrisk_ratio[col]
                 #print d, code , highriskratio * risk_ratio * high_w
                 #print risk_rank / 10.0, d, code , highriskratio * risk_ratio * high_w
-                all_code_position.append((risk_rank / 10.0, d, code ,highriskratio * risk_ratio * high_w))    
-                    
+                all_code_position.append((risk_rank / 10.0, d, code ,highriskratio * risk_ratio * high_w))
+
             for col in lowriskposition.keys():
 
                 lowriskratio = lowriskposition[col]

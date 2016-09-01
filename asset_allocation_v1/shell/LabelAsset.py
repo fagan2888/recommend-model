@@ -73,7 +73,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
             this_index_df  = DFUtil.get_date_df(indexdf, start_date, end_date)
             funddfr = stock_df.pct_change().fillna(0.0)
             #df = (allocationdata.stock_df, allocation_start_date, end_date)
-            #alldf        = 
+            #alldf        =
 
             #print
             #print time.time()
@@ -298,7 +298,7 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
     #fund_df.loc[tmp_d, 'ratebond'] = '200113'
     fund_df.to_csv(os.path.join(datadir,'bond_fund.csv'))
 
-    
+
     allocationdata.bond_fund_df = fund_df
 
 
