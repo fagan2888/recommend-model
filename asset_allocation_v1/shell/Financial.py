@@ -7,7 +7,7 @@ from math import sqrt
 from cvxopt import matrix
 from cvxopt.blas import dot
 from cvxopt.solvers import *
-from sklearn import datasets, linear_model    
+from sklearn import datasets, linear_model
 import numpy as np
 from scipy.stats import norm
 import cvxopt
@@ -30,7 +30,7 @@ def efficient_frontier(return_rate, bound):
     #print asset_mean
 
     cov        =     np.cov(return_rate)
-    
+
     S           =     matrix(cov)
     pbar       =     matrix(asset_mean)
 
@@ -127,7 +127,7 @@ def efficient_frontier(return_rate, bound):
 def efficient_frontier_index(return_rate):
 
         solvers.options['show_progress'] = False
-    
+
         n_asset    =     len(return_rate)
 
         asset_mean = np.mean(return_rate, axis = 1)
@@ -163,9 +163,9 @@ def efficient_frontier_fund(return_rate):
     #print asset_mean
 
     cov        =     np.cov(return_rate)
-    
+
     S       =     matrix(cov)
-    pbar       =     matrix(asset_mean)    
+    pbar       =     matrix(asset_mean)
 
     G          =     matrix(0.0 , (2 * n_asset,  n_asset))
 
@@ -178,17 +178,17 @@ def efficient_frontier_fund(return_rate):
 
     for i in range(0, n_asset):
         h[n_asset + i, 0] = 0.5
-    
-    
+
+
     A                 =  matrix(1.0, (1, n_asset))
     b                 =  matrix(1.0)
 
-            
+
     N = 100
     mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
     portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
     returns = [ dot(pbar,x) for x in portfolios ]
-    risks = [ sqrt(dot(x, S*x)) for x in portfolios ]    
+    risks = [ sqrt(dot(x, S*x)) for x in portfolios ]
 
 
     return risks, returns, portfolios
@@ -199,7 +199,7 @@ def efficient_frontier_fund(return_rate):
 def semivariance(portfolio):
     mean       =        np.mean(portfolio)
     var        =        0.0
-    n          =        0    
+    n          =        0
     for d in portfolio:
         if d <= mean:
             n   = n + 1
@@ -210,9 +210,9 @@ def semivariance(portfolio):
     if np.isnan(var) or np.isinf(var):
         var = 0.0
     return     var
-            
 
-        
+
+
 #jensen测度
 '''
 def jensen(portfolio, market, rf):
@@ -220,16 +220,16 @@ def jensen(portfolio, market, rf):
     pr         =    np.mean(portfolio)
     mr         =    np.mean(market)
     beta       =    np.cov(portfolio, market)[0][1] / np.cov(market)
-    return pr - (rf + beta * ( mr - rf) )    
+    return pr - (rf + beta * ( mr - rf) )
 '''
 
 
 def jensen(portfolio, market, rf):
 
     p = []
-    m = []        
+    m = []
     for i in range(0, len(portfolio)):
-        #print portfolio[i], market[i]    
+        #print portfolio[i], market[i]
         p.append(portfolio[i] - rf)
         m.append(market[i] - rf)
 
@@ -248,7 +248,7 @@ def jensen(portfolio, market, rf):
     return alpha
 
 
-            
+
 #sharp
 def sharp(portfolio, rf):
     r         =    np.mean(portfolio)
@@ -283,12 +283,12 @@ def sortino(portfolio, rf):
 
 #treynor-mazuy模型
 def tm(portfolio, market, rf):
-    xparams   = []    
+    xparams   = []
     yparams   = []
     for i in range(0, len(portfolio)):
         yparams.append(portfolio[i] - rf)
-        xparams.append([market[i] - rf, (market[i] - rf) ** 2])                    
-        
+        xparams.append([market[i] - rf, (market[i] - rf) ** 2])
+
     clf       = linear_model.LinearRegression()
     clf.fit(xparams, yparams)
     return clf.intercept_,  clf.coef_[0], clf.coef_[1]
@@ -296,15 +296,15 @@ def tm(portfolio, market, rf):
 
 #henrikson-merton
 def hm(portfolio, market, rf):
-    xparams   = []    
+    xparams   = []
     yparams   = []
     for i in range(0, len(portfolio)):
         yparams.append(portfolio[i] - rf)
         if rf - market[i] > 0:
-            xparams.append([market[i] - rf, market[i] - rf])                    
+            xparams.append([market[i] - rf, market[i] - rf])
         else:
-            xparams.append([market[i] - rf, 0])    
-                    
+            xparams.append([market[i] - rf, 0])
+
     clf       = linear_model.LinearRegression()
     clf.fit(xparams, yparams)
     return clf.intercept_,  clf.coef_[0], clf.coef_[1]
@@ -313,16 +313,16 @@ def hm(portfolio, market, rf):
 
 #value at risk
 def var(portfolio):
-    parray = np.array(portfolio)    
-    valueAtRisk = norm.ppf(0.05, parray.mean(), parray.std())    
+    parray = np.array(portfolio)
+    valueAtRisk = norm.ppf(0.05, parray.mean(), parray.std())
     return valueAtRisk
 
 
 
 #positive peroid weight
-def ppw(portfolio, benchmark):    
+def ppw(portfolio, benchmark):
 
-    
+
     #print 'p', portfolio
     #print 'm', benchmark
 
@@ -337,9 +337,9 @@ def ppw(portfolio, benchmark):
         for j in range(0, length + 3):
             item.append(0)
         A.append(item)
-    
+
     for i in range(0,  length + 3):
-        b.append(0)    
+        b.append(0)
 
     for i in range(0, length):
         A[i][i] = -1
@@ -348,24 +348,24 @@ def ppw(portfolio, benchmark):
     i = length
     for j in range(0, length):
         A[j][i]     = 1
-    b[i] = 1    
+    b[i] = 1
 
 
-    i = length + 1                
+    i = length + 1
     for j in range(0, length):
         A[j][i] = -1
-    b[i] = -1    
+    b[i] = -1
 
 
     i = length + 2
     for j in range(0, length):
         A[j][i] = -benchmark[j]
 
-    b[i] = 0         
-            
+    b[i] = 0
+
     c = []
     for j in range(0, length):
-        c.append(benchmark[j])    
+        c.append(benchmark[j])
 
 
     A = matrix(A)
@@ -379,7 +379,7 @@ def ppw(portfolio, benchmark):
     sol = solvers.lp(c, A, b)
     ppw = 0
     for i in range(0, len(sol['x'])):
-        ppw = ppw + portfolio[i] * sol['x'][i]    
+        ppw = ppw + portfolio[i] * sol['x'][i]
 
     return ppw
 
@@ -388,7 +388,7 @@ def ppw(portfolio, benchmark):
 
 
 def grs(portfolio):
-    return 0    
+    return 0
 
 
 
@@ -579,7 +579,7 @@ if __name__ == '__main__':
           [0.491, 0.779, 0.668, 0.653, 0.306, 0.652, 1.000]])
     Sigma = np.array([0.160, 0.203, 0.248, 0.271, 0.210, 0.200, 0.187])
     refPi = np.array([0.039, 0.069, 0.084, 0.090, 0.043, 0.068, 0.076])
-    assets= {'Australia','Canada   ','France   ','Germany  ','Japan    ','UK       ','USA      '}    
+    assets= {'Australia','Canada   ','France   ','Germany  ','Japan    ','UK       ','USA      '}
 
 
     V = np.multiply(np.outer(Sigma, Sigma), C)
@@ -590,7 +590,7 @@ if __name__ == '__main__':
 
     tauV = tau * V
     P1 = np.array([0, 0, -.295, 1.00, 0, -.705, 0 ])
-    P2 = np.array([1, 0, 0, 0, 0, -0.5, -0.5])      
+    P2 = np.array([1, 0, 0, 0, 0, -0.5, -0.5])
     Q1 = np.array([0.05])
     Q2 = np.array([0.06])
     P=np.array([P1, P2])
@@ -599,7 +599,7 @@ if __name__ == '__main__':
     #print P
     #print Q
     #print np.dot(np.dot(P,tauV),P.T)
-    Omega = np.dot(np.dot(P,tauV),P.T) * np.eye(Q.shape[0])    
+    Omega = np.dot(np.dot(P,tauV),P.T) * np.eye(Q.shape[0])
     #print np.eye(Q.shape[0])
     #print Omega
 

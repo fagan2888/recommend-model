@@ -47,7 +47,7 @@ def stockindex():
 def fund_index_data(start_date, end_date, index_code):
 
 
-    #取开始时间和结束时间的数据    
+    #取开始时间和结束时间的数据
     df = pd.read_csv(os.path.normpath(os.path.join(datadir, '../csvdata/fund_value.csv')), index_col = 'date', parse_dates = ['date'] )
     df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
     df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
@@ -57,7 +57,7 @@ def fund_index_data(start_date, end_date, index_code):
     indicator_df = pd.read_csv(os.path.normpath(os.path.join(datadir, '../csvdata/fund_establish_date.csv')), index_col = 'code', parse_dates = ['date'])
     establish_date_code = set()
     for code in indicator_df.index:
-        date = indicator_df['establish_date'][code]        
+        date = indicator_df['establish_date'][code]
         if date <= datetime.strptime(start_date, '%Y-%m-%d'):
             establish_date_code.add(code)
 
@@ -67,11 +67,11 @@ def fund_index_data(start_date, end_date, index_code):
     for col in cols:
 
         #有20%的净值是nan，则过滤掉该基金
-        vs = df[col]    
+        vs = df[col]
         n = 0
         for v in vs:
             if isnan(v):
-                n = n + 1    
+                n = n + 1
         if n > 0.2 * len(vs):
             continue
 
@@ -85,7 +85,7 @@ def fund_index_data(start_date, end_date, index_code):
 
 
     index_df = df[index_code]
-    #index_df_r = df_r[index_col]     
+    #index_df_r = df_r[index_col]
 
     #print fund_df_r
     #print index_df_r
@@ -96,8 +96,8 @@ def fund_index_data(start_date, end_date, index_code):
 
 def fund_value(start_date, end_date):
 
-    
-    #取开始时间和结束时间的数据    
+
+    #取开始时间和结束时间的数据
     df = pd.read_csv(os.path.normpath(os.path.join(datadir, '../csvdata/fund_value.csv')), index_col = 'date', parse_dates = ['date'])
     df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
     df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
@@ -109,7 +109,7 @@ def fund_value(start_date, end_date):
     indicator_df = indicator_df.dropna()
     establish_date_code = set()
     for code in indicator_df.index:
-        date = indicator_df['establish_date'][code]        
+        date = indicator_df['establish_date'][code]
         if datetime.strptime(date, '%Y-%m-%d') <= datetime.strptime(start_date, '%Y-%m-%d'):
             establish_date_code.add(code)
 
@@ -119,11 +119,11 @@ def fund_value(start_date, end_date):
     for col in cols:
 
         #有20%的净值是nan，则过滤掉该基金
-        vs = df[col].values    
+        vs = df[col].values
         n = 0
         for v in vs:
             if isnan(v):
-                n = n + 1    
+                n = n + 1
         if n > 0.2 * len(vs):
             continue
 
@@ -138,7 +138,7 @@ def fund_value(start_date, end_date):
 
 def bond_value(start_date, end_date):
 
-    #取开始时间和结束时间的数据    
+    #取开始时间和结束时间的数据
     df = pd.read_csv(os.path.normpath(os.path.join(datadir, '../csvdata/bond_value.csv')), index_col = 0, parse_dates = ['date'])
     df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
     df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
@@ -149,7 +149,7 @@ def bond_value(start_date, end_date):
     indicator_df = indicator_df.dropna()
     establish_date_code = set()
     for code in indicator_df.index:
-        date = indicator_df['establish_date'][code]        
+        date = indicator_df['establish_date'][code]
         if datetime.strptime(date,'%Y-%m-%d') <= datetime.strptime(start_date, '%Y-%m-%d'):
             establish_date_code.add(code)
 
@@ -158,11 +158,11 @@ def bond_value(start_date, end_date):
     for col in cols:
 
         #有20%的净值是nan，则过滤掉该基金
-        vs = df[col].values    
+        vs = df[col].values
         n = 0
         for v in vs:
             if isnan(v):
-                n = n + 1    
+                n = n + 1
         if n > 0.2 * len(vs):
             continue
 
@@ -220,7 +220,7 @@ def money_value(start_date, end_date):
 
 def index_value(start_date, end_date, index_code):
 
-    #取开始时间和结束时间的数据    
+    #取开始时间和结束时间的数据
     df = pd.read_csv(os.path.normpath(os.path.join(datadir, '../csvdata/fund_value.csv')), index_col = 'date', parse_dates = ['date'] )
     df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
     df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
@@ -230,8 +230,8 @@ def index_value(start_date, end_date, index_code):
     return index_df
 
 def bond_index_value(start_date, end_date, index_code):
-    
-    #取开始时间和结束时间的数据    
+
+    #取开始时间和结束时间的数据
     df = pd.read_csv(os.path.normpath(os.path.join(datadir, '../csvdata/bond_value.csv')), index_col = 'date', parse_dates = ['date'] )
     df = df[ df.index <= datetime.strptime(end_date,'%Y-%m-%d')]
     df = df[ df.index >= datetime.strptime(start_date,'%Y-%m-%d')]
@@ -292,17 +292,17 @@ def fund_position(start_date, end_date):
                 has = False
 
         if has:
-            codes.append(col)                        
+            codes.append(col)
 
 
-    positiondf = positiondf[codes]                                        
-    return positiondf    
+    positiondf = positiondf[codes]
+    return positiondf
 
 
 if __name__ == '__main__':
-    
+
     #fund_df, index_df = fund_index_data('2011-02-03', '2015-03-02', '000300.SH')
-    #print fund_df, index_df 
+    #print fund_df, index_df
     #print np.mean(index_df.pct_change())
     #fund_scale =  scale_data()
     #print fund_scale.values

@@ -22,14 +22,14 @@ def fund_maxsemivariance(funddf):
 
 
     fundsemivariance = {}
-    
+
     funddfr = funddf.pct_change().fillna(0.0)
 
     codes = funddfr.columns
 
     for code in codes:
 
-        rs = []    
+        rs = []
         for r in funddfr[code].values:
             if not isnan(r):
                 rs.append(r)
@@ -41,7 +41,7 @@ def fund_maxsemivariance(funddf):
                     max_semivariance = semivariance
 
         fundsemivariance[code] = max_semivariance
-    
+
     return fundsemivariance
 
 
@@ -49,40 +49,40 @@ def fund_semivariance(funddf):
 
 
     fundsemivariance = {}
-    
+
     funddfr = funddf.pct_change().fillna(0.0)
 
     codes = funddfr.columns
 
 
     for code in codes:
-        rs = []    
+        rs = []
         for r in funddfr[code].values:
             if not isnan(r):
                 rs.append(r)
 
         fundsemivariance[code] = fin.semivariance(rs)
-    
+
 
     return fundsemivariance
 
 
 def fund_weekly_return(funddf):
-        
+
     fundweeklyreturn = {}
-    
+
     funddfr = funddf.pct_change().fillna(0.0)
 
     codes = funddfr.columns
 
     for code in codes:
-        rs = []    
+        rs = []
         for r in funddfr[code].values:
             if not isnan(r):
                 rs.append(r)
-        rs.sort()    
+        rs.sort()
         fundweeklyreturn[code] = rs
-    
+
 
     return fundweeklyreturn
 
@@ -100,20 +100,20 @@ def fund_month_return(funddf):
             tran_index.append(i)
 
     funddf = funddf.iloc[tran_index]
-    
+
     funddfr = funddf.pct_change().fillna(0.0)
 
     codes = funddfr.columns
 
     for code in codes:
-        rs = []    
+        rs = []
         for r in funddfr[code].values:
             if not isnan(r):
                 rs.append(r)
-    
+
         rs.sort()
         fundmonthreturn[code] = rs
-    
+
 
     return fundmonthreturn
 
@@ -121,19 +121,19 @@ def fund_month_return(funddf):
 def fund_sharp(funddf):
 
     fundsharp = {}
-    
+
     funddfr = funddf.pct_change().fillna(0.0)
 
     codes = funddfr.columns
 
     for code in codes:
-        rs = []    
+        rs = []
         for r in funddfr[code].values:
             if not isnan(r):
                 rs.append(r)
 
         fundsharp[code] = fin.sharp(rs, const.rf)
-    
+
 
     x = fundsharp
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
@@ -149,13 +149,13 @@ def fund_sharp(funddf):
 def fund_sharp_annual(funddf):
 
     fundsharp = {}
-    
+
     funddfr = funddf.pct_change().fillna(0.0)
 
     codes = funddfr.columns
 
     for code in codes:
-        rs = []    
+        rs = []
         for r in funddfr[code].values:
             rs.append(r)
 
@@ -180,7 +180,7 @@ def fund_return(funddf):
 
 
     fundreturn = {}
-    
+
     funddfr = funddf.pct_change().fillna(0.0)
 
     codes = funddfr.columns
@@ -190,7 +190,7 @@ def fund_return(funddf):
         #fundreturn[code] = vs[len(vs) -1] / vs[0] - 1
         fundreturn[code] = np.mean(vs)
         #print code, fundreturn[code]
-    
+
     x = fundreturn
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
     sorted_return = sorted_x
@@ -208,14 +208,14 @@ def fund_risk(funddf):
 
 
     fundrisk = {}
-    
+
     funddfr = funddf.pct_change().fillna(0.0)
 
     codes = funddf.columns
 
     for code in codes:
         fundrisk[code] = np.std(funddfr[code].values)
-    
+
     x = fundrisk
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
     sorted_risk = sorted_x
@@ -278,7 +278,7 @@ def portfolio_drawdown(pvs):
 #基金的最大回撤
 def fund_maxdrawdown(funddf):
 
-    return 0    
+    return 0
 
 
 def fund_jensen(funddf, indexdf):
@@ -312,8 +312,8 @@ def fund_jensen(funddf, indexdf):
 
 
     return sorted_measure
-    
-    
+
+
 
 if __name__ == '__main__':
 

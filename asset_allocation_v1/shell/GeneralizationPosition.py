@@ -44,10 +44,10 @@ def risk_position():
     equalrisk_ratio_df = equalrisk_ratio_df[equalrisk_ratio_df.index >= start_date]
     #
     dates = risk_portfolio_df.index
-    start_date = dates[0]    
+    start_date = dates[0]
 
-    #print start_date 
-    #print dates[0]            
+    #print start_date
+    #print dates[0]
 
     fund_codes       = {}
     bond_fund_codes  = {}
@@ -193,7 +193,7 @@ def risk_position():
                 code = "[u'213009']"
                 left_weight = 1 - total_weight
                 all_code_position.append((d, risk_rank / 10.0, col, left_weight, code))
-                
+
 
     # all_code_position = clean_min(all_code_position)
     # all_code_position = clean_same(all_code_position)
@@ -230,10 +230,10 @@ def clean_same(re):
     result = []
     for i in re:
         if day_list.has_key(str(i[0])+'--'+str(i[1])):
-            result.append(i) 
+            result.append(i)
     return result
-                
-                 
+
+
 def is_same(tmp1,tmp2):
     flag = 0.03
     change = 0
@@ -252,14 +252,14 @@ def is_same(tmp1,tmp2):
     else:
         return False
 
-        
+
 
 def clean_min(re):
     tmp = {}
     tmp1 = {}
     tmp_list = []
     for i in re:
-        if i[3] < 0.01:    
+        if i[3] < 0.01:
             if tmp.has_key(str(i[0])+'--'+str(i[1])):
                 tmp[str(i[0])+'--'+str(i[1])] += i[3]
             else:
@@ -276,9 +276,9 @@ def clean_min(re):
         c = list(i)
         if tmp.has_key(str(i[0])+'--'+str(i[1])):
             tmp1[str(i[0])+'--'+str(i[1])] -=1
-            if tmp1[str(i[0])+'--'+str(i[1])] <= 0: 
+            if tmp1[str(i[0])+'--'+str(i[1])] <= 0:
                 if kk.has_key(str(i[0])+'--'+str(i[1])):
-                    c[3] = round(i[3] + round(tmp[str(i[0])+'--'+str(i[1])]-kk[str(i[0])+'--'+str(i[1])],6)    ,6)        
+                    c[3] = round(i[3] + round(tmp[str(i[0])+'--'+str(i[1])]-kk[str(i[0])+'--'+str(i[1])],6)    ,6)
                 else:
                     c[3] = round(i[3] * 1 / (1-tmp[str(i[0])+'--'+str(i[1])]) ,6)
             else:
@@ -306,7 +306,7 @@ def output_category_portfolio(all_code_position):
         'ratebond'        : 21, # 利率债
         'creditbond'      : 22, # 信用债
         'convertiblebond' : 23, # 可转债
-        
+
         'money'           : 31, # 货币
 
         'SP500.SPI'       : 41, # 标普
@@ -335,14 +335,14 @@ def output_final_portfolio(all_code_position):
         'ratebond'        : 21, # 利率债
         'creditbond'      : 22, # 信用债
         'convertiblebond' : 23, # 可转债
-        
+
         'money'           : 31, # 货币
 
         'SP500.SPI'       : 41, # 标普
         'GLNC'            : 42, # 黄金
         'HSCI.HI'         : 43, # 恒生
     }
-    
+
     positions = []
     for record in all_code_position:
         date, risk, stype, ratio, codes, = record
@@ -362,7 +362,7 @@ def output_final_portfolio(all_code_position):
 
         codes_used = codes[0:count_used]
         ratio_used = ratio / count_used
-        
+
         for code in codes_used :
             positions.append((risk, date, code, ratio_used))
 
@@ -370,8 +370,8 @@ def output_final_portfolio(all_code_position):
     #     risk, date, code, ratio = record
     #     print "B:%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
 
-    positions = merge_same_fund(positions)       
-    positions = clean_min(positions) 
+    positions = merge_same_fund(positions)
+    positions = clean_min(positions)
     positions = clean_same(positions)
 
     for record in positions:
@@ -393,7 +393,7 @@ def output_final_portfolio(all_code_position):
 #
 def merge_same_fund(positions) :
     result = []
-    
+
     positions = sorted(positions, key=itemgetter(0,1,2))
     for key, group in groupby(positions, key = itemgetter(0,1,2)) :
         ratio = sum(e[3] for e in group)
@@ -405,7 +405,7 @@ def merge_same_fund(positions) :
 if __name__ == '__main__':
 
     final = False
-    
+
     #
     # 处理命令行参数
     #
