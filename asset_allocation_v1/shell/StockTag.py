@@ -856,7 +856,7 @@ def hmmeasure(funddf, indexdf):
                 p.append(rs[i])
                 m.append(indexrs[i][0])
 
-                    #print p
+        #print p
         hm[col] = fin.hm(p, m, rf)
 
     return hm
@@ -1274,10 +1274,10 @@ def tagbondfund(allocationdata, funddf, indexdf):
         final_codes.add(code)
 
     for code in declinefitness_set:
-            final_codes.add(code)
+        final_codes.add(code)
 
     for code in oscillationfitness_set:
-            final_codes.add(code)
+        final_codes.add(code)
 
     for code in ratebondprefer_set:
         final_codes.add(code)
@@ -1383,7 +1383,7 @@ if __name__ == '__main__':
 
     '''
     funddf = data.fund_value(train_start, train_end)
-        funddf = funddf[codes]
+    funddf = funddf[codes]
 
 
     capindexdf         = data.index_value(train_start, train_end, ['399314.SZ', '399316.SZ'])
@@ -1395,8 +1395,8 @@ if __name__ == '__main__':
     positiondf         = data.fund_position(train_start, train_end)
     positiondf         = positiondf[codes]
 
-        largecapfitness    = largecapfitness(funddf, capindexdf, 0.5)
-        smallcapfitness    = smallcapfitness(funddf, capindexdf, 0.5)
+    largecapfitness    = largecapfitness(funddf, capindexdf, 0.5)
+    smallcapfitness    = smallcapfitness(funddf, capindexdf, 0.5)
     risefitness        = risefitness(funddf, hs300indexdf, 0.5)
     declinefitness     = declinefitness(funddf, hs300indexdf, 0.5)
     oscillationfitness = oscillationfitness(funddf, hs300indexdf,  0.5)
@@ -1564,7 +1564,7 @@ if __name__ == '__main__':
 
     codes = list(final_codes)
     funddf = data.fund_value(train_start, train_end)
-        #funddf = funddf[codes]
+    #funddf = funddf[codes]
 
 
     funds = set()
@@ -1656,3 +1656,5 @@ if __name__ == '__main__':
     print funds
 
     '''
+
+
