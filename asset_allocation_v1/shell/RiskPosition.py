@@ -140,7 +140,7 @@ def risk_position():
                 if col == 'GLNC':
                     code = 216
                 elif col == 'HSCI.HI':
-                    code = 000071
+                    code = 71
                 elif col == 'SP500.SPI':
                     code = 96001
                 else:
