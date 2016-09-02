@@ -2,15 +2,16 @@
 
 def readFile(path):
     tmp = []
-    for line in open(path):   
-        tmp.append(line.strip().split(','))
+    if type(path) == list: 
+        for line in path:   
+            tmp.append(line.strip().split(','))
+    else:
+        for line in open(path):   
+            tmp.append(line.strip().split(','))
     return tmp
 
 def loadDict(path):
-    if type(path) == list: 
-        tmp = path
-    else:
-        tmp = readFile(path)
+    tmp = readFile(path)
     result = {}
     day_list = {}
     risk_list = []

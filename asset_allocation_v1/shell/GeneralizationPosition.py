@@ -7,6 +7,7 @@ import os
 import sys
 import pandas as pd
 import string
+import GeneralizationTrade
 
 from itertools import groupby
 from operator import itemgetter
@@ -319,6 +320,48 @@ def output_category_portfolio(all_code_position):
         xtype = xtab[record[2]] if record[2] in xtab else 0
         print "%s,%.1f,%s,%.4f,%s" % (record[0].strftime("%Y-%m-%d"), record[1], xtype, record[3], ':'.join(codes))
 
+def output_portfolio(all_code_position):
+    #
+    # 输出配置数据
+    #
+    xtab = {
+        'largecap'        : 11, # 大盘
+        'smallcap'        : 12, # 小盘
+        'rise'            : 13, # 上涨
+        'oscillation'     : 14, # 震荡
+        'decline'         : 15, # 下跌
+        'growth'          : 16, # 成长
+        'value'           : 17, # 价值
+
+        'ratebond'        : 21, # 利率债
+        'creditbond'      : 22, # 信用债
+        'convertiblebond' : 23, # 可转债
+
+        'money'           : 31, # 货币
+
+        'SP500.SPI'       : 41, # 标普
+        'GLNC'            : 42, # 黄金
+        'HSCI.HI'         : 43, # 恒生
+    }
+
+    lines = []
+    for record in all_code_position:
+        codes = ast.literal_eval(record[4])
+        xtype = xtab[record[2]] if record[2] in xtab else 0
+        lines.append("%s,%.1f,%s,%.4f,%s" % (record[0].strftime("%Y-%m-%d"), record[1], xtype, record[3], ':'.join(codes)))
+
+    #
+    # 调用晓彬的代码
+    #
+    positions = GeneralizationTrade.init(lines)
+    positions = clean_min(positions)
+    positions = clean_same(positions)
+    
+    for record in positions :
+        risk, date, code, ratio = record
+        print "%s,%s,%06s,%.4f" % (risk, date, code, ratio)
+
+        
 def output_final_portfolio(all_code_position):
     #
     # 输出配置数据
@@ -405,12 +448,13 @@ def merge_same_fund(positions) :
 if __name__ == '__main__':
 
     final = False
+    category = False
 
     #
     # 处理命令行参数
     #
     try:
-        longopts = ['datadir=', 'verbose', 'help', 'final']
+        longopts = ['datadir=', 'verbose', 'help', 'final', 'category']
         options, remainder = getopt.gnu_getopt(sys.argv[1:], 'hvd:', longopts)
     except getopt.GetoptError:
         usage()
@@ -428,6 +472,8 @@ if __name__ == '__main__':
             version = arg
         elif opt == '--final':
             final = True
+        elif opt == '--category':
+            category = True
 
     #
     # 确认数据目录存在
@@ -447,5 +493,8 @@ if __name__ == '__main__':
     if final:
         output_final_portfolio(all_code_position)
     else:
-        output_category_portfolio(all_code_position)
+        if category :
+            output_category_portfolio(all_code_position)
+        else :
+            output_portfolio(all_code_position)
 
