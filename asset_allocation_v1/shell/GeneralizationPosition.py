@@ -9,9 +9,10 @@ import pandas as pd
 import string
 import GeneralizationTrade
 
+from Const import datadir
+from datetime import datetime
 from itertools import groupby
 from operator import itemgetter
-from Const import datadir
 
 def risk_position():
 
@@ -90,6 +91,8 @@ def risk_position():
 
     #print fund_df
 
+    glnc_pivot = datetime.strptime('2013-08-22', '%Y-%m-%d')
+
     all_code_position = []
 
     for i in range(0, len(dates)):
@@ -152,7 +155,10 @@ def risk_position():
                 code = None
 
                 if col == 'GLNC':
-                    code = "[u'000216']"
+                    if d < glnc_pivot :
+                        code = "[u'320013']"
+                    else :
+                        code = "[u'000216']"
                 elif col == 'HSCI.HI':
                     code = "[u'000071']"
                 elif col == 'SP500.SPI':
