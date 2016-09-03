@@ -43,7 +43,13 @@ def highriskasset(allocationdata, dfr, his_week, interval):
             allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d').date()]
             allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d').date()]
 
-            risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
+
+            uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3]
+            downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+            #risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
+            risk, returns, ws, sharpe = PF.markowitz_r_spe(allocation_dfr, [downlimit, uplimit])
+            #risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
             fund_codes = allocation_dfr.columns
 
 
