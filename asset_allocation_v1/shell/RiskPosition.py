@@ -38,15 +38,15 @@ def risk_position():
     dates = risk_portfolio_df.index
 
 
-    #print start_date 
-    #print dates[0]            
+    #print start_date
+    #print dates[0]
 
     fund_codes       = {}
     bond_fund_codes  = {}
     equalrisk_ratio  = {}
     highriskposition = {}
     lowriskposition = {}
-    
+
     #print fund_df
 
     for i in range(0, len(fund_df.index) - 1):
@@ -151,10 +151,10 @@ def risk_position():
                 #print d, code , highriskratio * risk_ratio * high_w
                 #print risk_rank / 10.0, d, code , highriskratio * risk_ratio * high_w
                 #all_code_position.append((risk_rank / 10.0, d, code ,highriskratio * risk_ratio * high_w))
-                #print d, code, highriskratio * risk_ratio * high_w        
+                #print d, code, highriskratio * risk_ratio * high_w
                 weight   = ws.setdefault(code, 0.0)
                 ws[code] = weight + highriskratio * risk_ratio * high_w
-    
+
             for col in lowriskposition.keys():
 
                 lowriskratio = lowriskposition[col]
@@ -162,12 +162,12 @@ def risk_position():
                 #print risk_rank / 10.0, d, code, lowriskratio * low_w
                 #all_code_position.append((risk_rank / 10.0, d, code, lowriskratio * low_w))
                 #print col,
-                
+
                 weight   = ws.setdefault(code, 0.0)
                 ws[code] = weight  + lowriskratio * low_w
 
             for code in ws.keys():
-                w = ws[code]        
+                w = ws[code]
                 all_code_position.append((risk_rank / 10.0, d, code, w))
         #print
     #print risk_portfolio_df
@@ -209,10 +209,10 @@ def clean_same(re):
     result = []
     for i in re:
         if day_list.has_key(str(i[0])+'--'+str(i[1])):
-            result.append(i) 
+            result.append(i)
     return result
-                
-                 
+
+
 def is_same(tmp1,tmp2):
     flag = 0.03
     change = 0
@@ -231,14 +231,14 @@ def is_same(tmp1,tmp2):
     else:
         return False
 
-        
+
 
 def clean_min(re):
     tmp = {}
     tmp1 = {}
     tmp_list = []
     for i in re:
-        if i[3] < 0.01:    
+        if i[3] < 0.01:
             if tmp.has_key(str(i[0])+'--'+str(i[1])):
                 tmp[str(i[0])+'--'+str(i[1])] += i[3]
             else:
@@ -255,9 +255,9 @@ def clean_min(re):
         c = list(i)
         if tmp.has_key(str(i[0])+'--'+str(i[1])):
             tmp1[str(i[0])+'--'+str(i[1])] -=1
-            if tmp1[str(i[0])+'--'+str(i[1])] <= 0: 
+            if tmp1[str(i[0])+'--'+str(i[1])] <= 0:
                 if kk.has_key(str(i[0])+'--'+str(i[1])):
-                    c[3] = round(i[3] + round(tmp[str(i[0])+'--'+str(i[1])]-kk[str(i[0])+'--'+str(i[1])],6)    ,6)        
+                    c[3] = round(i[3] + round(tmp[str(i[0])+'--'+str(i[1])]-kk[str(i[0])+'--'+str(i[1])],6)    ,6)
                 else:
                     c[3] = round(i[3] * 1 / (1-tmp[str(i[0])+'--'+str(i[1])]) ,6)
             else:
@@ -268,8 +268,8 @@ def clean_min(re):
                     kk[str(i[0])+'--'+str(i[1])] = round(c[3]-i[3],6)
         result.append(tuple(c))
     return result
-            
-            
+
+
 
 if __name__ == '__main__':
 
@@ -312,15 +312,15 @@ if __name__ == '__main__':
     dates = risk_portfolio_df.index
 
 
-    #print start_date 
-    #print dates[0]            
+    #print start_date
+    #print dates[0]
 
     fund_codes       = {}
     bond_fund_codes  = {}
     equalrisk_ratio  = {}
     highriskposition = {}
     lowriskposition = {}
-    
+
     #print fund_df
 
     for i in range(0, len(fund_df.index) - 1):
@@ -423,8 +423,8 @@ if __name__ == '__main__':
                 risk_ratio = equalrisk_ratio[col]
                 #print d, code , highriskratio * risk_ratio * high_w
                 #print risk_rank / 10.0, d, code , highriskratio * risk_ratio * high_w
-                all_code_position.append((risk_rank / 10.0, d, code ,highriskratio * risk_ratio * high_w))    
-                    
+                all_code_position.append((risk_rank / 10.0, d, code ,highriskratio * risk_ratio * high_w))
+
             for col in lowriskposition.keys():
 
                 lowriskratio = lowriskposition[col]

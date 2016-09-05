@@ -210,13 +210,13 @@ def fund_measure(allocationdata):
         HSCI_sharpe = other_fund_sharpe_df.loc[date,'HSCI.HI']
 
         sql = base_sql % (allocationdata.start_date, date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback,'other' ,'513500' , 0, 0, 0, 0, SP500_sharpe , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,datetime.now(), datetime.now())
-        cursor.execute(sql)        
+        cursor.execute(sql)
 
         sql = base_sql % (allocationdata.start_date, date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback,'other' ,'159934' , 0, 0, 0, 0, GLNC_sharpe , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,datetime.now(), datetime.now())
-        cursor.execute(sql)        
+        cursor.execute(sql)
 
         sql = base_sql % (allocationdata.start_date, date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback,'other' ,'513600' , 0, 0, 0, 0, HSCI_sharpe , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,datetime.now(), datetime.now())
-        cursor.execute(sql)        
+        cursor.execute(sql)
 
 
     conn.commit()
@@ -311,7 +311,7 @@ def label_asset(allocationdata):
                 fund = stock_fund_df.loc[d.strftime('%Y-%m-%d'), label]
             if label in set(other_tags):
                 fund = label
-                
+
             net_value = label_asset_df.loc[d, label]
 
             navs.append(net_value)
@@ -335,11 +335,11 @@ def label_asset(allocationdata):
             #print fund
             if label in set(other_tags):
                 if label == 'SP500.SPI':
-                    fund = '513500'    
+                    fund = '513500'
                 if label == 'HSCI.HI':
-                    fund = '513600'    
+                    fund = '513600'
                 if label == 'GLNC':
-                    fund = '518880'    
+                    fund = '518880'
                 sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'other', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
             else:
                 sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'stock', fund, 'origin', 1.0, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
@@ -395,11 +395,11 @@ def label_asset(allocationdata):
             #print base_sql
             if label in set(other_tags):
                 if label == 'SP500.SPI':
-                    fund = '513500'    
+                    fund = '513500'
                 if label == 'HSCI.HI':
-                    fund = '513600'    
+                    fund = '513600'
                 if label == 'GLNC':
-                    fund = '518880'    
+                    fund = '518880'
                 sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'other', fund, 'fixed_risk', position, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
             else:
                 sql = base_sql % (allocationdata.start_date, allocationdata.fund_measure_adjust_period, allocationdata.fund_measure_lookback, allocationdata.fixed_risk_asset_risk_adjust_period, allocationdata.fixed_risk_asset_risk_lookback, 'stock', fund, 'fixed_risk', position, label, net_value, d, returns, sharpe, risk, maxdrawdown , datetime.now(), datetime.now())
@@ -623,7 +623,7 @@ def asset_allocation(allocationdata):
         net_value = high_risk_asset_df.loc[d, 'high_risk_asset']
         navs.append(net_value)
 
-        str_d = d.strftime('%Y-%m-%d')    
+        str_d = d.strftime('%Y-%m-%d')
         if str_d in high_position_dates:
             largecap_ratio = high_risk_position_df.loc[str_d, 'largecap']
             smallcap_ratio = high_risk_position_df.loc[str_d, 'smallcap']
@@ -710,7 +710,7 @@ def asset_allocation(allocationdata):
     dates.sort()
     highlow_position_dates = set(highlow_risk_position_df.index.values)
 
-    
+
 
 
     #print high_risk_position_df
@@ -860,7 +860,7 @@ def riskhighlowriskasset(allocationdata):
         ps = dateposition[dates[0]]
         last_date = dates[0]
 
-        for i in range(1, len(dates)):    
+        for i in range(1, len(dates)):
 
             d = dates[i]
             current_ps = dateposition[d]
@@ -935,13 +935,13 @@ def getFee(fund_id,fee_type,amount,day=0):
                 return float(result['ff_fee'])
             else:
                 fee = float(result['ff_fee'])
-                return fee*amount 
+                return fee*amount
         else:
             fund_type = getFundType(fund_id)
             if fund_type == 'huobi':
                 return 0
             return 0.00*amount
-        
+
 def getCompany(fund_id):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -952,7 +952,7 @@ def getCompany(fund_id):
         return result['fi_company_id']
     else:
         return 0
-    
+
 def isChangeOut(fund_id):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -974,7 +974,7 @@ def isChangeIn(fund_id):
         if result['fi_yingmi_transfor_status'] in [0,1]:
             return True
     return False
-        
+
 def getShare(fund_id,amount,day,count=0):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -1000,7 +1000,7 @@ def getAmount(fund_id,share,day=0):
     if result:
         return share * float(result['wf_nav_value'])
     return share
-    
+
 def getNavValue(fund_id,day):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -1009,7 +1009,7 @@ def getNavValue(fund_id,day):
     result = cur.fetchone()
     if result:
         return float(result['wf_nav_value'])
-    return 1 
+    return 1
 
 def getFundType(fund_id):
     type_list = {'zhishu':[2001010607,200101080102],'huobi':[20010104],'zhaiquan':[20010103,2001010203],'gupiao':[20010101,2001010201,2001010202,2001010204]}
@@ -1033,8 +1033,8 @@ def getBuyPoFee(fund_id):
     result = cur.fetchone()
     if result:
         return float(result['fi_yingmi_amount'])
-    return 1 
-    
+    return 1
+
 def getRiskPosition(status):
     conn = MySQLdb.connect(**db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -1049,7 +1049,7 @@ def getRiskPosition(status):
         for i in result:
             tmp.append(tuple([i['ra_alloc_id'],str(i['ra_transfer_date'])+' 00:00:00',getFundCode(str(i['ra_fund_id'])),float(i['ra_fund_ratio'])]))
     return tmp
-     
+
 def getFundCode(fund_id):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -1077,9 +1077,9 @@ def insertNav(risk,position,risk_type):
                 cur.execute(sql)
     conn.commit()
     conn.close()
-                
-            
-    
+
+
+
 
 if __name__ == '__main__':
 

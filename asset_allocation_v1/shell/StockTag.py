@@ -22,7 +22,7 @@ def largecapfitness(funddf, indexdf, ratio):
 
     largecaptag = {}
 
-    largecap = []    
+    largecap = []
 
     cols   = indexdfr.columns
 
@@ -30,7 +30,7 @@ def largecapfitness(funddf, indexdf, ratio):
     indexr.append(0)
     for i in range(1 ,len(indexdfr[cols[0]].values)):
         indexr.append(indexdfr[cols[0]].values[i] - indexdfr[cols[1]].values[i])
-    
+
 
     for i in range(4, len(indexr)):
         n = 0
@@ -46,19 +46,19 @@ def largecapfitness(funddf, indexdf, ratio):
         elif n > 0:
             largecap.append(1)
         else:
-            largecap.append(-1)        
+            largecap.append(-1)
 
 
     for code in funddfr.columns:
-    
-        fundr = funddfr[code].values                
+
+        fundr = funddfr[code].values
         largecapr = []
         for i in range(0, len(largecap)):
             tag = largecap[i]
             if tag == 1 and (not isnan(fundr[i + 4])):
                 largecapr.append(fundr[i + 4])
-    
-        largecaptag[code] = largecapr    
+
+        largecaptag[code] = largecapr
 
 
     fitness = {}
@@ -78,7 +78,7 @@ def largecapfitness(funddf, indexdf, ratio):
 
 
     return result
-    
+
 
 
 #小盘适应度
@@ -90,7 +90,7 @@ def smallcapfitness(funddf, indexdf, ratio):
 
     smallcaptag = {}
 
-    smallcap = []    
+    smallcap = []
 
     cols   = indexdfr.columns
 
@@ -98,7 +98,7 @@ def smallcapfitness(funddf, indexdf, ratio):
     indexr.append(0)
     for i in range(1 ,len(indexdfr[cols[0]].values)):
         indexr.append(indexdfr[cols[0]].values[i] - indexdfr[cols[1]].values[i])
-    
+
 
     for i in range(4, len(indexr)):
         n = 0
@@ -114,19 +114,19 @@ def smallcapfitness(funddf, indexdf, ratio):
         elif n > 0:
             smallcap.append(1)
         else:
-            smallcap.append(-1)        
+            smallcap.append(-1)
 
 
     for code in funddfr.columns:
-    
-        fundr = funddfr[code].values                
+
+        fundr = funddfr[code].values
         smallcapr = []
         for i in range(0, len(smallcap)):
             tag = smallcap[i]
             if tag == -1 and (not isnan(fundr[i + 4])):
                 smallcapr.append(fundr[i + 4])
 
-        smallcaptag[code] = smallcapr    
+        smallcaptag[code] = smallcapr
 
 
     fitness = {}
@@ -157,7 +157,7 @@ def risefitness(funddf, indexdf, ratio):
 
     risetag = {}
 
-    rise = []    
+    rise = []
 
     indexr = indexdfr.values
 
@@ -176,20 +176,20 @@ def risefitness(funddf, indexdf, ratio):
         elif n > 0:
             rise.append(1)
         else:
-            rise.append(-1)                                        
+            rise.append(-1)
 
     for code in funddfr.columns:
-    
-        fundr = funddfr[code].values                
+
+        fundr = funddfr[code].values
         riser = []
         for i in range(0, len(rise)):
             tag = rise[i]
             if tag == 1 and (not isnan(fundr[i + 4])):
                 riser.append(fundr[i + 4])
-    
-        risetag[code] = riser            
 
-                                        
+        risetag[code] = riser
+
+
     fitness = {}
     for code in risetag.keys():
         rs = risetag[code]
@@ -218,7 +218,7 @@ def declinefitness(funddf, indexdf, ratio):
 
     declinetag = {}
 
-    decline = []    
+    decline = []
 
     indexr = indexdfr.values
 
@@ -239,17 +239,17 @@ def declinefitness(funddf, indexdf, ratio):
             decline.append(-1)
 
     for code in funddfr.columns:
-    
-        fundr = funddfr[code].values                
+
+        fundr = funddfr[code].values
         decliner = []
         for i in range(0, len(decline)):
             tag = decline[i]
             if tag == -1 and (not isnan(fundr[i + 4])):
                 decliner.append(fundr[i + 4])
-    
-        declinetag[code] = decliner    
-            
-                            
+
+        declinetag[code] = decliner
+
+
     fitness = {}
     for code in declinetag.keys():
         rs = declinetag[code]
@@ -278,7 +278,7 @@ def oscillationfitness(funddf, indexdf, ratio):
 
     oscillationtag = {}
 
-    oscillation = []    
+    oscillation = []
 
     indexr = indexdfr.values
 
@@ -296,20 +296,20 @@ def oscillationfitness(funddf, indexdf, ratio):
         elif n > 0:
             oscillation.append(1)
         else:
-            oscillation.append(-1)        
-                        
+            oscillation.append(-1)
+
     for code in funddfr.columns:
-    
-        fundr = funddfr[code].values                
+
+        fundr = funddfr[code].values
         oscillationr = []
         for i in range(0, len(oscillation)):
             tag = oscillation[i]
             if tag == 0 and not isnan(fundr[i + 4]):
                 oscillationr.append(fundr[i + 4])
-    
-        oscillationtag[code] = oscillationr            
 
-                                        
+        oscillationtag[code] = oscillationr
+
+
     fitness = {}
     for code in oscillationtag.keys():
         rs = oscillationtag[code]
@@ -338,7 +338,7 @@ def growthfitness(funddf, indexdf, ratio):
 
     growthcaptag = {}
 
-    growthcap = []    
+    growthcap = []
 
     cols   = indexdfr.columns
 
@@ -346,7 +346,7 @@ def growthfitness(funddf, indexdf, ratio):
     indexr.append(0)
     for i in range(1 ,len(indexdfr[cols[0]].values)):
         indexr.append(0.5 * indexdfr['399372.SZ'].values[i]  + 0.5 * indexdfr['399376.SZ'].values[i] - 0.5 * indexdfr['399373.SZ'].values[i] - 0.5 * indexdfr['399377.SZ'].values[i])
-    
+
 
     for i in range(4, len(indexr)):
         n = 0
@@ -362,19 +362,19 @@ def growthfitness(funddf, indexdf, ratio):
         elif n > 0:
             growthcap.append(1)
         else:
-            growthcap.append(-1)        
+            growthcap.append(-1)
 
 
     for code in funddfr.columns:
-    
-        fundr = funddfr[code].values                
+
+        fundr = funddfr[code].values
         growthcapr = []
         for i in range(0, len(growthcap)):
             tag = growthcap[i]
             if tag == 1 and (not isnan(fundr[i + 4])):
                 growthcapr.append(fundr[i + 4])
 
-        growthcaptag[code] = growthcapr    
+        growthcaptag[code] = growthcapr
 
 
     fitness = {}
@@ -405,7 +405,7 @@ def valuefitness(funddf, indexdf, ratio):
 
     valuecaptag = {}
 
-    valuecap = []    
+    valuecap = []
 
     cols   = indexdfr.columns
 
@@ -413,7 +413,7 @@ def valuefitness(funddf, indexdf, ratio):
     indexr.append(0)
     for i in range(1 ,len(indexdfr[cols[0]].values)):
         indexr.append(0.5 * indexdfr['399372.SZ'].values[i]  + 0.5 * indexdfr['399376.SZ'].values[i]- 0.5 * indexdfr['399373.SZ'].values[i] - 0.5 * indexdfr['399377.SZ'].values[i])
-    
+
 
     for i in range(4, len(indexr)):
         n = 0
@@ -429,19 +429,19 @@ def valuefitness(funddf, indexdf, ratio):
         elif n > 0:
             valuecap.append(1)
         else:
-            valuecap.append(-1)        
+            valuecap.append(-1)
 
 
     for code in funddfr.columns:
-    
-        fundr = funddfr[code].values                
+
+        fundr = funddfr[code].values
         valuecapr = []
         for i in range(0, len(valuecap)):
             tag = valuecap[i]
             if tag == -1 and (not isnan(fundr[i + 4])):
                 valuecapr.append(fundr[i + 4])
 
-        valuecaptag[code] = valuecapr    
+        valuecaptag[code] = valuecapr
 
     fitness = {}
     for code in valuecaptag.keys():
@@ -467,7 +467,7 @@ def valuefitness(funddf, indexdf, ratio):
 def positionprefer(funddf, ratio):
 
 
-    positiontag = {}    
+    positiontag = {}
     for col in funddf.columns:
         vs = funddf[col].values
         positiontag[col] = np.mean(vs)
@@ -491,7 +491,7 @@ def positionprefer(funddf, ratio):
 def largecapprefer(funddf, indexdf, ratio):
 
     largecapprefer = {}
-    
+
 
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
@@ -514,7 +514,7 @@ def largecapprefer(funddf, indexdf, ratio):
         #print m
         #print np.corrcoef(p,m)
         largecapprefer[col] = np.corrcoef(p, m)[0][1]
-         
+
 
     x = largecapprefer
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
@@ -525,14 +525,14 @@ def largecapprefer(funddf, indexdf, ratio):
         result.append(sorted_largecapprefer[i])
 
     return result
-                
+
 
 
 def smallcapprefer(funddf, indexdf, ratio):
 
 
     smallcapprefer = {}
-    
+
 
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
@@ -568,12 +568,12 @@ def smallcapprefer(funddf, indexdf, ratio):
 
     return result
 
-                
+
 
 def growthcapprefer(funddf, indexdf, ratio):
 
     growthcapprefer = {}
-    
+
 
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
@@ -613,14 +613,14 @@ def growthcapprefer(funddf, indexdf, ratio):
         result.append(sorted_growthcapprefer[i])
 
     return result
-                
+
 
 
 def valuecapprefer(funddf, indexdf, ratio):
 
 
     valuecapprefer = {}
-    
+
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
 
@@ -665,11 +665,11 @@ def valuecapprefer(funddf, indexdf, ratio):
 
     return result
 
-    
+
 def ratebondprefer(funddf, indexdf, ratio):
 
     ratebondprefer = {}
-    
+
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
 
@@ -718,7 +718,7 @@ def ratebondprefer(funddf, indexdf, ratio):
 def creditbondprefer(funddf, indexdf, ratio):
 
     creditbondprefer = {}
-    
+
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
 
@@ -762,7 +762,7 @@ def creditbondprefer(funddf, indexdf, ratio):
 def convertiblebondprefer(funddf, indexdf, ratio):
 
     convertiblebondprefer = {}
-    
+
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
 
@@ -806,7 +806,7 @@ def convertiblebondprefer(funddf, indexdf, ratio):
 def tmmeasure(funddf, indexdf):
 
     rf = const.rf
-    
+
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
 
@@ -827,7 +827,7 @@ def tmmeasure(funddf, indexdf):
 
         tm[col] = fin.tm(p, m, rf)
 
-    return tm                                
+    return tm
 
 
 #henrikson-merton测度
@@ -835,7 +835,7 @@ def hmmeasure(funddf, indexdf):
 
 
     rf = const.rf
-    
+
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
 
@@ -893,10 +893,10 @@ def tagstockfund(allocationdata, funddf, indexdf):
     largecapfitness_result    = largecapfitness(funddf, capindexdf, 0.5)
     smallcapfitness_result    = smallcapfitness(funddf, capindexdf, 0.5)
     risefitness_result    = risefitness(funddf, hs300indexdf, 0.5)
-    declinefitness_result     = declinefitness(funddf, hs300indexdf, 0.5)    
+    declinefitness_result     = declinefitness(funddf, hs300indexdf, 0.5)
     oscillationfitness_result = oscillationfitness(funddf, hs300indexdf,  0.5)
     growthfitness_result      = growthfitness(funddf, growthvalueindexdf, 0.5)
-    valuefitness_result       = valuefitness(funddf,  growthvalueindexdf, 0.5) 
+    valuefitness_result       = valuefitness(funddf,  growthvalueindexdf, 0.5)
     positionprefer_result     = positionprefer(positiondf, 0.5)
     largecapprefer_result     = largecapprefer(funddf, largecapindexdf, 0.5)
     smallcapprefer_result     = smallcapprefer(funddf, smallcapindexdf, 0.5)
@@ -911,23 +911,23 @@ def tagstockfund(allocationdata, funddf, indexdf):
         #print k, v
 
 
-    #print 
+    #print
     #print 'smallcap'
     smallcapfitness_set = set()
     for k,v in smallcapfitness_result:
         smallcapfitness_set.add(k)
-        #print k, v    
-
-
-    #print 
-    #print 'rise'
-    risefitness_set = set()
-    for k,v in risefitness_result:
-        risefitness_set.add(k)        
         #print k, v
 
 
-    #print 
+    #print
+    #print 'rise'
+    risefitness_set = set()
+    for k,v in risefitness_result:
+        risefitness_set.add(k)
+        #print k, v
+
+
+    #print
     declinefitness_set = set()
     #print 'decline'
     for k,v in declinefitness_result:
@@ -940,17 +940,17 @@ def tagstockfund(allocationdata, funddf, indexdf):
     for k,v in oscillationfitness_result:
         oscillation_set.add(k)
         #print k, v
-    #print 
+    #print
 
 
     #print 'growth'
-    growthfitness_set = set()    
+    growthfitness_set = set()
     for k,v in growthfitness_result:
         growthfitness_set.add(k)
         #print k, v
 
-    #print 
-    
+    #print
+
     #print 'value'
     valuefitness_set = set()
     for k,v in valuefitness_result:
@@ -959,22 +959,22 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
 
     #print
-    #print 'positionprefer'    
+    #print 'positionprefer'
     positionprefer_set = set()
     for k,v in positionprefer_result:
         positionprefer_set.add(k)
         #print k, v
 
 
-    #print 
-    #print 'largecapprefer'    
+    #print
+    #print 'largecapprefer'
     largecapprefer_set = set()
     for k, v in largecapprefer_result:
         largecapprefer_set.add(k)
         #print k, v
 
-    #print 
-    #print 'smallcapprefer'    
+    #print
+    #print 'smallcapprefer'
     smallcapprefer_set = set()
     for k, v in smallcapprefer_result:
         smallcapprefer_set.add(k)
@@ -982,25 +982,25 @@ def tagstockfund(allocationdata, funddf, indexdf):
     #print largecapfitness
 
 
-    #print 
+    #print
     #print 'grwothcapprefer'
     growthcapprefer_set = set()
     for k, v in growthcapprefer_result:
         growthcapprefer_set.add(k)
-        #print k, v    
+        #print k, v
 
 
-    #print 
+    #print
     #print 'valuecapprefer'
     valuecapprefer_set = set()
     for k, v in valuecapprefer_result:
         valuecapprefer_set.add(k)
-        #print k, v    
+        #print k, v
 
 
 
-    final_codes = set()    
-    #print 
+    final_codes = set()
+    #print
     #print 'rise'
     for code in positionprefer_set:
         if code in risefitness_set:
@@ -1008,7 +1008,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
             final_codes.add(code)
 
 
-    #print 
+    #print
     #print 'largecap'
     for code in largecapprefer_set:
         if code in largecapfitness_set:
@@ -1016,15 +1016,15 @@ def tagstockfund(allocationdata, funddf, indexdf):
             final_codes.add(code)
 
 
-    #print 
+    #print
     #print 'smallcap'
     for code in smallcapprefer_set:
         if code in smallcapfitness_set:
             #print code
-            final_codes.add(code)    
+            final_codes.add(code)
 
 
-    #print 
+    #print
     #print  'growth'
     for code in growthcapprefer_set:
         if code in growthfitness_set:
@@ -1033,25 +1033,25 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
 
     #print
-    #print 'value' 
+    #print 'value'
     for code in valuecapprefer_set:
         if code in valuefitness_set:
             #print code
             final_codes.add(code)
 
 
-    #print 
+    #print
     #print len(final_codes)
     #print final_codes
 
 
     funddf = funddf[list(final_codes)]
-    #print 
+    #print
     #print 'tm'
-    #print tmmeasure(funddf, hs300indexdf)    
+    #print tmmeasure(funddf, hs300indexdf)
 
 
-    #print 
+    #print
     #print 'hm'
     #print hmmeasure(funddf, hs300indexdf)
 
@@ -1126,12 +1126,12 @@ def tagstockfund(allocationdata, funddf, indexdf):
         else:
             labels.append(0)
             labels.append(1)
-        
+
         if code in largecapprefer_set:
             labels.append(1)
         else:
             labels.append(0)
-        
+
         if code in smallcapprefer_set:
             labels.append(1)
         else:
@@ -1211,10 +1211,10 @@ def tagbondfund(allocationdata, funddf, indexdf):
     creditbondindexdf           = indexdf[[Const.credictbondindex_code]]
     convertiblebondindexdf      = indexdf[[Const.convertiblebondindex_code]]
 
-    risefitness_result          =  risefitness(funddf, csibondindexdf, 0.5)    
+    risefitness_result          =  risefitness(funddf, csibondindexdf, 0.5)
     declinefitness_result       =  declinefitness(funddf, csibondindexdf, 0.5)
-    oscillationfitness_result   =  oscillationfitness(funddf, csibondindexdf, 0.5)    
-    ratebondprefer_result       =  ratebondprefer(funddf, ratebondindexdf,0.5) 
+    oscillationfitness_result   =  oscillationfitness(funddf, csibondindexdf, 0.5)
+    ratebondprefer_result       =  ratebondprefer(funddf, ratebondindexdf,0.5)
     creditbondprefer_result     =  creditbondprefer(funddf, creditbondindexdf, 0.5)
     convertiblebondprefer_result=  convertiblebondprefer(funddf, convertiblebondindexdf, 0.5)
 
@@ -1272,7 +1272,7 @@ def tagbondfund(allocationdata, funddf, indexdf):
         final_codes.add(code)
 
     for code in declinefitness_set:
-        final_codes.add(code)        
+        final_codes.add(code)
 
     for code in oscillationfitness_set:
         final_codes.add(code)
@@ -1339,7 +1339,7 @@ def tagbondfund(allocationdata, funddf, indexdf):
         if code in ratebondprefer_set:
             labels.append(1)
         else:
-            labels.append(0)    
+            labels.append(0)
 
         if code in creditbondprefer_set:
             labels.append(1)
@@ -1350,7 +1350,7 @@ def tagbondfund(allocationdata, funddf, indexdf):
             labels.append(1)
         else:
             labels.append(0)
-    
+
         indicator_datas.append(labels)
 
 
@@ -1359,31 +1359,31 @@ def tagbondfund(allocationdata, funddf, indexdf):
     indicator_df.to_csv('./tmp/bond_label_' + end_date + '.csv')
 
     allocationdata.bond_fund_label[end_date] = indicator_df
-    
+
     return list(final_codes), fund_tags
 
 
 if __name__ == '__main__':
 
 
-    train_start = '2010-01-01'    
+    train_start = '2010-01-01'
     train_end   = '2012-12-31'
 
-    codes       =   main.fundfilter(train_start, train_end)        
+    codes       =   main.fundfilter(train_start, train_end)
     #print codes
 
     fund_codes  =   tagfunds(train_start, train_end, codes)
 
     print fund_codes
 
-    #risk, returns, ws, sharp = pf.markowitz()             
+    #risk, returns, ws, sharp = pf.markowitz()
 
 
-    '''        
+    '''
     funddf = data.fund_value(train_start, train_end)
-    funddf = funddf[codes]    
-    
-    
+    funddf = funddf[codes]
+
+
     capindexdf     = data.index_value(train_start, train_end, ['399314.SZ', '399316.SZ'])
     largecapindexdf    = data.index_value(train_start, train_end, ['399314.SZ'])
     smallcapindexdf    = data.index_value(train_start, train_end, ['399316.SZ'])
@@ -1395,11 +1395,11 @@ if __name__ == '__main__':
 
     largecapfitness    = largecapfitness(funddf, capindexdf, 0.5)
     smallcapfitness    = smallcapfitness(funddf, capindexdf, 0.5)
-    risefitness        = risefitness(funddf, hs300indexdf, 0.5)    
-    declinefitness     = declinefitness(funddf, hs300indexdf, 0.5)    
+    risefitness        = risefitness(funddf, hs300indexdf, 0.5)
+    declinefitness     = declinefitness(funddf, hs300indexdf, 0.5)
     oscillationfitness = oscillationfitness(funddf, hs300indexdf,  0.5)
     growthfitness      = growthfitness(funddf, growthvalueindexdf, 0.5)
-    valuefitness       = valuefitness(funddf,  growthvalueindexdf, 0.5) 
+    valuefitness       = valuefitness(funddf,  growthvalueindexdf, 0.5)
     positionprefer     = positionprefer(positiondf, 0.5)
     largecapprefer     = largecapprefer(funddf, largecapindexdf, 0.5)
     smallcapprefer     = smallcapprefer(funddf, smallcapindexdf, 0.5)
@@ -1411,32 +1411,32 @@ if __name__ == '__main__':
     largecapfitness_set =  set()
     for k,v in largecapfitness:
         largecapfitness_set.add(k)
-        print k, v    
+        print k, v
 
-    print 
+    print
 
     print 'smallcap'
     smallcapfitness_set = set()
     for k,v in smallcapfitness:
         smallcapfitness_set.add(k)
-        print k, v    
+        print k, v
 
-    print 
+    print
 
     print 'rise'
     risefitness_set = set()
     for k,v in risefitness:
-        risefitness_set.add(k)        
+        risefitness_set.add(k)
         print k, v
 
-    print 
+    print
     declinefitness_set = set()
     print 'decline'
     for k,v in declinefitness:
         declinefitness_set.add(k)
         print k, v
 
-    print 
+    print
 
     print 'oscillation'
     oscillation_set = set()
@@ -1444,40 +1444,40 @@ if __name__ == '__main__':
         oscillation_set.add(k)
         print k, v
 
-    print 
+    print
 
     print 'growth'
-    growthfitness_set = set()    
+    growthfitness_set = set()
     for k,v in growthfitness:
         growthfitness_set.add(k)
         print k, v
 
-    print 
-    
+    print
+
     print 'value'
     valuefitness_set = set()
     for k,v in valuefitness:
         valuefitness_set.add(k)
         print k, v
 
-    print 
-    print 'positionprefer'    
+    print
+    print 'positionprefer'
     positionprefer_set = set()
     for k,v in positionprefer:
         positionprefer_set.add(k)
         print k, v
 
 
-    
-    print 
-    print 'largecapprefer'    
+
+    print
+    print 'largecapprefer'
     largecapprefer_set = set()
     for k, v in largecapprefer:
         largecapprefer_set.add(k)
         print k, v
 
-    print 
-    print 'smallcapprefer'    
+    print
+    print 'smallcapprefer'
     smallcapprefer_set = set()
     for k, v in smallcapprefer:
         smallcapprefer_set.add(k)
@@ -1485,25 +1485,25 @@ if __name__ == '__main__':
     #print largecapfitness
 
 
-    print 
+    print
     print 'grwothcapprefer'
     growthcapprefer_set = set()
     for k, v in growthcapprefer:
         growthcapprefer_set.add(k)
-        print k, v    
+        print k, v
 
 
-    print 
+    print
     print 'valuecapprefer'
     valuecapprefer_set = set()
     for k, v in valuecapprefer:
         valuecapprefer_set.add(k)
-        print k, v    
+        print k, v
 
 
 
-    final_codes = set()    
-    print 
+    final_codes = set()
+    print
     print 'rise'
     for code in positionprefer_set:
         if code in risefitness_set:
@@ -1511,7 +1511,7 @@ if __name__ == '__main__':
             final_codes.add(code)
 
 
-    print 
+    print
     print 'largecap'
     for code in largecapprefer_set:
         if code in largecapfitness_set:
@@ -1519,15 +1519,15 @@ if __name__ == '__main__':
             final_codes.add(code)
 
 
-    print 
+    print
     print 'smallcap'
     for code in smallcapprefer_set:
         if code in smallcapfitness_set:
             print code
-            final_codes.add(code)    
+            final_codes.add(code)
 
 
-    print 
+    print
     print  'growth'
     for code in growthcapprefer_set:
         if code in growthfitness_set:
@@ -1536,33 +1536,33 @@ if __name__ == '__main__':
 
 
     print
-    print 'value' 
+    print 'value'
     for code in valuecapprefer_set:
         if code in valuefitness_set:
             print code
             final_codes.add(code)
 
 
-    print 
+    print
     #print len(final_codes)
     print final_codes
 
 
 
     funddf = funddf[list(final_codes)]
-    print 
+    print
     #print 'tm'
-    #print tmmeasure(funddf, hs300indexdf)    
+    #print tmmeasure(funddf, hs300indexdf)
 
 
-    print 
+    print
     #print 'hm'
     #print hmmeasure(funddf, hs300indexdf)
 
 
     codes = list(final_codes)
     funddf = data.fund_value(train_start, train_end)
-    #funddf = funddf[codes]    
+    #funddf = funddf[codes]
 
 
     funds = set()
@@ -1572,10 +1572,10 @@ if __name__ == '__main__':
     for code in largecapfitness_set:
         if code in final_codes and (not code in funds):
             codes.append(code)
-        
+
     largecapfitness_df = funddf[codes]
     sharps = fi.fund_sharp(largecapfitness_df)
-    print sharps    
+    print sharps
     funds.add(sharps[0][0])
 
 
@@ -1584,10 +1584,10 @@ if __name__ == '__main__':
     for code in smallcapfitness_set:
         if code in final_codes and (not code in funds):
             codes.append(code)
-        
+
     smallcapfitness_df = funddf[codes]
     sharps = fi.fund_sharp(smallcapfitness_df)
-    print sharps    
+    print sharps
     funds.add(sharps[0][0])
 
 
@@ -1596,22 +1596,22 @@ if __name__ == '__main__':
     for code in risefitness_set:
         if code in final_codes and (not code in funds):
             codes.append(code)
-        
+
     risefitness_df = funddf[codes]
     sharps = fi.fund_sharp(risefitness_df)
-    print sharps    
+    print sharps
     funds.add(sharps[0][0])
 
 
-    print 'decline'    
+    print 'decline'
     codes = []
     for code in declinefitness_set:
         if code in final_codes and (not code in funds):
             codes.append(code)
-        
+
     declinefitness_df = funddf[codes]
     sharps = fi.fund_sharp(declinefitness_df)
-    print sharps    
+    print sharps
     funds.add(sharps[0][0])
 
 
@@ -1620,10 +1620,10 @@ if __name__ == '__main__':
     for code in oscillation_set:
         if code in final_codes and (not code in funds):
             codes.append(code)
-        
+
     oscillationfitness_df = funddf[codes]
     sharps = fi.fund_sharp(oscillationfitness_df)
-    print sharps    
+    print sharps
     funds.add(sharps[0][0])
 
 
@@ -1632,10 +1632,10 @@ if __name__ == '__main__':
     for code in growthfitness_set:
         if code in final_codes and (not code in funds):
             codes.append(code)
-        
+
     growthfitness_df = funddf[codes]
     sharps = fi.fund_sharp(growthfitness_df)
-    print sharps    
+    print sharps
     funds.add(sharps[0][0])
 
 
@@ -1644,10 +1644,10 @@ if __name__ == '__main__':
     for code in valuefitness_set:
         if code in final_codes and (not code in funds):
             codes.append(code)
-        
+
     valuefitness_df = funddf[codes]
     sharps = fi.fund_sharp(valuefitness_df)
-    print sharps    
+    print sharps
     funds.add(sharps[0][0])
 
 

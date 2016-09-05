@@ -62,7 +62,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
             this_index_df  = DFUtil.get_date_df(indexdf, start_date, end_date)
             funddfr = stock_df.pct_change().fillna(0.0)
             #df = (allocationdata.stock_df, allocation_start_date, end_date)
-            #alldf        = 
+            #alldf        =
 
             #print
             #print time.time()
@@ -295,7 +295,7 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
     fund_df.loc[tmp_d, 'ratebond'] = '200113'
     fund_df.to_csv('./tmp/bond_fund.csv')
 
-    
+
     allocationdata.bond_fund_df = fund_df
 
 
@@ -355,12 +355,12 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
 
 
             fund_dates.append(dates[i])
-            fund_datas.append(fund_sharpe[0][1])        
+            fund_datas.append(fund_sharpe[0][1])
 
 
-            #print fund_sharpe[0][0]    
-                    
-            
+            #print fund_sharpe[0][0]
+
+
         #print tag
         # print tag
         # print fund_codes
@@ -422,7 +422,7 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
             end_date = dates[i].strftime('%Y-%m-%d')
 
             label_other_df = DFUtil.get_date_df(funddf, start_date, end_date)
-            
+
             fund_sharpe       = FundIndicator.fund_sharp_annual(label_other_df)
 
             sharpe_dict = {}

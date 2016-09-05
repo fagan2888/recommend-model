@@ -14,7 +14,7 @@ def cost(all_code_position):
     risk_position_buy_po_fee = {}
     risk_position_date_holding = {}
     risk_position_date = {}
-    
+
     for record in all_code_position:
         if risk_day.has_key(str(record[0])):
             if str(record[1]) not in risk_day[str(record[0])]:
@@ -39,24 +39,24 @@ def cost(all_code_position):
                 risk_position_buy_po_fee[str(record[0])+'--'+str(record[1])] = po_fee
         else:
             risk_position_buy_po_fee[str(record[0])+'--'+str(record[1])] = po_fee
-   
+
     #po_dict = sorted(risk_position_buy_po_fee.iteritems(), key=lambda d:d[1], reverse = True)
     #for i in po_dict:
-    #    print i 
+    #    print i
 
     for k,v in risk_position_other.items():
         if v<1:
             if risk_position[k].has_key(str(213009)):
                 risk_position[k][str(213009)] += (1-v)
             else:
-                risk_position[k][str(213009)] = 1-v    
+                risk_position[k][str(213009)] = 1-v
 
     risk_position_cost = {}
     for k,v in risk_day.items():
         #if k != str(8) :#and k != str(0.2):
         #    continue
-        print 'cost'+k 
-        v.sort() 
+        print 'cost'+k
+        v.sort()
         laste = {}
         code_list = []
         share_list = []
@@ -69,17 +69,17 @@ def cost(all_code_position):
         for i in v:
     #        if isDay('2013-03-22',i)<0 or isDay('2013-07-22',i)>0:
     #        if isDay('2013-07-01',i)<=0:
-    #            continue 
+    #            continue
             #print k,i,'配置',risk_position[k+'--'+i]
             change_times +=1
-            risk_position_date_holding[k+'--'+i] = {} 
+            risk_position_date_holding[k+'--'+i] = {}
             if laste == {}:
                 laste = risk_position[k+'--'+i]
-                risk_position_cost[k+'--'+i] = 0 
+                risk_position_cost[k+'--'+i] = 0
                 fee = 0
                 for j,l in risk_position[k+'--'+i].items():
                     tmp_fee = DB.getFee(j,0,10000*l)
-                    fee += tmp_fee 
+                    fee += tmp_fee
                     fund_type = DB.getFundType(j)
                     if fee_dict.has_key(fund_type):
                         fee_dict[fund_type]['buy'] += tmp_fee
@@ -90,13 +90,13 @@ def cost(all_code_position):
                     [day,share] = DB.getShare(j,10000*l-tmp_fee,i)
                     share_list.append(share)
                     time_list.append(day)
-                    risk_position_date_holding[k+'--'+i][j] = share  
+                    risk_position_date_holding[k+'--'+i][j] = share
                 risk_position_date[k] = [i]
                 risk_position_cost[k+'--'+i] = fee/(10000)
                 all_fee = fee
                 all_cost = fee/(10000)
                 #print '成本:',10000,'调仓花费:',fee,'花费占比:',fee/10000
-            else: 
+            else:
             #    continue
                 cg = change(code_list,share_list,time_list,risk_position[k+'--'+i],i)
                 #print '成本:',cg['amount'],'调仓花费:',cg['fee'],'花费占比:',cg['cost']
@@ -111,9 +111,9 @@ def cost(all_code_position):
                 time_list = tmp['time_list']
                 for code,share,time in zip(code_list,share_list,time_list):
                     if risk_position_date_holding[k+'--'+i].has_key(code):
-                        risk_position_date_holding[k+'--'+i][code] += share  
+                        risk_position_date_holding[k+'--'+i][code] += share
                     else:
-                        risk_position_date_holding[k+'--'+i][code] = share  
+                        risk_position_date_holding[k+'--'+i][code] = share
                 risk_position_date[k].append(i)
                 all_fee += cg['fee']
                 all_cost += cg['cost']
@@ -128,7 +128,7 @@ def cost(all_code_position):
             amount = DB.getAmount(code,share)
             last_amount += amount
         #print k,all_fee,last_amount#,all_cost,change_times,fee_dict
-    
+
     return [risk_position_date_holding,risk_position_date]
 
 
@@ -169,7 +169,7 @@ def change(code_list_origin,share_list_origin,time_list_origin,position_origin,d
             else:
                 fee_dict[fund_type] = {'buy':0,'del':0}
                 fee_dict[fund_type]['del'] += tmp_fee
-            if DB.isChangeOut(code):  
+            if DB.isChangeOut(code):
                 if company_list.has_key(company_id):
                     company_list[company_id] += amount
                 else:
@@ -177,11 +177,11 @@ def change(code_list_origin,share_list_origin,time_list_origin,position_origin,d
             change_dict.append({'code':code,'amount':amount/amounts,'type':'del'})
             index_list.append(index)
         index +=1
-         
+
     for k,v in position.items():
         change_amount = amounts*v
         if old_key.has_key(k):
-            if old_key[k] >= change_amount:  
+            if old_key[k] >= change_amount:
                 del_amount = old_key[k] - change_amount
                 index = 0
                 for code,share,time in zip(code_list,share_list,time_list):
@@ -200,16 +200,16 @@ def change(code_list_origin,share_list_origin,time_list_origin,position_origin,d
                                 fee_dict[fund_type] = {'buy':0,'del':0}
                                 fee_dict[fund_type]['del'] += tmp_fee
                             del_amount = 0
-                            if DB.isChangeOut(code):  
+                            if DB.isChangeOut(code):
                                 if company_list.has_key(company_id):
                                     company_list[company_id] += del_amount
                                 else:
                                     company_list[company_id] = del_amount
                             change_dict.append({'code':code,'amount':del_amount/amounts,'type':'del'})
                             if del_index_list.has_key(index):
-                                del_index_list[index] += del_share 
+                                del_index_list[index] += del_share
                             else:
-                                del_index_list[index] = del_share 
+                                del_index_list[index] = del_share
                         else:
                             tmp_fee = DB.getFee(code,1,amount,getDelDay(time,day))
                             fee += tmp_fee
@@ -232,14 +232,14 @@ def change(code_list_origin,share_list_origin,time_list_origin,position_origin,d
         del code_list[i]
         del share_list[i]
         del time_list[i]
-        
+
 
     for k,v in position.items():
         company_id = DB.getCompany(k)
         change_amount = amounts*v
         if old_key.has_key(k):
-            if old_key[k] < change_amount:  
-                add_amount = change_amount - old_key[k] 
+            if old_key[k] < change_amount:
+                add_amount = change_amount - old_key[k]
                 if DB.isChangeIn(k):
                     if company_list.has_key(company_id):
                         if company_list[company_id] > add_amount:
@@ -317,42 +317,42 @@ def change(code_list_origin,share_list_origin,time_list_origin,position_origin,d
                     fee_dict[fund_type] = {'buy':0,'del':0}
                     fee_dict[fund_type]['buy'] += tmp_fee
                 change_dict.append({'code':k,'amount':change_amount/amounts,'type':'add','time':3})
-    
-    return {'fee':fee,'cost':fee/amounts,'dict':change_dict,'amount':amounts,'code_list':code_list,'share_list':share_list,'time_list':time_list,'fee_dict':fee_dict} 
-                        
+
+    return {'fee':fee,'cost':fee/amounts,'dict':change_dict,'amount':amounts,'code_list':code_list,'share_list':share_list,'time_list':time_list,'fee_dict':fee_dict}
+
 def getUpdateShare(code_list,share_list,time_list,change_dict,day,amount,position):
     for i in change_dict:
         if i['type'] == 'add':
-            code_list.append(i['code'])   
+            code_list.append(i['code'])
             [time,share] = DB.getShare(i['code'],amount*i['amount'],day,i['time'])
-            share_list.append(share)   
-            time_list.append(time)   
-        
+            share_list.append(share)
+            time_list.append(time)
+
     return {'code_list':code_list,'share_list':share_list,'time_list':time_list}
-    
+
 def getDelDay(day1,day2):
-    date1 = time.strptime(str(day1),"%Y-%m-%d")          
-    date2 = time.strptime(str(day2),"%Y-%m-%d %H:%M:%S")          
+    date1 = time.strptime(str(day1),"%Y-%m-%d")
+    date2 = time.strptime(str(day2),"%Y-%m-%d %H:%M:%S")
     d1 = datetime.datetime(date1[0],date1[1],date1[2])
     d2 = datetime.datetime(date2[0],date2[1],date2[2])
     day = (d2 - d1).days
     return abs(day)
-       
+
 def isDay(day1,day2):
     if len(str(day1))==10:
-        date1 = time.strptime(str(day1),"%Y-%m-%d")          
+        date1 = time.strptime(str(day1),"%Y-%m-%d")
     else:
-        date1 = time.strptime(str(day1),"%Y-%m-%d %H:%M:%S")          
+        date1 = time.strptime(str(day1),"%Y-%m-%d %H:%M:%S")
     if len(str(day2))==10:
-        date2 = time.strptime(str(day2),"%Y-%m-%d")          
+        date2 = time.strptime(str(day2),"%Y-%m-%d")
     else:
-        date2 = time.strptime(str(day2),"%Y-%m-%d %H:%M:%S")          
+        date2 = time.strptime(str(day2),"%Y-%m-%d %H:%M:%S")
     d1 = datetime.datetime(date1[0],date1[1],date1[2])
     d2 = datetime.datetime(date2[0],date2[1],date2[2])
     day = (d2 - d1).days
     return day
 
-   
+
 def getDailyNav(position):
     [risk_position_date_holiding,risk_position_date] = cost(position)
     all_result = []
@@ -361,16 +361,16 @@ def getDailyNav(position):
         date2 = time.strptime(str(datetime.date.today()-datetime.timedelta(days=1)),"%Y-%m-%d")
         begin = datetime.datetime(date1[0],date1[1],date1[2])
         end = datetime.datetime(date2[0],date2[1],date2[2])
-        
+
         tmp_v = copy.deepcopy(v)
         tmp_day = 0
         result = []
         old_position = {}
         old_nav = 1
-        for i in range((end - begin).days+1): 
-            day = begin + datetime.timedelta(days=i) 
+        for i in range((end - begin).days+1):
+            day = begin + datetime.timedelta(days=i)
             amounts = 0
-            nav = 0 
+            nav = 0
             inc = 0
             if len(tmp_v)>0 and isDay(day,tmp_v[0]) == 0:
                 for code,share in risk_position_date_holiding[str(k)+'--'+str(day)].items():
@@ -391,11 +391,11 @@ def getDailyNav(position):
             result.append({'date':day,'nav':nav,'inc':inc})
         all_result.append({'risk':k,'data':result})
     return all_result
-                    
-                
-            
-            
-         
+
+
+
+
+
 if __name__ == '__main__':
     risk_type = 0
     print 'getPositionSuccess'

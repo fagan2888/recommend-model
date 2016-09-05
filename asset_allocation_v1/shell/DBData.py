@@ -78,9 +78,9 @@ def stock_fund_value(start_date, end_date):
         ds.append(datetime.strptime(d,'%Y-%m-%d').date())
     dates = ds
 
-    nav_values_dict = {}            
+    nav_values_dict = {}
 
-        
+
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
@@ -89,7 +89,7 @@ def stock_fund_value(start_date, end_date):
     sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010101%%' or b.wf_type like '2001010201%%' or b.wf_type like '2001010202%%' or b.wf_type like '2001010204%%'  ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010101%%' and wf_type not like '2001010201%%' and wf_type not like '2001010202%%' and wf_type not like '2001010204%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
 
-    #print sql    
+    #print sql
     cur.execute(sql)
 
 
@@ -105,12 +105,12 @@ def stock_fund_value(start_date, end_date):
     conn.close()
 
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         ds = vs_dict.keys()
         ds.sort()
         for d in dates:
@@ -120,9 +120,9 @@ def stock_fund_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-    
 
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
     df = df.fillna(method='pad')
     df.index.name = 'date'
     return df
@@ -133,7 +133,7 @@ def stock_day_fund_value(start_date, end_date):
 
 
     dates = set()
-    nav_values_dict = {}            
+    nav_values_dict = {}
 
 
     conn  = MySQLdb.connect(**db_params)
@@ -143,7 +143,7 @@ def stock_day_fund_value(start_date, end_date):
 
     sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010101%%' or b.wf_type like '2001010201%%' or b.wf_type like '2001010202%%' or b.wf_type like '2001010204%%'  ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010101%%' and wf_type not like '2001010201%%' and wf_type not like '2001010202%%' and wf_type not like '2001010204%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
-    #print sql    
+    #print sql
     cur.execute(sql)
 
     records = cur.fetchall()
@@ -161,12 +161,12 @@ def stock_day_fund_value(start_date, end_date):
     dates = list(dates)
     dates.sort()
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         ds = vs_dict.keys()
         ds.sort()
         for d in dates:
@@ -176,9 +176,9 @@ def stock_day_fund_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-    
 
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
     df = df.fillna(method='pad')
     df.index.name = 'date'
     return df
@@ -194,9 +194,9 @@ def bond_fund_value(start_date, end_date):
         ds.append(datetime.strptime(d,'%Y-%m-%d').date())
     dates = ds
 
-    nav_values_dict = {}            
+    nav_values_dict = {}
 
-        
+
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
@@ -205,10 +205,10 @@ def bond_fund_value(start_date, end_date):
     sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010203%%' or b.wf_type like '20010103%%' ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010203%%' and wf_type not like '20010103%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
 
-    
+
     cur.execute(sql)
 
-    
+
     records = cur.fetchall()
 
     for record in records:
@@ -221,12 +221,12 @@ def bond_fund_value(start_date, end_date):
     conn.close()
 
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         for d in dates:
             if vs_dict.has_key(d):
                 vs.append(vs_dict[d])
@@ -234,9 +234,9 @@ def bond_fund_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-        #print code , len(vs)    
+        #print code , len(vs)
 
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
 
     df = df.fillna(method='pad')
 
@@ -250,8 +250,8 @@ def bond_day_fund_value(start_date, end_date):
 
     dates = set()
 
-    nav_values_dict = {}            
-        
+    nav_values_dict = {}
+
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
@@ -259,10 +259,10 @@ def bond_day_fund_value(start_date, end_date):
 
     sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010203%%' or b.wf_type like '20010103%%' ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010203%%' and wf_type not like '20010103%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
-    
+
     cur.execute(sql)
 
-    
+
     records = cur.fetchall()
     for record in records:
         code      = record['wf_fund_code']
@@ -277,12 +277,12 @@ def bond_day_fund_value(start_date, end_date):
     dates = list(dates)
     dates.sort()
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         for d in dates:
             if vs_dict.has_key(d):
                 vs.append(vs_dict[d])
@@ -290,9 +290,9 @@ def bond_day_fund_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-        #print code , len(vs)    
+        #print code , len(vs)
 
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
 
     df = df.fillna(method='pad')
 
@@ -311,9 +311,9 @@ def money_fund_value(start_date, end_date):
         ds.append(datetime.strptime(d,'%Y-%m-%d').date())
     dates = ds
 
-    nav_values_dict = {}            
+    nav_values_dict = {}
 
-        
+
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
@@ -322,10 +322,10 @@ def money_fund_value(start_date, end_date):
     sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010104%%' ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010104%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
 
-    
+
     cur.execute(sql)
 
-    
+
     records = cur.fetchall()
 
     for record in records:
@@ -338,12 +338,12 @@ def money_fund_value(start_date, end_date):
     conn.close()
 
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         for d in dates:
             if vs_dict.has_key(d):
                 vs.append(vs_dict[d])
@@ -351,9 +351,9 @@ def money_fund_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-        #print code , len(vs)    
+        #print code , len(vs)
 
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
 
     df = df.fillna(method='pad')
 
@@ -368,8 +368,8 @@ def money_day_fund_value(start_date, end_date):
 
     dates = set()
 
-    nav_values_dict = {}            
-        
+    nav_values_dict = {}
+
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
@@ -378,7 +378,7 @@ def money_day_fund_value(start_date, end_date):
 
 
     cur.execute(sql)
-    
+
     records = cur.fetchall()
 
     for record in records:
@@ -395,12 +395,12 @@ def money_day_fund_value(start_date, end_date):
     dates = list(dates)
     dates.sort()
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         for d in dates:
             if vs_dict.has_key(d):
                 vs.append(vs_dict[d])
@@ -408,9 +408,9 @@ def money_day_fund_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-        #print code , len(vs)    
+        #print code , len(vs)
 
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
 
     df = df.fillna(method='pad')
 
@@ -431,9 +431,9 @@ def index_value(start_date, end_date):
         ds.append(datetime.strptime(d,'%Y-%m-%d').date())
     dates = ds
 
-    nav_values_dict = {}            
+    nav_values_dict = {}
 
-        
+
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
@@ -445,7 +445,7 @@ def index_value(start_date, end_date):
     #print sql
     cur.execute(sql)
 
-    
+
     records = cur.fetchall()
 
     for record in records:
@@ -458,12 +458,12 @@ def index_value(start_date, end_date):
     conn.close()
 
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         for d in dates:
             if vs_dict.has_key(d):
                 vs.append(vs_dict[d])
@@ -471,10 +471,10 @@ def index_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-        #print code , len(vs)    
+        #print code , len(vs)
 
     #print nav_values
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
 
     df = df.fillna(method='pad')
 
@@ -489,8 +489,8 @@ def index_day_value(start_date, end_date):
 
     dates = set()
 
-    nav_values_dict = {}            
-        
+    nav_values_dict = {}
+
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
@@ -498,7 +498,7 @@ def index_day_value(start_date, end_date):
 
     sql = "select iv_index_id,iv_index_code,iv_time,iv_value from index_value where iv_time>='%s' and iv_time<='%s' " % (start_date, end_date)
     cur.execute(sql)
-    
+
     records = cur.fetchall()
 
     for record in records:
@@ -515,12 +515,12 @@ def index_day_value(start_date, end_date):
     dates = list(dates)
     dates.sort()
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         for d in dates:
             if vs_dict.has_key(d):
                 vs.append(vs_dict[d])
@@ -528,10 +528,10 @@ def index_day_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-        #print code , len(vs)    
+        #print code , len(vs)
 
     #print nav_values
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
 
     df = df.fillna(method='pad')
 
@@ -551,9 +551,9 @@ def other_fund_value(start_date, end_date):
         ds.append(datetime.strptime(d,'%Y-%m-%d').date())
     dates = ds
 
-    nav_values_dict = {}            
+    nav_values_dict = {}
 
-        
+
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
@@ -561,10 +561,10 @@ def other_fund_value(start_date, end_date):
 
     sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
 
-    
+
     cur.execute(sql)
 
-    
+
     records = cur.fetchall()
 
     for record in records:
@@ -577,12 +577,12 @@ def other_fund_value(start_date, end_date):
     conn.close()
 
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         for d in dates:
             if vs_dict.has_key(d):
                 vs.append(vs_dict[d])
@@ -590,9 +590,9 @@ def other_fund_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-        #print code , len(vs)    
+        #print code , len(vs)
 
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
 
     df = df.fillna(method='pad')
 
@@ -607,7 +607,7 @@ def other_day_fund_value(start_date, end_date):
 
     dates = set()
 
-    nav_values_dict = {}            
+    nav_values_dict = {}
 
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -616,10 +616,10 @@ def other_day_fund_value(start_date, end_date):
 
     sql = "select iv_index_id,iv_index_code,iv_time,iv_value from index_value where iv_time>='%s' and iv_time<='%s' " % (start_date, end_date)
 
-    
+
     cur.execute(sql)
 
-    
+
     records = cur.fetchall()
 
     for record in records:
@@ -632,12 +632,12 @@ def other_day_fund_value(start_date, end_date):
     conn.close()
 
 
-    nav_values = []    
+    nav_values = []
     nav_codes  = []
     for code in nav_values_dict.keys():
         nav_codes.append(code)
         vs = []
-        vs_dict = nav_values_dict[code]    
+        vs_dict = nav_values_dict[code]
         for d in dates:
             if vs_dict.has_key(d):
                 vs.append(vs_dict[d])
@@ -645,9 +645,9 @@ def other_day_fund_value(start_date, end_date):
                 vs.append(np.NaN)
 
         nav_values.append(vs)
-        #print code , len(vs)    
+        #print code , len(vs)
 
-    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)    
+    df = pd.DataFrame(np.matrix(nav_values).T, index = dates, columns = nav_codes)
 
     df = df.fillna(method='pad')
 
@@ -663,20 +663,20 @@ def position():
 
 
     #dates = set()
-    
+
     conn  = MySQLdb.connect(**db_params)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
 
     sql = "select wf_fund_code, wf_time, wf_stock_value from wind_fund_stock_value"
-    
+
     cur.execute(sql)
     records = cur.fetchall()
 
     position_dict = {}
 
-    code_position = {}    
+    code_position = {}
 
 
     for record in records:
@@ -695,12 +695,12 @@ def position():
     dates = list(dates)
     dates.sort()
 
-    position_values = []    
+    position_values = []
     position_codes  = []
     for code in position_dict.keys():
         position_codes.append(code)
         ps = []
-        ps_dict = position_dict[code]    
+        ps_dict = position_dict[code]
         for d in dates:
             if ps_dict.has_key(d):
                 ps.append(ps_dict[d])
@@ -709,10 +709,10 @@ def position():
 
 
         position_values.append(ps)
-        #print code , len(vs)    
+        #print code , len(vs)
 
 
-    df = pd.DataFrame(np.matrix(position_values).T, index = dates, columns = position_codes)    
+    df = pd.DataFrame(np.matrix(position_values).T, index = dates, columns = position_codes)
     df = df.fillna(method='pad')
     df.index.name = 'date'
     return df
@@ -737,13 +737,13 @@ def scale():
     #records = cur.fetchall()
     conn.close()
 
-    return df    
+    return df
 
 
 
 if __name__ == '__main__':
 
-    #trade_dates()    
+    #trade_dates()
     #df = stock_fund_value('2014-01-03', '2016-06-03')
     #df = bond_fund_value('2014-01-03', '2016-06-03')
     #df = money_fund_value('2015-01-03', '2016-06-03')

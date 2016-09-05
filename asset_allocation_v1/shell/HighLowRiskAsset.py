@@ -248,10 +248,10 @@ def highlowallocation(allocationdata, dfr, his_week, interval):
         if len(risk_drawdown) >= 26:
             if drawdown > risk_drawdown[(int)(0.6 * len(risk_drawdown))]:
                 risk_position = risk_position * 0.6
-                risk_index    = i                        
+                risk_index    = i
 
         #print risk_drawdown
-                
+
 
     result_datas  = portfolio_vs
     result_df = pd.DataFrame(result_datas, index=result_dates,

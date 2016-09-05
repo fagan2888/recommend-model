@@ -58,7 +58,7 @@ def stock_fund_measure(allocationdata, start_date, end_date):
     cursor = conn.cursor()
 
     lookback  = 52
-    
+
     index_df  = DBData.index_value(start_date, end_date)
     stock_df  = DBData.stock_fund_value(start_date, end_date)
 
@@ -113,7 +113,7 @@ def stock_fund_measure(allocationdata, start_date, end_date):
     conn.commit()
     conn.close()
 
-    
+
     return 1
 
 
@@ -124,7 +124,7 @@ def bond_fund_measure(allocationdata, start_date, end_date):
     fund_code_id_dict = allocationdata.fund_code_id_dict
 
     base_sql = "replace into fund_pool (fp_date, fp_look_back, fp_fund_type, fp_fund_code,fp_fund_id, fp_jensen, fp_ppw, fp_stability, fp_sortino, fp_sharpe, fp_ratebond, fp_creditbond, fp_convertiblebond, created_at, updated_at) values ('%s',%d, %d, '%s', %d , %f, %f, %f, %f, %f, %d, %d, %d, '%s', '%s')"
-    
+
     conn = MySQLdb.connect(**db_params)
     cursor = conn.cursor()
 
@@ -132,7 +132,7 @@ def bond_fund_measure(allocationdata, start_date, end_date):
 
     index_df   = DBData.index_value(start_date, end_date)
     bond_df    = DBData.bond_fund_value(start_date, end_date)
-        
+
     codes, indicator     = FundFilter.bondfundfilter(allocationdata, bond_df, index_df[Const.csibondindex_code])
     fund_pool, fund_tags = ST.tagbondfund(allocationdata, bond_df[codes], index_df)
 
@@ -164,7 +164,7 @@ def bond_fund_measure(allocationdata, start_date, end_date):
 
 
     conn.commit()
-    conn.close()    
+    conn.close()
 
     return 1
 
@@ -188,7 +188,7 @@ def money_fund_measure(allocationdata, start_date, end_date):
     for record in fund_sharpe:
         code   = record[0]
         fund_id = fund_code_id_dict[string.atoi(code)]
-        sharpe = record[1]    
+        sharpe = record[1]
         if sharpe < 0:
             continue
         sql = base_sql % (end_date, lookback, 3, code, fund_id ,sharpe ,datetime.now(), datetime.now())
@@ -218,7 +218,7 @@ def other_fund_measure(allocationdata, start_date, end_date):
 
     for record in fund_sharpe:
         code   = record[0]
-        sharpe = record[1]    
+        sharpe = record[1]
 
         if code == 'GLNC':
             fund_id = fund_code_id_dict[159937]
@@ -232,10 +232,10 @@ def other_fund_measure(allocationdata, start_date, end_date):
             fund_id = fund_code_id_dict[513600]
             sql = base_sql % (end_date, lookback, 4, '513600', fund_id, sharpe ,datetime.now(), datetime.now())
             cursor.execute(sql)
-        
-    
+
+
     conn.commit()
-    conn.close()        
+    conn.close()
 
     return 1
 
@@ -247,7 +247,7 @@ if __name__ == '__main__':
     lookback = 52
     dates = DBData.all_trade_dates()
 
-    start_date = dates[-1 * lookback]    
+    start_date = dates[-1 * lookback]
 
     allocationdata = AllocationData.allocationdata()
     last_friday = DFUtil.last_friday()
@@ -269,9 +269,9 @@ if __name__ == '__main__':
                 index = i - 1
                 break
 
-        #print last_friday_date, dates[index]        
+        #print last_friday_date, dates[index]
 
-        start_date = dates[index - 52]        
+        start_date = dates[index - 52]
 
         print start_date, last_friday_date
 
@@ -279,8 +279,8 @@ if __name__ == '__main__':
         bond_fund_measure(allocationdata, start_date, last_friday_date.strftime('%Y-%m-%d'))
         money_fund_measure(allocationdata, start_date, last_friday_date.strftime('%Y-%m-%d'))
         other_fund_measure(allocationdata, start_date, last_friday_date.strftime('%Y-%m-%d'))
-        
-        #print last_friday_date    
+
+        #print last_friday_date
 
 
     #print dates
@@ -294,4 +294,4 @@ if __name__ == '__main__':
     money_fund_measure(allocationdata, start_date, last_friday)
     other_fund_measure(allocationdata, start_date, last_friday)
 
-    '''    
+    '''
