@@ -16,7 +16,7 @@ def highriskasset(allocationdata, dfr, his_week, interval):
 
     dfr =  dfr.drop('HSCI.HI', axis = 1)
     dfr =  dfr.drop('oscillation', axis = 1)
-    
+
     #interval = 26
 
     result_dates = []
@@ -202,7 +202,7 @@ def highlowallocation(allocationdata, dfr):
         d = dates[i]
 
 
-        high_risk_asset_r = dfr.loc[d, 'high_risk_asset']    
+        high_risk_asset_r = dfr.loc[d, 'high_risk_asset']
         low_risk_asset_r  = dfr.loc[d, 'low_risk_asset']
 
 
@@ -215,7 +215,7 @@ def highlowallocation(allocationdata, dfr):
             v      = last_risk_vs[j - 1] * (1 +  high_risk_asset_r * high_w +  low_risk_asset_r * low_w)
             risk_vs.append(v)
             print v,
-        print 
+        print
 
         portfolio_vs.append(risk_vs)
         portfolio_dates.append(d)
@@ -223,7 +223,7 @@ def highlowallocation(allocationdata, dfr):
 
     cols = []
     for i in range(0 , 10):
-        cols.append(str(i + 1))    
+        cols.append(str(i + 1))
     portfolio_df = pd.DataFrame(portfolio_vs, index = portfolio_dates, columns = cols)
     portfolio_df.index.name = 'date'
     portfolio_df.to_csv(os.path.join(datadir,'risk_portfolio.csv'))

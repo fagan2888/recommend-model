@@ -936,13 +936,13 @@ def getFee(fund_id,fee_type,amount,day=0):
                 return float(result['ff_fee'])
             else:
                 fee = float(result['ff_fee'])
-                return fee*amount 
+                return fee*amount
         else:
             fund_type = getFundType(fund_id)
             if fund_type == 'huobi':
                 return 0
             return 0.00*amount
-        
+
 def getCompany(fund_id):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -953,7 +953,7 @@ def getCompany(fund_id):
         return result['fi_company_id']
     else:
         return 0
-    
+
 def isChangeOut(fund_id):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -975,7 +975,7 @@ def isChangeIn(fund_id):
         if result['fi_yingmi_transfor_status'] in [0,1]:
             return True
     return False
-        
+
 def getShare(fund_id,amount,day,count=0):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -1001,7 +1001,7 @@ def getAmount(fund_id,share,day=0):
     if result:
         return share * float(result['wf_nav_value'])
     return share
-    
+
 def getNavValue(fund_id,day):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -1010,7 +1010,7 @@ def getNavValue(fund_id,day):
     result = cur.fetchone()
     if result:
         return float(result['wf_nav_value'])
-    return 1 
+    return 1
 
 def getFundType(fund_id):
     type_list = {'zhishu':[2001010607,200101080102],'huobi':[20010104],'zhaiquan':[20010103,2001010203],'gupiao':[20010101,2001010201,2001010202,2001010204]}
@@ -1034,8 +1034,8 @@ def getBuyPoFee(fund_id):
     result = cur.fetchone()
     if result:
         return float(result['fi_yingmi_amount'])
-    return 1 
-    
+    return 1
+
 def getRiskPosition(status):
     conn = MySQLdb.connect(**db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -1050,7 +1050,7 @@ def getRiskPosition(status):
         for i in result:
             tmp.append(tuple([i['ra_alloc_id'],str(i['ra_transfer_date'])+' 00:00:00',getFundCode(str(i['ra_fund_id'])),float(i['ra_fund_ratio'])]))
     return tmp
-     
+
 def getFundCode(fund_id):
     conn = MySQLdb.connect(**mofang_db_params)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
@@ -1078,9 +1078,9 @@ def insertNav(risk,position,risk_type):
                 cur.execute(sql)
     conn.commit()
     conn.close()
-                
-            
-    
+
+
+
 
 if __name__ == '__main__':
 
