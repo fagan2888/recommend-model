@@ -1,6 +1,7 @@
 #coding=utf8
 
 
+import os
 import sys
 sys.path.append('shell')
 import MySQLdb
@@ -10,8 +11,8 @@ import numpy as np
 from datetime import datetime
 import FundIndicator
 import AllocationData
-import os
 import RiskPosition
+from Const import datadir
 
 
 
@@ -265,7 +266,7 @@ def label_asset(allocationdata):
     m = np.matrix(values)
     label_asset_df = pd.DataFrame(m.T, index = equal_risk_asset_df.index.values, columns = columns)
 
-    label_asset_df.to_csv('./tmp/test.csv')
+    label_asset_df.to_csv(os.path.join(datadir,'test.csv'))
 
 
     base_sql = 'replace into fixed_risk_asset (fra_start_date, fra_adjust_period, fra_asset_look_back, fra_risk_adjust_period, fra_risk_look_back, fra_fund_type, fra_fund_code, fra_asset_type, fra_position, fra_asset_label, fra_net_value, fra_date, fra_annual_return, fra_sharpe, fra_std, fra_maxdrawdown ,created_at, updated_at) values ("%s", %d, %d, %d, %d, "%s","%s", "%s" ,%f, "%s", %f, "%s", %f, %f, %f, %f, "%s", "%s")'
@@ -804,7 +805,7 @@ def riskhighlowriskasset(allocationdata):
 
     start_date = '2010-01-01'
 
-    df = pd.read_csv('./tmp/risk_portfolio.csv', index_col = 'date', parse_dates = ['date'])
+    df = pd.read_csv(os.path.join(datadir,'risk_portfolio.csv'), index_col = 'date', parse_dates = ['date'])
 
     conn = MySQLdb.connect(**db_params)
     cursor = conn.cursor()
@@ -1086,39 +1087,39 @@ if __name__ == '__main__':
 
     '''
     allocationdata = AllocationData.allocationdata()
-    df = pd.read_csv('./tmp/stock_indicator_2015-07-10.csv', index_col = 'code')
+    df = pd.read_csv(os.path.join(datadir,'stock_indicator_2015-07-10.csv'), index_col = 'code')
     allocationdata.stock_fund_measure['2015-07-10'] = df
-    df = pd.read_csv('./tmp/stock_label_2015-07-10.csv', index_col = 'code')
+    df = pd.read_csv(os.path.join(datadir,'stock_label_2015-07-10.csv'), index_col = 'code')
     allocationdata.stock_fund_label['2015-07-10'] = df
     fund_measure(allocationdata)
 
 
-    df = pd.read_csv('./tmp/labelasset.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'labelasset.csv'), index_col = 'date')
     allocationdata.label_asset_df = df
-    df = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'stock_fund.csv'), index_col = 'date')
     allocationdata.stock_fund_df  = df
-    df = pd.read_csv('./tmp/equalriskasset.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'equalriskasset.csv'), index_col = 'date')
     allocationdata.equal_risk_asset_df  = df
-    df = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'equalriskassetratio.csv'), index_col = 'date')
     allocationdata.equal_risk_asset_ratio_df  = df
-    df = pd.read_csv('./tmp/bond_fund.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'bond_fund.csv'), index_col = 'date')
     allocationdata.bond_fund_df  = df
 
 
     label_asset(allocationdata)
 
 
-    df = pd.read_csv('./tmp/highriskasset.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'highriskasset.csv'), index_col = 'date')
     allocationdata.high_risk_asset_df = df
-    df = pd.read_csv('./tmp/lowriskasset.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'lowriskasset.csv'), index_col = 'date')
     allocationdata.low_risk_asset_df = df
-    df = pd.read_csv('./tmp/highlowriskasset.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'highlowriskasset.csv'), index_col = 'date')
     allocationdata.highlow_risk_asset_df = df
-    df = pd.read_csv('./tmp/highriskposition.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'highriskposition.csv'), index_col = 'date')
     allocationdata.high_risk_position_df = df
-    df = pd.read_csv('./tmp/lowriskposition.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'lowriskposition.csv'), index_col = 'date')
     allocationdata.low_risk_position_df = df
-    df = pd.read_csv('./tmp/highlowriskposition.csv', index_col = 'date')
+    df = pd.read_csv(os.path.join(datadir,'highlowriskposition.csv'), index_col = 'date')
     allocationdata.highlow_risk_position_df = df
 
 

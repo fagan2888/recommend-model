@@ -3,6 +3,7 @@
 
 import numpy as np
 import string
+import os
 import sys
 sys.path.append("windshell")
 import Financial as fin
@@ -11,6 +12,7 @@ import Data
 from numpy import *
 from datetime import datetime
 
+from Const import datadir
 
 #strategicallocation
 
@@ -140,7 +142,7 @@ def markowitz(funddf, bounds, d):
             final_sharp = sharp
 
     f_str = '%s, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n'
-    f = open('./tmp/ef_' + d + '.csv','w')
+    f = open(os.path.join(datadir,'ef_' + d + '.csv'),'w')
     f.write('date, risk, return, largecap, smallcap, rise, oscillation, decline ,growth ,value, ratebond, creditbond, convertiblebond, money1, money2, SP500.SPI, SPGSGCTR.SPI, HSCI.HI\n')
     #for j in range(0, len(risks)):
     #    f.write(f_str % (d,risks[j], returns[j], ws[j][0], ws[j][1], ws[j][2], ws[j][3], ws[j][4], ws[j][5], ws[j][6], ws[j][7], ws[j][8], ws[j][9], ws[j][10], ws[j][11], ws[j][12], ws[j][13], ws[j][14] ))

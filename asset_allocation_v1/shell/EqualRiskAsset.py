@@ -5,9 +5,11 @@ import string
 import pandas as pd
 import time
 from datetime import datetime
+import os
 import sys
 sys.path.append('shell')
 
+from Const import datadir
 
 
 def equalriskasset(allocationdata):
@@ -17,13 +19,13 @@ def equalriskasset(allocationdata):
 
 
     ratio_df         = allocationdata.equal_risk_asset_ratio_df
-    #ratio_df         = pd.read_csv('./tmp/equalriskassetratio.csv', index_col = 'date', parse_dates = 'date' )
+    #ratio_df         = pd.read_csv(os.path.join(datadir,'equalriskassetratio.csv'), index_col = 'date', parse_dates = 'date' )
     ratio_dates      = ratio_df.index
     start_date = ratio_dates[0]
 
 
     dfr              = allocationdata.label_asset_df
-    #dfr              = pd.read_csv('./tmp/labelasset.csv', index_col = 'date', parse_dates = 'date' )
+    #dfr              = pd.read_csv(os.path.join(datadir,'labelasset.csv'), index_col = 'date', parse_dates = 'date' )
     dfr              = dfr[dfr.index >= start_date]
 
     dates = dfr.index
@@ -111,6 +113,6 @@ def equalriskasset(allocationdata):
     result_df = pd.DataFrame(result_datas, index=result_dates, columns=new_assetlabels)
 
     result_df.index.name = 'date'
-    result_df.to_csv('./tmp/equalriskasset.csv')
+    result_df.to_csv(os.path.join(datadir,'equalriskasset.csv'))
 
     allocationdata.equal_risk_asset_df = result_df

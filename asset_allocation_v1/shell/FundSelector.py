@@ -112,7 +112,7 @@ def select_bond(funddf, fund_tags, indexdf):
 
         if code in set(ratebond_codes) and need_rate:
             codes.append(code)
-            need_largecap = False
+            need_rate = False
             tag['ratebond'] = code
             #print code, i
             continue
