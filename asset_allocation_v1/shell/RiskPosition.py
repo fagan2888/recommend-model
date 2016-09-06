@@ -336,12 +336,14 @@ def clean_min(re):
 
 if __name__ == '__main__':
 
+    outfile = '-'
+    
     #
     # 处理命令行参数
     #
     try:
-        longopts = ['datadir=', 'verbose', 'help', ]
-        options, remainder = getopt.gnu_getopt(sys.argv[1:], 'hvd:', longopts)
+        longopts = ['datadir=', 'verbose', 'help', 'output=']
+        options, remainder = getopt.gnu_getopt(sys.argv[1:], 'hvd:o:', longopts)
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -356,6 +358,8 @@ if __name__ == '__main__':
             verbose = True
         elif opt == '--version':
             version = arg
+        elif opt in ('-o', '--output'):
+            outfile = arg
 
     #
     # 确认数据目录存在
@@ -370,8 +374,11 @@ if __name__ == '__main__':
     print Const.datadir
     all_code_position = risk_position()
     risk_dict = {}
-    for record in all_code_position:
-        print "%.1f,%s,%06d,%.6f" % (record[0], record[1].strftime("%Y-%m-%d"), record[2], record[3])
+    with (open(outfile, 'w') if outfile != '-' else os.fdopen(os.dup(sys.stdout.fileno()), 'w')) as out:
+        for record in all_code_position:
+            out.write("%.1f,%s,%06d,%.6f\n" % (record[0], record[1].strftime("%Y-%m-%d"), record[2], record[3]))
+            
+    #TradeUtil.getDailyNav(all_code_position)
     # print all_code_position
     # for tmp in all_code_position:
     #     if tmp[0] == 0.8:
