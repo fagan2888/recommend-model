@@ -17,7 +17,7 @@ import pandas as pd
 import AllocationData
 
 
-from Const import datadir
+from Const import datapath
 
 rf = Const.rf
 
@@ -414,14 +414,14 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=['sharpe', 'jensen', 'sortino', 'ppw', 'stability'])
     indicator_df.index.name = 'code'
-    indicator_df.to_csv(os.path.join(datadir,'stock_indicator_' + end_date + '.csv'))
+    indicator_df.to_csv(datapath('stock_indicator_' + end_date + '.csv'))
 
 
     allocationdata.stock_fund_measure[end_date] = indicator_df
 
 
     '''
-    f = open(os.path.join(datadir,'stockfilter_codes_' + end_date + '.csv'),'w')
+    f = open(datapath('stockfilter_codes_' + end_date + '.csv'),'w')
     for code in codes:
         f.write(str(code) + '\n')
 
@@ -589,14 +589,14 @@ def bondfundfilter(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=['sharpe', 'jensen', 'sortino', 'ppw', 'stability'])
     indicator_df.index.name = 'code'
-    indicator_df.to_csv(os.path.join(datadir,'bond_indicator_' + end_date + '.csv'))
+    indicator_df.to_csv(datapath('bond_indicator_' + end_date + '.csv'))
 
 
     allocationdata.bond_fund_measure[end_date] = indicator_df
 
 
     '''
-    f = open(os.path.join(datadir,'bondfilter_codes_' + end_date + '.csv'),'w')
+    f = open(datapath('bondfilter_codes_' + end_date + '.csv'),'w')
     for code in codes:
         f.write(str(code) + '\n')
 
