@@ -21,7 +21,7 @@ import AllocationData
 import DBData
 import DFUtil
 
-from Const import datadir
+from Const import datapath
 
 def mean_r(d, funddfr, codes):
     r   = 0.0
@@ -51,7 +51,8 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
     poolcodes   = []
     selectcodes = []
 
-
+    print datapath("aa.csv")
+    
     for i in range(his_week, len(dates)):
 
 
@@ -78,7 +79,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
             #print
             #print time.time()
 
-            label_stock_df.to_csv(os.path.join(datadir,'stock_' + dates[i].strftime('%Y-%m-%d') + '.csv'))
+            label_stock_df.to_csv(datapath('stock_' + dates[i].strftime('%Y-%m-%d') + '.csv'))
 
             codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[Const.hs300_code])
             #print time.time()
@@ -107,7 +108,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
             #print tag['largecap'] , tag['smallcap'], tag['rise'], tag['oscillation'], tag['decline'], tag['growth'], tag['value']
 
 
-            f = open(os.path.join(datadir,'stock_pool_codes_' + end_date +'.txt'),'w')
+            f = open(datapath('stock_pool_codes_' + end_date +'.txt'),'w')
             for code in poolcodes:
                 f.write(str(code) + "\n")
             f.close()
@@ -145,14 +146,14 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
 
     result_df = pd.DataFrame(result_datas, index = result_dates, columns=['largecap', 'smallcap', 'rise', 'oscillation', 'decline', 'growth', 'value'])
-    result_df.to_csv(os.path.join(datadir,'stocklabelasset.csv'))
+    result_df.to_csv(datapath('stocklabelasset.csv'))
 
     select_df = pd.DataFrame(select_datas, index = result_dates, columns=['allcodes','filtercodes','poolcode','selectcode'])
-    select_df.to_csv(os.path.join(datadir,'stockselectasset.csv'))
+    select_df.to_csv(datapath('stockselectasset.csv'))
 
     fund_df = pd.DataFrame(fund_datas , index = fund_dates, columns=['largecap', 'smallcap', 'rise', 'oscillation', 'decline', 'growth', 'value'])
     fund_df.index.name = 'date'
-    fund_df.to_csv(os.path.join(datadir,'stock_fund.csv'))
+    fund_df.to_csv(datapath('stock_fund.csv'))
 
 
     allocationdata.stock_fund_df = fund_df
@@ -286,17 +287,17 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 
     result_df = pd.DataFrame(result_datas, index=result_dates,
                              columns=['ratebond', 'creditbond', 'convertiblebond'])
-    result_df.to_csv(os.path.join(datadir,'bondlabelasset.csv'))
+    result_df.to_csv(datapath('bondlabelasset.csv'))
 
     select_df = pd.DataFrame(select_datas, index = result_dates, columns=['allcodes','filtercodes','poolcode','selectcode'])
-    select_df.to_csv(os.path.join(datadir,'bondselectasset.csv'))
+    select_df.to_csv(datapath('bondselectasset.csv'))
 
 
     fund_df = pd.DataFrame(fund_datas , index = fund_dates, columns=['ratebond', 'creditbond','convertiblebond'])
     fund_df.index.name = 'date'
     #tmp_d = fund_df.index[-1]
     #fund_df.loc[tmp_d, 'ratebond'] = '200113'
-    fund_df.to_csv(os.path.join(datadir,'bond_fund.csv'))
+    fund_df.to_csv(datapath('bond_fund.csv'))
 
 
     allocationdata.bond_fund_df = fund_df
@@ -377,13 +378,13 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
 
 
     result_df = pd.DataFrame(result_datas, index=result_dates,columns=['money'])
-    result_df.to_csv(os.path.join(datadir,'moneylabelasset.csv'))
+    result_df.to_csv(datapath('moneylabelasset.csv'))
 
 
     fund_df = pd.DataFrame(fund_datas, index=fund_dates, columns=['money'])
     fund_df.index.name = 'date'
 
-    fund_df.to_csv(os.path.join(datadir,'money_fund.csv'))
+    fund_df.to_csv(datapath('money_fund.csv'))
     allocationdata.money_fund_sharpe_df = fund_df
 
     print 'money label asset done'
@@ -440,14 +441,14 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
     result_df = pd.DataFrame(result_datas, index=result_dates,
                              columns=['SP500.SPI', 'GLNC', 'HSCI.HI'])
 
-    result_df.to_csv(os.path.join(datadir,'otherlabelasset.csv'))
+    result_df.to_csv(datapath('otherlabelasset.csv'))
 
 
     fund_df = pd.DataFrame(fund_datas, index=fund_dates, columns=['SP500.SPI', 'GLNC', 'HSCI.HI'])
     fund_df.index.name = 'date'
     allocationdata.other_fund_sharpe_df = fund_df
 
-    fund_df.to_csv(os.path.join(datadir,'other_fund.csv'))
+    fund_df.to_csv(datapath('other_fund.csv'))
 
 
     print 'other label asset done'
@@ -511,7 +512,7 @@ def labelasset(allocationdata):
     alldf = pd.DataFrame(np.matrix(values).T, index = dfr.index, columns = dfr.columns)
 
     allocationdata.label_asset_df = alldf
-    alldf.to_csv(os.path.join(datadir,'labelasset.csv'))
+    alldf.to_csv(datapath('labelasset.csv'))
 
     allocationdata.label_asset_df = df
 
@@ -543,5 +544,5 @@ if __name__ == '__main__':
 
     df = pd.concat([stock_df, bond_df, money_df, other_df], axis = 1, join_axes=[stock_df.index])
 
-    df.to_csv(os.path.join(datadir,'labelasset.csv'))
+    df.to_csv(datapath('labelasset.csv'))
 

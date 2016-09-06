@@ -10,7 +10,7 @@ import sys
 sys.path.append('shell')
 import AllocationData
 
-from Const import datadir
+from Const import datapath
 
 rf = 0.03 / 252
 
@@ -22,7 +22,7 @@ def equalriskasset(allocationdata):
 
 
     ratio_df         = allocationdata.equal_risk_asset_ratio_df
-    #ratio_df         = pd.read_csv(os.path.join(datadir,'equalriskassetratio.csv'), index_col = 'date', parse_dates = 'date' )
+    #ratio_df         = pd.read_csv(datapath('equalriskassetratio.csv'), index_col = 'date', parse_dates = 'date' )
     ratio_dates      = ratio_df.index
     start_date = ratio_dates[0]
 
@@ -116,7 +116,7 @@ def equalriskasset(allocationdata):
     result_df = pd.DataFrame(result_datas, index=result_dates, columns=new_assetlabels)
 
     result_df.index.name = 'date'
-    result_df.to_csv(os.path.join(datadir,'equalriskasset.csv'))
+    result_df.to_csv(datapath('equalriskasset.csv'))
 
     result_df = result_df.resample('W-FRI').last()
     result_df = result_df.fillna(method='pad')

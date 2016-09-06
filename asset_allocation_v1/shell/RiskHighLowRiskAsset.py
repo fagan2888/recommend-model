@@ -10,7 +10,7 @@ from datetime import datetime
 import Portfolio as PF
 import AllocationData
 
-from Const import datadir
+from Const import datapath
 
 
 def highriskasset(allocationdata, dfr, his_week, interval):
@@ -87,12 +87,12 @@ def highriskasset(allocationdata, dfr, his_week, interval):
                                  columns=['high_risk_asset'])
 
     result_df.index.name = 'date'
-    result_df.to_csv(os.path.join(datadir,'highriskasset.csv'))
+    result_df.to_csv(datapath('highriskasset.csv'))
 
 
     highriskposition_df = pd.DataFrame(position_datas, index=position_dates, columns=dfr.columns)
     highriskposition_df.index.name = 'date'
-    highriskposition_df.to_csv(os.path.join(datadir,'highriskposition.csv'))
+    highriskposition_df.to_csv(datapath('highriskposition.csv'))
 
 
     print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(result_df['high_risk_asset'].values)
@@ -171,12 +171,12 @@ def lowriskasset(allocationdata, dfr, his_week, interval):
                              columns=['low_risk_asset'])
 
     result_df.index.name = 'date'
-    result_df.to_csv(os.path.join(datadir,'lowriskasset.csv'))
+    result_df.to_csv(datapath('lowriskasset.csv'))
 
 
     lowriskposition_df = pd.DataFrame(position_datas, index=position_dates, columns=dfr.columns)
     lowriskposition_df.index.name = 'date'
-    lowriskposition_df.to_csv(os.path.join(datadir,'lowriskposition.csv'))
+    lowriskposition_df.to_csv(datapath('lowriskposition.csv'))
 
 
     allocationdata.low_risk_position_df = lowriskposition_df
@@ -228,7 +228,7 @@ def highlowallocation(allocationdata, dfr):
         cols.append(str(i + 1))
     portfolio_df = pd.DataFrame(portfolio_vs, index = portfolio_dates, columns = cols)
     portfolio_df.index.name = 'date'
-    portfolio_df.to_csv(os.path.join(datadir,'risk_portfolio.csv'))
+    portfolio_df.to_csv(datapath('risk_portfolio.csv'))
 
 
     allocationdata.riskhighlowriskasset = portfolio_df
@@ -240,7 +240,7 @@ def highlowriskasset(allocationdata):
 
 
     highriskassetdf  = allocationdata.equal_risk_asset_df
-    #highriskassetdf  = pd.read_csv(os.path.join(datadir,'equalriskasset.csv'), index_col = 'date', parse_dates = 'date' )
+    #highriskassetdf  = pd.read_csv(datapath('equalriskasset.csv'), index_col = 'date', parse_dates = 'date' )
     highriskassetdfr = highriskassetdf.pct_change().fillna(0.0)
 
     df = allocationdata.label_asset_df.resample('W-FRI').last().pct_change().fillna(method='pad')
@@ -285,7 +285,7 @@ def highlowriskasset(allocationdata):
     #print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(highlowdf['highlow_risk_asset'].values)
 
 
-    #highlowdf.to_csv(os.path.join(datadir,'highlowrisk_net_value.csv'))
+    #highlowdf.to_csv(datapath('highlowrisk_net_value.csv'))
     #print "sharpe : ", fi.portfolio_sharpe(highdf['high_risk_asset'].values)
     #print "annual_return : ", fi.portfolio_return(highdf['high_risk_asset'].values)
     #print "maxdrawdown : ", fi.portfolio_maxdrawdown(highdf['high_risk_asset'].values)
@@ -298,9 +298,9 @@ if __name__ == '__main__':
 
 
     allocationdata = AllocationData.allocationdata()
-    df  = pd.read_csv(os.path.join(datadir,'equalriskasset.csv'), index_col = 'date', parse_dates = 'date' )
+    df  = pd.read_csv(datapath('equalriskasset.csv'), index_col = 'date', parse_dates = 'date' )
     allocationdata.equal_risk_asset_df = df
-    df  = pd.read_csv(os.path.join(datadir,'labelasset.csv'), index_col = 'date', parse_dates = 'date' )
+    df  = pd.read_csv(datapath('labelasset.csv'), index_col = 'date', parse_dates = 'date' )
     allocationdata.label_asset_df = df
 
     highlowriskasset(allocationdata)

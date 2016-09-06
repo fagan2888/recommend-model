@@ -10,9 +10,9 @@ from datetime import datetime
 import portfolio as pf
 import fundindicator as fi
 
-from Const import datadir
+from Const import datapath
 
-dfr         = pd.read_csv(os.path.join(datadir,'labelasset.csv'), index_col = 'date', parse_dates = 'date' )
+dfr         = pd.read_csv(datapath('labelasset.csv'), index_col = 'date', parse_dates = 'date' )
 dates = dfr.index
 
 his_week = 13
@@ -75,11 +75,11 @@ result_datas  = portfolio_vs
 result_df = pd.DataFrame(result_datas, index=result_dates,
                          columns=['all_asset'])
 
-result_df.to_csv(os.path.join(datadir,'labelasset_net_value.csv'))
+result_df.to_csv(datapath('labelasset_net_value.csv'))
 
 
 position_df = pd.DataFrame(position_datas, index=position_dates, columns=dfr.columns)
-position_df.to_csv(os.path.join(datadir,'labelasset_position.csv'))
+position_df.to_csv(datapath('labelasset_position.csv'))
 
 print "sharpe : ", fi.portfolio_sharpe(result_df['all_asset'].values)
 print "annual_return : ", fi.portfolio_return(result_df['all_asset'].values)

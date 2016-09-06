@@ -1,5 +1,6 @@
 #coding=utf8
 
+import os
 
 rf = 0.025 / 52
 annual_rf = 0.03
@@ -32,3 +33,6 @@ fund_num = 5
 version = '1.0'
 verbose = False
 datadir = "./tmp"
+
+def datapath(filepath) :
+    return os.path.join(datadir, filepath)

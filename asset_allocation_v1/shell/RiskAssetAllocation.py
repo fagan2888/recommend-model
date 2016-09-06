@@ -19,8 +19,8 @@ import time
 import RiskHighLowRiskAsset
 import FixRisk
 import WeekFund2DayNav
+import Const
 
-from Const import datadir
 from datetime import datetime
 
 def usage():
@@ -87,7 +87,7 @@ if __name__ == '__main__':
             usage()
             sys.exit(2)
         elif opt in ('-d', '--datadir'):
-            datadir = arg
+            Const.datadir = arg
         elif opt in ('-v', '--verbose'):
             verbose = True
         elif opt == '--version':
@@ -96,15 +96,14 @@ if __name__ == '__main__':
     #
     # 确认数据目录存在
     #
-    if not os.path.exists(datadir):
-        os.mkdir(datadir)
+    if not os.path.exists(Const.datadir):
+        os.mkdir(Const.datadir)
     else:
-        if not os.path.isdir(datadir):
-            print "path [%s] not dir" % datadir
+        if not os.path.isdir(Const.datadir):
+            print "path [%s] not dir" % Const.datadir
             sys.exit(-1)
 
-    print datadir
-
+    print Const.datadir
     #
     # 运行资产配置程序
     #

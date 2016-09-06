@@ -12,7 +12,7 @@ sys.path.append('shell')
 import Const
 import dbconfig
 
-from Const import datadir
+from Const import datapath
 
 db_params = dbconfig.db_mofang
 
@@ -742,6 +742,6 @@ if __name__ == '__main__':
     #df =  scale()
     #df  = bond_day_fund_value('2014-01-03', '2016-06-03')
     df  = bond_fund_value('2014-01-01', '2016-07-19')
-    df.to_csv(os.path.join(datadir,'bond.csv'))
+    df.to_csv(datapath('bond.csv'))
     #print trade_dates('2014-01-03', '2016-06-03')
 
