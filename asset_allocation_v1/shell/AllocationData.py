@@ -6,7 +6,7 @@ import os
 import MySQLdb
 from datetime import datetime
 import DBData
-from Const import datadir
+from Const import datapath
 
 
 db_params = {
@@ -151,13 +151,13 @@ class allocationdata:
         #print 'scale done'
         #print 'load data done'
 
-        #self.stock_df.to_csv(os.path.join(datadir,'stock.csv'))
-        #self.bond_df.to_csv(os.path.join(datadir,'bond.csv'))
-        #self.money_df.to_csv(os.path.join(datadir,'money.csv'))
-        #self.other_df.to_csv(os.path.join(datadir,'other.csv'))
-        #self.index_df.to_csv(os.path.join(datadir,'index.csv'))
-        #self.position_df.to_csv(os.path.join(datadir,'position.csv'))
-        #self.scale_df.to_csv(os.path.join(datadir,'scale.csv'))
+        #self.stock_df.to_csv(datapath('stock.csv'))
+        #self.bond_df.to_csv(datapath('bond.csv'))
+        #self.money_df.to_csv(datapath('money.csv'))
+        #self.other_df.to_csv(datapath('other.csv'))
+        #self.index_df.to_csv(datapath('index.csv'))
+        #self.position_df.to_csv(datapath('position.csv'))
+        #self.scale_df.to_csv(datapath('scale.csv'))
 
         return 0
 
