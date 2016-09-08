@@ -459,7 +459,6 @@ def black_litterman(delta, weq, sigma, tau, P, Q, Omega):
 
     pi = weq.dot(sigma * delta)
 
-
     # We use tau * sigma many places so just compute it once
     ts = tau * sigma
 
@@ -468,19 +467,36 @@ def black_litterman(delta, weq, sigma, tau, P, Q, Omega):
     # This is a simplified version of formula (8) on page 4.
     middle = linalg.inv(np.dot(np.dot(P,ts),P.T) + Omega)
 
-
     #print middle
     #print(middle)
     #print(Q-np.expand_dims(np.dot(P,pi.T),axis=1))
     er = np.expand_dims(pi,axis=0).T + np.dot(np.dot(np.dot(ts,P.T),middle),(Q - np.expand_dims(np.dot(P,pi.T),axis=1)))
 
-
     # Compute posterior estimate of the uncertainty in the mean
     # This is a simplified and combined version of formulas (9) and (15)
     posteriorSigma = sigma + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
+
+
+    '''
+    solvers.options['show_progress'] = False
+    n_asset           =     len(er)
+    asset_mean        =     er
+    S                 =     matrix(posteriorSigma)
+    pbar              =     matrix(0.0, (n_asset, 1))
+    G                 =     matrix(0.0, (n_asset, n_asset))
+    G[::n_asset + 1]  =  -1.0
+    h                 =  matrix(0.0, (n_asset, 1))
+    A                 =  matrix(1.0, (1, n_asset))
+    b                 =  matrix(1.0)
+    ws    = qp(S, -pbar, G, h, A, b)['x']
+    '''
+
     #print(posteriorSigma)
     # Compute posterior weights based on uncertainty in mean
+
     w = er.T.dot(linalg.inv(delta * posteriorSigma)).T
+    #print w
+    #print er.T.dot(linalg.inv(delta * posteriorSigma))
     # Compute lambda value
     # We solve for lambda from formula (17) page 7, rather than formula (18)
     # just because it is less to type, and we've already computed w*.
@@ -491,8 +507,7 @@ def black_litterman(delta, weq, sigma, tau, P, Q, Omega):
     for v in w:
         ws.append(v[0])
 
-
-    return [er, ws, lmbda]
+    return ws
 
 
 def printHello():
@@ -609,6 +624,27 @@ def efficient_frontier_wrong(return_rate, bound):
     #wt = solvers.qp(cvxopt.matrix(x1 * S), -pbar, G, h, A, b)['x']
     #print portfolios[0], portfolios[1], portfolios[2]
     #print wt[0] , wt[1] , wt[2]
+
+
+#最小方差组合
+def min_risk_allocation(return_rate):
+
+    solvers.options['show_progress'] = False
+
+    n_asset    =     len(return_rate)
+    asset_mean = np.mean(return_rate, axis = 1)
+    cov        =     np.cov(return_rate)
+    S           =     matrix(cov)
+    pbar       =     matrix(0.0, (n_asset, 1))
+    G          =     matrix(0.0, (n_asset, n_asset))
+    G[::n_asset + 1]  =  -1.0
+    h                 =  matrix(0.0, (n_asset, 1))
+    A                 =  matrix(1.0, (1, n_asset))
+    b                 =  matrix(1.0)
+    ws    = qp(S, -pbar, G, h, A, b)['x']
+
+    return ws
+
 
 if __name__ == '__main__':
 
