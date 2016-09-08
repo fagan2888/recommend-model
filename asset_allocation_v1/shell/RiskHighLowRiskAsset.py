@@ -48,8 +48,25 @@ def highriskasset(allocationdata, dfr, his_week, interval):
             uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3]
             downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-            #risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
-            risk, returns, ws, sharpe = PF.markowitz_r_spe(allocation_dfr, [downlimit, uplimit])
+            '''
+            delta = 2.5
+            tau = 0.05
+            l = len(allocation_dfr.columns)
+            ws = []
+            for i in range(0, l):
+                ws.append(1.0 / l)
+
+            P = [[0, 1, 0, 0, 0, 0, -0.5, -0.5]]
+            Q = [[0.005]]
+
+            print ws
+            ws = PF.black_litterman(allocation_dfr, delta, tau, ws, P, Q)
+            '''
+            #risk, returns, ws, sharpe = PF.new_markowitz(allocation_dfr)
+            #print ws
+            risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, [downlimit, uplimit])
+            #ws = PF.min_risk(allocation_dfr)
+            #print ws
             #risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
             fund_codes = allocation_dfr.columns
 
@@ -267,9 +284,9 @@ def highlowriskasset(allocationdata):
 
     his_week = allocationdata.allocation_lookback
     interval = allocationdata.allocation_adjust_period
-    print interval
 
     highdf = highriskasset(allocationdata, highriskassetdfr, his_week, interval)
+    ''' 
     lowdf  = lowriskasset(allocationdata, lowriskassetdfr, his_week, interval)
 
 
@@ -279,7 +296,7 @@ def highlowriskasset(allocationdata):
     #print dfr
 
     highlowdf = highlowallocation(allocationdata, dfr)
-
+    '''
     #print "sharpe : ", FundIndicator.portfolio_sharpe(highlowdf['highlow_risk_asset'].values)
     #print "annual_return : ", FundIndicator.portfolio_return(highlowdf['highlow_risk_asset'].values)
     #print "maxdrawdown : ", FundIndicator.portfolio_maxdrawdown(highlowdf['highlow_risk_asset'].values)

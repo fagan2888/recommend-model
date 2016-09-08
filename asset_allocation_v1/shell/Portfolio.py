@@ -10,16 +10,75 @@ import Financial as fin
 import Const
 from numpy import *
 from datetime import datetime
-
 from Const import datadir
-
-#strategicallocation
-
-
-#indexallocation
+import cvxopt as opt
+from cvxopt import blas, solvers
 
 
-#technicallocation
+#markowizt 资产配置
+def optimal_portfolio(returns):
+
+    solvers.options['show_progress'] = False
+    n = len(returns)
+    returns = np.asmatrix(returns)
+    
+    N = 500
+    mus = [10**(5.0 * t/N - 1.0) for t in range(N)]
+    
+    # Convert to cvxopt matrices
+    S = opt.matrix(np.cov(returns))
+    pbar = opt.matrix(np.mean(returns, axis=1))
+    
+    # Create constraint matrices
+    G = -opt.matrix(np.eye(n))   # negative n x n identity matrix
+    h = opt.matrix(0.0, (n ,1))
+    A = opt.matrix(1.0, (1, n))
+    b = opt.matrix(1.0)
+    
+    # Calculate efficient frontier weights using quadratic programming
+    portfolios = [solvers.qp(mu*S, -pbar, G, h, A, b)['x'] 
+                  for mu in mus]
+    ## CALCULATE RISKS AND RETURNS FOR FRONTIER
+    returns = [blas.dot(pbar, x) for x in portfolios]
+    risks = [np.sqrt(blas.dot(x, S*x)) for x in portfolios]
+    ## CALCULATE THE 2ND DEGREE POLYNOMIAL OF THE FRONTIER CURVE
+    m1 = np.polyfit(returns, risks, 2)
+    x1 = np.sqrt(m1[2] / m1[0])
+    # CALCULATE THE OPTIMAL PORTFOLIO
+    wt = solvers.qp(opt.matrix(x1 * S), -pbar, G, h, A, b)['x']
+
+    return risks, returns, np.asarray(wt)
+
+
+def new_markowitz(funddfr):
+
+    rf = Const.rf
+
+    final_risk = 0
+    final_return = 0
+    final_ws = []
+    final_sharp = -10000000000000000000000000.0
+    final_codes = []
+
+    codes = funddfr.columns
+    return_rate = []
+    for code in codes:
+        return_rate.append(funddfr[code].values)
+
+    risks, returns, ws = optimal_portfolio(return_rate)
+
+    print ws
+
+    for j in range(0, len(risks)):
+        sharp = (returns[j] - rf) / risks[j]
+        if sharp > final_sharp:
+            final_risk   = risks[j]
+            final_return = returns[j]
+            final_sharp  = sharp
+
+    final_ws = ws
+
+    return final_risk, final_return, final_ws, final_sharp
 
 
 #中类资产配置
@@ -455,3 +514,39 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
     #for code in largecap:
 
     return fund_codes, ws
+
+
+def black_litterman(dfr, delta, tau, ws, P, Q):
+
+    rs = []
+    cols = dfr.columns
+    for col in cols:
+        rs.append(dfr[col].values)
+
+    delta = 2.5
+    tau = 0.05
+
+    P = np.array(P)
+    Q = np.array(Q)
+
+    weq = np.array(ws)
+
+    sigma = np.cov(rs)
+    tauV  = tau * sigma
+    Omega = np.dot(np.dot(P,tauV),P.T) * np.eye(Q.shape[0])
+    ws    = fin.black_litterman(delta, weq, sigma, tau, P, Q, Omega)
+
+    return ws
+
+
+#min risk allocation model
+def min_risk(funddfr):
+
+    codes = funddfr.columns
+    return_rate = []
+    for code in codes:
+        return_rate.append(funddfr[code].values)
+
+    ws = fin.min_risk_allocation(return_rate)
+
+    return ws
