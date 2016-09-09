@@ -5,6 +5,7 @@ import os
 import sys
 sys.path.append('shell')
 import MySQLdb
+import config
 import string
 import pandas as pd
 import numpy as np
@@ -47,7 +48,7 @@ mofang_db_params = {
 def fund_measure(allocationdata):
 
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
 
@@ -231,7 +232,7 @@ def fund_measure(allocationdata):
 def label_asset(allocationdata):
 
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
 
@@ -576,7 +577,7 @@ def label_asset(allocationdata):
 def asset_allocation(allocationdata):
 
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
 
@@ -761,7 +762,7 @@ def asset_allocation(allocationdata):
 
 def risk_allocation_list(risk_value, risk_begin_date):
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
 
@@ -775,7 +776,7 @@ def risk_allocation_list(risk_value, risk_begin_date):
 
 
 def risk_allocation_ratio(df, lid):
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
     base_sql = "replace into risk_asset_allocation_list (ra_alloc_id, ra_transfer_date, ra_fund_code, ra_fund_ratio) values (%d, %s, %s, %f)"
 
@@ -807,7 +808,7 @@ def riskhighlowriskasset(allocationdata):
 
     df = pd.read_csv(datapath('risk_portfolio.csv'), index_col = 'date', parse_dates = ['date'])
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
     for risk in df.columns:
@@ -899,7 +900,7 @@ def riskhighlowriskasset(allocationdata):
 
 def getFee(fund_id,fee_type,amount,day=0):
     amount = float(amount)
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     if fee_type == 0:
         sql = 'select * from fund_fee where ff_code="%s" and ff_type=%s and ff_fee_type=1 order by ff_fee desc limit 1' % (fund_id.zfill(6),5)
@@ -944,7 +945,7 @@ def getFee(fund_id,fee_type,amount,day=0):
             return 0.00*amount
 
 def getCompany(fund_id):
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     sql = 'select * from fund_infos where fi_code="%s"' % fund_id.zfill(6)
     cur.execute(sql)
@@ -955,7 +956,7 @@ def getCompany(fund_id):
         return 0
 
 def isChangeOut(fund_id):
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     sql = 'select * from fund_infos where fi_code="%s"' % fund_id.zfill(6)
     cur.execute(sql)
@@ -966,7 +967,7 @@ def isChangeOut(fund_id):
     return False
 
 def isChangeIn(fund_id):
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     sql = 'select * from fund_infos where fi_code="%s"' % fund_id.zfill(6)
     cur.execute(sql)
@@ -977,7 +978,7 @@ def isChangeIn(fund_id):
     return False
 
 def getShare(fund_id,amount,day,count=0):
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     if count==0:
         sql = 'select * from wind_fund_value where wf_fund_code="%s" and wf_time>="%s" order by wf_time asc limit 1' % (fund_id.zfill(6),day)
@@ -990,7 +991,7 @@ def getShare(fund_id,amount,day,count=0):
     return [day,amount]
 
 def getAmount(fund_id,share,day=0):
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     if day!=0:
         sql = 'select * from wind_fund_value where wf_fund_code="%s" and wf_time<="%s" order by wf_time desc limit 1' % (fund_id.zfill(6),day)
@@ -1003,7 +1004,7 @@ def getAmount(fund_id,share,day=0):
     return share
 
 def getNavValue(fund_id,day):
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     sql = 'select * from wind_fund_value where wf_fund_code="%s" and wf_time<="%s" order by wf_time desc limit 1' % (fund_id.zfill(6),day)
     cur.execute(sql)
@@ -1014,7 +1015,7 @@ def getNavValue(fund_id,day):
 
 def getFundType(fund_id):
     type_list = {'zhishu':[2001010607,200101080102],'huobi':[20010104],'zhaiquan':[20010103,2001010203],'gupiao':[20010101,2001010201,2001010202,2001010204]}
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     sql = 'select * from wind_fund_type where wf_fund_code="%s" and wf_status=1' % fund_id.zfill(6)
     cur.execute(sql)
@@ -1027,7 +1028,7 @@ def getFundType(fund_id):
     print 'error---------------------------'+str(fund_id)
 
 def getBuyPoFee(fund_id):
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     sql = 'select * from fund_infos where fi_code="%s"' % fund_id.zfill(6)
     cur.execute(sql)
@@ -1037,7 +1038,7 @@ def getBuyPoFee(fund_id):
     return 1
 
 def getRiskPosition(status):
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     if status==0:
         sql = 'select * from risk_asset_allocation_ratio order by ra_alloc_id,ra_transfer_date asc'
@@ -1052,7 +1053,7 @@ def getRiskPosition(status):
     return tmp
 
 def getFundCode(fund_id):
-    conn = MySQLdb.connect(**mofang_db_params)
+    conn = MySQLdb.connect(**config.db_base)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     sql = 'select * from fund_infos where fi_globalid="%s"' % fund_id
     cur.execute(sql)
@@ -1061,7 +1062,7 @@ def getFundCode(fund_id):
         return result['fi_code']
 
 def insertNav(risk,position,risk_type):
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cur = conn.cursor(MySQLdb.cursors.DictCursor)
     if len(position)>0:
         if risk_type == 0:

@@ -9,3 +9,4 @@ data/
 *.swo
 *.tar.gz
 nohup.out
+config.py
