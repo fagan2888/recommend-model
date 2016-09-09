@@ -18,6 +18,7 @@ import StockTag as ST
 import FundIndicator
 import DFUtil
 import MySQLdb
+import config
 
 
 db_params = {
@@ -43,7 +44,7 @@ def stock_fund_measure(allocationdata, start_date, end_date):
 
     fund_code_id_dict = allocationdata.fund_code_id_dict
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
     lookback  = 52
@@ -114,7 +115,7 @@ def bond_fund_measure(allocationdata, start_date, end_date):
 
     base_sql = "replace into fund_pool (fp_date, fp_look_back, fp_fund_type, fp_fund_code,fp_fund_id, fp_jensen, fp_ppw, fp_stability, fp_sortino, fp_sharpe, fp_ratebond, fp_creditbond, fp_convertiblebond, created_at, updated_at) values ('%s',%d, %d, '%s', %d , %f, %f, %f, %f, %f, %d, %d, %d, '%s', '%s')"
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
     lookback  = 52
@@ -166,7 +167,7 @@ def money_fund_measure(allocationdata, start_date, end_date):
 
     base_sql = "replace into fund_pool (fp_date, fp_look_back, fp_fund_type, fp_fund_code, fp_fund_id, fp_sharpe, created_at, updated_at) values ('%s',%d, %d, '%s', %d, %f ,'%s', '%s')"
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
     lookback  = 52
@@ -196,7 +197,7 @@ def other_fund_measure(allocationdata, start_date, end_date):
 
     base_sql = "replace into fund_pool (fp_date, fp_look_back, fp_fund_type, fp_fund_code, fp_fund_id, fp_sharpe, created_at, updated_at) values ('%s',%d, %d, '%s', %d, %f ,'%s', '%s')"
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
     lookback  = 52
