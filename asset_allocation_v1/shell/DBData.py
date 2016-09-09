@@ -11,12 +11,8 @@ import os
 import sys
 sys.path.append('shell')
 import Const
-import dbconfig
 
 from Const import datapath
-
-db_params = dbconfig.db_mofang
-
 
 def all_trade_dates():
 

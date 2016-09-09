@@ -25,15 +25,6 @@ import time
 
 app = Flask(__name__)
 
-db_params = {
-            "host": "rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com",
-            "port": 3306,
-            "user": "jiaoyang",
-            "passwd": "wgOdGq9SWruwATrVWGwi",
-            "db":"asset_allocation",
-            "charset": "utf8"
-        }
-
 def asset_allocation(allocationdata, uid):
 
     try:

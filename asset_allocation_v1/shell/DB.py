@@ -13,10 +13,7 @@ from datetime import datetime
 import FundIndicator
 import AllocationData
 import RiskPosition
-import dbconfig
 from Const import datapath
-
-
 
 
 def fund_measure(allocationdata):

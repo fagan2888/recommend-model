@@ -21,9 +21,6 @@ import MySQLdb
 import config
 
 
-db_params = dbconfig.db_assetallocation
-
-
 def stock_fund_measure(allocationdata, start_date, end_date):
 
 

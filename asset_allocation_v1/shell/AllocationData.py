@@ -7,12 +7,7 @@ import MySQLdb
 import config;
 from datetime import datetime
 import DBData
-import dbconfig
 from Const import datapath
-
-db_params = dbconfig.db_mofang
-
-
 
 
 class allocationdata:
