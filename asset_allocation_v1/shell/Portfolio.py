@@ -12,6 +12,8 @@ from numpy import *
 from datetime import datetime
 from Const import datadir
 import cvxopt as opt
+from cvxopt import matrix
+from scipy import linalg
 from cvxopt import blas, solvers
 
 
@@ -516,7 +518,9 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
     return fund_codes, ws
 
 
-def black_litterman(dfr, delta, tau, ws, P, Q):
+def black_litterman(dfr, delta, tau, ws, P, Q, ):
+
+    solvers.options['show_progress'] = False
 
     rs = []
     cols = dfr.columns
@@ -524,8 +528,8 @@ def black_litterman(dfr, delta, tau, ws, P, Q):
         rs.append(dfr[col].values)
 
     delta = 2.5
-    tau = 0.05
-
+    tau = 0.02
+    n_asset = len(cols)
     P = np.array(P)
     Q = np.array(Q)
 
@@ -534,9 +538,25 @@ def black_litterman(dfr, delta, tau, ws, P, Q):
     sigma = np.cov(rs)
     tauV  = tau * sigma
     Omega = np.dot(np.dot(P,tauV),P.T) * np.eye(Q.shape[0])
-    ws    = fin.black_litterman(delta, weq, sigma, tau, P, Q, Omega)
+    pi = weq.dot(sigma * delta)
+    ts = tau * sigma
+    middle = linalg.inv(np.dot(np.dot(P,ts),P.T) + Omega)
+    er = np.expand_dims(pi,axis=0).T + np.dot(np.dot(np.dot(ts,P.T),middle),(Q - np.expand_dims(np.dot(P,pi.T),axis=1)))
+    posteriorSigma = sigma + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
 
-    return ws
+    G                 =     matrix(0.0, (n_asset, n_asset))
+    G[::n_asset + 1]  =  -1.0
+    h                 =  matrix(0.0, (n_asset, 1))
+    A                 =  matrix(1.0, (1, n_asset))
+    b                 =  matrix(1.0)
+
+    pbar              = matrix(er)
+    S                 = matrix(posteriorSigma)
+
+    min_ws    = solvers.qp(delta / 2.0 * S, -1.0 * pbar, G, h, A, b)['x']
+
+    return min_ws
+
 
 
 #min risk allocation model
