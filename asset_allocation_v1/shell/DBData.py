@@ -3,6 +3,7 @@
 
 import string
 import MySQLdb
+import config
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -19,7 +20,7 @@ db_params = dbconfig.db_mofang
 
 def all_trade_dates():
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -38,7 +39,7 @@ def all_trade_dates():
 
 def trade_dates(start_date, end_date):
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -68,7 +69,7 @@ def stock_fund_value(start_date, end_date):
     nav_values_dict = {}
 
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -123,7 +124,7 @@ def stock_day_fund_value(start_date, end_date):
     nav_values_dict = {}
 
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -184,7 +185,7 @@ def bond_fund_value(start_date, end_date):
     nav_values_dict = {}
 
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -240,7 +241,7 @@ def bond_day_fund_value(start_date, end_date):
 
     nav_values_dict = {}
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -303,7 +304,7 @@ def money_fund_value(start_date, end_date):
     nav_values_dict = {}
 
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -359,7 +360,7 @@ def money_day_fund_value(start_date, end_date):
 
     nav_values_dict = {}
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -423,7 +424,7 @@ def index_value(start_date, end_date):
     nav_values_dict = {}
 
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -480,7 +481,7 @@ def index_day_value(start_date, end_date):
 
     nav_values_dict = {}
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -543,7 +544,7 @@ def other_fund_value(start_date, end_date):
     nav_values_dict = {}
 
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -598,7 +599,7 @@ def other_day_fund_value(start_date, end_date):
 
     nav_values_dict = {}
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -653,7 +654,7 @@ def position():
 
     #dates = set()
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 
@@ -711,7 +712,7 @@ def position():
 def scale():
 
 
-    conn  = MySQLdb.connect(**db_params)
+    conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
 

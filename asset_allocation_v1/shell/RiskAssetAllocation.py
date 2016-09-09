@@ -13,7 +13,6 @@ import EqualRiskAsset
 import HighLowRiskAsset
 import os
 import DB
-import MySQLdb
 import AllocationData
 import time
 import RiskHighLowRiskAsset

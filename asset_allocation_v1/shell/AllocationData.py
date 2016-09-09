@@ -4,6 +4,7 @@
 
 import os
 import MySQLdb
+import config;
 from datetime import datetime
 import DBData
 import dbconfig
@@ -23,7 +24,7 @@ class allocationdata:
 
     def __init__(self):
 
-        conn  = MySQLdb.connect(**db_params)
+        conn  = MySQLdb.connect(**config.db_base)
 
         cursor = conn.cursor()
         sql = "select fi_globalid, fi_code from fund_infos"

@@ -15,6 +15,7 @@ import os
 import DB
 import thread
 import MySQLdb
+import config
 from datetime import datetime
 import AllocationData
 from flask import Flask
@@ -45,7 +46,7 @@ def asset_allocation(allocationdata, uid):
         DB.label_asset(allocationdata)
         DB.asset_allocation(allocationdata)
 
-        conn = MySQLdb.connect(**db_params)
+        conn = MySQLdb.connect(**config.db_asset)
         cursor = conn.cursor()
 
         sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('complete', uid)
@@ -58,7 +59,7 @@ def asset_allocation(allocationdata, uid):
 
         print e
 
-        conn = MySQLdb.connect(**db_params)
+        conn = MySQLdb.connect(**config.db_asset)
         cursor = conn.cursor()
 
         sql = "update user_job_status set ujs_status = '%s'  where ujs_uid = %d"  % ('error', uid)
@@ -100,7 +101,7 @@ def asset_allocation_v1():
 
     print json_args
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
 
     cursor = conn.cursor()
     sql = "insert into user_job_status (ujs_uid, ujs_args, ujs_status, created_at, updated_at) values(%d, '%s', '%s', '%s', '%s')" % (uid,json_args, 'running', datetime.now() ,datetime.now())
@@ -135,7 +136,7 @@ def risk_asset_allocation():
     start_date     =   args.get('start_date')
     risk           =   string.atof(args.get('risk'))
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
 

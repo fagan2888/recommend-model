@@ -20,8 +20,3 @@ import AllocationData
 import DBData
 import DFUtil
 
-
-#conn = MySQLdb.connect(host='dev.mofanglicai.com.cn', port=3306, user='jiaoyang', passwd='q36wx5Td3Nv3Br2OPpH7', db='asset_allocation', charset='utf8')
-
-
-#def stockLabelAsset():

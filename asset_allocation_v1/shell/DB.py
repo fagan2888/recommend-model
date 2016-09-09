@@ -5,6 +5,7 @@ import os
 import sys
 sys.path.append('shell')
 import MySQLdb
+import config
 import string
 import pandas as pd
 import numpy as np
@@ -16,13 +17,12 @@ import dbconfig
 from Const import datapath
 
 
-db_params = dbconfig.db_assetallocation
 
 
 def fund_measure(allocationdata):
 
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
 
@@ -206,7 +206,7 @@ def fund_measure(allocationdata):
 def label_asset(allocationdata):
 
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
 
@@ -551,7 +551,7 @@ def label_asset(allocationdata):
 def asset_allocation(allocationdata):
 
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
 
@@ -736,7 +736,7 @@ def asset_allocation(allocationdata):
 
 def risk_allocation_list(risk_value, risk_begin_date):
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
 
@@ -750,7 +750,7 @@ def risk_allocation_list(risk_value, risk_begin_date):
 
 
 def risk_allocation_ratio(df, lid):
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
     base_sql = "replace into risk_asset_allocation_list (ra_alloc_id, ra_transfer_date, ra_fund_code, ra_fund_ratio) values (%d, %s, %s, %f)"
 
@@ -782,7 +782,7 @@ def riskhighlowriskasset(allocationdata):
 
     df = pd.read_csv(datapath('risk_portfolio.csv'), index_col = 'date', parse_dates = ['date'])
 
-    conn = MySQLdb.connect(**db_params)
+    conn = MySQLdb.connect(**config.db_asset)
     cursor = conn.cursor()
 
     for risk in df.columns:
