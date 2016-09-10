@@ -55,8 +55,8 @@ def highriskasset(allocationdata, dfr, his_week, interval):
             for m in range(0, l):
                 ws.append(1.0 / l)
 
-            P = [[0, 1.0, 0, 0, 0, 0, -0.5, -0.5]]
-            Q = [[0.0000005]]
+            P = [[0, 0.0, 0, 0, 0, 0, 1, 0.0]]
+            Q = [[0.0005]]
             ws = PF.black_litterman(allocation_dfr, delta, tau, ws, P, Q)
 
             #print ws
