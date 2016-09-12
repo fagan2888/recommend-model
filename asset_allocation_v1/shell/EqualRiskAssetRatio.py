@@ -113,7 +113,7 @@ def equalriskassetratio(allocationdata):
 
     result_df = pd.DataFrame(result_datas, index=result_dates, columns=assetlabels)
     result_df.index.name = 'date'
-
+    result_df = result_df.fillna(0.0)
     result_df.to_csv(datapath('equalriskassetratio.csv'))
 
     allocationdata.equal_risk_asset_ratio_df = result_df
