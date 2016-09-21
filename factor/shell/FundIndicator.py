@@ -218,7 +218,7 @@ if __name__ == '__main__':
 
         d = dates[i]
 
-        if i % interval == 0:
+        if (i - his_back) % interval == 0:
             codes = []
             tmp_fdfr  = fdfr.iloc[i - his_back : i, ]
             tmp_idfr = idfr.iloc[i - his_back : i, ]
