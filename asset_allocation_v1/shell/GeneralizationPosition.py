@@ -297,7 +297,7 @@ def clean_min(re):
         result.append(tuple(c))
     return result
 
-def output_category_portfolio(all_code_position):
+def output_category_portfolio(all_code_position, out):
     #
     # 输出配置数据
     #
@@ -324,9 +324,9 @@ def output_category_portfolio(all_code_position):
     for record in all_code_position:
         codes = ast.literal_eval(record[4])
         xtype = xtab[record[2]] if record[2] in xtab else 0
-        print "%s,%.1f,%s,%.4f,%s" % (record[0].strftime("%Y-%m-%d"), record[1], xtype, record[3], ':'.join(codes))
+        out.write("%s,%.1f,%s,%.4f,%s\n" % (record[0].strftime("%Y-%m-%d"), record[1], xtype, record[3], ':'.join(codes)))
 
-def output_portfolio(all_code_position):
+def output_portfolio(all_code_position, out):
     #
     # 输出配置数据
     #
@@ -365,10 +365,10 @@ def output_portfolio(all_code_position):
     
     for record in positions :
         risk, date, code, ratio = record
-        print "%s,%s,%06s,%.4f" % (risk, date, code, ratio)
+        out.write("%s,%s,%06s,%.4f\n" % (risk, date, code, ratio))
 
         
-def output_final_portfolio(all_code_position):
+def output_final_portfolio(all_code_position, out):
     #
     # 输出配置数据
     #
@@ -425,7 +425,7 @@ def output_final_portfolio(all_code_position):
 
     for record in positions:
         risk, date, code, ratio = record
-        print "%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
+        out.write("%.1f,%s,%06s,%.4f\n" % (risk, date.strftime("%Y-%m-%d"), code, ratio))
 
     # #
     # # 检查是否100%
@@ -496,11 +496,12 @@ if __name__ == '__main__':
     #
     all_code_position = risk_position()
 
-    if final:
-        output_final_portfolio(all_code_position)
-    else:
-        if category :
-            output_category_portfolio(all_code_position)
-        else :
-            output_portfolio(all_code_position)
+    with (open(outfile, 'w') if outfile != '-' else os.fdopen(os.dup(sys.stdout.fileno()), 'w')) as out:
+        if final:
+            output_final_portfolio(all_code_position, out)
+        else:
+            if category :
+                output_category_portfolio(all_code_position, out)
+            else :
+                output_portfolio(all_code_position, out)
 
