@@ -101,7 +101,7 @@ def model(ctx):
 @model.command()
 @click.pass_context
 def risk(ctx):
-    click.echo("const risk model")
+    click.echo("const risk model, not integrated")
 
 if __name__=='__main__':
     roboadvisor(obj={})  
