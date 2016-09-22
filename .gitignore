@@ -10,3 +10,4 @@ data/
 *.tar.gz
 nohup.out
 config.py
+*.log
