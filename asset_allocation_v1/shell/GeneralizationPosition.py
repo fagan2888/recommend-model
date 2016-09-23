@@ -5,14 +5,20 @@ import ast
 import getopt
 import os
 import sys
+import numpy as np
 import pandas as pd
 import string
 import GeneralizationTrade
+import MySQLdb
+import config
 
 from Const import datapath
 from datetime import datetime
 from itertools import groupby
 from operator import itemgetter
+from dateutil.parser import parse
+
+conn  = None
 
 def risk_position():
 
@@ -369,6 +375,8 @@ def output_portfolio(all_code_position, out):
 
         
 def output_final_portfolio(all_code_position, out):
+    global conn
+    conn = MySQLdb.connect(**config.db_base)
     #
     # 输出配置数据
     #
@@ -395,26 +403,38 @@ def output_final_portfolio(all_code_position, out):
     positions = []
     for record in all_code_position:
         date, risk, stype, ratio, codes, = record
+        if ratio < 0.000099:
+            continue
         codes = ast.literal_eval(codes)
-        xtype = xtab[stype] if stype in xtab else 0
+        # xtype = xtab[stype] if stype in xtab else 0
         # print "%s,%.1f,%s,%.4f,%s" % (date.strftime("%Y-%m-%d"), risk, xtype, ratio, ':'.join(codes))
+        #
+        # 根据历史可购信息筛选基金
+        #
+        codes2 = filter_by_status(date, codes)
+        #
+        # 根据配置占比和可用基金数目平分基金
+        #
         if ratio > 0.60 :
-            count_used = min (5, len(codes))
+            count_used = min (5, len(codes2))
         elif ratio > 0.45 :
-            count_used = min (4, len(codes))
+            count_used = min (4, len(codes2))
         elif ratio > 0.30 :
-            count_used = min (3, len(codes))
+            count_used = min (3, len(codes2))
         elif ratio > 0.15 :
-            count_used = min (2, len(codes))
+            count_used = min (2, len(codes2))
         else :
             count_used = 1;
 
-        codes_used = codes[0:count_used]
+        codes_used = codes2[0:count_used]
         ratio_used = ratio / count_used
 
         for code in codes_used :
             positions.append((risk, date, code, ratio_used))
-
+            
+        # if codes != codes2:
+        #     print "diff", date.strftime("%Y-%m-%d"), codes, codes2
+        
     # for record in positions:
     #     risk, date, code, ratio = record
     #     print "B:%.1f,%s,%06s,%.4f" % (risk, date.strftime("%Y-%m-%d"), code, ratio)
@@ -426,6 +446,8 @@ def output_final_portfolio(all_code_position, out):
     for record in positions:
         risk, date, code, ratio = record
         out.write("%.1f,%s,%06s,%.4f\n" % (risk, date.strftime("%Y-%m-%d"), code, ratio))
+
+    conn.close()
 
     # #
     # # 检查是否100%
@@ -448,6 +470,30 @@ def merge_same_fund(positions) :
         ratio = sum(e[3] for e in group)
         result.append(key + (ratio,))
 
+    return result
+
+
+#
+# 根据历史可购信息筛选基金
+#
+def filter_by_status(date, codes):
+    result = []
+    # codes.extend([u'202202', u'000002'])
+
+    imploded_codes = ','.join([repr(e.encode('utf-8')) for e in codes])
+
+
+    min_date = parse('2016-09-03')
+    if date <= min_date:
+        sql = "SELECT fs_fund_id, fs_date, fs_fund_code, fs_subscribe_status FROM fund_status WHERE fs_fund_code IN (%s) AND fs_date = '2016-09-03'" % (imploded_codes.decode('utf-8'))
+    else:
+        sql = "SELECT fs_fund_id, fs_date, fs_fund_code, fs_subscribe_status FROM fund_status WHERE fs_fund_code IN (%s) AND fs_date = '%s'" % (imploded_codes.decode('utf-8'), date.strftime('%Y-%m-%d'))
+
+    df = pd.read_sql(sql, con=conn, index_col='fs_fund_code', parse_dates=('fs_date'))
+
+    df2 = df.reindex(codes, fill_value=0)
+    
+    result =  list(df2[df2.fs_subscribe_status == 0].index)
     return result
 
 
