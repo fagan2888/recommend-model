@@ -95,6 +95,40 @@ def category(ctx):
     
 @roboadvisor.group()  
 @click.pass_context
+def measure(ctx):
+    click.echo("model")
+  
+@measure.command()
+@click.pass_context
+
+def sharpe(ctx):
+    '''calc fund sharpe ratio
+    '''
+    click.echo("Not integrated")
+
+@measure.command()
+@click.pass_context
+def jensen(ctx):
+    '''calc fund jensen alpha
+    '''
+    click.echo("Not integrated")
+
+@measure.command()
+@click.pass_context
+def sortino(ctx):
+    '''calc fund sortino ratio
+    '''
+    click.echo("Not integrated")
+
+@measure.command()
+@click.pass_context
+def ppw(ctx):
+    '''calc fund ppw measure
+    '''
+    click.echo("Not integrated")
+
+@roboadvisor.group()  
+@click.pass_context
 def model(ctx):
     click.echo("model")
   
