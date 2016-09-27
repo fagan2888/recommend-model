@@ -45,7 +45,10 @@ def beta(stock_dfr, index_dfr):
 
 #momentum factor
 def momentum(stock_dfr):
-
+    T = 504
+    L = 21
+    dfr = pd.rolling_sum(stock_dfr, L)
+    print dfr
 
 
 
@@ -59,4 +62,5 @@ if __name__ == '__main__':
     stock_dfr = stock_df.pct_change().fillna(0.0)
     index_dfr = index_df.pct_change().fillna(0.0)
 
-    beta(stock_dfr, index_dfr)
+    #beta(stock_dfr, index_dfr)
+    momentum(stock_dfr)
