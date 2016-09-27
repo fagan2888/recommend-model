@@ -18,7 +18,6 @@ def beta(stock_dfr, index_dfr):
     for i in range(back, len(dates)):
         tmp_stock_dfr = stock_dfr.iloc[i - back: i,]
         tmp_index_dfr = index_dfr.loc[tmp_stock_dfr.index]
-        tmp_stock_dfr.to_csv('tmp.csv')
         d = dates[i]
         beta = []
         for col in tmp_stock_dfr.columns:
@@ -45,12 +44,38 @@ def beta(stock_dfr, index_dfr):
 
 #momentum factor
 def momentum(stock_dfr):
+
     T = 504
     L = 21
     dfr = pd.rolling_sum(stock_dfr, L)
-    print dfr
+    cols = dfr.columns
+    dates = dfr.index
 
+    indexs = []
+    for j in range(0, T):
+        if j % L == 0:
+            indexs.append(j)
 
+    momentums = []
+    ds        = []
+    for i in range(T, len(dates)):
+        d = dates[i]
+        tmp_dfr = dfr.iloc[ i - T : i, ]
+        log_dfr = np.log(1 + tmp_dfr)
+        log_dfr = log_dfr.iloc[indexs]
+        momentum_df = np.sum(log_dfr)
+        moment = []
+        for col in cols:
+            moment.append(momentum_df[col])
+        print d
+        momentums.append(moment)
+        ds.append(d)
+
+    mom_df = pd.DataFrame(momentums, index = ds, columns = cols)
+    mom_df.index.name = 'date'
+    mom_df.to_csv('./tmp/momentum.csv')
+
+    return mom_df
 
 
 if __name__ == '__main__':
@@ -58,9 +83,9 @@ if __name__ == '__main__':
     stock_df = pd.read_csv('./data/stock_price_adjust.csv', index_col = 'date', parse_dates = ['date'])
     #stock_df = pd.read_csv('./data/index_price.csv', index_col = 'date', parse_dates = ['date'])
     index_df = pd.read_csv('./data/index_price.csv', index_col = 'date', parse_dates = ['date'])
-    index_df = index_df[['000905']]
+    index_df = index_df[['000300']]
     stock_dfr = stock_df.pct_change().fillna(0.0)
     index_dfr = index_df.pct_change().fillna(0.0)
 
-    #beta(stock_dfr, index_dfr)
+    beta(stock_dfr, index_dfr)
     momentum(stock_dfr)

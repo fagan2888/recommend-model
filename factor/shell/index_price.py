@@ -37,6 +37,7 @@ def all_index_price():
         secode_symbol_dict[secode] = symbol
     cur.close()
 
+
     #print secode_symbol_dict
     secodes = secode_symbol_dict.keys()
 
