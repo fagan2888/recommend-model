@@ -205,7 +205,7 @@ def risk_position():
             if total_weight < 1 :
                 code = "[u'213009']"
                 left_weight = 1 - total_weight
-                all_code_position.append((d, risk_rank / 10.0, col, left_weight, code))
+                all_code_position.append((d, risk_rank / 10.0, 'money', left_weight, code))
 
 
     # all_code_position = clean_min(all_code_position)
