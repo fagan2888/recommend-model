@@ -1,4 +1,8 @@
 #coding=utf8
+import sys
+sys.path.append('shell')
+import DB
+import time
 
 def readFile(path):
     tmp = []
@@ -15,15 +19,30 @@ def loadDict(path):
     result = {}
     day_list = {}
     risk_list = []
+    codes = []
+    days = []
+    for i in tmp:
+        l = i[4].strip().split(':')
+        codes.extend(l)
+        days.append(str(i[0]))
+    days = list(set(days))
+    codes = list(set(codes))
+    buy_list = getNotBuy(days,codes) 
     for i in tmp:
         if float(i[3]) == 0:
             continue
         key = str(i[1])+'--'+str(i[0])
         if not result.has_key(key):  
             l = i[4].strip().split(':')
+            l = cleanNotBuy(i[0],l,buy_list) 
+            if l == []:
+                raise Exception("the funds is can not buy in risk:%s,day:%s,list:%s" % (i[1],i[0],i[4]))
             result[key] = {str(i[2]):{'sum':i[3],'list':l}}
         else:
             l = i[4].strip().split(':')
+            l = cleanNotBuy(i[0],l,buy_list) 
+            if l == []:
+                raise Exception("the funds is can not buy in risk:%s,day:%s,list:%s" % (i[1],i[0],i[4]))
             result[key][str(i[2])] = {'sum':i[3],'list':l}
         if day_list.has_key(str(i[1])):
             if str(i[0]) not in day_list[str(i[1])]:
@@ -33,6 +52,21 @@ def loadDict(path):
         if str(i[1]) not in risk_list:
             risk_list.append(str(i[1]))
     return result,day_list,risk_list
+
+def getNotBuy(days,funds):
+    return DB.getBuyStatus(days,funds)
+
+def cleanNotBuy(day,funds,buy_list):
+    date1 = time.strptime(str(day),"%Y-%m-%d")
+    date2 = time.strptime(str('2016-09-03'),"%Y-%m-%d")
+    if date1 < date2:
+        return funds
+    tmp = []
+    for fund in funds:
+        if buy_list.has_key(day):
+            if fund in buy_list[day]:
+                tmp.append(fund)
+    return tmp
                 
 def getTrade(position,day_list,risk_list): 
     result = []
