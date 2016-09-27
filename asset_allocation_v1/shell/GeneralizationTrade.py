@@ -60,7 +60,7 @@ def cleanNotBuy(day,funds,buy_list):
     date1 = time.strptime(str(day),"%Y-%m-%d")
     date2 = time.strptime(str('2016-09-03'),"%Y-%m-%d")
     if date1 < date2:
-        return funds
+        day = '2016-09-03'
     tmp = []
     for fund in funds:
         if buy_list.has_key(day):
