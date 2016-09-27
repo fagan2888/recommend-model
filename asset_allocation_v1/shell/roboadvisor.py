@@ -46,6 +46,8 @@ def roboadvisor(ctx):
 @click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 @click.pass_context
 def portfolio(ctx, datadir, output):
+    ''' generate portfolios
+    '''
     ctx.obj['datadir'] = datadir
     ctx.obj['output'] = output
     Const.datadir = datadir
@@ -96,6 +98,8 @@ def category(ctx):
 @roboadvisor.group()  
 @click.pass_context
 def measure(ctx):
+    '''calc fund measure
+    '''
     click.echo("model")
   
 @measure.command()
@@ -130,6 +134,8 @@ def ppw(ctx):
 @roboadvisor.group()  
 @click.pass_context
 def model(ctx):
+    '''run models
+    '''
     click.echo("model")
   
 @model.command()
@@ -139,3 +145,4 @@ def risk(ctx):
 
 if __name__=='__main__':
     roboadvisor(obj={})  
+    
