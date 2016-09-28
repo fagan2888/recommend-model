@@ -111,7 +111,7 @@ def stock_fund_value(start_date, end_date):
 
     for record in records:
         code      = record['ra_code']
-        nav_value = record['ra_nav']
+        nav_value = record['ra_nav_adjusted']
         date      = record['ra_date']
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
@@ -189,7 +189,7 @@ def stock_day_fund_value(start_date, end_date):
 
     for record in records:
         code      = record['ra_code']
-        nav_value = record['ra_nav']
+        nav_value = record['ra_nav_adjusted']
         date      = record['ra_date']
         dates.add(date)
         vs = nav_values_dict.setdefault(code, {})
@@ -277,7 +277,7 @@ def bond_fund_value(start_date, end_date):
 
     for record in records:
         code      = record['ra_code']
-        nav_value = record['ra_nav']
+        nav_value = record['ra_nav_adjusted']
         date      = record['ra_date']
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
@@ -355,7 +355,7 @@ def bond_day_fund_value(start_date, end_date):
     records = cur.fetchall()
     for record in records:
         code      = record['ra_code']
-        nav_value = record['ra_nav']
+        nav_value = record['ra_nav_adjusted']
         date      = record['ra_date']
         dates.add(date)
         vs = nav_values_dict.setdefault(code, {})
@@ -442,7 +442,7 @@ def money_fund_value(start_date, end_date):
 
     for record in records:
         code      = record['ra_code']
-        nav_value = record['ra_nav']
+        nav_value = record['ra_nav_adjusted']
         date      = record['ra_date']
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
@@ -519,7 +519,7 @@ def money_day_fund_value(start_date, end_date):
 
     for record in records:
         code      = record['ra_code']
-        nav_value = record['ra_nav']
+        nav_value = record['ra_nav_adjusted']
         date      = record['ra_date']
         dates.add(date)
         vs = nav_values_dict.setdefault(code, {})

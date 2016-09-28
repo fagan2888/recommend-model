@@ -168,9 +168,9 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
 
     indexdf   = DBData.index_value(dates[0], dates[-1])
 
-    pre_ratebond        = None
-    pre_creditbond      = None
-    pre_convertiblebond = None
+    pre_ratebond        = [u'217003']
+    pre_creditbond      = [u'217003']
+    pre_convertiblebond = [u'217003']
 
     tag = {}
     result_dates = []

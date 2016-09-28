@@ -485,7 +485,8 @@ def filter_by_status(date, codes):
 
     min_date = parse('2016-09-03')
     if date <= min_date:
-        sql = "SELECT fs_fund_id, fs_date, fs_fund_code, fs_subscribe_status FROM fund_status WHERE fs_fund_code IN (%s) AND fs_date = '2016-09-03'" % (imploded_codes.decode('utf-8'))
+        # sql = "SELECT fs_fund_id, fs_date, fs_fund_code, fs_subscribe_status FROM fund_status WHERE fs_fund_code IN (%s) AND fs_date = '2016-09-03'" % (imploded_codes.decode('utf-8'))
+        return codes
     else:
         sql = "SELECT fs_fund_id, fs_date, fs_fund_code, fs_subscribe_status FROM fund_status WHERE fs_fund_code IN (%s) AND fs_date = '%s'" % (imploded_codes.decode('utf-8'), date.strftime('%Y-%m-%d'))
 

@@ -14,8 +14,11 @@ from Const import datapath
 
 def highriskasset(allocationdata, dfr, his_week, interval):
 
-    dfr =  dfr.drop('HSCI.HI', axis = 1)
-    dfr =  dfr.drop('oscillation', axis = 1)
+    if 'HSCI.HI' in dfr.columns:
+        dfr =  dfr.drop('HSCI.HI', axis = 1)
+
+    if 'oscillation' in dfr.columns:
+        dfr =  dfr.drop('oscillation', axis = 1)
 
     #interval = 26
 
