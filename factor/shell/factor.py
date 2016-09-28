@@ -78,6 +78,10 @@ def momentum(stock_dfr):
     return mom_df
 
 
+def cap_size():
+    
+    return 1
+
 if __name__ == '__main__':
 
     stock_df = pd.read_csv('./data/stock_price_adjust.csv', index_col = 'date', parse_dates = ['date'])
