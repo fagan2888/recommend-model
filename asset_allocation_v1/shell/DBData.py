@@ -104,7 +104,7 @@ def stock_fund_value(start_date, end_date):
     
     # sql = "SELECT A.* FROM ra_fund_nav A, (%s) D WHERE A.ra_fund_id = D.wf_fund_id AND ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) = 6" % (intersected, start_date, end_date);
 
-    sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010101%%' or b.wf_type like '2001010201%%' or b.wf_type like '2001010202%%' or b.wf_type like '2001010204%%'  ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010101%%' and wf_type not like '2001010201%%' and wf_type not like '2001010202%%' and wf_type not like '2001010204%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
+    # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010101%%' or b.wf_type like '2001010201%%' or b.wf_type like '2001010202%%' or b.wf_type like '2001010204%%'  ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010101%%' and wf_type not like '2001010201%%' and wf_type not like '2001010202%%' and wf_type not like '2001010204%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
 
     print "stock_fund_value", sql
@@ -115,12 +115,12 @@ def stock_fund_value(start_date, end_date):
     records = cur.fetchall()
 
     for record in records:
-        # code      = record['ra_code']
-        # nav_value = record['ra_nav_adjusted']
-        # date      = record['ra_date']
-        code      = record['wf_fund_code']
-        nav_value = record['wf_nav_value']
-        date      = record['wf_time']
+        code      = record['ra_code']
+        nav_value = record['ra_nav_adjusted']
+        date      = record['ra_date']
+        # code      = record['wf_fund_code']
+        # nav_value = record['wf_nav_value']
+        # date      = record['wf_time']
         
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
@@ -190,7 +190,7 @@ def stock_day_fund_value(start_date, end_date):
     sql = "SELECT A.* FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date" % (intersected, date_sql);
 
     #sql = "SELECT A.* FROM ra_fund_nav A, (%s) D WHERE A.ra_fund_id = D.wf_fund_id AND ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) BETWEEN 2 AND 6" % (intersected, start_date, end_date);
-    sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010101%%' or b.wf_type like '2001010201%%' or b.wf_type like '2001010202%%' or b.wf_type like '2001010204%%'  ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010101%%' and wf_type not like '2001010201%%' and wf_type not like '2001010202%%' and wf_type not like '2001010204%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
+    # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010101%%' or b.wf_type like '2001010201%%' or b.wf_type like '2001010202%%' or b.wf_type like '2001010204%%'  ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010101%%' and wf_type not like '2001010201%%' and wf_type not like '2001010202%%' and wf_type not like '2001010204%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
     #print sql
     cur.execute(sql)
@@ -198,12 +198,12 @@ def stock_day_fund_value(start_date, end_date):
     records = cur.fetchall()
 
     for record in records:
-        # code      = record['ra_code']
-        # nav_value = record['ra_nav_adjusted']
-        # date      = record['ra_date']
-        code      = record['wf_fund_code']
-        nav_value = record['wf_nav_value']
-        date      = record['wf_time']
+        code      = record['ra_code']
+        nav_value = record['ra_nav_adjusted']
+        date      = record['ra_date']
+        # code      = record['wf_fund_code']
+        # nav_value = record['wf_nav_value']
+        # date      = record['wf_time']
         dates.add(date)
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
