@@ -238,7 +238,6 @@ def stock_day_fund_value(start_date, end_date):
 
 def bond_fund_value(start_date, end_date):
 
-
     dates = trade_dates(start_date, end_date)
     dates.sort()
     ds = []
@@ -280,7 +279,7 @@ def bond_fund_value(start_date, end_date):
     sql = "SELECT A.* FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date" % (intersected, date_sql);
     
     # sql = "SELECT A.* FROM ra_fund_nav A, (%s) D WHERE A.ra_fund_id = D.wf_fund_id AND ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) = 6" % (intersected, start_date, end_date);
-    sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010301%%' or b.wf_type like '2001010302%%' or b.wf_type like '2001010305%%') and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010301%%' and wf_type not like '2001010302%%' and wf_type not like '2001010305') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
+    # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010301%%' or b.wf_type like '2001010302%%' or b.wf_type like '2001010305%%') and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010301%%' and wf_type not like '2001010302%%' and wf_type not like '2001010305') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
     print "bond_fund_value", sql;
 
@@ -290,12 +289,12 @@ def bond_fund_value(start_date, end_date):
     records = cur.fetchall()
 
     for record in records:
-        # code      = record['ra_code']
-        # nav_value = record['ra_nav_adjusted']
-        # date      = record['ra_date']
-        code      = record['wf_fund_code']
-        nav_value = record['wf_nav_value']
-        date      = record['wf_time']
+        code      = record['ra_code']
+        nav_value = record['ra_nav_adjusted']
+        date      = record['ra_date']
+        # code      = record['wf_fund_code']
+        # nav_value = record['wf_nav_value']
+        # date      = record['wf_time']
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
 
@@ -365,19 +364,19 @@ def bond_day_fund_value(start_date, end_date):
     sql = "SELECT A.* FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date" % (intersected, date_sql);
 
     # sql = "SELECT A.* FROM ra_fund_nav A, (%s) D WHERE A.ra_fund_id = D.wf_fund_id AND ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) BETWEEN 2 AND 6" % (intersected, start_date, end_date);
-    sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010301%%' or b.wf_type like '2001010302%%'  or b.wf_type like '2001010305%%') and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010301%%' and wf_type not like '2001010302%%' and wf_type not like '2001010305%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
+    # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010301%%' or b.wf_type like '2001010302%%'  or b.wf_type like '2001010305%%') and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010301%%' and wf_type not like '2001010302%%' and wf_type not like '2001010305%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
     cur.execute(sql)
 
 
     records = cur.fetchall()
     for record in records:
-        # code      = record['ra_code']
-        # nav_value = record['ra_nav_adjusted']
-        # date      = record['ra_date']
-        code      = record['wf_fund_code']
-        nav_value = record['wf_nav_value']
-        date      = record['wf_time']
+        code      = record['ra_code']
+        nav_value = record['ra_nav_adjusted']
+        date      = record['ra_date']
+        # code      = record['wf_fund_code']
+        # nav_value = record['wf_nav_value']
+        # date      = record['wf_time']
         dates.add(date)
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
@@ -453,7 +452,7 @@ def money_fund_value(start_date, end_date):
     sql = "SELECT A.* FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date" % (intersected, date_sql);
 
     # sql = "SELECT A.* FROM ra_fund_nav A, (%s) D WHERE A.ra_fund_id = D.wf_fund_id AND ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) = 6" % (intersected, start_date, end_date);
-    sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010104%%' ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010104%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
+    # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010104%%' ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010104%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
     print "money_fund_value", sql
 
@@ -463,12 +462,12 @@ def money_fund_value(start_date, end_date):
     records = cur.fetchall()
 
     for record in records:
-        # code      = record['ra_code']
-        # nav_value = record['ra_nav_adjusted']
-        # date      = record['ra_date']
-        code      = record['wf_fund_code']
-        nav_value = record['wf_nav_value']
-        date      = record['wf_time']
+        code      = record['ra_code']
+        nav_value = record['ra_nav_adjusted']
+        date      = record['ra_date']
+        # code      = record['wf_fund_code']
+        # nav_value = record['wf_nav_value']
+        # date      = record['wf_time']
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
 
@@ -536,7 +535,7 @@ def money_day_fund_value(start_date, end_date):
     sql = "SELECT A.* FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date" % (intersected, date_sql);
 
     # sql = "SELECT A.* FROM ra_fund_nav A, (%s) D WHERE A.ra_fund_id = D.wf_fund_id AND ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) BETWEEN 2 AND 6" % (intersected, start_date, end_date);
-    sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010104%%' ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010104%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
+    # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010104%%' ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010104%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
 
     cur.execute(sql)
@@ -544,12 +543,12 @@ def money_day_fund_value(start_date, end_date):
     records = cur.fetchall()
 
     for record in records:
-        # code      = record['ra_code']
-        # nav_value = record['ra_nav_adjusted']
-        # date      = record['ra_date']
-        code      = record['wf_fund_code']
-        nav_value = record['wf_nav_value']
-        date      = record['wf_time']
+        code      = record['ra_code']
+        nav_value = record['ra_nav_adjusted']
+        date      = record['ra_date']
+        # code      = record['wf_fund_code']
+        # nav_value = record['wf_nav_value']
+        # date      = record['wf_time']
         dates.add(date)
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
@@ -615,7 +614,7 @@ def index_value(start_date, end_date):
     
     # sql = "SELECT ra_index_id, ra_index_code, ra_date, ra_nav FROM ra_index_nav WHERE ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) = 6" % (start_date, end_date);
 
-    sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
+    # sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
 
 
     print "index_value", sql
@@ -625,12 +624,12 @@ def index_value(start_date, end_date):
     records = cur.fetchall()
 
     for record in records:
-        # code      = record['ra_index_code']
-        # nav_value = record['ra_nav']
-        # date      = record['ra_date']
-        code      = record['iv_index_code']
-        nav_value = record['iv_value']
-        date      = record['iv_time']
+        code      = record['ra_index_code']
+        nav_value = record['ra_nav']
+        date      = record['ra_date']
+        # code      = record['iv_index_code']
+        # nav_value = record['iv_value']
+        # date      = record['iv_time']
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
 
@@ -686,19 +685,19 @@ def index_day_value(start_date, end_date):
     sql = "SELECT ra_index_id, ra_index_code, ra_date, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date" % (date_sql)
     # sql = "SELECT ra_index_id, ra_index_code, ra_date, ra_nav FROM ra_index_nav WHERE ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) BETWEEN 2 AND 6" % (start_date, end_date);
 
-    sql = "select iv_index_id,iv_index_code,iv_time,iv_value from index_value where iv_time>='%s' and iv_time<='%s' " % (start_date, end_date)
+    # sql = "select iv_index_id,iv_index_code,iv_time,iv_value from index_value where iv_time>='%s' and iv_time<='%s' " % (start_date, end_date)
     
     cur.execute(sql)
 
     records = cur.fetchall()
 
     for record in records:
-        # code      = record['ra_index_code']
-        # nav_value = record['ra_nav']
-        # date      = record['ra_date']
-        code      = record['iv_index_code']
-        nav_value = record['iv_value']
-        date      = record['iv_time']
+        code      = record['ra_index_code']
+        nav_value = record['ra_nav']
+        date      = record['ra_date']
+        # code      = record['iv_index_code']
+        # nav_value = record['iv_value']
+        # date      = record['iv_time']
         dates.add(date)
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
@@ -766,7 +765,7 @@ def other_fund_value(start_date, end_date):
     sql = "SELECT ra_index_id, ra_index_code, ra_date, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date" % (date_sql)
 
     # sql = "SELECT ra_index_id, ra_index_code, ra_date, ra_nav FROM ra_index_nav WHERE ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) = 6" % (start_date, end_date);
-    sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
+    # sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
 
 
     cur.execute(sql)
@@ -775,12 +774,12 @@ def other_fund_value(start_date, end_date):
     records = cur.fetchall()
 
     for record in records:
-        # code      = record['ra_index_code']
-        # nav_value = record['ra_nav']
-        # date      = record['ra_date']
-        code      = record['iv_index_code']
-        nav_value = record['iv_value']
-        date      = record['iv_time']
+        code      = record['ra_index_code']
+        nav_value = record['ra_nav']
+        date      = record['ra_date']
+        # code      = record['iv_index_code']
+        # nav_value = record['iv_value']
+        # date      = record['iv_time']
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
 
@@ -835,7 +834,7 @@ def other_day_fund_value(start_date, end_date):
     sql = "SELECT ra_index_id, ra_index_code, ra_date, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date" % (date_sql)
 
     #sql = "SELECT ra_index_id, ra_index_code, ra_date, ra_nav FROM ra_index_nav WHERE ra_date BETWEEN '%s' AND '%s'" % (start_date, end_date);
-    sql = "select iv_index_id,iv_index_code,iv_time,iv_value from index_value where iv_time>='%s' and iv_time<='%s' " % (start_date, end_date)
+    # sql = "select iv_index_id,iv_index_code,iv_time,iv_value from index_value where iv_time>='%s' and iv_time<='%s' " % (start_date, end_date)
 
 
     cur.execute(sql)
@@ -844,12 +843,12 @@ def other_day_fund_value(start_date, end_date):
     records = cur.fetchall()
 
     for record in records:
-        # code      = record['ra_index_code']
-        # nav_value = record['ra_nav']
-        # date      = record['ra_date']
-        code      = record['iv_index_code']
-        nav_value = record['iv_value']
-        date      = record['iv_time']
+        code      = record['ra_index_code']
+        nav_value = record['ra_nav']
+        date      = record['ra_date']
+        # code      = record['iv_index_code']
+        # nav_value = record['iv_value']
+        # date      = record['iv_time']
         vs = nav_values_dict.setdefault(code, {})
         vs[date]  = float(nav_value)
 
