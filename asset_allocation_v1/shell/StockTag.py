@@ -866,7 +866,6 @@ def hmmeasure(funddf, indexdf):
 def tagstockfund(allocationdata, funddf, indexdf):
 
     dates = indexdf.index.values
-    print "todiff:tagstockfund", [e.strftime("%Y-%m-%d") for e in dates]
     
     dates.sort()
     end_date   = dates[-1].strftime('%Y-%m-%d')
@@ -1201,7 +1200,6 @@ def tagbondfund(allocationdata, funddf, indexdf):
 
 
     dates = indexdf.index.values
-    print "todiff:tagbondfund", [ e.strftime("%Y-%m-%d") for e in dates]
     
     dates.sort()
     end_date   = dates[-1].strftime('%Y-%m-%d')
@@ -1497,8 +1495,6 @@ if __name__ == '__main__':
     for k, v in growthcapprefer:
         growthcapprefer_set.add(k)
         print k, v
-
-
     print
     print 'valuecapprefer'
     valuecapprefer_set = set()

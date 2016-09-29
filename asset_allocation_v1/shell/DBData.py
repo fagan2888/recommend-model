@@ -59,7 +59,7 @@ def trade_dates(start_date, end_date):
 
     # dates = [x for x in dates if x != '2013-12-31' and x != '2012-12-31']
 
-    print "todiff:%s,%s" % (start_date, end_date), dates
+    # print "todiff:%s,%s" % (start_date, end_date), dates
     
     return dates
 
@@ -734,8 +734,6 @@ def index_day_value(start_date, end_date):
     df = df.fillna(method='pad')
 
     df.index.name = 'date'
-
-    print df
 
     return df
 
