@@ -22,6 +22,7 @@ import DBData
 import DFUtil
 
 from Const import datapath
+from dateutil.parser import parse
 
 def mean_r(d, funddfr, codes):
     r   = 0.0
@@ -468,8 +469,10 @@ def labelasset(allocationdata):
     #indexdf = Data.index_value(start_date, end_date, '000300.SH')
 
 
-    indexdf = DBData.index_value(allocationdata.data_start_date, allocationdata.end_date)[[Const.hs300_code]]
-    dates = indexdf.pct_change().index
+    # indexdf = DBData.index_value(allocationdata.data_start_date, allocationdata.end_date)[[Const.hs300_code]]
+    # dates = indexdf.pct_change().index
+    dates = DBData.trade_dates(allocationdata.data_start_date, allocationdata.end_date)
+    dates = [parse(e).date() for e in dates]
 
 
     #allfunddf = Data.funds()

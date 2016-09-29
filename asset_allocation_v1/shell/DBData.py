@@ -13,6 +13,7 @@ sys.path.append('shell')
 import Const
 
 from Const import datapath
+from dateutil.parser import parse
 
 def all_trade_dates():
 
@@ -56,6 +57,10 @@ def trade_dates(start_date, end_date):
         dates.append(record.values()[0].strftime('%Y-%m-%d'))
     conn.close()
 
+    # dates = [x for x in dates if x != '2013-12-31' and x != '2012-12-31']
+
+    print "todiff:%s,%s" % (start_date, end_date), dates
+    
     return dates
 
 
@@ -979,4 +984,3 @@ if __name__ == '__main__':
     #df.to_csv(datapath('bond.csv'))
     print all_trade_dates()
     print trade_dates('2014-01-03', '2016-06-03')
-

@@ -39,6 +39,7 @@ def risk_position():
     #print start_date
     equalrisk_ratio_df = equalrisk_ratio_df[equalrisk_ratio_df.index >= start_date]
     dates = risk_portfolio_df.index
+    print "todiff:riskposition1", dates
 
 
     #print start_date

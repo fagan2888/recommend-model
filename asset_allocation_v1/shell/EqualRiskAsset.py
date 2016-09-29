@@ -29,6 +29,7 @@ def equalriskasset(allocationdata):
     dfr              = dfr[dfr.index >= start_date]
 
     dates = dfr.index
+    print "todiff:equalriskasset", dates
     ratio_dates = ratio_df.index
 
     #assetlabels  = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']

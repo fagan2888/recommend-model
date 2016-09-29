@@ -866,6 +866,8 @@ def hmmeasure(funddf, indexdf):
 def tagstockfund(allocationdata, funddf, indexdf):
 
     dates = indexdf.index.values
+    print "todiff:tagstockfund", [e.strftime("%Y-%m-%d") for e in dates]
+    
     dates.sort()
     end_date   = dates[-1].strftime('%Y-%m-%d')
     start_date = dates[0].strftime('%Y-%m-%d')
@@ -1199,6 +1201,8 @@ def tagbondfund(allocationdata, funddf, indexdf):
 
 
     dates = indexdf.index.values
+    print "todiff:tagbondfund", [ e.strftime("%Y-%m-%d") for e in dates]
+    
     dates.sort()
     end_date   = dates[-1].strftime('%Y-%m-%d')
     start_date = dates[0].strftime('%Y-%m-%d')
