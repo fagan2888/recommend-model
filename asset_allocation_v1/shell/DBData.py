@@ -24,7 +24,7 @@ def all_trade_dates():
     sql = "SELECT td_date FROM trade_dates WHERE td_date >= '2002-01-04' AND td_type & 0x02";
     
     # sql = "SELECT ra_date FROM ra_index_nav WHERE ra_index_id = 120000001 AND DAYOFWEEK(ra_date) = 6";
-    sql = 'select iv_time from (select iv_time,DATE_FORMAT(`iv_time`,"%Y%u") week from (select * from index_value where iv_index_id =120000001  order by iv_time desc) as a group by iv_index_id,week order by week asc) as b'
+    # sql = 'select iv_time from (select iv_time,DATE_FORMAT(`iv_time`,"%Y%u") week from (select * from index_value where iv_index_id =120000001  order by iv_time desc) as a group by iv_index_id,week order by week asc) as b'
 
 
     dates = []
@@ -47,7 +47,7 @@ def trade_dates(start_date, end_date):
     sql = "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND td_type & 0x02" % (start_date, end_date);
     
     # sql = "SELECT ra_date FROM ra_index_nav WHERE ra_index_id = 120000001 AND ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) = 6" % (start_date, end_date);
-    sql = 'select iv_time from (select iv_time,DATE_FORMAT(`iv_time`,"%%Y%%u") week from (select * from index_value where iv_index_id =120000001 and iv_time >= "%s" and iv_time <= "%s" order by iv_time desc) as a group by iv_index_id,week order by week asc) as b' % (start_date, end_date)
+    # sql = 'select iv_time from (select iv_time,DATE_FORMAT(`iv_time`,"%%Y%%u") week from (select * from index_value where iv_index_id =120000001 and iv_time >= "%s" and iv_time <= "%s" order by iv_time desc) as a group by iv_index_id,week order by week asc) as b' % (start_date, end_date)
 
 
     dates = []
