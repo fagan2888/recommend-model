@@ -9,6 +9,8 @@ from datetime import datetime
 import DBData
 from Const import datapath
 
+from inspect import getmembers
+from pprint import pprint
 
 class allocationdata:
 
@@ -44,7 +46,7 @@ class allocationdata:
 
 
 
-    start_date                              = '2010-01-01'
+    start_date                              = '2010-01-15'
 
     end_date                                = datetime.now().strftime('%Y-%m-%d')
     fund_measure_lookback                   = 52              #回溯52个周
