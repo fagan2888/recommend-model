@@ -12,6 +12,10 @@ import time
 import Const
 import GeneralizationPosition
 
+import CommandModelRisk
+
+
+
 logger = logging.getLogger(__name__)
 
 def setup_logging(
@@ -138,11 +142,9 @@ def model(ctx):
     '''
     click.echo("model")
   
-@model.command()
-@click.pass_context
-def risk(ctx):
-    click.echo("const risk model, not integrated")
-
 if __name__=='__main__':
+    model.add_command(CommandModelRisk.risk)
+
+
     roboadvisor(obj={})  
     
