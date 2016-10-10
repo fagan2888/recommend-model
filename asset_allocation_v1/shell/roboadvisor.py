@@ -46,26 +46,24 @@ def roboadvisor(ctx):
     #config.load()        
 
 @roboadvisor.group()  
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 @click.pass_context
-def portfolio(ctx, datadir, output):
+def portfolio(ctx):
     ''' generate portfolios
     '''
-    ctx.obj['datadir'] = datadir
-    ctx.obj['output'] = output
-    Const.datadir = datadir
     pass;
     
-@portfolio.command()  
+@portfolio.command()
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 # @click.option('-m', '--msg')  
 # @click.option('--dry-run', is_flag=True, help=u'pretend to run')
 # @click.option('--name', prompt='Your name', help='The person to greet.')
 @click.pass_context
-def simple(ctx):
+def simple(ctx, datadir, output):
     '''generate final portfolio using simple average strategy (no cost)
     '''
-    out = ctx.obj['output']
+    out = output
+    Const.datadir = datadir
     #
     # 生成配置数据
     #
@@ -74,11 +72,14 @@ def simple(ctx):
     GeneralizationPosition.output_final_portfolio(all_code_position, out)
 
 @portfolio.command()  
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 @click.pass_context
-def optimize(ctx):
+def optimize(ctx, datadir, output):
     '''generate final portfolio with optimized strategy (cost consider in).  
     '''
-    out = ctx.obj['output']
+    out = output
+    Const.datadir = datadir
     #
     # 生成配置数据
     #
@@ -87,11 +88,14 @@ def optimize(ctx):
     GeneralizationPosition.output_portfolio(all_code_position, out)
 
 @portfolio.command()  
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 @click.pass_context
-def category(ctx):
+def category(ctx, datadir, output):
     '''generate intemediate portfolio for different asset categories 
     '''
-    out = ctx.obj['output']
+    out = output
+    Const.datadir = datadir
     #
     # 生成配置数据
     #

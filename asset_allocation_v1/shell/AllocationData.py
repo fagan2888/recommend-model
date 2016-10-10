@@ -113,7 +113,7 @@ class allocationdata:
 
         dates = DBData.trade_dates('1900-01-01',self.start_date)
         start_n = len(dates) - self.fund_measure_lookback    - self.fixed_risk_asset_risk_lookback  - 2 * self.allocation_lookback
-        self.data_start_date = dates[len(dates) - self.fund_measure_lookback    - self.fixed_risk_asset_risk_lookback  - 2 * self.allocation_lookback]
+        self.data_start_date = dates[start_n - 1]
         dates = dates[start_n  : len(dates)]
 
         print self.data_start_date

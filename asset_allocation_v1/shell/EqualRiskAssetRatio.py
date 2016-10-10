@@ -33,17 +33,17 @@ def riskmeanstd(risks):
     #return np.mean(risk), np.std(risk)
 
 
-def equalriskassetratio(allocationdata):
+def equalriskassetratio(lookback, adjust_period):
 
     assetlabels = ['largecap','smallcap','rise','oscillation','decline','growth','value','convertiblebond','SP500.SPI','GLNC','HSCI.HI']
 
-    dfr         = allocationdata.label_asset_df
-    #dfr         = pd.read_csv(datapath('labelasset.csv'), index_col = 'date', parse_dates = 'date' )
+    #dfr         = allocationdata.label_asset_df
+    dfr         = pd.read_csv(datapath('labelasset.csv'), index_col = 'date', parse_dates = ['date'] )
     dates = dfr.index
 
 
-    interval = allocationdata.fixed_risk_asset_risk_adjust_period
-    his_week = allocationdata.fixed_risk_asset_risk_lookback
+    interval = adjust_period # allocationdata.fixed_risk_asset_risk_adjust_period
+    his_week = lookback      # allocationdata.fixed_risk_asset_risk_lookback
 
     result_dates = []
     result_datas  = []
@@ -53,7 +53,7 @@ def equalriskassetratio(allocationdata):
 
         d = dates[i]
 
-        if (i) % interval == 0:
+        if (i - his_week) % interval == 0:
         #if (i - his_week) % interval == 0:
 
 
@@ -61,11 +61,13 @@ def equalriskassetratio(allocationdata):
             end_date   = dates[i].strftime('%Y-%m-%d')
             allocation_start_date = dates[i - interval].strftime('%Y-%m-%d')
 
-            allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d').date()]
-            allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(allocation_start_date, '%Y-%m-%d').date()]
+            print type(end_date)
+            print type(dfr.index.values[0])
+            allocation_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
+            allocation_dfr = allocation_dfr[allocation_dfr.index >= datetime.strptime(allocation_start_date, '%Y-%m-%d')]
 
-            his_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d').date()]
-            his_dfr = his_dfr[his_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d').date()]
+            his_dfr = dfr[dfr.index <= datetime.strptime(end_date, '%Y-%m-%d')]
+            his_dfr = his_dfr[his_dfr.index >= datetime.strptime(start_date, '%Y-%m-%d')]
 
             j = 0
             risks = {}
@@ -116,6 +118,6 @@ def equalriskassetratio(allocationdata):
     result_df = result_df.fillna(0.0)
     result_df.to_csv(datapath('equalriskassetratio.csv'))
 
-    allocationdata.equal_risk_asset_ratio_df = result_df
+    #allocationdata.equal_risk_asset_ratio_df = result_df
 
 

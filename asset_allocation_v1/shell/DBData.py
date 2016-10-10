@@ -45,7 +45,7 @@ def trade_dates(start_date, end_date):
     conn.autocommit(True)
 
     sql = "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND td_type & 0x02 ORDER By td_date ASC" % (start_date, end_date);
-    
+
     # sql = "SELECT ra_date FROM ra_index_nav WHERE ra_index_id = 120000001 AND ra_date BETWEEN '%s' AND '%s' AND DAYOFWEEK(ra_date) = 6" % (start_date, end_date);
     # sql = 'select iv_time from (select iv_time,DATE_FORMAT(`iv_time`,"%%Y%%u") week from (select * from index_value where iv_index_id =120000001 and iv_time >= "%s" and iv_time <= "%s" order by iv_time desc) as a group by iv_index_id,week order by week asc) as b' % (start_date, end_date)
 
@@ -57,12 +57,29 @@ def trade_dates(start_date, end_date):
         dates.append(record.values()[0].strftime('%Y-%m-%d'))
     conn.close()
 
+    if '2016-10-14' not in dates:
+        dates.append('2016-10-14')
+
+    dates.sort()
+    
     # dates = [x for x in dates if x != '2013-12-31' and x != '2012-12-31']
 
     # print "todiff:%s,%s" % (start_date, end_date), dates
     
+    
     return dates
 
+def trade_date_index(end_date=None, lookback=26, include_end_date=True):
+    sql = "SELECT td_date, td_type FROM trade_dates WHERE td_date <= '%s' AND '%s' AND td_type & 0x02 ORDER By td_date DESC LIMIT %d" % (end_date, lookback)
+
+    conn  = MySQLdb.connect(**config.db_base)
+    df = pd.read_sql(sql, conn, index_col = 'td_date')
+    conn.close()
+
+    if include_end_date and end_date not in df.index:
+        df.loc[end_date] = [0]
+    
+    return df.index
 
 def stock_fund_value(start_date, end_date):
 

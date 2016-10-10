@@ -16,7 +16,6 @@ def risk_position():
     fund_df                   = pd.read_csv(datapath('stock_fund.csv'), index_col = 'date', parse_dates = ['date'])
     bond_fund_df              = pd.read_csv(datapath('bond_fund.csv'), index_col = 'date', parse_dates = ['date'])
     equalrisk_ratio_df        = pd.read_csv(datapath('equalriskassetratio.csv'), index_col = 'date', parse_dates = ['date'])
-    #highriskposition_ratio_df = pd.read_csv(datapath('highriskposition.csv'), index_col = 'date', parse_dates = ['date'])
     highriskposition_ratio_df = pd.read_csv(datapath('highriskposition.csv'), index_col = 'date', parse_dates = ['date'])
     lowriskposition_ratio_df  = pd.read_csv(datapath('lowriskposition.csv'), index_col = 'date', parse_dates = ['date'])
     risk_portfolio_df         = pd.read_csv(datapath('risk_portfolio.csv') , index_col  = 'date', parse_dates = ['date'])

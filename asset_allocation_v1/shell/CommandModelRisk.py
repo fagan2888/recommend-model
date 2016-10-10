@@ -25,8 +25,9 @@ from datetime import datetime
 @click.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2010-01-01', help=u'start date to calc')
+@click.option('--label-asset/--no-label-asset', default=True)
 @click.pass_context
-def risk(ctx, datadir, startdate):
+def risk(ctx, datadir, startdate, label_asset):
     '''run constant risk model
     '''
 
@@ -37,12 +38,6 @@ def risk(ctx, datadir, startdate):
     allocationdata.all_dates()
 
     print "aa", allocationdata.data_start_date
-    
-    #allocationdata.all_dates()
-
-    #allocationdata.start_date                            = args.get('start_date')
-    #allocationdata.start_date                            = '2010-01-01'
-    #allocationdata.start_date                            = '2016-01-01'
 
     allocationdata.fund_measure_lookback                 = 52
     allocationdata.fund_measure_adjust_period            = 26
@@ -56,9 +51,11 @@ def risk(ctx, datadir, startdate):
     allocationdata.allocation_adjust_period              = 13
 
 
+    if label_asset:
+        LabelAsset.labelasset(allocationdata)
+        
+    EqualRiskAssetRatio.equalriskassetratio(allocationdata.fixed_risk_asset_lookback, allocationdata.fixed_risk_asset_risk_adjust_period)
+    EqualRiskAsset.equalriskasset()
+    RiskHighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
 
-    LabelAsset.labelasset(allocationdata)
-    EqualRiskAssetRatio.equalriskassetratio(allocationdata)
-    EqualRiskAsset.equalriskasset(allocationdata)
-    RiskHighLowRiskAsset.highlowriskasset(allocationdata)
 

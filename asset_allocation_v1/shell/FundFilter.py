@@ -14,7 +14,6 @@ from datetime import datetime
 import Const
 import FundIndicator as fi
 import pandas as pd
-import AllocationData
 
 
 from Const import datapath

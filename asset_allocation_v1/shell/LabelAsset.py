@@ -53,11 +53,14 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
     selectcodes = []
 
     print datapath("aa.csv")
-    
+    print len(dates), dates
+
+    print range(his_week, len(dates))
     for i in range(his_week, len(dates)):
 
 
         if (i - his_week) % interval == 0:
+            print "aa", i-his_week, dates[i]
 
             start_date                    = dates[i - his_week].strftime('%Y-%m-%d')
             end_date                      = dates[i - 1].strftime('%Y-%m-%d')
@@ -472,6 +475,8 @@ def labelasset(allocationdata):
     # indexdf = DBData.index_value(allocationdata.data_start_date, allocationdata.end_date)[[Const.hs300_code]]
     # dates = indexdf.pct_change().index
     dates = DBData.trade_dates(allocationdata.data_start_date, allocationdata.end_date)
+    print "xxxxxxxxxxx", dates,
+    print "end date", allocationdata.end_date
     dates = [parse(e).date() for e in dates]
 
 

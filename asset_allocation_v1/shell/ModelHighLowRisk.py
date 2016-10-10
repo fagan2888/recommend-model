@@ -236,30 +236,29 @@ def highlowallocation(dfr):
 
 
 
-def highlowriskasset(lookback, adjust_period):
+def highlowriskasset(day, lookback):
 
+    # 加载时间轴数据
+    index = DBData.trade_date_index(end_date=day, lookback=lookback)
 
     #highriskassetdf  = allocationdata.equal_risk_asset_df
-    highriskassetdf  = pd.read_csv(datapath('equalriskasset.csv'), index_col = 'date', parse_dates = ['date'] )
+    highriskassetdf  = pd.read_csv(datapath('equalriskasset.csv'), index_col = 'date', parse_dates = ['date'])
     highriskassetdfr = highriskassetdf.pct_change().fillna(0.0)
+    highriskassetdfr = highriskassetdfr.reindex(index, method='ffill')
 
-
-    lowassetlabel    = ['ratebond','creditbond']
     #lowriskassetdfr  = allocationdata.label_asset_df
-    lowriskassetdfr  = pd.read_csv(datapath('labelasset.csv'), index_col = 'date', parse_dates = ['date'] )
+    lowassetlabel    = ['ratebond','creditbond']
+    lowriskassetdf   = pd.read_csv(datapath('labelasset.csv'), index_col = 'date', parse_dates = ['date'] )
+    lowriskassetdfr  = lowriskassetdf.pct_change().fillna(0.0)
     lowriskassetdfr  = lowriskassetdfr[lowassetlabel]
-    lowriskassetdfr  = lowriskassetdfr.loc[highriskassetdfr.index]
+    # lowriskassetdfr  = lowriskassetdfr.loc[highriskassetdfr.index]
+    lowriskassetdfr  = lowriskassetdfr.reindex(index, method='ffill')
+
+    highdf = highriskasset(highriskassetdfr)
+    lowdf  = lowriskasset(lowriskassetdfr)
 
 
-    his_week = lookback      # allocationdata.allocation_lookback
-    interval = adjust_period # allocationdata.allocation_adjust_period
-
-
-    highdf = highriskasset(highriskassetdfr, his_week, interval)
-    lowdf  = lowriskasset(lowriskassetdfr, his_week, interval)
-
-
-    df  = pd.concat([highdf, lowdf], axis = 1, join_axes=[highdf.index])
+    df  = pd.concat([highdf, lowdf], axis = 1, join_axes=[index])
     dfr = df.pct_change().fillna(0.0)
 
     print dfr
