@@ -8,6 +8,7 @@ import numpy as np
 import FundIndicator
 from datetime import datetime
 import Portfolio as PF
+import DFUtil
 import AllocationData
 
 from Const import datapath
@@ -234,12 +235,154 @@ def highlowallocation(dfr):
     # allocationdata.riskhighlowriskasset = portfolio_df
     return portfolio_df
 
+def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
+    '''perform asset allocation of high risk asset for single day
+    '''
+    if not columns:
+        columns = ['date', 'largecap', 'smallcap', 'rise', 'decline', 'growth', 'value', 'SP500.SPI', 'GLNC']
+    
+    # 加载时间轴数据
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
+    # 加载数据
+    if df_inc is None:
+        df_nav  = pd.read_csv(datapath('equalriskasset.csv'), index_col='date', parse_dates=['date'], usecols=columns)
+        df_inc  = df_nav.pct_change().fillna(0.0)
+
+    #
+    # 根据时间轴进行重采样
+    #
+    df_inc = df_inc.reindex(index, fill_value=0.0)
+    
+    #
+    # 基于马克维茨进行资产配置
+    #
+    uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3]
+    downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+    #risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
+    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, [downlimit, uplimit])
+
+    df_result = pd.concat([
+        pd.DataFrame(ws, index=[day], columns=df_inc.columns),
+        pd.DataFrame((sharpe, risk, returns), index=[day], columns=['sharpe','risk', 'return'])
+    ], axis=1)
+
+    return df_result
+
+def asset_alloc_low_risk_per_day(day, lookback, df_inc=None, columns=None):
+    '''perform asset allocation of low risk asset for single day
+    '''
+    if not columns:
+        columns = ['ratebond','creditbond']
+
+    # 加载时间轴数据
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+
+    # 加载数据
+    if df_inc is None:
+        df_nav = pd.read_csv(datapath('labelasset.csv'), index_col='date', parse_dates=['date'], usecols=columns)
+        df_inc  = df_nav.pct_change().fillna(0.0)
+    #
+    # 根据时间轴进行重采样
+    #
+    df_inc = df_inc.reindex(index, fill_value=0.0)
+    
+    #
+    # 基于马克维茨进行资产配置
+    #
+    risk, returns, ws, sharpe = PF.markowitz_r(dfr_inc, None)
+
+    df_result = pd.concat([
+        pd.DataFrame(ws, index=[day], columns=df_inc.columns),
+        pd.DataFrame((sharpe, risk, returns), index=[day], columns=['sharpe','risk', 'return'])
+    ], axis=1)
+
+    return df_result
+
+def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=None):
+    '''perform asset allocation with constant-risk + high_low model.
+    '''
+    # 加载时间轴数据
+    index = DBData.trade_date_index(start_date, end_date=end_date)
+
+    # 根据调整间隔抽取调仓点
+    if adjust_period:
+        adjust_index = index[::adjust_period]
+    else:
+        adjust_index = index
+        
+    columns = {
+        'low':['ratebond','creditbond'],
+        'high':['date', 'largecap', 'smallcap', 'rise', 'decline', 'growth', 'value', 'SP500.SPI', 'GLNC']
+    }
+        
+    #
+    # 计算每个调仓点的最新配置
+    #
+    df_high = pd.DataFrame(index=pd.Index([], name='date'), columns=columns['high'])
+    df_low =  pd.DataFrame(index=pd.Index([], name='date'), columns=columns['low'])
+    for day in adjust_index:
+        # 高风险资产配置
+        df_tmp = asset_alloc_high_risk_per_day(day, lookback, columns=columns['high'])
+        df_high = pd.concat([df_high, df_tmp], axis=0)
+        # 底风险资产配置
+        df_tmp = asset_alloc_low_risk_per_day(day, lookback, columns=columns['low'])
+        df_low = pd.concat([df_low, df_tmp], axis=0)
+
+    #
+    # 保存高低风险配置结果
+    #
+    df_high.to_csv(datapath('high_position.csv'))
+    df_low.to_csv(datapath('low_position.csv'))
+
+    #
+    # 计算高风险资产的资产净值
+    #
+    df_inc = DFUtil.load_inc_csv(datapath('equalriskasset.csv'), columns['high'], index)
+    df_nav_high = DFUtil.portfolio_nav(df_inc, df_high[columns['high']])
+    df_nav_high.to_csv(datapath('high_nav.csv'))
+    
+    #
+    # 计算低风险资产的资产净值
+    #
+    df_inc = DFUtil.load_inc_csv(datapath('labelasset.csv'), columns['low'], index)
+    df_nav_low = DFUtil.portfolio_nav(df_inc, df_low[columns['low']])
+    df_nav_low.to_csv(datapath('low_nav.csv'))
+        
+    #
+    # 混合后风险1-10的资产净值
+    #
+    # 高低风险净值增长率
+    df_inc_high = df_nav_high.pct_change()
+    df_inc_low = df_inc_low.pct_change()
+    df_inc = pd.DataFrame({'high':df_inc_high['portfolio'], 'low':df_inc_low['portfolio']})
+    # 高低风险配置比例
+    dt = dict()
+    for risk in range(1, 11):
+        # 配置比例
+        ratio_h  = (risk - 1) * 1.0 / 9
+        ratio_l  = 1 - ratio_h
+        # 按调仓日期,生成调仓矩阵
+        data = [(ratio_h, ratio_l) for x in adjust_index]
+        df_position = pd.DataFrame(data, index=adjust_index, columns=['high', 'low'])
+        # 单个风险配置结果
+        dt['risk'+str(risk)] = DFUtil.portfolio_nav(df_inc, df_position)
+
+    #
+    # 保存高低风险配置结果
+    # 
+    df_nav_result = pd.concat(dt, axis=1)
+    df_nav_result.to_csv(datapath('portfolio_nav.csv'))
+    #
+    # 返回结果
+    #
+    return df_nav_result
 
 def highlowriskasset(day, lookback):
 
     # 加载时间轴数据
-    index = DBData.trade_date_index(end_date=day, lookback=lookback)
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
     #highriskassetdf  = allocationdata.equal_risk_asset_df
     highriskassetdf  = pd.read_csv(datapath('equalriskasset.csv'), index_col = 'date', parse_dates = ['date'])

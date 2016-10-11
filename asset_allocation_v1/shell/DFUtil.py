@@ -9,9 +9,9 @@ import calendar
 
 
 def get_date_df(df, start_date, end_date):
-     _df = df[df.index <= datetime.datetime.strptime(end_date,'%Y-%m-%d').date()]
-     _df = _df[_df.index >= datetime.datetime.strptime(start_date,'%Y-%m-%d').date()]
-     return _df
+    _df = df[df.index <= datetime.datetime.strptime(end_date,'%Y-%m-%d').date()]
+    _df = _df[_df.index >= datetime.datetime.strptime(start_date,'%Y-%m-%d').date()]
+    return _df
 
 
 
@@ -20,51 +20,85 @@ def last_friday():
     oneday = datetime.timedelta(days=1)
 
     while date.weekday() != calendar.FRIDAY:
-        date -= oneday
+       date -= oneday
 
     date = date.strftime('%Y-%m-%d')
     return date
 
-def portfolio_nav(df_inc, df_position) :
-     '''calc nav for portfolio
-     '''
-     #
-     # 从第一次调仓开始算起.
-     #
-     # [XXX] 调仓日的处理是先计算收益,然后再调仓, 因为在实际中, 调仓的
-     # 动作也是在收盘确认之后发生的
-     #
-     start_date = df_position.index.min()
-     
-     if start_date not in df_inc.index:
-          df_inc.loc[start_date] = 0
+def portfolio_nav(df_inc, df_position, result_col='portfolio') :
+    '''calc nav for portfolio
+    '''
+    #
+    # 从第一次调仓开始算起.
+    #
+    # [XXX] 调仓日的处理是先计算收益,然后再调仓, 因为在实际中, 调仓的
+    # 动作也是在收盘确认之后发生的
+    #
+    start_date = df_position.index.min()
+    
+    if start_date not in df_inc.index:
+        df_inc.loc[start_date] = 0
 
-     df = df_inc[start_date:]
+    df = df_inc[start_date:]
 
-     assets_s = pd.Series(np.zeros(len(df.columns)), index=df.columns) # 当前资产
-     assets_s[0] = 1
+    assets_s = pd.Series(np.zeros(len(df.columns)), index=df.columns) # 当前资产
+    assets_s[0] = 1
 
-     #
-     # 计算每天的各资产持仓情况
-     #
-     df_result = pd.DataFrame(index=df.index, columns=df.columns)
-     for day,row in df.iterrows():
-          # 如果不是第一天, 首先计算当前资产收益
-          if day != start_date:
-               assets_s = assets_s * (row + 1)
+    #
+    # 计算每天的各资产持仓情况
+    #
+    df_result = pd.DataFrame(index=df.index, columns=df.columns)
+    for day,row in df.iterrows():
+        # 如果不是第一天, 首先计算当前资产收益
+        if day != start_date:
+            assets_s = assets_s * (row + 1)
 
-          # 如果是调仓日, 则调仓
-          if day in df_position.index: # 调仓日
-               assets_s = assets_s.sum() * df_position.loc[day]
+         # 如果是调仓日, 则调仓
+         if day in df_position.index: # 调仓日
+             assets_s = assets_s.sum() * df_position.loc[day]
 
-          # 日末各个基金持仓情况
-          df_result.loc[day] = assets_s
-     #
-     # 计算资产组合净值
-     #
-     df_result.insert(0, 'portfolio', df_result.sum(axis=1))               
+         # 日末各个基金持仓情况
+         df_result.loc[day] = assets_s
+         #
+    # 计算资产组合净值
+    #
+    df_result.insert(0, result_col, df_result.sum(axis=1))               
 
-     return df_result
+    return df_result
+
+def load_nav_csv(csv, columns=None, reindex=None):
+    df = pd.read_csv(csv, index_col='date', parse_dates=['date'], usecols=columns)
+
+    if reindex:
+        #
+        # 重索引的时候需要, 需要首先用两个索引的并集,填充之后再取
+        # reindex, 否则中间可能会造成增长率丢失
+        # 
+        index = df.index.union(reindex)
+        df = df.reindex(index, method='pad').reindex(reindex)
+        
+    return df
+
+def load_inc_csv(csv, columns=None, reindex=None):
+    #
+    # [XXX] 不能直接调用load_nav_csv, 否则会造成第一行的增长率丢失
+    #
+    df = pd.read_csv(csv, index_col='date', parse_dates=['date'], usecols=columns)
+
+    if reindex:
+        #
+        # 重索引的时候需要, 需要首先用两个索引的并集,填充之后再计算增长率
+        # 
+        index = df.index.union(reindex)
+        df = df.reindex(index, method='pad')
+
+    # 计算增长率
+    dfr = df.pct_change().fillna(0.0)
+
+    if reindex:
+        dfr = dfr.reindex(reindex)
+        
+    return dfr
 
 if __name__ == '__main__':
 

@@ -4,7 +4,7 @@
 import string
 import MySQLdb
 import config
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import os
@@ -69,7 +69,34 @@ def trade_dates(start_date, end_date):
     
     return dates
 
-def trade_date_index(end_date=None, lookback=26, include_end_date=True):
+def db_pluck(conn, col, sql):
+    with conn.cursor(MySQLdb.cursors.DictCursor) as cur:
+        cur.execute(sql)
+        records = cur.fetchall()
+
+    if records:
+        return records[0][col]
+    return None
+
+def trade_date_index(start_date, end_date=None):
+    conn  = MySQLdb.connect(**config.db_base)
+
+    if not end_date:
+        sql = "SELECT max(td_date) as td_date FROM trade_dates WHERE td_type & 0x02"
+        end_date = db_pluck(conn, 'td_date', sql)
+
+    if not end_date:
+        yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)); 
+        end_date = yesterday.strftime("%Y-%m-%d")
+
+    sql = "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND (td_type & 0x02 OR td_date = '%s') ORDER By td_date ASC" % (start_date, end_date, end_date);
+
+    df = pd.read_sql(sql, conn, index_col = 'td_date')
+    conn.close()
+
+    return df.index
+
+def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True):
     sql = "SELECT td_date, td_type FROM trade_dates WHERE td_date <= '%s' AND '%s' AND td_type & 0x02 ORDER By td_date DESC LIMIT %d" % (end_date, lookback)
 
     conn  = MySQLdb.connect(**config.db_base)
