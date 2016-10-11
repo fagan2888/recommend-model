@@ -14,6 +14,6 @@ for f in factors:
 
 df = pd.concat(dfs, axis = 1)
 df.columns = cols
-df.fillna(0.0, inplace = True)
+#df.fillna(0.0, inplace = True)
 
 df.to_csv('./tmp/factor_index.csv')
