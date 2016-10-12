@@ -18,6 +18,7 @@ import DB
 import AllocationData
 import time
 import RiskHighLowRiskAsset
+import ModelHighLowRisk
 import Const
 
 from datetime import datetime
@@ -56,6 +57,8 @@ def risk(ctx, datadir, startdate, label_asset):
         
     EqualRiskAssetRatio.equalriskassetratio(allocationdata.fixed_risk_asset_lookback, allocationdata.fixed_risk_asset_risk_adjust_period)
     EqualRiskAsset.equalriskasset()
-    RiskHighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
+    # RiskHighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
+    ModelHighLowRisk.asset_alloc_high_low(startdate, lookback=26, adjust_period=13)
+
 
 

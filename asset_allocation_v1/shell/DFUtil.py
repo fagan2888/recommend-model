@@ -53,13 +53,13 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
         if day != start_date:
             assets_s = assets_s * (row + 1)
 
-         # 如果是调仓日, 则调仓
-         if day in df_position.index: # 调仓日
-             assets_s = assets_s.sum() * df_position.loc[day]
+        # 如果是调仓日, 则调仓
+        if day in df_position.index: # 调仓日
+            assets_s = assets_s.sum() * df_position.loc[day]
 
-         # 日末各个基金持仓情况
-         df_result.loc[day] = assets_s
-         #
+        # 日末各个基金持仓情况
+        df_result.loc[day] = assets_s
+    #
     # 计算资产组合净值
     #
     df_result.insert(0, result_col, df_result.sum(axis=1))               
@@ -67,6 +67,9 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     return df_result
 
 def load_nav_csv(csv, columns=None, reindex=None):
+    if columns and 'date' not in columns:
+        columns.insert(0, 'date')
+        
     df = pd.read_csv(csv, index_col='date', parse_dates=['date'], usecols=columns)
 
     if reindex:
@@ -80,12 +83,14 @@ def load_nav_csv(csv, columns=None, reindex=None):
     return df
 
 def load_inc_csv(csv, columns=None, reindex=None):
+    if columns and 'date' not in columns:
+        columns.insert(0, 'date')
     #
     # [XXX] 不能直接调用load_nav_csv, 否则会造成第一行的增长率丢失
     #
     df = pd.read_csv(csv, index_col='date', parse_dates=['date'], usecols=columns)
 
-    if reindex:
+    if reindex is not None:
         #
         # 重索引的时候需要, 需要首先用两个索引的并集,填充之后再计算增长率
         # 
@@ -95,7 +100,7 @@ def load_inc_csv(csv, columns=None, reindex=None):
     # 计算增长率
     dfr = df.pct_change().fillna(0.0)
 
-    if reindex:
+    if reindex is not None:
         dfr = dfr.reindex(reindex)
         
     return dfr
