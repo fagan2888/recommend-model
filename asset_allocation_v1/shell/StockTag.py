@@ -15,6 +15,7 @@ import FundIndicator as fi
 import AllocationData
 
 from Const import datapath
+from dateutil.parser import parse
 
 #大盘适应度
 def largecapfitness(funddf, indexdf, ratio):
@@ -868,8 +869,8 @@ def tagstockfund(allocationdata, funddf, indexdf):
     dates = indexdf.index.values
     
     dates.sort()
-    end_date   = dates[-1].strftime('%Y-%m-%d')
-    start_date = dates[0].strftime('%Y-%m-%d')
+    end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
+    start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
 
     capindexdf = indexdf[['399314.SZ', '399316.SZ']]
@@ -1202,8 +1203,8 @@ def tagbondfund(allocationdata, funddf, indexdf):
     dates = indexdf.index.values
     
     dates.sort()
-    end_date   = dates[-1].strftime('%Y-%m-%d')
-    start_date = dates[0].strftime('%Y-%m-%d')
+    end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
+    start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
 
     #funddf = Data.bond_value(start_date, end_date)

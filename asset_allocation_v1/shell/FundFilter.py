@@ -14,6 +14,7 @@ from datetime import datetime
 import Const
 import FundIndicator as fi
 import pandas as pd
+from dateutil.parser import parse
 
 
 from Const import datapath
@@ -269,8 +270,9 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 
     dates = funddf.index.values
     dates.sort()
-    end_date   = dates[-1].strftime('%Y-%m-%d')
-    start_date = dates[0].strftime('%Y-%m-%d')
+    
+    end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
+    start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
     indicator = {}
 
@@ -437,8 +439,8 @@ def bondfundfilter(allocationdata, funddf, indexdf):
 
     dates = funddf.index.values
     dates.sort()
-    end_date   = dates[-1].strftime('%Y-%m-%d')
-    start_date = dates[0].strftime('%Y-%m-%d')
+    end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
+    start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
 
     indicator = {}

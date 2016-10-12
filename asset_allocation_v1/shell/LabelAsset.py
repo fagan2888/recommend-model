@@ -474,10 +474,8 @@ def labelasset(allocationdata):
 
     # indexdf = DBData.index_value(allocationdata.data_start_date, allocationdata.end_date)[[Const.hs300_code]]
     # dates = indexdf.pct_change().index
-    dates = DBData.trade_dates(allocationdata.data_start_date, allocationdata.end_date)
-    print "xxxxxxxxxxx", dates,
-    print "end date", allocationdata.end_date
-    dates = [parse(e).date() for e in dates]
+    dates = DBData.trade_date_index(allocationdata.data_start_date, allocationdata.end_date)
+    dates = [e.date() for e in dates]
 
 
     #allfunddf = Data.funds()
