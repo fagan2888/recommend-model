@@ -37,7 +37,8 @@ def alpha_beta(factor_index_df, fund_nav_df):
         #if alpha < 0 or rsquared_adj < 0:
         #    continue
         cs.append(code)
-        print code, result.summary()
+        #print code, result.pvalues, result.rsquared_adj
+        #print result.summary()
         #print code, result.rsquared_adj
         vs = []
         vs.append(alpha)
@@ -102,6 +103,6 @@ if __name__ == '__main__':
     factor_index_df = factor_index_df[diff_cols]
     alpha_beta_df = alpha_beta(factor_index_df, fund_nav_df)
 
-    print alpha_beta_df
-    #correl(factor_index_df, fund_nav_df)
+    #print alpha_beta_df
+    correl(factor_index_df, fund_nav_df)
     #print factor_index_df
