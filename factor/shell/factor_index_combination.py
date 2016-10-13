@@ -14,6 +14,12 @@ for f in factors:
 
 df = pd.concat(dfs, axis = 1)
 df.columns = cols
+df['beta']         = df['low_beta']         - df['high_beta']
+df['market_value'] = df['low_market_value'] - df['high_market_value']
+df['momentum']     = df['low_momentum']     - df['high_momentum']
+df['dastd']        = df['low_dastd']        - df['high_dastd']
+df['bp']           = df['low_bp']           - df['high_bp']
+df['liquidity']    = df['low_liquidity']    - df['high_liquidity']
 #df.fillna(0.0, inplace = True)
 
 df.to_csv('./tmp/factor_index.csv')

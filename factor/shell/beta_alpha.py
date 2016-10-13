@@ -34,10 +34,10 @@ def alpha_beta(factor_index_df, fund_nav_df):
         #print code, result.params
         alpha = result.params[0]
         rsquared_adj = result.rsquared_adj
-        if alpha < 0 or rsquared_adj < 0:
-            continue
+        #if alpha < 0 or rsquared_adj < 0:
+        #    continue
         cs.append(code)
-        #print result.summary()
+        print code, result.summary()
         #print code, result.rsquared_adj
         vs = []
         vs.append(alpha)
@@ -81,6 +81,7 @@ def correl(factor_index_df, fund_nav_df):
     corr_df.to_csv('./tmp/corr.csv')
     return corr_df
 
+
     '''
     print factor_index_df
     codes = fund_nav_dfr.columns
@@ -88,16 +89,19 @@ def correl(factor_index_df, fund_nav_df):
         y = fund_nav_dfr[code].values
     '''
 
-
-
 if __name__ == '__main__':
+
 
     factor_index_df  = pd.read_csv('./tmp/factor_index.csv', index_col = 'date', parse_dates = ['date'])
     #factor_index_df  = pd.read_csv('./tmp/factor_index_diff.csv', index_col = 'date', parse_dates = ['date'])
     fund_nav_df      = pd.read_csv('./data/fund_value.csv', index_col = 'date', parse_dates = ['date'])
     factor_index_df.dropna(inplace = True)
 
-    #alpha_beta_df = alpha_beta(factor_index_df, fund_nav_df)
-    #print alpha_beta_df
-    correl(factor_index_df, fund_nav_df)
+
+    diff_cols       = ['beta', 'market_value', 'momentum', 'dastd', 'bp', 'liquidity']
+    factor_index_df = factor_index_df[diff_cols]
+    alpha_beta_df = alpha_beta(factor_index_df, fund_nav_df)
+
+    print alpha_beta_df
+    #correl(factor_index_df, fund_nav_df)
     #print factor_index_df
