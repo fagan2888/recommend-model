@@ -110,25 +110,28 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
         # 底风险资产配置
         df_low.loc[day] = asset_alloc_low_risk_per_day(day, lookback, columns=get_columns('low'))
 
+    # df_high.index.name='date'
+    # df_low.index.name='date'
+
     #
     # 保存高低风险配置结果
     #
-    df_high.to_csv(datapath('high_position.csv'))
-    df_low.to_csv(datapath('low_position.csv'))
+    df_high.to_csv(datapath('high_position.csv'), index_label='date')
+    df_low.to_csv(datapath('low_position.csv'), index_label='date')
 
     #
     # 计算高风险资产的资产净值
     #
     df_inc = DFUtil.load_inc_csv(datapath('equalriskasset.csv'), get_columns('high'), index)
     df_nav_high = DFUtil.portfolio_nav(df_inc, df_high[get_columns('high')])
-    df_nav_high.to_csv(datapath('high_nav.csv'))
+    df_nav_high.to_csv(datapath('high_nav.csv'), index_label='date')
     
     #
     # 计算低风险资产的资产净值
     #
     df_inc = DFUtil.load_inc_csv(datapath('labelasset.csv'), get_columns('low'), index)
     df_nav_low = DFUtil.portfolio_nav(df_inc, df_low[get_columns('low')])
-    df_nav_low.to_csv(datapath('low_nav.csv'))
+    df_nav_low.to_csv(datapath('low_nav.csv'), index_label='date')
         
     #
     # 混合后风险1-10的资产净值
