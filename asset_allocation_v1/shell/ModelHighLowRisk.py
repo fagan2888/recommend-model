@@ -147,12 +147,12 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
         data = [(ratio_h, ratio_l) for x in adjust_index]
         df_position = pd.DataFrame(data, index=adjust_index, columns=['high', 'low'])
         # 单个风险配置结果
-        dt['risk'+str(risk)] = DFUtil.portfolio_nav(df_inc, df_position)
+        dt['%.1f' % (risk / 10.0)] = DFUtil.portfolio_nav(df_inc, df_position)
 
     #
     # 保存高低风险配置结果
     # 
-    df_nav_result = pd.concat(dt, axis=1)
+    df_nav_result = pd.concat(dt, names=('risk', 'date'))
     df_nav_result.to_csv(datapath('portfolio_nav.csv'))
     #
     # 返回结果

@@ -104,9 +104,9 @@ def trade_date_index(start_date, end_date=None):
         yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)); 
         end_date = yesterday.strftime("%Y-%m-%d").date()
 
-    sql = "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND (td_type & 0x02 OR td_date = '%s') ORDER By td_date ASC" % (start_date, end_date, end_date);
+    sql = "SELECT td_date as date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND (td_type & 0x02 OR td_date = '%s') ORDER By td_date ASC" % (start_date, end_date, end_date);
 
-    df = pd.read_sql(sql, conn, index_col = 'td_date', parse_dates=['td_date'])
+    df = pd.read_sql(sql, conn, index_col = 'date', parse_dates=['date'])
     conn.close()
 
     return df.index
@@ -117,10 +117,10 @@ def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True)
     else:
         condition = "(td_type & 0x02)"
         
-    sql = "SELECT td_date, td_type FROM trade_dates WHERE td_date <= '%s' AND %s ORDER By td_date DESC LIMIT %d" % (end_date, condition, lookback)
+    sql = "SELECT td_date as date, td_type FROM trade_dates WHERE td_date <= '%s' AND %s ORDER By td_date DESC LIMIT %d" % (end_date, condition, lookback)
 
     conn  = MySQLdb.connect(**config.db_base)
-    df = pd.read_sql(sql, conn, index_col = 'td_date', parse_dates=['td_date'])
+    df = pd.read_sql(sql, conn, index_col = 'date', parse_dates=['date'])
     conn.close()
 
     return df.index
