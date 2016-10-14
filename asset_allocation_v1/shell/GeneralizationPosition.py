@@ -20,9 +20,197 @@ from dateutil.parser import parse
 
 conn  = None
 
+def categories_types():
+    #
+    # 输出配置数据
+    #
+    return {
+        'largecap'        : '11', # 大盘
+        'smallcap'        : '12', # 小盘
+        'rise'            : '13', # 上涨
+        'oscillation'     : '14', # 震荡
+        'decline'         : '15', # 下跌
+        'growth'          : '16', # 成长
+        'value'           : '17', # 价值
+
+        'ratebond'        : '21', # 利率债
+        'creditbond'      : '22', # 信用债
+        'convertiblebond' : '23', # 可转债
+
+        'money'           : '31', # 货币
+
+        'SP500.SPI'       : '41', # 标普
+        'GLNC'            : '42', # 黄金
+        'HSCI.HI'         : '43', # 恒生
+    }
+
+
+def portfolio_position():
+    columns =['date', 'largecap', 'smallcap', 'rise', 'decline', 'growth', 'value']
+
+    df_ratio_equalrisk = pd.read_csv(datapath('equalriskassetratio.csv'), index_col = 'date', parse_dates = ['date'], usecols=columns)
+    df_ratio_highrisk = pd.read_csv(datapath('high_position.csv'), index_col = 'date', parse_dates = ['date'])
+    df_ratio_lowrisk = pd.read_csv(datapath('low_position.csv'), index_col = 'date', parse_dates = ['date'])
+
+    #
+    # 基本思想:
+    #
+    #    时间轴 采用马克维茨调仓点和风险修型调仓点的并集, 起点采用三者起点中最大值
+    #
+    #    某中类资产的比例=(高|风险资产比例) * 该资产的马克维茨比例 * 该资产的风险修型仓位
+    #
+    # 其中, 如果是非股票类资产, 风险修型仓位始终未1. 例如:
+    #    大盘股比例 = 高风险资产比例 * 大盘股的马克维茨比例 * 大盘资产的仓位
+    #    利率债比例 = 低风险资产比例 * 利率债的马卡维茨比例
+    #
+    columns_high = df_ratio_highrisk.columns
+    columns_low = df_ratio_lowrisk.columns
+    
+    start = max(df_ratio_highrisk.index.min(), df_ratio_lowrisk.index.min(), df_ratio_equalrisk.index.min())
+    
+    index = df_ratio_highrisk.index.union(df_ratio_lowrisk.index).union(df_ratio_equalrisk.index)
+    df_ratio_highrisk = df_ratio_highrisk.reindex(index, method='pad')[start:]
+    df_ratio_lowrisk = df_ratio_lowrisk.reindex(index, method='pad')[start:]
+    df_ratio_equalrisk = df_ratio_equalrisk.reindex(index, method='pad')[start:]
+
+    index = index[index >= start]
+    
+    # 构造马克维茨资产矩阵
+    df_markowitz = pd.concat([df_ratio_highrisk, df_ratio_lowrisk], axis=1)
+    # 扩展风险修型矩阵, 与马克维茨矩阵配型
+    df_tmp1 = pd.DataFrame(1.0, index=index, columns=columns_high.difference(df_ratio_equalrisk.columns))
+    df_tmp2 = pd.DataFrame(1.0, index=index, columns=df_ratio_lowrisk.columns)
+    df_equalrisk = pd.concat([df_ratio_equalrisk, df_tmp1, df_tmp2], axis=1)
+
+    # 中类资产配置比例
+    dt = dict()
+    for risk in range(1, 11):
+        # 配置比例
+        ratio_h  = (risk - 1) * 1.0 / 9
+        ratio_l  = 1 - ratio_h
+        # 生成高低风险配置矩阵并与马克维茨矩阵配型
+        df_high_low = pd.concat([
+            pd.DataFrame(ratio_h, index=df_ratio_highrisk.index, columns=df_ratio_highrisk.columns),
+            pd.DataFrame(ratio_l, index=df_ratio_lowrisk.index, columns=df_ratio_lowrisk.columns),
+        ], axis=1)
+        # 单个风险配置结果
+        df_risk_result = df_high_low * df_markowitz * df_equalrisk
+        df_risk_result['money'] = 1 - df_risk_result.sum(axis=1)
+        dt['%.1f' % (risk / 10.0)] = df_risk_result
+        
+    #
+    # 保存中类资产配置比例
+    # 
+    df_result = pd.concat(dt, names=('risk', 'date'))
+    df_result.to_csv(datapath('portfolio_position.csv'))
+    #
+    # 返回结果
+    #
+    return df_result
+
+def portfolio_category():
+    columns_stock =['date', 'largecap', 'smallcap', 'rise', 'decline', 'growth', 'value']
+    columns_bond =['date', 'ratebond', 'creditbond']
+    #
+    # 计算各中类资产的配置比例, 确定调仓时间轴
+    #
+    df_position = portfolio_position()
+    index = df_position.unstack(0).index
+
+    #
+    # 加载基金池,并根据调仓时间轴整形
+    #
+    df_fund_stock = pd.read_csv(datapath('stock_fund.csv'), index_col = 'date', parse_dates = ['date'], usecols=columns_stock)
+    df_fund_stock = df_fund_stock.reindex(index, method='pad')
+    
+    df_fund_bond = pd.read_csv(datapath('bond_fund.csv'), index_col = 'date', parse_dates = ['date'], usecols=columns_bond)
+    df_fund_bond = df_fund_bond.reindex(index, method='pad')
+
+    df_fund_money = pd.DataFrame("[u'213009']", index=index, columns=['money'])
+
+    glnc_pivot = datetime.strptime('2013-08-22', '%Y-%m-%d')
+    sr_glnc = pd.Series("[u'000216']", index=index, name='GLNC')
+    sr_glnc[index < glnc_pivot] = "[u'320013']"
+
+    df_fund_other = pd.concat([
+        pd.DataFrame("[u'096001']", index=index, columns=['SP500.SPI']),
+        pd.DataFrame(sr_glnc)
+    ], axis=1)
+
+    #
+    # 生成分类资产配置结果
+    #
+    df_fund_risk = pd.concat([df_fund_stock, df_fund_other, df_fund_bond, df_fund_money], axis=1)
+    df_fund = pd.concat({'%.1f' % (risk / 10.0):df_fund_risk for risk in range(1, 11)}, names=('risk', 'date'))
+
+    df_result = pd.concat({'ratio':df_position, 'xfund':df_fund}, axis=1, names=('xtype','category'))
+    df_result = df_result.stack(1)
+
+    #
+    # 滤掉过小的份额配置
+    #
+    df_result = df_result[df_result['ratio'] >= 0.00001]
+    df_result['xfund'] = df_result['xfund'].map(lambda s: ':'.join(ast.literal_eval(s)))
+    df_result.to_csv(datapath('cposition.csv'))
+
+    #
+    # 生成用于交换的gposition
+    #
+    df_result.rename(index=categories_types()).to_csv(datapath('gposition.csv'))
+
+    return df_result
+
+def portfolio_simple():
+    columns=('risk','date','fund','ratio')
+    #
+    # 中类资产比例和对应基金
+    #
+    df = portfolio_category()
+
+    df_result = pd.DataFrame(columns=columns)
+    for key,row in df.iterrows():
+        # codes2 = filter_by_status(date, codes)
+        (risk, date, _ph) = key
+        ratio = row['ratio']
+        funds = row['xfund'].split(':')
+        data = [(risk, date, fund, ratio) for (fund, ratio) in split_category_ratio(ratio, funds)]
+
+        df_result = df_result.append(pd.DataFrame(data, columns=columns), ignore_index=True)
+
+    #
+    # 根据基金代码合并配置比例
+    #
+    
+    #
+    # 计算资产组合净值
+    #
+    df_result.to_csv(datapath('position-s.csv'))
+
+    return df_result
+
+def split_category_ratio(ratio, funds):
+    if ratio < 0.000099:
+        return None
+    #
+    # 根据配置占比和可用基金数目平分基金
+    #
+    if ratio > 0.60 :
+        count_used = min (5, len(funds))
+    elif ratio > 0.45 :
+        count_used = min (4, len(funds))
+    elif ratio > 0.30 :
+        count_used = min (3, len(funds))
+    elif ratio > 0.15 :
+        count_used = min (2, len(funds))
+    else :
+        count_used = 1;
+        
+    funds_used = funds[0:count_used]
+    ratio_used = ratio / count_used
+
+    return [(code, ratio_used) for code in funds_used]
+
 def risk_position():
-
-
     fund_df                   = pd.read_csv(datapath('stock_fund.csv'), index_col = 'date', parse_dates = ['date'])
     bond_fund_df              = pd.read_csv(datapath('bond_fund.csv'), index_col = 'date', parse_dates = ['date'])
     equalrisk_ratio_df        = pd.read_csv(datapath('equalriskassetratio.csv'), index_col = 'date', parse_dates = ['date'])

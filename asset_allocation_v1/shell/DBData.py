@@ -97,7 +97,7 @@ def trade_date_index(start_date, end_date=None):
     conn  = MySQLdb.connect(**config.db_base)
 
     if not end_date:
-        sql = "SELECT max(td_date) as td_date FROM trade_dates WHERE td_type & 0x02"
+        sql = "SELECT max(td_date) as td_date FROM trade_dates WHERE td_date != CURDATE()"
         end_date = db_pluck(conn, 'td_date', sql)
 
     if not end_date:
