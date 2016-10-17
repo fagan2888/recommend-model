@@ -167,7 +167,7 @@ def portfolio_simple():
     #
     df = portfolio_category()
 
-    df_result = pd.DataFrame(columns=columns)
+    df2 = pd.DataFrame(columns=columns)
     for key,row in df.iterrows():
         # codes2 = filter_by_status(date, codes)
         (risk, date, _ph) = key
@@ -175,11 +175,18 @@ def portfolio_simple():
         funds = row['xfund'].split(':')
         data = [(risk, date, fund, ratio) for (fund, ratio) in split_category_ratio(ratio, funds)]
 
-        df_result = df_result.append(pd.DataFrame(data, columns=columns), ignore_index=True)
+        df2 = df2.append(pd.DataFrame(data, columns=columns), ignore_index=True)
 
     #
     # 根据基金代码合并配置比例
     #
+    df_result = df2.groupby(['risk', 'date', 'fund']).sum()
+    df_result.reset_index(inplace=True)
+
+    #
+    # 某天持仓补足100%
+    #
+    df_result = pad_sum_to_one(df_result)
     
     #
     # 计算资产组合净值
@@ -187,6 +194,17 @@ def portfolio_simple():
     df_result.to_csv(datapath('position-s.csv'))
 
     return df_result
+
+def pad_sum_to_one(df):
+    df3 = df['ratio'].groupby([df['risk'], df['date']]).agg(['sum', 'idxmax'])
+    df4 = df.set_index(['risk', 'date'])
+
+    df5 = df4.merge(df3, how='left', left_index=True, right_index=True)
+    df5.ix[df3['idxmax'], 'ratio'] += (1 - df5.ix[df3['idxmax'], 'sum'])
+
+    print df5['ratio'].groupby([df5.index.get_level_values(0), df5.index.get_level_values(1)]).sum()
+    
+    return df5[['fund', 'ratio']]
 
 def split_category_ratio(ratio, funds):
     if ratio < 0.000099:
