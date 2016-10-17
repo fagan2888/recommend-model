@@ -168,20 +168,15 @@ def portfolio_simple():
     df = portfolio_category()
     print "portfolio_category"
 
-    df2 = pd.DataFrame(columns=columns)
-    print len(df.index)
-    i = 0
+    data = []
     for key,row in df.iterrows():
-        i += 1
         # codes2 = filter_by_status(date, codes)
         (risk, date, _ph) = key
         ratio = row['ratio']
         funds = row['xfund'].split(':')
-        data = [(risk, date, fund, ratio) for (fund, ratio) in split_category_ratio(ratio, funds)]
+        data.extend([(risk, date, fund, ratio) for (fund, ratio) in split_category_ratio(ratio, funds)])
 
-        df2 = df2.append(pd.DataFrame(data, columns=columns), ignore_index=True)
-        if (i % 100) == 0:
-            print risk, date
+    df2 = pd.DataFrame(data, columns=columns)
     print "category to fund finish"
     #
     # 根据基金代码合并配置比例
