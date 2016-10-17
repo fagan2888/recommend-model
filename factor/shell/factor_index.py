@@ -44,8 +44,9 @@ def index(factor_df, stock_df):
     dates.sort()
     codes = factor_df.columns
 
-    rs = []
-    ds = []
+    rs     = []
+    ds     = []
+    stocks = []
     for i in range(0, len(dates) - 1):
         d      = dates[i]
         next_d = dates[i + 1]
@@ -72,12 +73,15 @@ def index(factor_df, stock_df):
 
         print next_d, high_r, low_r
         rs.append([high_r, low_r])
+        stocks.append([high_factors.index.values, low_factors.index.values])
         ds.append(next_d)
 
     df = pd.DataFrame(rs, index = ds, columns = ['high_r','low_r']).fillna(0.0)
     df.index.name = 'date'
+    stock_df = pd.DataFrame(stocks, index = ds, columns = ['high_factor','low_factor']).fillna(0.0)
+    stock_df.index.name = 'date'
     #print df
-    return df
+    return df, stock_df
 
 
 if __name__ == '__main__':
@@ -91,29 +95,31 @@ if __name__ == '__main__':
 
     stock_df        = pd.read_csv('./data/stock_price_adjust.csv', index_col = 'date', parse_dates = ['date'])
 
-
     dfs = []
 
     #df = index(beta_df, stock_df)
     #df.to_csv('./tmp/beta_index.csv')
     #dfs.append(df)
 
-    #df = index(momentum_df, stock_df)
-    #df.to_csv('./tmp/momentum_index.csv')
+    df, momentum_stock_df = index(momentum_df, stock_df)
+    df.to_csv('./tmp/momentum_index.csv')
+    momentum_stock_df.to_csv('./tmp/momentum_stock.csv')
     #dfs.append(df)
 
-    #df = index(market_value_df, stock_df)
-    #df.to_csv('./tmp/market_value_index.csv')
+    df, market_value_stock_df = index(market_value_df, stock_df)
+    df.to_csv('./tmp/market_value_index.csv')
+    market_value_stock_df.to_csv('./tmp/market_value_stock.csv')
     #dfs.append(df)
 
-    #df = index(dastd_df, stock_df)
+    #df, stock_df = index(dastd_df, stock_df)
     #df.to_csv('./tmp/dastd_index.csv')
+    #stock_df.to_csv('./tmp/dastd_stock.csv')
     #dfs.append(df)
 
     #df = index(bp_df, stock_df)
     #df.to_csv('./tmp/bp_index.csv')
     #dfs.append(df)
 
-    df = index(liquidity_df, stock_df)
-    df.to_csv('./tmp/liquidity_index.csv')
+    #df = index(liquidity_df, stock_df)
+    #df.to_csv('./tmp/liquidity_index.csv')
     #dfs.append(df)

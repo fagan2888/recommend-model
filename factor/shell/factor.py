@@ -244,12 +244,12 @@ if __name__ == '__main__':
     stock_dfr = stock_df.pct_change()
     index_dfr = index_df.pct_change().fillna(0.0)
     stock_market_value_df = stock_market_value_df.fillna(method = 'pad')
-    stock_market_value_df = stock_market_value_df[stock_df.columns]
-    stock_bp_df = stock_bp_df[stock_df.columns]
+    #stock_market_value_df = stock_market_value_df[stock_df.columns]
+    #stock_bp_df = stock_bp_df[stock_df.columns]
 
     #beta(stock_dfr, index_dfr)
-    #momentum(stock_dfr)
-    #cap_size(stock_market_value_df)
+    momentum(stock_dfr)
+    cap_size(stock_market_value_df)
     #dastd(stock_dfr)
     #bp(stock_bp_df)
-    liquidity(stock_turnover_df)
+    #liquidity(stock_turnover_df)
