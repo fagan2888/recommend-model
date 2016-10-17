@@ -166,9 +166,13 @@ def portfolio_simple():
     # 中类资产比例和对应基金
     #
     df = portfolio_category()
+    print "portfolio_category"
 
     df2 = pd.DataFrame(columns=columns)
+    print len(df.index)
+    i = 0
     for key,row in df.iterrows():
+        i += 1
         # codes2 = filter_by_status(date, codes)
         (risk, date, _ph) = key
         ratio = row['ratio']
@@ -176,27 +180,33 @@ def portfolio_simple():
         data = [(risk, date, fund, ratio) for (fund, ratio) in split_category_ratio(ratio, funds)]
 
         df2 = df2.append(pd.DataFrame(data, columns=columns), ignore_index=True)
-
+        if (i % 100) == 0:
+            print risk, date
+    print "category to fund finish"
     #
     # 根据基金代码合并配置比例
     #
     df_result = df2.groupby(['risk', 'date', 'fund']).sum()
     df_result.reset_index(inplace=True)
+    print "sum funds"
 
     #
     # 过滤掉过小的份额配置
     #
     df_result = df_result[df_result['ratio'] >= 0.009999]
+    print "fileout small"
 
     #
     # 过滤掉与上期换手率小于3%
     #
     df_result = filter_by_turnover_rate(df_result, 0.03)
+    print "filter_by_turnover_rate"
 
     #
     # 某天持仓补足100%
     #
     df_result = pad_sum_to_one(df_result)
+    print "pad_sum_to_one"
     
     #
     # 计算资产组合净值
