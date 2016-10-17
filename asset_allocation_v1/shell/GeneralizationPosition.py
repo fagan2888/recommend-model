@@ -149,7 +149,7 @@ def portfolio_category():
     #
     # 滤掉过小的份额配置
     #
-    df_result = df_result[df_result['ratio'] >= 0.00001]
+    df_result = df_result[df_result['ratio'] >= 0.0001]
     df_result['xfund'] = df_result['xfund'].map(lambda s: ':'.join(ast.literal_eval(s)))
     df_result.to_csv(datapath('cposition.csv'))
 
@@ -184,6 +184,16 @@ def portfolio_simple():
     df_result.reset_index(inplace=True)
 
     #
+    # 过滤掉过小的份额配置
+    #
+    df_result = df_result[df_result['ratio'] >= 0.009999]
+
+    #
+    # 过滤掉与上期换手率小于3%
+    #
+    df_result = filter_by_turnover_rate(df_result, 0.03)
+
+    #
     # 某天持仓补足100%
     #
     df_result = pad_sum_to_one(df_result)
@@ -191,11 +201,38 @@ def portfolio_simple():
     #
     # 计算资产组合净值
     #
-    df_result.to_csv(datapath('position-s.csv'))
+    df_result.to_csv(datapath('position-s.csv'), header=False)
 
     return df_result
 
+def filter_by_turnover_rate(df, turnover_rate):
+    df_result = pd.DataFrame(columns=['risk', 'date', 'fund', 'ratio'])
+    for k0, v0 in df.groupby('risk'):
+        df_tmp = filter_by_turnover_rate_per_risk(v0, turnover_rate)
+        if not df_tmp.empty:
+            df_result = pd.concat([df_result, df_tmp])
+            
+    return df_result
+
+def filter_by_turnover_rate_per_risk(df, turnover_rate):
+    df_result = pd.DataFrame(columns=['risk', 'date', 'fund', 'ratio'])
+    df_last=None
+    for k1, v1 in df.groupby(['risk', 'date']):
+        if df_last is None:
+            df_last = v1[['fund','ratio']].set_index('fund')
+            df_result = pd.concat([df_result, v1])
+        else:
+            df_current = v1[['fund', 'ratio']].set_index('fund')
+            df_diff = df_current - df_last
+            xsum = df_diff['ratio'].sum()
+            if df_diff.isnull().values.any() or abs(df_diff['ratio'].sum()) >= turnover_rate:
+                df_result = pd.concat([df_result, v1])
+                df_last = df_current
+                
+    return df_result
+
 def pad_sum_to_one(df):
+    df.reset_index(inplace=True)
     df3 = df['ratio'].groupby([df['risk'], df['date']]).agg(['sum', 'idxmax'])
     df4 = df.set_index(['risk', 'date'])
 
@@ -705,6 +742,9 @@ def filter_by_status(date, codes):
 
 if __name__ == '__main__':
 
+    # df2 = pd.read_csv('../testcases/aa.csv',  parse_dates=['date'])
+    # print filter_by_turnover_rate(df2, 0.03)
+    
     final = False
     category = False
 
