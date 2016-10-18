@@ -8,6 +8,7 @@ import sys
 sys.path.append('shell')
 import datetime
 import AllocationData
+from Const import datapath
 
 
 
@@ -55,7 +56,9 @@ def fixrisk(allocationdata):
     long_period  = 252
 
 
-    alldf = allocationdata.label_asset_df
+    # alldf = allocationdata.label_asset_df
+    alldf = pd.read_csv(datapath('labelasset.csv'), index_col='date', parse_dates=['date'])
+
 
     position_datas = []
     position_dates = []

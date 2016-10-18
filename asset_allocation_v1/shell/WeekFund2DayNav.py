@@ -11,7 +11,7 @@ import DBData
 import DFUtil
 import AllocationData
 import re
-from Const import datadir
+from Const import datapath
 
 pattern = re.compile(r'\d+')
 
@@ -23,34 +23,22 @@ def codes_r(d, dfr, codes):
 	return r
 
 
-def week2day(allocationdata):
+def week2day(startdate, enddate):
+	stock_df = pd.read_csv(datapath('stock_fund.csv'), index_col = 'date', parse_dates = ['date'])
+	bond_df  = pd.read_csv(datapath('bond_fund.csv'),  index_col = 'date', parse_dates = ['date'])
+	money_df = pd.read_csv(datapath('money_fund.csv'), index_col = 'date', parse_dates = ['date'])
 
 
-	stock_df = pd.read_csv(os.path.join(datadir, 'stock_fund.csv'), index_col = 'date', parse_dates = ['date'])
-	bond_df  = pd.read_csv(os.path.join(datadir, 'bond_fund.csv'),  index_col = 'date', parse_dates = ['date'])
-	money_df = pd.read_csv(os.path.join(datadir, 'money_fund.csv'), index_col = 'date', parse_dates = ['date'])
+        index = stock_df.index.union(bond_df.index).union(money_df.index).union(pd.DatetimeIndex([startdate, enddate]))
+        
+	df = pd.concat([stock_df, bond_df, money_df], axis = 1, join_axes = [index]).fillna(method='pad')
 
-
-	#print stock_df
-	#print bond_df
-	#print money_df
-	#print other_df
-
-
-	df = pd.concat([stock_df, bond_df, money_df], axis = 1, join_axes = [stock_df.index])
-	dates = df.index
+        index = index[(index <= enddate)]
 
 	rs      = []
 	r_dates = []
 
-	for i in range(0, len(dates)):
-
-
-		d = dates[i]
-		start_date = d
-		end_date   = datetime.datetime.now()
-		if i < len(dates) - 1:
-			end_date = dates[i + 1]	
+	for start_date, end_date in zip(index[:-1], index[1:]):
 
 		stock_value_df   = DBData.stock_day_fund_value(start_date, end_date)
 		bond_value_df    = DBData.bond_day_fund_value(start_date, end_date)
@@ -62,26 +50,27 @@ def week2day(allocationdata):
                         index_value_df['GLNC'] = 287.8400
 
 
-		stock_value_dfr  = stock_value_df.pct_change().fillna(0.0).iloc[1:,:]
-		bond_value_dfr   = bond_value_df.pct_change().fillna(0.0).iloc[1:,:]
-		money_value_dfr  = money_value_df.pct_change().fillna(0.0).iloc[1:,:]
-		index_value_dfr  = index_value_df.pct_change().fillna(0.0).iloc[1:,:]
+                index2 = stock_value_df.index
+		stock_value_dfr  = stock_value_df.pct_change().fillna(0.0)[1:]
+		bond_value_dfr   = bond_value_df.pct_change().reindex(index2).fillna(0.0)[1:]
+		money_value_dfr  = money_value_df.pct_change().reindex(index2).fillna(0.0)[1:]
+		index_value_dfr  = index_value_df.pct_change().reindex(index2).fillna(0.0)[1:]
 
 
-		large_code       = stock_df.loc[d, 'largecap']	
-		small_code       = stock_df.loc[d, 'smallcap']	
-		rise_code        = stock_df.loc[d, 'rise']	
-		oscillation_code = stock_df.loc[d, 'oscillation']	
-		decline_code     = stock_df.loc[d, 'decline']	
-		growth_code      = stock_df.loc[d, 'growth']	
-		value_code       = stock_df.loc[d, 'value']	
+		large_code       = df.loc[start_date, 'largecap']	
+		small_code       = df.loc[start_date, 'smallcap']	
+		rise_code        = df.loc[start_date, 'rise']	
+		oscillation_code = df.loc[start_date, 'oscillation']	
+		decline_code     = df.loc[start_date, 'decline']	
+		growth_code      = df.loc[start_date, 'growth']	
+		value_code       = df.loc[start_date, 'value']	
 
-		ratebond_code    = bond_df.loc[d,'ratebond']
-		creditbond_code  = bond_df.loc[d,'creditbond']
-		convertiblebond_code = bond_df.loc[d,'convertiblebond']
+		ratebond_code    = df.loc[start_date,'ratebond']
+		creditbond_code  = df.loc[start_date,'creditbond']
+		convertiblebond_code = df.loc[start_date,'convertiblebond']
 
-		#money_code       = money_df.loc[d, 'money']
-		money_code       = "%06d" % money_df.loc[d, 'money']
+		#money_code       = money_df.loc[start_date, 'money']
+		money_code       = "%06d" % df.loc[start_date, 'money']
 
 
 		sp500_code       = 'SP500.SPI'
@@ -135,15 +124,11 @@ def week2day(allocationdata):
 	
 	alldf = pd.DataFrame(np.matrix(values).T, index = dfr.index, columns = dfr.columns)
 
-	allocationdata.label_asset_df = alldf	
-	alldf.to_csv(os.path.join(datadir, 'labelasset.csv'))
+	alldf.to_csv(datapath('labelasset.csv'))
 
 	week_df = alldf.resample('W-FRI').last()
 	week_df = week_df.fillna(method = 'pad')
-	week_df.to_csv(os.path.join(datadir, 'labelassetweek.csv'))
-
-		#print start_date, d, end_date			
-	#print df
+	week_df.to_csv(datapath('labelassetweek.csv'))
 
 
 if __name__ == '__main__':
