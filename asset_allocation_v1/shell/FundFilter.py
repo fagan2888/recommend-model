@@ -429,7 +429,7 @@ def stockfundfilter(allocationdata, funddf, indexdf):
     f.flush()
     f.close()
     '''
-
+    print "aa codes", end_date, codes
 
     return codes, indicator
 
@@ -459,6 +459,17 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
 
     sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
 
+    df_indicator = pd.DataFrame({
+        'sharpe': {k:v for (k, v) in  sharpe_data},
+        'jensen': jensen_measure,
+        'sortino': sortino_measure,
+        'ppw': ppw_measure,
+        'stability': stability_measure,
+    });
+
+    df_indicator.index.name = 'code'
+    df_indicator.to_csv(datapath('stock_indicator_' + daystr + '.csv'), columns=['sharpe','jensen','sortino','ppw','stability'])
+
     df_result = pd.DataFrame({
         'sharpe':{k:v for (k, v) in  sharpe_data},
         'jensen': {k:v for (k, v) in jensen_data},
@@ -468,9 +479,9 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
     });
 
     df_result.index.name = 'code'
-    df_result.to_csv(datapath('stock_bindicator_' + daystr + '.csv'));
+    df_result.to_csv(datapath('stock_bindicator_selected' + daystr + '.csv'));
     df_result.dropna(inplace=True)
-    df_result.to_csv(datapath('stock_indicator_' + daystr + '.csv'))
+    df_result.to_csv(datapath('stock_indicator_selected' + daystr + '.csv'))
 
     return df_result
 

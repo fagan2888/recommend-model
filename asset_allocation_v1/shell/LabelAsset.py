@@ -65,6 +65,9 @@ def label_asset_stock_per_day(day, lookback):
     df_nav_stock = DBData.stock_fund_value(start_date, end_date)
     df_nav_index = DBData.index_value(start_date, end_date)
 
+    df_nav_stock.to_csv(datapath('stock_' + day.strftime('%Y-%m-%d') + '.csv'))
+    
+    
     #
     # 根据时间轴进行重采样
     #
