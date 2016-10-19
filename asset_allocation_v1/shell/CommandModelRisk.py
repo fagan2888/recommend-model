@@ -72,7 +72,8 @@ def risk(ctx, datadir, output, startdate, enddate, label_asset, week_to_day):
     enddate = allocationdata.end_date
 
     if label_asset:
-        LabelAsset.labelasset(allocationdata)
+        # LabelAsset.labelasset(allocationdata)
+        LabelAsset.label_asset(startdate, enddate, lookback=52, adjust_period=26)
 
     print "calc equal risk ratio ...."
     if week_to_day:

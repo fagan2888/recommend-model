@@ -15,6 +15,20 @@ import FundIndicator as fi
 
 fund_num = Const.fund_num
 
+def select_stock_new(day, df_label, df_indicator):
+    # df = df_label.merge(df_indicator, left_index=True, right_index=True)
+    categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
+    
+    data = {}
+    for category in categories:
+        index_codes = df_label[df_label[category] == 1].index
+        df_tmp = df_indicator.loc[index_codes]
+        data[category] = df_tmp.sort_values(by='jensen')[-fund_num:]
+        
+    df_result = pd.concat(data)   
+    
+    return df_result
+
 def select_stock(funddf, fund_tags, indexdf):
 
     largecap_codes             = fund_tags['largecap']

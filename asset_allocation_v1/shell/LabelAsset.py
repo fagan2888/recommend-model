@@ -24,6 +24,79 @@ import DFUtil
 from Const import datapath
 from dateutil.parser import parse
 
+def label_asset(start_date, end_date=None, lookback=52, adjust_period=26):
+    '''perform asset allocation with constant-risk + high_low model.
+    '''
+    # 加载时间轴数据
+    index = DBData.trade_date_index(start_date, end_date=end_date)
+
+    # 根据调整间隔抽取调仓点
+    if adjust_period:
+        adjust_index = index[::adjust_period]
+    else:
+        adjust_index = index
+
+    adjust_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14'])
+
+    #
+    # 计算每个调仓点的最新配置
+    #
+    data = {}
+    for day in adjust_index:
+        # 股票标签
+        data[day] = label_asset_stock_per_day(day, lookback)
+        sys.exit(0)
+        
+    df_result = pd.concat(data)
+
+    print df_result
+
+    
+    return df_result
+
+def label_asset_stock_per_day(day, lookback):
+    # 加载时间轴数据
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+
+    start_date = index.min().strftime("%Y-%m-%d")
+    end_date = day
+
+    # 加载数据
+    df_nav_stock = DBData.stock_fund_value(start_date, end_date)
+    df_nav_index = DBData.index_value(start_date, end_date)
+
+    #
+    # 根据时间轴进行重采样
+    #
+    df_nav_stock = df_nav_stock.reindex(index, method='pad')
+    df_nav_index = df_nav_index.reindex(index, method='pad')
+
+    # #
+    # # 计算涨跌幅
+    # #
+    # df_inc_stock = df_nav_stock.pct_change().fillna(0.0)
+    # df_inc_index = df_nav_index.pct_change().fillna(0.0)
+
+    #
+    # 基于测度筛选基金
+    #
+    df_indicator = FundFilter.stock_fund_filter_new(
+        day, df_nav_stock, df_nav_index[Const.hs300_code])
+
+    #
+    # 打标签确定所有备选基金
+    #
+    df_nav_indicator = df_nav_stock[df_indicator.index]
+    df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
+
+    #
+    # 选择基金
+    #
+    df_stock_fund = FundSelector.select_stock_new(day, df_label, df_indicator)
+
+    return df_stock_fund
+    
+
 def mean_r(d, funddfr, codes):
     r   = 0.0
     num = 1.0 * (len(codes))

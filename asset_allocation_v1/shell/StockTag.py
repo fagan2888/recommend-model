@@ -1196,6 +1196,98 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
     return list(final_codes) , fund_tags
 
+def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
+    daystr = day.strftime("%Y-%m-%d")
+    
+    dates = df_nav_index.index.values
+    dates.sort()
+    end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
+    start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
+
+
+    capindexdf = df_nav_index[['399314.SZ', '399316.SZ']]
+    largecapindexdf = df_nav_index[['399314.SZ']]
+    smallcapindexdf = df_nav_index[['399316.SZ']]
+    hs300indexdf = df_nav_index[['000300.SH']]
+    growthvalueindexdf = df_nav_index[['399372.SZ', '399373.SZ', '399376.SZ', '399377.SZ']]
+
+
+    codes = df_nav_fund.columns
+
+    positiondf = Data.fund_position(start_date, end_date)
+    columns = set(positiondf.columns)
+    tmp_codes = []
+    for code in codes:
+        if code in columns:
+            tmp_codes.append(code)
+    codes = tmp_codes
+
+
+    positiondf = positiondf[codes]
+
+
+    largecapfitness_result    = largecapfitness(df_nav_fund, capindexdf, 0.5)
+    smallcapfitness_result    = smallcapfitness(df_nav_fund, capindexdf, 0.5)
+    risefitness_result    = risefitness(df_nav_fund, hs300indexdf, 0.5)
+    declinefitness_result     = declinefitness(df_nav_fund, hs300indexdf, 0.5)
+    oscillationfitness_result = oscillationfitness(df_nav_fund, hs300indexdf,  0.5)
+    growthfitness_result      = growthfitness(df_nav_fund, growthvalueindexdf, 0.5)
+    valuefitness_result       = valuefitness(df_nav_fund,  growthvalueindexdf, 0.5)
+    positionprefer_result     = positionprefer(positiondf, 0.5)
+    largecapprefer_result     = largecapprefer(df_nav_fund, largecapindexdf, 0.5)
+    smallcapprefer_result     = smallcapprefer(df_nav_fund, smallcapindexdf, 0.5)
+    growthcapprefer_result    = growthcapprefer(df_nav_fund, growthvalueindexdf, 0.5)
+    valuecapprefer_result     = valuecapprefer(df_nav_fund, growthvalueindexdf, 0.5)
+
+
+    data = {
+        'high_position_prefer': {k:1 for (k, v) in positionprefer_result},
+        # 'low_position_prefer',
+        'largecap_prefer': {k:1 for (k, v) in largecapprefer_result},
+        'smallcap_prefer': {k:1 for (k, v) in smallcapprefer_result},
+        'growth_prefer': {k:1 for (k, v) in growthcapprefer_result},
+        'value_prefer': {k:1 for (k, v) in valuecapprefer_result},
+        'largecap_fitness': {k:1 for (k, v) in largecapfitness_result},
+        'smallcap_fitness': {k:1 for (k, v) in smallcapfitness_result},
+        'rise_fitness': {k:1 for (k, v) in risefitness_result},
+        'decline_fitness': {k:1 for (k, v) in declinefitness_result},
+        'oscillation_fitness': {k:1 for (k, v) in oscillationfitness_result},
+        'growth_fitness': {k:1 for (k, v) in growthfitness_result},
+        'value_fitness': {k:1 for (k, v) in valuecapprefer_result}
+    };
+
+    df_label = pd.DataFrame(data)
+    df_label.index.name = 'code'
+    df_label.to_csv(datapath('stock_blabel_' + daystr + '.csv'))
+    df_label.fillna(0, inplace=True)
+    df_label.to_csv(datapath('stock_label_' + daystr + '.csv'))
+
+    columns = ['largecap', 'smallcap', 'rise', 'decline', 'oscillation', 'growth', 'value']
+    df_result = pd.DataFrame(0, index=df_label.index, columns=columns)
+
+    mask = (df_label['largecap_prefer'] == 1) & (df_label['largecap_fitness'] == 1) 
+    df_result.loc[mask, 'largecap'] = 1
+
+    mask = (df_label['smallcap_prefer'] == 1) & (df_label['smallcap_fitness'] == 1) 
+    df_result.loc[mask, 'smallcap'] = 1
+    
+    mask = (df_label['high_position_prefer'] == 1) & (df_label['rise_fitness'] == 1) 
+    df_result.loc[mask, 'rise'] = 1
+    
+    mask = (df_label['high_position_prefer'] == 0) & (df_label['decline_fitness'] == 1) 
+    df_result.loc[mask, 'decline'] = 1
+    
+    mask = (df_label['oscillation_fitness'] == 1)
+    df_result.loc[mask, 'oscillation'] = 1
+    
+    mask = (df_label['growth_prefer'] == 1) & (df_label['growth_fitness'] == 1) 
+    df_result.loc[mask, 'growth'] = 1
+
+    mask = (df_label['value_prefer'] == 1) & (df_label['value_fitness'] == 1) 
+    df_result.loc[mask, 'value'] = 1
+
+    return df_result
+
 
 def tagbondfund(allocationdata, funddf, indexdf):
 
