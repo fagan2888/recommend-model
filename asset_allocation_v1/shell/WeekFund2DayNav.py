@@ -29,7 +29,11 @@ def week2day(startdate, enddate):
 	money_df = pd.read_csv(datapath('money_fund.csv'), index_col = 'date', parse_dates = ['date'])
 
 
-        index = stock_df.index.union(bond_df.index).union(money_df.index).union(pd.DatetimeIndex([startdate, enddate]))
+        if startdate == enddate:
+                index_tmp = pd.DatetimeIndex([startdate])
+        else:
+                index_tmp = pd.DatetimeIndex([startdate, enddate])
+        index = stock_df.index.union(bond_df.index).union(money_df.index).union(index_tmp)
         
 	df = pd.concat([stock_df, bond_df, money_df], axis = 1, join_axes = [index]).fillna(method='pad')
 
