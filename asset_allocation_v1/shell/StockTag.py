@@ -1004,53 +1004,79 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
 
     final_codes = set()
-    #print
+    fund_tags = {}
+
     #print 'rise'
+    codes = []
     for code in positionprefer_set:
         if code in risefitness_set:
             #print code
             final_codes.add(code)
+            codes.append(code)
+    fund_tags['risefitness'] = codes        
 
+    #print 'decline'
+    codes = []
+    for code in declinefitness_set:
+        if code not in positionprefer_set:
+            #print code
+            final_codes.add(code)
+            codes.append(code)
+    fund_tags['declinefitness'] = codes        
 
-    #print
+    #print 'oscillation'
+    codes = []
+    for code in oscillation_set:
+        final_codes.add(code)
+        codes.append(code)
+    fund_tags['oscillationfitness'] = codes        
+
     #print 'largecap'
+    codes = []
     for code in largecapprefer_set:
         if code in largecapfitness_set:
             #print code
             final_codes.add(code)
+            codes.append(code)
+    fund_tags['largecap'] = codes
 
 
-    #print
+
     #print 'smallcap'
+    codes = []    
     for code in smallcapprefer_set:
         if code in smallcapfitness_set:
             #print code
             final_codes.add(code)
+            codes.append(code)
+    fund_tags['smallcap'] = codes
 
 
-    #print
+
     #print  'growth'
+    codes = []
     for code in growthcapprefer_set:
         if code in growthfitness_set:
             #print code
             final_codes.add(code)
+            codes.append(code)
+    fund_tags['growthfitness'] = codes
 
 
-    #print
     #print 'value'
+    codes = []
     for code in valuecapprefer_set:
         if code in valuefitness_set:
             #print code
             final_codes.add(code)
+            codes.append(code)
+    fund_tags['valuefitness'] = codes
 
-
-    #print
     #print len(final_codes)
     #print final_codes
 
 
     funddf = funddf[list(final_codes)]
-    #print
     #print 'tm'
     #print tmmeasure(funddf, hs300indexdf)
 
@@ -1065,55 +1091,6 @@ def tagstockfund(allocationdata, funddf, indexdf):
     #funddf = funddf[codes]
 
     #funds = set()
-
-    fund_tags = {}
-    #print 'large'
-
-
-    codes = []
-    for code in largecapfitness_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['largecap'] = codes
-
-
-    codes = []
-    for code in smallcapfitness_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['smallcap'] = codes
-
-
-    codes = []
-    for code in risefitness_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['risefitness'] = codes
-
-    codes = []
-    for code in declinefitness_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['declinefitness'] = codes
-
-    codes = []
-    for code in oscillation_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['oscillationfitness'] = codes
-
-    codes = []
-    for code in growthfitness_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['growthfitness'] = codes
-
-    codes = []
-    for code in valuefitness_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['valuefitness'] = codes
-
 
     indicator_datas = []
     indicator_codes = []
@@ -1239,7 +1216,6 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     growthcapprefer_result    = growthcapprefer(df_nav_fund, growthvalueindexdf, 0.5)
     valuecapprefer_result     = valuecapprefer(df_nav_fund, growthvalueindexdf, 0.5)
 
-
     data = {
         'high_position_prefer': {k:1 for (k, v) in positionprefer_result},
         # 'low_position_prefer',
@@ -1253,13 +1229,14 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
         'decline_fitness': {k:1 for (k, v) in declinefitness_result},
         'oscillation_fitness': {k:1 for (k, v) in oscillationfitness_result},
         'growth_fitness': {k:1 for (k, v) in growthfitness_result},
-        'value_fitness': {k:1 for (k, v) in valuecapprefer_result}
+        'value_fitness': {k:1 for (k, v) in valuefitness_result}
     };
 
-    df_label = pd.DataFrame(data)
+    df_label = pd.DataFrame(data, columns=["high_position_prefer","largecap_prefer","smallcap_prefer","growth_prefer","value_prefer","largecap_fitness","smallcap_fitness","rise_fitness","decline_fitness","oscillation_fitness","growth_fitness","value_fitness"])
     df_label.index.name = 'code'
     df_label.to_csv(datapath('stock_blabel_' + daystr + '.csv'))
     df_label.fillna(0, inplace=True)
+    df_label = df_label.applymap(lambda x: int(round(x)))
     df_label.to_csv(datapath('stock_label_' + daystr + '.csv'))
 
     columns = ['largecap', 'smallcap', 'rise', 'decline', 'oscillation', 'growth', 'value']

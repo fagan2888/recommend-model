@@ -123,7 +123,7 @@ def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True)
     df = pd.read_sql(sql, conn, index_col = 'date', parse_dates=['date'])
     conn.close()
 
-    return df.index
+    return df.index.sort_values()
 
 def build_sql_trade_date_weekly(start_date, end_date, include_end_date=True):
     if include_end_date:

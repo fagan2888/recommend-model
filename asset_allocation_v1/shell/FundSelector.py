@@ -12,10 +12,12 @@ import numpy as np
 import pandas as pd
 import Financial as fin
 import FundIndicator as fi
+from Const import datapath
 
 fund_num = Const.fund_num
 
 def select_stock_new(day, df_label, df_indicator):
+    daystr = day.strftime("%Y-%m-%d")
     # df = df_label.merge(df_indicator, left_index=True, right_index=True)
     categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
     
@@ -23,9 +25,10 @@ def select_stock_new(day, df_label, df_indicator):
     for category in categories:
         index_codes = df_label[df_label[category] == 1].index
         df_tmp = df_indicator.loc[index_codes]
-        data[category] = df_tmp.sort_values(by='jensen')[-fund_num:]
+        data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:fund_num]
         
-    df_result = pd.concat(data)   
+    df_result = pd.concat(data, names=['category','code'])
+    df_result.to_csv(datapath('stock_pool_' + daystr + '.csv'))
     
     return df_result
 

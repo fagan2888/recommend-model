@@ -351,7 +351,6 @@ def stockfundfilter(allocationdata, funddf, indexdf):
     for k,v in sharpe_data:
         sharpe_dict[k] = v
 
-
     #scale_set = set()
     #for k, v in scale_data:
     #    scale_set.add(k)

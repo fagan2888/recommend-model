@@ -59,14 +59,13 @@ def label_asset_stock_per_day(day, lookback):
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
     start_date = index.min().strftime("%Y-%m-%d")
-    end_date = day
+    end_date = day.strftime("%Y-%m-%d")
 
     # 加载数据
     df_nav_stock = DBData.stock_fund_value(start_date, end_date)
     df_nav_index = DBData.index_value(start_date, end_date)
 
     df_nav_stock.to_csv(datapath('stock_' + day.strftime('%Y-%m-%d') + '.csv'))
-    
     
     #
     # 根据时间轴进行重采样
@@ -129,7 +128,6 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
     selectcodes = []
 
     print datapath("aa.csv")
-    print len(dates), dates
 
     print range(his_week, len(dates))
     for i in range(his_week, len(dates)):
@@ -158,7 +156,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
             #print
             #print time.time()
-
+            
             label_stock_df.to_csv(datapath('stock_' + dates[i].strftime('%Y-%m-%d') + '.csv'))
 
             codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[Const.hs300_code])
