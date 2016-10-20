@@ -1218,7 +1218,6 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
     data = {
         'high_position_prefer': {k:1 for (k, v) in positionprefer_result},
-        # 'low_position_prefer',
         'largecap_prefer': {k:1 for (k, v) in largecapprefer_result},
         'smallcap_prefer': {k:1 for (k, v) in smallcapprefer_result},
         'growth_prefer': {k:1 for (k, v) in growthcapprefer_result},
@@ -1285,9 +1284,6 @@ def tagbondfund(allocationdata, funddf, indexdf):
     creditbondindexdf           = indexdf[[Const.credictbondindex_code]]
     convertiblebondindexdf      = indexdf[[Const.convertiblebondindex_code]]
 
-    risefitness_result          =  risefitness(funddf, csibondindexdf, 0.5)
-    declinefitness_result       =  declinefitness(funddf, csibondindexdf, 0.5)
-    oscillationfitness_result   =  oscillationfitness(funddf, csibondindexdf, 0.5)
     ratebondprefer_result       =  ratebondprefer(funddf, ratebondindexdf,0.5)
     creditbondprefer_result     =  creditbondprefer(funddf, creditbondindexdf, 0.5)
     convertiblebondprefer_result=  convertiblebondprefer(funddf, convertiblebondindexdf, 0.5)
@@ -1295,29 +1291,6 @@ def tagbondfund(allocationdata, funddf, indexdf):
     #print ratebondprefer_result
     #print creditbondprefer_result
     #print convertiblebondprefer_result
-
-    #print 'rise'
-    risefitness_set = set()
-    for k,v in risefitness_result:
-        risefitness_set.add(k)
-        #print k, v
-
-    #print
-    declinefitness_set = set()
-    #print 'decline'
-    for k,v in declinefitness_result:
-        declinefitness_set.add(k)
-        #print k, v
-
-    #print
-
-    #print 'oscillation'
-    oscillationfitness_set = set()
-    for k,v in oscillationfitness_result:
-        oscillationfitness_set.add(k)
-        #print k, v
-    #print
-
 
     #print 'ratebondprefer'
     ratebondprefer_set = set()
@@ -1334,22 +1307,10 @@ def tagbondfund(allocationdata, funddf, indexdf):
     for k,v in convertiblebondprefer_result:
         convertiblebondprefer_set.add(k)
 
-    #print risefitness_set
-    #print declinefitness_set
-    #print oscillationfitness_set
     #print creditbondprefer_set
     #print convertiblebondprefer_set
 
     final_codes = set()
-
-    for code in risefitness_set:
-        final_codes.add(code)
-
-    for code in declinefitness_set:
-        final_codes.add(code)
-
-    for code in oscillationfitness_set:
-        final_codes.add(code)
 
     for code in ratebondprefer_set:
         final_codes.add(code)
@@ -1361,25 +1322,6 @@ def tagbondfund(allocationdata, funddf, indexdf):
         final_codes.add(code)
 
     fund_tags = {}
-
-
-    codes = []
-    for code in risefitness_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['risefitness'] = codes
-
-    codes = []
-    for code in declinefitness_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['declinefitness'] = codes
-
-    codes = []
-    for code in oscillationfitness_set:
-        if code in final_codes:
-            codes.append(code)
-    fund_tags['oscillationfitness'] = codes
 
     codes = []
     for code in ratebondprefer_set:
@@ -1435,6 +1377,37 @@ def tagbondfund(allocationdata, funddf, indexdf):
     allocationdata.bond_fund_label[end_date] = indicator_df
 
     return list(final_codes), fund_tags
+
+def tag_bond_fund_new(day, df_nav_fund, df_nav_index):
+    daystr = day.strftime("%Y-%m-%d")
+
+    # csibondindexdf              = indexdf[[Const.csibondindex_code]]
+
+    ratebondindexdf             = df_nav_index[[Const.ratebondindex_code]]
+    creditbondindexdf           = df_nav_index[[Const.credictbondindex_code]]
+    convertiblebondindexdf      = df_nav_index[[Const.convertiblebondindex_code]]
+
+    ratebondprefer_result       =  ratebondprefer(df_nav_fund, ratebondindexdf,0.5)
+    creditbondprefer_result     =  creditbondprefer(df_nav_fund, creditbondindexdf, 0.5)
+    convertiblebondprefer_result=  convertiblebondprefer(df_nav_fund, convertiblebondindexdf, 0.5)
+
+    data = {
+        'ratebond': {k:1 for (k, v) in ratebondprefer_result},
+        'creditbond': {k:1 for (k, v) in creditbondprefer_result},
+        'convertiblebond': {k:1 for (k, v) in convertiblebondprefer_result},
+    };
+
+    columns=["ratebond","creditbond", "convertiblebond"]
+    
+    df_label = pd.DataFrame(data, columns=columns)
+    df_label.index.name = 'code'
+    df_label.to_csv(datapath('bond_blabel_' + daystr + '.csv'))
+    df_label.fillna(0, inplace=True)
+    df_label = df_label.applymap(lambda x: int(round(x)))
+    df_label.to_csv(datapath('bond_label_' + daystr + '.csv'))
+
+    return df_label
+
 
 
 if __name__ == '__main__':

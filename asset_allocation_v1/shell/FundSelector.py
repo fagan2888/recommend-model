@@ -121,24 +121,33 @@ def select_stock(funddf, fund_tags, indexdf):
     return codes, tag
 
 
+def select_bond_new(day, df_label, df_indicator):
+    daystr = day.strftime("%Y-%m-%d")
+    # df = df_label.merge(df_indicator, left_index=True, right_index=True)
+    categories = ['ratebond','creditbond','convertiblebond']
+    
+    data = {}
+    for category in categories:
+        index_codes = df_label[df_label[category] == 1].index
+        df_tmp = df_indicator.loc[index_codes]
+        data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:fund_num]
+        
+    df_result = pd.concat(data, names=['category','code'])
+    df_result.to_csv(datapath('bond_pool_' + daystr + '.csv'))
+    
+    return df_result
+
 def select_bond(funddf, fund_tags, indexdf):
 
     ratebond_codes             = fund_tags['ratebond']
     credit_codes               = fund_tags['creditbond']
     convertible_codes          = fund_tags['convertiblebond']
 
-
-    ratebond_codes             = fund_tags['ratebond']
-    credit_codes               = fund_tags['creditbond']
-    convertible_codes          = fund_tags['convertiblebond']
-
-
     #fund_sharpe  = fi.fund_sharp_annual(funddf)
     fund_sharpe  = fi.fund_jensen(funddf, indexdf)
     codes = []
     tag   = {}
     for i in range(0, len(fund_sharpe)):
-
         code = fund_sharpe[i][0]
 
     codes = []

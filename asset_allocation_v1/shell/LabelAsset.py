@@ -41,17 +41,18 @@ def label_asset(start_date, end_date=None, lookback=52, adjust_period=26):
     #
     # 计算每个调仓点的最新配置
     #
-    data = {}
+    data_stock = {}
+    data_bond = {}
     for day in adjust_index:
         # 股票标签
-        data[day] = label_asset_stock_per_day(day, lookback)
+        # data_stock[day] = label_asset_stock_per_day(day, lookback)
+        data_bond[day] = label_asset_bond_per_day(day, lookback)
         sys.exit(0)
         
     df_result = pd.concat(data)
 
     print df_result
 
-    
     return df_result
 
 def label_asset_stock_per_day(day, lookback):
@@ -97,7 +98,51 @@ def label_asset_stock_per_day(day, lookback):
     df_stock_fund = FundSelector.select_stock_new(day, df_label, df_indicator)
 
     return df_stock_fund
+
+def label_asset_bond_per_day(day, lookback):
+    # 加载时间轴数据
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+
+    start_date = index.min().strftime("%Y-%m-%d")
+    end_date = day.strftime("%Y-%m-%d")
+
+    # 加载数据
+    df_nav_bond = DBData.bond_fund_value(start_date, end_date)
+    df_nav_index = DBData.index_value(start_date, end_date)
+
+    df_nav_bond.to_csv(datapath('bond_' + day.strftime('%Y-%m-%d') + '.csv'))
     
+    #
+    # 根据时间轴进行重采样
+    #
+    df_nav_bond = df_nav_bond.reindex(index, method='pad')
+    df_nav_index = df_nav_index.reindex(index, method='pad')
+
+    # #
+    # # 计算涨跌幅
+    # #
+    # df_inc_bond = df_nav_bond.pct_change().fillna(0.0)
+    # df_inc_index = df_nav_index.pct_change().fillna(0.0)
+
+    #
+    # 基于测度筛选基金
+    #
+    df_indicator = FundFilter.bond_fund_filter_new(
+        day, df_nav_bond, df_nav_index[Const.csibondindex_code])
+
+    #
+    # 打标签确定所有备选基金
+    #
+    df_nav_indicator = df_nav_bond[df_indicator.index]
+    df_label = ST.tag_bond_fund_new(day, df_nav_indicator, df_nav_index)
+
+    #
+    # 选择基金
+    #
+    df_bond_fund = FundSelector.select_bond_new(day, df_label, df_indicator)
+
+    return df_bond_fund
+
 
 def mean_r(d, funddfr, codes):
     r   = 0.0
