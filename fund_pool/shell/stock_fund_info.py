@@ -63,7 +63,9 @@ if __name__ == '__main__':
     managersta_df = pd.read_sql(sql, conn)
     #print managersta_df
 
-    sql = ''
+    sql = 'select * from TQ_FD_DERIVEDN'
+    df  = pd.read_sql(sql, conn)
+    print df
     #mgperformance_df= mgperformance_df.loc[fund_info_df.index]
 
     #df = pd.concat([fund_info_df, mgperformance_df])
