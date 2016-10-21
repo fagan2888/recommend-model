@@ -340,6 +340,8 @@ def bond_day_fund_value(start_date, end_date):
 
     # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010301%%' or b.wf_type like '2001010302%%'  or b.wf_type like '2001010305%%') and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010301%%' and wf_type not like '2001010302%%' and wf_type not like '2001010305%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
+    print sql
+    
     conn  = MySQLdb.connect(**config.db_base)
     df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
     conn.close()
@@ -491,9 +493,8 @@ def index_value(start_date, end_date):
     # 数据.
     #
     date_sql = build_sql_trade_date_weekly(start_date, end_date)
-    #
-    #
 
+    sql = "SELECT ra_date as date, ra_index_code, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date ORDER BY ra_date" % (date_sql)
     
     # sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
 

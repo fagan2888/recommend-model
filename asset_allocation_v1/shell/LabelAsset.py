@@ -25,6 +25,12 @@ from Const import datapath
 from dateutil.parser import parse
 
 def label_asset(start_date, end_date=None, lookback=52, adjust_period=26):
+    '''perform fund tagging and calc asset nav
+    '''
+    label_asset_tag(start_date, end_date, lookback, adjust_period)
+    label_asset_nav(start_date, end_date)
+
+def label_asset_tag(start_date, end_date=None, lookback=52, adjust_period=26):
     '''perform asset allocation with constant-risk + high_low model.
     '''
     # 加载时间轴数据
@@ -52,21 +58,34 @@ def label_asset(start_date, end_date=None, lookback=52, adjust_period=26):
         data_other[day] = label_asset_other_per_day(day, lookback)
         
     df_stock = pd.concat(data_stock, names=['date', 'category', 'code'])
-    df_stock.to_csv(datapath('stock_fund_new.csv'))
-
     df_bond = pd.concat(data_bond, names=['date', 'category', 'code'])
-    df_bond.to_csv(datapath('bond_fund_new.csv'))
-                   
     df_money = pd.concat(data_money, names=['date', 'category', 'code'])
-    df_money.to_csv(datapath('money_fund_new.csv'))
-                   
     df_other = pd.concat(data_other, names=['date', 'category', 'code'])
-    df_money.to_csv(datapath('other_fund_new.csv'))
 
     df_result = pd.concat([df_stock, df_bond, df_money, df_other])
     df_result = df_result.swaplevel(0, 1)
     df_result.sort_index(inplace=True)
     df_result.to_csv(datapath('fund_pool.csv'))
+
+    #
+    # 兼容老版本的基金池
+    #
+    fund_pool_convert_to_old(df_stock, datapath('stock_fund.csv'))
+    fund_pool_convert_to_old(df_bond, datapath('bond_fund.csv'))
+    fund_pool_convert_to_old(df_money, datapath('money_fund.csv'))
+    fund_pool_convert_to_old(df_other, datapath('other_fund.csv'))
+
+def fund_pool_convert_to_old(df, path):
+    df.reset_index(2, inplace=True)
+    df = df.swaplevel(0, 1)
+    data = {}
+    for category in df.index.levels[0]:
+        sr_category = df.loc[category]['code']
+        data[category] = sr_category.groupby(level=0).apply(lambda x: list(x))
+
+    df_result = pd.DataFrame(data)
+    df_result.to_csv(path)
+
 
 def label_asset_nav(start_date, end_date):
     df_pool = pd.read_csv(datapath('fund_pool.csv'),  index_col=['category', 'date', 'code'], parse_dates=['date'])
@@ -85,9 +104,9 @@ def label_asset_nav(start_date, end_date):
         # 加载各个基金的日净值数据
         #
         if category in ['GLNC', 'HSCI.HI', 'SP500.SPI']:
-            df_nav_fund = db_index_value_daily(start_date, end_date, df_position.columns)
+            df_nav_fund = DBData.db_index_value_daily(start_date, end_date, df_position.columns)
         else:
-            df_nav_fund = db_fund_value_daily(start_date, end_date, df_position.columns)
+            df_nav_fund = DBData.db_fund_value_daily(start_date, end_date, df_position.columns)
         df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
         #
         # 计算组合净值增长率
@@ -98,7 +117,7 @@ def label_asset_nav(start_date, end_date):
         data[category] = df_nav_portfolio['portfolio']
 
     df_result = pd.DataFrame(data)
-    df_result.to_csv(datapath('label_asset_nav.csv'))
+    df_result.to_csv(datapath('labelasset.csv'))
 
     return df_result
         

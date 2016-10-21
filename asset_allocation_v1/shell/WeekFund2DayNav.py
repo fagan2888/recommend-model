@@ -19,14 +19,16 @@ def codes_r(d, dfr, codes):
 	cs = pattern.findall(codes)
 	r = 0.0
 	for code in cs:
-		r = r + dfr.loc[d, code] / len(cs)
+                if code in dfr.columns:
+                        r = r + dfr.loc[d, code] / len(cs)
+                        
 	return r
 
 
 def week2day(startdate, enddate):
 	stock_df = pd.read_csv(datapath('stock_fund.csv'), index_col = 'date', parse_dates = ['date'])
 	bond_df  = pd.read_csv(datapath('bond_fund.csv'),  index_col = 'date', parse_dates = ['date'])
-	money_df = pd.read_csv(datapath('money_fund.csv'), index_col = 'date', parse_dates = ['date'])
+	money_df = pd.read_csv(datapath('money_fund.csv'), index_col = 'date', parse_dates = ['date'], dtype={'money':str})
 
 
         if startdate == enddate:
@@ -73,14 +75,13 @@ def week2day(startdate, enddate):
 		creditbond_code  = df.loc[start_date,'creditbond']
 		convertiblebond_code = df.loc[start_date,'convertiblebond']
 
-		#money_code       = money_df.loc[start_date, 'money']
-		money_code       = "%06d" % df.loc[start_date, 'money']
+		money_code       = df.loc[start_date, 'money']
+		#money_code       = "%06d" % df.loc[start_date, 'money']
 
 
 		sp500_code       = 'SP500.SPI'
 		gold_code        = 'GLNC'
 		hs_code          = 'HSCI.HI'
-
 
 		for tmp_d in stock_value_dfr.index:
 
@@ -98,7 +99,7 @@ def week2day(startdate, enddate):
 			r.append(codes_r(tmp_d, bond_value_dfr, creditbond_code))
 			r.append(codes_r(tmp_d, bond_value_dfr, convertiblebond_code))
 
-			r.append(money_value_dfr.loc[tmp_d, money_code])
+			r.append(codes_r(tmp_d, money_value_dfr, money_code))
 
 			r.append(index_value_dfr.loc[tmp_d, sp500_code])
 			r.append(index_value_dfr.loc[tmp_d, gold_code])
