@@ -529,6 +529,9 @@ def bondfundfilter(allocationdata, funddf, indexdf):
     jensen_measure = jensenmeasure(funddf, indexdf, rf)
     jensen_data    = ratio_filter(jensen_measure, 0.5)
     #jensen_data    = sf.jensenfilter(funddf, indexdf, rf, 1.0)
+    # print "jenson[000024]", jensen_measure['000024']
+    # print funddf['000024'],
+    # print indexdf
 
     #按照索提诺比率过滤
     sortino_measure = sortinomeasure(funddf, rf)
@@ -709,4 +712,37 @@ def bond_fund_filter_new(day, df_nav_fund, df_nav_index):
     df_result.to_csv(datapath('bond_indicator_selected_' + daystr + '.csv'), columns=columns)
 
     return df_result
+
+def money_fund_filter_new(day, df_nav_fund):
+    daystr = day.strftime("%Y-%m-%d")
+
+    sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
+    # sharpe_dict = {}
+    # for k,v in sharpe_data:
+    #     sharpe_dict[k] = v
+
+    columns=['sharpe']
+    df_indicator = pd.DataFrame({
+        'sharpe': {k:v for (k, v) in  sharpe_data},
+    });
+
+    df_indicator.index.name = 'code'
+    df_indicator.to_csv(datapath('money_indicator_' + daystr + '.csv'), columns=columns)
+
+    return df_indicator
+
+def other_fund_filter_new(day, df_nav_fund):
+    daystr = day.strftime("%Y-%m-%d")
+
+    sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
+
+    columns=['sharpe']
+    df_indicator = pd.DataFrame({
+        'sharpe': {k:v for (k, v) in  sharpe_data},
+    });
+
+    df_indicator.index.name = 'code'
+    df_indicator.to_csv(datapath('other_indicator_' + daystr + '.csv'), columns=columns)
+
+    return df_indicator
 

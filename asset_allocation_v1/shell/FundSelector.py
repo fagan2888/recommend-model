@@ -188,11 +188,31 @@ def select_bond(funddf, fund_tags, indexdf):
 
     return codes, tag
 
-
+def select_money_new(day, df_indicator):
+    daystr = day.strftime("%Y-%m-%d")
+    # df = df_label.merge(df_indicator, left_index=True, right_index=True)
+    categories = ['money']
+    
+    data = {}
+    for category in categories:
+        data[category] = df_indicator.sort_values(by='sharpe', ascending=False)[:1]
+        
+    df_result = pd.concat(data, names=['category','code'])
+    df_result.to_csv(datapath('money_pool_' + daystr + '.csv'))
+    
+    return df_result
 
 def select_money(funddf):
 
+    day = funddf.index.max()
+    daystr = day.strftime("%Y-%m-%d")
+    
     fund_sharpe  = fi.fund_sharp_annual(funddf)
+    print fund_sharpe
+    df = pd.DataFrame(fund_sharpe, columns=['code', 'sharpe'])
+    df.set_index('code', inplace=True)
+    df.to_csv(datapath('money_indicator_' + daystr + '.csv'))
+    
     codes = []
     tag   = {}
     tag['money'] = fund_sharpe[0][0]
@@ -201,3 +221,16 @@ def select_money(funddf):
     #codes.append(fund_sharpe[0][0])
 
     return codes, tag
+
+def select_other_new(day, df_indicator):
+    daystr = day.strftime("%Y-%m-%d")
+    categories = ['SP500.SPI','GLNC','HSCI.HI']
+    
+    data = {}
+    for category in categories:
+        data[category] = df_indicator.loc[[category]]
+        
+    df_result = pd.concat(data, names=['category','code'])
+    df_result.to_csv(datapath('other_pool_' + daystr + '.csv'))
+    
+    return df_result

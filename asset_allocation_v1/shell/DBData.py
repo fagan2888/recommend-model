@@ -136,6 +136,53 @@ def build_sql_trade_date_weekly(start_date, end_date, include_end_date=True):
 def build_sql_trade_date_daily(start_date, end_date):
     return "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s'" % (start_date, end_date);
 
+def db_fund_value(start_date, end_date, codes=None):          
+    #
+    # 按照周收盘取净值
+    #
+    date_sql = build_sql_trade_date_weekly(start_date, end_date)
+    if codes is not None:
+        #
+        # 按照代码筛选基金
+        #
+        code_str = ','.join([repr(e) for e in codes])
+        code_sql = "SELECT globalid FROM ra_fund WHERE ra_code IN (%s)" % (code_str);
+        sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.globalid AND A.ra_date = E.td_date ORDER BY A.ra_date" % (code_sql, date_sql)
+    else:
+        sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) E WHERE A.ra_date = E.td_date ORDER BY A.ra_date" % (date_sql)
+        
+    print "db_fund_value", sql
+    
+    conn  = MySQLdb.connect(**config.db_base)
+    df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
+
+def db_fund_value_daily(start_date, end_date, codes=None):          
+    #
+    # 按照周收盘取净值
+    #
+    date_sql = build_sql_trade_date_daily(start_date, end_date)
+    if codes is not None:
+        #
+        # 按照代码筛选基金
+        #
+        code_str = ','.join([repr(e) for e in codes])
+        code_sql = "SELECT globalid FROM ra_fund WHERE ra_code IN (%s)" % (code_str);
+        sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.globalid AND A.ra_date = E.td_date ORDER BY A.ra_date" % (code_sql, date_sql)
+    else:
+        sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) E WHERE A.ra_date = E.td_date ORDER BY A.ra_date" % (date_sql)
+        
+    print "db_fund_value", sql
+    
+    conn  = MySQLdb.connect(**config.db_base)
+    df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
 
 def stock_fund_value(start_date, end_date):
 
@@ -388,12 +435,56 @@ def money_day_fund_value(start_date, end_date):
     return df
 
 
+def db_index_value(start_date, end_date, codes=None):          
+    #
+    # 按照周收盘取净值
+    #
+    date_sql = build_sql_trade_date_weekly(start_date, end_date)
+    if codes is not None:
+        #
+        # 按照代码筛选基金
+        #
+        code_str = ','.join([repr(e) for e in codes])
+        code_sql = "SELECT globalid FROM ra_index WHERE ra_code IN (%s)" % (code_str);
+        sql = "SELECT A.ra_date as date, A.ra_index_code as code, A.ra_nav FROM ra_index_nav A, (%s) D, (%s) E WHERE A.ra_index_id = D.globalid AND A.ra_date = E.td_date ORDER BY A.ra_date" % (code_sql, date_sql)
+    else:
+        sql = "SELECT ra_date as date, ra_index_code, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date ORDER BY ra_date" % (date_sql)
+        
+    print "db_index_value", sql
+    
+    conn  = MySQLdb.connect(**config.db_base)
+    df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
+
+def db_index_value_daily(start_date, end_date, codes=None):          
+    #
+    # 按照周收盘取净值
+    #
+    date_sql = build_sql_trade_date_daily(start_date, end_date)
+    if codes is not None:
+        #
+        # 按照代码筛选基金
+        #
+        code_str = ','.join([repr(e) for e in codes])
+        code_sql = "SELECT globalid FROM ra_index WHERE ra_code IN (%s)" % (code_str);
+        sql = "SELECT A.ra_date as date, A.ra_index_code as code, A.ra_nav FROM ra_index_nav A, (%s) D, (%s) E WHERE A.ra_index_id = D.globalid AND A.ra_date = E.td_date ORDER BY A.ra_date" % (code_sql, date_sql)
+    else:
+        sql = "SELECT ra_date as date, ra_index_code, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date ORDER BY ra_date" % (date_sql)
+        
+    print "db_index_value", sql
+    
+    conn  = MySQLdb.connect(**config.db_base)
+    df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
 
 
 def index_value(start_date, end_date):
-
-    dates = trade_date_index(start_date, end_date)
-
     #
     # [XXX] 本来想按照周收盘取净值数据, 但实践中发现周收盘存在美股和A
     # 股节假日对其的问题. 实践证明, 最好的方式是按照自然日的周五来对齐
@@ -402,7 +493,7 @@ def index_value(start_date, end_date):
     date_sql = build_sql_trade_date_weekly(start_date, end_date)
     #
     #
-    sql = "SELECT ra_date as date, ra_index_code, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date ORDER BY ra_date" % (date_sql)
+
     
     # sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
 
@@ -465,6 +556,8 @@ def other_fund_value(start_date, end_date):
     sql = "SELECT ra_date as date, ra_index_code, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date ORDER BY ra_date" % (date_sql)
 
     # sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
+
+    print sql
 
     conn  = MySQLdb.connect(**config.db_base)
     df = pd.read_sql(sql, conn, index_col = ['date', 'ra_index_code'], parse_dates=['date'])
@@ -589,6 +682,18 @@ def scale():
 
 if __name__ == '__main__':
 
+    sql = "SELECT ra_date, ra_code, ra_nav_adjusted FROM `ra_fund_nav` JOIN trade_dates ON ra_date = td_date WHERE ra_code IN ('206018', '100058', '000509') AND ra_date >= '2015-10-20' ORDER BY ra_date"
+
+    print "stock_fund_value", sql
+    
+    conn  = MySQLdb.connect(**config.db_base)
+    df = pd.read_sql(sql, conn, index_col = ['ra_date', 'ra_code'], parse_dates=['ra_date'])
+    conn.close()
+
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+    
+    df.to_csv("~/tmp.csv", columns=['206018', '100058', '000509'])
     #df = stock_fund_value('2014-01-03', '2016-06-03')
     #df = bond_fund_value('2014-01-03', '2016-06-03')
     #df = money_fund_value('2015-01-03', '2016-06-03')
@@ -599,5 +704,5 @@ if __name__ == '__main__':
     #df  = bond_day_fund_value('2014-01-03', '2016-06-03')
     #df  = bond_fund_value('2014-01-01', '2016-07-19')
     #df.to_csv(datapath('bond.csv'))
-    print all_trade_dates()
-    print trade_date_index('2014-01-03', '2016-06-03')
+    #print all_trade_dates()
+    #print trade_date_index('2014-01-03', '2016-06-03')
