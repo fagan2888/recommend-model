@@ -24,26 +24,12 @@ import DFUtil
 from Const import datapath
 from dateutil.parser import parse
 
-def label_asset(start_date, end_date=None, lookback=52, adjust_period=26):
-    '''perform fund tagging and calc asset nav
+def label_asset_tag(label_index, lookback=52):
+    '''perform fund tagging along label_index.
     '''
-    label_asset_tag(start_date, end_date, lookback, adjust_period)
-    label_asset_nav(start_date, end_date)
-
-def label_asset_tag(start_date, end_date=None, lookback=52, adjust_period=26):
-    '''perform asset allocation with constant-risk + high_low model.
-    '''
-    # 加载时间轴数据
-    index = DBData.trade_date_index(start_date, end_date=end_date)
-
-    # 根据调整间隔抽取调仓点
-    if adjust_period:
-        adjust_index = index[::adjust_period]
-    else:
-        adjust_index = index
-
-    adjust_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14'])
-
+    
+    # label_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14'])
+    
     #
     # 计算每个调仓点的最新配置
     #
@@ -51,7 +37,7 @@ def label_asset_tag(start_date, end_date=None, lookback=52, adjust_period=26):
     data_bond = {}
     data_money = {}
     data_other = {}
-    for day in adjust_index:
+    for day in label_index:
         data_stock[day] = label_asset_stock_per_day(day, lookback)
         data_bond[day] = label_asset_bond_per_day(day, lookback)
         data_money[day] = label_asset_money_per_day(day, lookback)

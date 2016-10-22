@@ -45,11 +45,11 @@ def week2day(startdate, enddate):
 	r_dates = []
 
 	for start_date, end_date in zip(index[:-1], index[1:]):
+                print "week to day [%s, %s]" % (start_date, end_date)
 
 		stock_value_df   = DBData.stock_day_fund_value(start_date, end_date)
 		bond_value_df    = DBData.bond_day_fund_value(start_date, end_date)
 		money_value_df   = DBData.money_day_fund_value(start_date, end_date)
-                print start_date, end_date
 		index_value_df   = DBData.index_day_value(start_date, end_date)
 
                 if 'GLNC' not in index_value_df.columns:
@@ -86,7 +86,6 @@ def week2day(startdate, enddate):
 		for tmp_d in stock_value_dfr.index:
 
 			r = []
-
 			r.append(codes_r(tmp_d, stock_value_dfr, large_code))
 			r.append(codes_r(tmp_d, stock_value_dfr, small_code))
 			r.append(codes_r(tmp_d, stock_value_dfr, rise_code))
@@ -109,7 +108,7 @@ def week2day(startdate, enddate):
 
 			tmp_d = datetime.datetime.strftime(tmp_d, '%Y-%m-%d')
 			r_dates.append(datetime.datetime.strptime(tmp_d, '%Y-%m-%d'))
-			print tmp_d ,r
+			#print tmp_d ,r
 
 
 	df = pd.DataFrame(rs, index = r_dates, columns = ['largecap','smallcap','rise', 'oscillation', 'decline', 'growth','value', 'ratebond', 'creditbond','convertiblebond','money', 'SP500.SPI', 'GLNC','HSCI.HI'])

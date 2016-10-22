@@ -48,15 +48,8 @@ def periodstdmean(df, period):
 
 
 
-def fixrisk(allocationdata):
+def fixrisk(interval=20, short_period=20, long_period=252):
 
-    
-    interval     = 20
-    short_period = 20
-    long_period  = 252
-
-
-    # alldf = allocationdata.label_asset_df
     alldf = pd.read_csv(datapath('labelasset.csv'), index_col='date', parse_dates=['date'])
 
 
@@ -140,10 +133,7 @@ def fixrisk(allocationdata):
 
     pdf = pd.DataFrame(np.matrix(position_datas).T, index = position_dates, columns = alldf.columns)
     pdf.index.name = 'date'
-    pdf.to_csv('./tmp/equalriskassetratio.csv')
-
-    allocationdata.equal_risk_asset_ratio_df = pdf
-
+    pdf.to_csv(datapath('equalriskassetratio.csv'))
 
 if __name__ == '__main__':
 

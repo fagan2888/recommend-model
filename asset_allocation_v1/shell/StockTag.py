@@ -3,6 +3,7 @@
 
 import os
 import sys
+import math
 sys.path.append("windshell")
 import Data
 import Const
@@ -76,7 +77,7 @@ def largecapfitness(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_fitness) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
 
@@ -144,7 +145,7 @@ def smallcapfitness(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_fitness) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
 
@@ -205,7 +206,7 @@ def risefitness(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_fitness) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
 
@@ -265,7 +266,7 @@ def declinefitness(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_fitness) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
 
@@ -325,7 +326,7 @@ def oscillationfitness(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_fitness) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
 
@@ -392,7 +393,7 @@ def growthfitness(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_fitness) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
 
@@ -458,7 +459,7 @@ def valuefitness(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_fitness) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
 
@@ -482,7 +483,7 @@ def positionprefer(funddf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_position) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_position) * ratio))):
         result.append(sorted_position[i])
 
 
@@ -524,7 +525,7 @@ def largecapprefer(funddf, indexdf, ratio):
     sorted_largecapprefer = sorted_x
 
     result = []
-    for i in range(0, (int)(len(sorted_largecapprefer) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_largecapprefer) * ratio))):
         result.append(sorted_largecapprefer[i])
 
     return result
@@ -566,7 +567,7 @@ def smallcapprefer(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_smallcapprefer) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_smallcapprefer) * ratio))):
         result.append(sorted_smallcapprefer[i])
 
     return result
@@ -612,7 +613,7 @@ def growthcapprefer(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_growthcapprefer) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_growthcapprefer) * ratio))):
         result.append(sorted_growthcapprefer[i])
 
     return result
@@ -662,7 +663,7 @@ def valuecapprefer(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_valuecapprefer) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_valuecapprefer) * ratio))):
         result.append(sorted_valuecapprefer[i])
 
 
@@ -712,7 +713,7 @@ def ratebondprefer(funddf, indexdf, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_ratebondprefer) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_ratebondprefer) * ratio))):
         result.append(sorted_ratebondprefer[i])
 
     return result
@@ -756,7 +757,7 @@ def creditbondprefer(funddf, indexdf, ratio):
     sorted_creditbondprefer = sorted_x
 
     result = []
-    for i in range(0, (int)(len(sorted_creditbondprefer) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_creditbondprefer) * ratio))):
         result.append(sorted_creditbondprefer[i])
 
     return result
@@ -799,7 +800,7 @@ def convertiblebondprefer(funddf, indexdf, ratio):
     sorted_convertiblebondprefer = sorted_x
 
     result = []
-    for i in range(0, (int)(len(sorted_convertiblebondprefer) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_convertiblebondprefer) * ratio))):
         result.append(sorted_convertiblebondprefer[i])
 
     return result
