@@ -97,14 +97,18 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
     # 根据调整间隔抽取调仓点
     if adjust_period:
         adjust_index = index[::adjust_period]
+        if index.max() not in adjust_index:
+            adjust_index = adjust_index.insert(len(adjust_index), index.max())
     else:
         adjust_index = index
+    print "xxxxx", adjust_index
     #
     # 计算每个调仓点的最新配置
     #
     df_high = pd.DataFrame(index=pd.Index([], name='date'), columns=get_columns('high'))
     df_low =  pd.DataFrame(index=pd.Index([], name='date'), columns=get_columns('low'))
     for day in adjust_index:
+        print "markowitz:", day
         # 高风险资产配置
         df_high.loc[day] = asset_alloc_high_risk_per_day(day, lookback, columns=get_columns('high'))
         # 底风险资产配置

@@ -67,7 +67,7 @@ def risk(ctx, datadir, output, startdate, enddate, label_asset, week_to_day):
     allocationdata.fixed_risk_asset_lookback             = 52
     allocationdata.fixed_risk_asset_risk_adjust_period   = 5
     allocationdata.allocation_lookback                   = 26
-    allocationdata.allocation_adjust_period              = 13
+    allocationdata.allocation_adjust_period              = 4
 
     # 根据调整间隔抽取调仓点
     label_period = allocationdata.fund_measure_adjust_period
@@ -126,7 +126,7 @@ def risk(ctx, datadir, output, startdate, enddate, label_asset, week_to_day):
 
     print "calc high low risk model ..."
     # RiskHighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
-    ModelHighLowRisk.asset_alloc_high_low(allocationdata.start_date, allocationdata.end_date, lookback=26, adjust_period=13)
+    ModelHighLowRisk.asset_alloc_high_low(allocationdata.start_date, allocationdata.end_date, lookback=26, adjust_period=4)
     print "calc high low risk model finished"
 
     print "output category postion ...."

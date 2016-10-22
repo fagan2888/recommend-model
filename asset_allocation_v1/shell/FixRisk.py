@@ -61,21 +61,22 @@ def fixrisk(interval=20, short_period=20, long_period=252):
         df = alldf[[code]]
 
 
-        ma5_df  = pd.rolling_mean(df, 5)
+        ma5_df  = df.rolling(window=5).mean()
         ma5_dfr = ma5_df.pct_change().fillna(0.0)
-        ma10_df  = pd.rolling_mean(df, 10)
+        ma10_df  = df.rolling(window=10).mean()
         ma10_dfr = ma10_df.pct_change().fillna(0.0)
-        ma20_df  = pd.rolling_mean(df, 20)
+        ma20_df  = df.rolling(window=20).mean()
         ma20_dfr = ma20_df.pct_change().fillna(0.0)
-        ma60_df  = pd.rolling_mean(df, 60)
-        ma60_dfr = ma20_df.pct_change().fillna(0.0)
-
+        ma60_df  = df.rolling(window=60).mean()
+        ma60_dfr = ma60_df.pct_change().fillna(0.0)
 
         dfr = df.pct_change().fillna(0.0)
 
         interval_df = intervalreturn(df, interval)
-        periodstdmean_df = periodstdmean(interval_df, short_period)
-
+        periodstdmean_df = pd.DataFrame({
+            'mean': interval_df['nav'].rolling(window=short_period).mean(),
+            'std': interval_df['nav'].rolling(window=short_period).std(),
+        }, columns=['std', 'mean'])
 
         dates = periodstdmean_df.index
 
@@ -83,15 +84,15 @@ def fixrisk(interval=20, short_period=20, long_period=252):
         pds   = [dates[long_period]]
 
 
-        for i in range(long_period, len(dates) - 2):
+        for i in range(long_period, len(dates) - 1):
 
             d = dates[i]
 
             risk    = periodstdmean_df.iloc[i, 0]
             r       = periodstdmean_df.iloc[i, 1]
 
-            risks   = periodstdmean_df.iloc[i - long_period : i + 1 , 0]
-            rs      = periodstdmean_df.iloc[i - long_period : i + 1 , 1]
+            risks   = periodstdmean_df.iloc[i - long_period : i, 0]
+            rs      = periodstdmean_df.iloc[i - long_period : i, 1]
 
             rerisks  = risks
             rers     = rs
