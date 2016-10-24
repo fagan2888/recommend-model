@@ -101,7 +101,7 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
             adjust_index = adjust_index.insert(len(adjust_index), index.max())
     else:
         adjust_index = index
-    print "xxxxx", adjust_index
+
     #
     # 计算每个调仓点的最新配置
     #

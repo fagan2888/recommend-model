@@ -69,7 +69,6 @@ def portfolio_position():
     start = max(df_ratio_highrisk.index.min(), df_ratio_lowrisk.index.min(), df_ratio_equalrisk.index.min())
     
     index = df_ratio_highrisk.index.union(df_ratio_lowrisk.index).union(df_ratio_equalrisk.index)
-    print index
     df_ratio_highrisk = df_ratio_highrisk.reindex(index, method='pad')[start:]
     df_ratio_lowrisk = df_ratio_lowrisk.reindex(index, method='pad')[start:]
     df_ratio_equalrisk = df_ratio_equalrisk.reindex(index, method='pad')[start:]
