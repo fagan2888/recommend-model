@@ -36,9 +36,9 @@ import traceback, code
 @click.option('--start-date', 'startdate', default='2012-07-15', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--label-asset/--no-label-asset', default=True)
-@click.option('--week-to-day/--no-week-to-day', default=True)
+@click.option('--reshape/--no-reshape', default=True)
 @click.pass_context
-def risk(ctx, datadir, output, startdate, enddate, label_asset, week_to_day):
+def risk(ctx, datadir, output, startdate, enddate, label_asset, reshape):
     '''run constant risk model
     '''
     Const.datadir = datadir
@@ -113,20 +113,20 @@ def risk(ctx, datadir, output, startdate, enddate, label_asset, week_to_day):
         LabelAsset.label_asset_tag(label_index, lookback=52)
         LabelAsset.label_asset_nav(nav_start_date, allocationdata.end_date)
 
-    print "calc equal risk ratio ...."
-    if week_to_day:
+    if reshape:
+        print "calc equal risk ratio ...."
         # WeekFund2DayNav.week2day(nav_start_date, allocationdata.end_date)
         FixRisk.fixrisk(interval=20, short_period=20, long_period=252)
-    # EqualRiskAssetRatio.equalriskassetratio(allocationdata.fixed_risk_asset_lookback, allocationdata.fixed_risk_asset_risk_adjust_period)
-    print "calc equal risk ratio finished"
+        # EqualRiskAssetRatio.equalriskassetratio(allocationdata.fixed_risk_asset_lookback, allocationdata.fixed_risk_asset_risk_adjust_period)
+        print "calc equal risk ratio finished"
 
-    print "calc equal risk nav...."
-    EqualRiskAsset.equalriskasset()
-    print "calc equal risk nav finished"
+        print "calc equal risk nav...."
+        EqualRiskAsset.equalriskasset()
+        print "calc equal risk nav finished"
 
     print "calc high low risk model ..."
     # RiskHighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
-    ModelHighLowRisk.asset_alloc_high_low(allocationdata.start_date, allocationdata.end_date, lookback=26, adjust_period=4)
+    ModelHighLowRisk.asset_alloc_high_low(allocationdata.start_date, allocationdata.end_date, lookback=26, adjust_period=1)
     print "calc high low risk model finished"
 
     print "output category postion ...."
@@ -137,5 +137,6 @@ def risk(ctx, datadir, output, startdate, enddate, label_asset, week_to_day):
     GeneralizationPosition.portfolio_simple()
     print "output simple position ok"
 
+    
 
 
