@@ -14,7 +14,7 @@ from datetime import datetime
 import Const
 import FundIndicator as fi
 import pandas as pd
-import AllocationData
+from dateutil.parser import parse
 
 
 from Const import datapath
@@ -270,8 +270,9 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 
     dates = funddf.index.values
     dates.sort()
-    end_date   = dates[-1].strftime('%Y-%m-%d')
-    start_date = dates[0].strftime('%Y-%m-%d')
+    
+    end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
+    start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
     indicator = {}
 
@@ -350,7 +351,6 @@ def stockfundfilter(allocationdata, funddf, indexdf):
     for k,v in sharpe_data:
         sharpe_dict[k] = v
 
-
     #scale_set = set()
     #for k, v in scale_data:
     #    scale_set.add(k)
@@ -428,9 +428,62 @@ def stockfundfilter(allocationdata, funddf, indexdf):
     f.flush()
     f.close()
     '''
-
+    print "aa codes", end_date, codes
 
     return codes, indicator
+
+def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
+    daystr = day.strftime("%Y-%m-%d")
+    #按照jensen测度过滤
+    jensen_measure = jensenmeasure(df_nav_fund, df_nav_index, rf)
+    jensen_data    = ratio_filter(jensen_measure, 0.5)
+    #jensen_data    = sf.jensenfilter(funddf, indexdf, rf, 1.0)
+
+    #按照索提诺比率过滤
+    sortino_measure = sortinomeasure(df_nav_fund, rf)
+    sortino_data    = ratio_filter(sortino_measure, 0.5)
+    #sortino_data   = sf.sortinofilter(funddf, rf, 1.0)
+
+    #按照ppw测度过滤
+    ppw_measure    = ppwmeasure(df_nav_fund, df_nav_index, rf)
+    ppw_data       = ratio_filter(ppw_measure, 0.5)
+
+    #ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 1.0)
+    #print ppw_data
+
+    stability_measure = stabilitymeasure(df_nav_fund)
+    stability_data    = ratio_filter(stability_measure, 2.0 / 3)
+
+    #stability_data = sf.stabilityfilter(funddf, 1.0)
+
+    sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
+
+    df_indicator = pd.DataFrame({
+        'sharpe': {k:v for (k, v) in  sharpe_data},
+        'jensen': jensen_measure,
+        'sortino': sortino_measure,
+        'ppw': ppw_measure,
+        'stability': stability_measure,
+    });
+    
+    columns=['sharpe','jensen','sortino','ppw','stability']
+    df_indicator.index.name = 'code'
+    df_indicator.to_csv(datapath('stock_indicator_' + daystr + '.csv'), columns=columns)
+
+    df_result = pd.DataFrame({
+        'sharpe':{k:v for (k, v) in  sharpe_data},
+        'jensen': {k:v for (k, v) in jensen_data},
+        'sortino': {k:v for (k, v) in sortino_data},
+        'ppw': {k:v for (k, v) in ppw_data},
+        'stability': {k:v for (k, v) in stability_data}
+    }, columns=columns);
+
+    df_result.index.name = 'code'
+    df_result.to_csv(datapath('stock_bindicator_selected_' + daystr + '.csv'));
+    df_result.dropna(inplace=True)
+    df_result.to_csv(datapath('stock_indicator_selected_' + daystr + '.csv'))
+
+    return df_result
 
 
 def bondfundfilter(allocationdata, funddf, indexdf):
@@ -438,8 +491,8 @@ def bondfundfilter(allocationdata, funddf, indexdf):
 
     dates = funddf.index.values
     dates.sort()
-    end_date   = dates[-1].strftime('%Y-%m-%d')
-    start_date = dates[0].strftime('%Y-%m-%d')
+    end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
+    start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
 
     indicator = {}
@@ -476,6 +529,9 @@ def bondfundfilter(allocationdata, funddf, indexdf):
     jensen_measure = jensenmeasure(funddf, indexdf, rf)
     jensen_data    = ratio_filter(jensen_measure, 0.5)
     #jensen_data    = sf.jensenfilter(funddf, indexdf, rf, 1.0)
+    # print "jenson[000024]", jensen_measure['000024']
+    # print funddf['000024'],
+    # print indexdf
 
     #按照索提诺比率过滤
     sortino_measure = sortinomeasure(funddf, rf)
@@ -551,9 +607,6 @@ def bondfundfilter(allocationdata, funddf, indexdf):
         stability_set.add(k)
 
     codes = []
-
-
-
     for code in jensen_set:
         if (code in sortino_set) and (code in ppw_set) and (code in stability_set):
             codes.append(code)
@@ -576,22 +629,18 @@ def bondfundfilter(allocationdata, funddf, indexdf):
 
     for code in indicator_set:
 
-        if (not sharpe_dict.has_key(code)) or (not sortino_dict.has_key(code)):
-            continue
-        if np.isinf(sharpe_dict[code]):
-            continue
-        if np.isinf(sortino_dict[code]):
-            continue
-
         indicator_codes.append(code)
         indicator_datas.append([sharpe_dict.setdefault(code, None), jensen_measure.setdefault(code, None), sortino_measure.setdefault(code, None), ppw_measure.setdefault(code, None), stability_measure.setdefault(code, None)])
 
-
-    indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=['sharpe', 'jensen', 'sortino', 'ppw', 'stability'])
+    columns=['sharpe', 'jensen', 'sortino', 'ppw', 'stability']
+    indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=columns)
     indicator_df.index.name = 'code'
     indicator_df.to_csv(datapath('bond_indicator_' + end_date + '.csv'))
 
 
+    indicator_selected_df = indicator_df.loc[codes]
+    indicator_selected_df.to_csv(datapath('bond_indicator_selected_' + end_date + '.csv'))
+    
     allocationdata.bond_fund_measure[end_date] = indicator_df
 
 
@@ -606,4 +655,94 @@ def bondfundfilter(allocationdata, funddf, indexdf):
 
     return codes, indicator
 
+def bond_fund_filter_new(day, df_nav_fund, df_nav_index):
+    daystr = day.strftime("%Y-%m-%d")
+    #按照jensen测度过滤
+    jensen_measure = jensenmeasure(df_nav_fund, df_nav_index, rf)
+    jensen_data    = ratio_filter(jensen_measure, 0.5)
+    # print "jenson[000024]", jensen_measure['000024']
+    # print df_nav_fund['000024']
+    # print df_nav_index
+
+    #按照索提诺比率过滤
+    sortino_measure = sortinomeasure(df_nav_fund, rf)
+    sortino_data    = ratio_filter(sortino_measure, 0.5)
+    #sortino_data   = sf.sortinofilter(funddf, rf, 1.0)
+
+    #按照ppw测度过滤
+    ppw_measure    = ppwmeasure(df_nav_fund, df_nav_index, rf)
+    ppw_data       = ratio_filter(ppw_measure, 0.5)
+
+    #ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 1.0)
+    #print ppw_data
+
+    stability_measure = stabilitymeasure(df_nav_fund)
+    stability_data    = ratio_filter(stability_measure, 2.0 / 3)
+
+    #stability_data = sf.stabilityfilter(funddf, 1.0)
+
+    sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
+    # sharpe_dict = {}
+    # for k,v in sharpe_data:
+    #     sharpe_dict[k] = v
+
+    columns=['sharpe','jensen','sortino','ppw','stability']
+    df_indicator = pd.DataFrame({
+        'sharpe': {k:v for (k, v) in  sharpe_data},
+        'jensen': jensen_measure,
+        'sortino': sortino_measure,
+        'ppw': ppw_measure,
+        'stability': stability_measure,
+    });
+
+    df_indicator.index.name = 'code'
+    df_indicator.to_csv(datapath('bond_indicator_' + daystr + '.csv'), columns=columns)
+
+    df_result = pd.DataFrame({
+        'sharpe':{k:v for (k, v) in  sharpe_data},
+        'jensen': {k:v for (k, v) in jensen_data},
+        'sortino': {k:v for (k, v) in sortino_data},
+        'ppw': {k:v for (k, v) in ppw_data},
+        'stability': {k:v for (k, v) in stability_data}
+    });
+
+    df_result.index.name = 'code'
+    df_result.to_csv(datapath('bond_bindicator_selected_' + daystr + '.csv'), columns=columns);
+    df_result.dropna(inplace=True)
+    df_result.to_csv(datapath('bond_indicator_selected_' + daystr + '.csv'), columns=columns)
+
+    return df_result
+
+def money_fund_filter_new(day, df_nav_fund):
+    daystr = day.strftime("%Y-%m-%d")
+
+    sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
+    # sharpe_dict = {}
+    # for k,v in sharpe_data:
+    #     sharpe_dict[k] = v
+
+    columns=['sharpe']
+    df_indicator = pd.DataFrame({
+        'sharpe': {k:v for (k, v) in  sharpe_data},
+    });
+
+    df_indicator.index.name = 'code'
+    df_indicator.to_csv(datapath('money_indicator_' + daystr + '.csv'), columns=columns)
+
+    return df_indicator
+
+def other_fund_filter_new(day, df_nav_fund):
+    daystr = day.strftime("%Y-%m-%d")
+
+    sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
+
+    columns=['sharpe']
+    df_indicator = pd.DataFrame({
+        'sharpe': {k:v for (k, v) in  sharpe_data},
+    });
+
+    df_indicator.index.name = 'code'
+    df_indicator.to_csv(datapath('other_indicator_' + daystr + '.csv'), columns=columns)
+
+    return df_indicator
 

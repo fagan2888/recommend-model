@@ -32,7 +32,7 @@ def asset_allocation(allocationdata, uid):
         LabelAsset.labelasset(allocationdata)
         EqualRiskAssetRatio.equalriskassetratio(allocationdata)
         EqualRiskAsset.equalriskasset(allocationdata)
-        HighLowRiskAsset.highlowriskasset(allocationdata)
+        HighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
         DB.fund_measure(allocationdata)
         DB.label_asset(allocationdata)
         DB.asset_allocation(allocationdata)

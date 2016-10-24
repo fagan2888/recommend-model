@@ -12,7 +12,7 @@ import fundindicator as fi
 
 from Const import datapath
 
-dfr         = pd.read_csv(datapath('labelasset.csv'), index_col = 'date', parse_dates = 'date' )
+dfr         = pd.read_csv(datapath('labelasset.csv'), index_col = 'date', parse_dates = ['date'] )
 dates = dfr.index
 
 his_week = 13

@@ -275,7 +275,7 @@ def stock_fund_code():
 def fund_position(start_date, end_date):
 
 
-    positiondf = pd.read_csv(os.path.normpath(datapath( '../csvdata/fund_position.csv')), index_col = 'date' , parse_dates = ['date'])
+    positiondf = pd.read_csv(os.path.normpath(datapath( '../csvdata/fund_position2.csv')), index_col = 'date' , parse_dates = ['date'])
     positiondf = positiondf[ positiondf.index <= datetime.strptime(end_date,'%Y-%m-%d')]
     positiondf = positiondf[ positiondf.index >= datetime.strptime(start_date,'%Y-%m-%d')]
 

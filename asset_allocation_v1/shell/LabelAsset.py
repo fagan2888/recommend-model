@@ -24,6 +24,248 @@ import DFUtil
 from Const import datapath
 from dateutil.parser import parse
 
+def label_asset_tag(label_index, lookback=52):
+    '''perform fund tagging along label_index.
+    '''
+    
+    # label_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14'])
+    
+    #
+    # 计算每个调仓点的最新配置
+    #
+    data_stock = {}
+    data_bond = {}
+    data_money = {}
+    data_other = {}
+    for day in label_index:
+        data_stock[day] = label_asset_stock_per_day(day, lookback)
+        data_bond[day] = label_asset_bond_per_day(day, lookback)
+        data_money[day] = label_asset_money_per_day(day, lookback)
+        data_other[day] = label_asset_other_per_day(day, lookback)
+        
+    df_stock = pd.concat(data_stock, names=['date', 'category', 'code'])
+    df_bond = pd.concat(data_bond, names=['date', 'category', 'code'])
+    df_money = pd.concat(data_money, names=['date', 'category', 'code'])
+    df_other = pd.concat(data_other, names=['date', 'category', 'code'])
+
+    df_result = pd.concat([df_stock, df_bond, df_money, df_other])
+    df_result = df_result.swaplevel(0, 1)
+    df_result.sort_index(inplace=True)
+    df_result.to_csv(datapath('fund_pool.csv'))
+
+    #
+    # 兼容老版本的基金池
+    #
+    fund_pool_convert_to_old(df_stock, datapath('stock_fund.csv'))
+    fund_pool_convert_to_old(df_bond, datapath('bond_fund.csv'))
+    fund_pool_convert_to_old(df_money, datapath('money_fund.csv'))
+    fund_pool_convert_to_old(df_other, datapath('other_fund.csv'))
+
+def fund_pool_convert_to_old(df, path):
+    df.reset_index(2, inplace=True)
+    df = df.swaplevel(0, 1)
+    data = {}
+    for category in df.index.levels[0]:
+        sr_category = df.loc[category]['code']
+        data[category] = sr_category.groupby(level=0).apply(lambda x: list(x))
+
+    df_result = pd.DataFrame(data)
+    df_result.to_csv(path)
+
+
+def label_asset_nav(start_date, end_date):
+    df_pool = pd.read_csv(datapath('fund_pool.csv'),  index_col=['category', 'date', 'code'], parse_dates=['date'])
+    df_pool['ratio'] = 1.0
+
+    data = {}
+    for category in df_pool.index.levels[0]:
+        #
+        # 生成大类的基金仓位配置矩阵
+        #
+        df_pool_category = df_pool.loc[category, ['ratio']]
+        df_position = df_pool_category.groupby(level=0).apply(lambda x: x / len(x))
+        df_position = df_position.unstack(fill_value=0.0)
+        df_position.columns = df_position.columns.droplevel(0)
+        #
+        # 加载各个基金的日净值数据
+        #
+        if category in ['GLNC', 'HSCI.HI', 'SP500.SPI']:
+            df_nav_fund = DBData.db_index_value_daily(start_date, end_date, df_position.columns)
+        else:
+            df_nav_fund = DBData.db_fund_value_daily(start_date, end_date, df_position.columns)
+        df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
+        #
+        # 计算组合净值增长率
+        #
+        df_nav_portfolio = DFUtil.portfolio_nav(df_inc_fund, df_position, result_col='portfolio')
+        df_nav_portfolio.to_csv(datapath('category_nav_' + category + '.csv'))
+
+        data[category] = df_nav_portfolio['portfolio']
+
+    df_result = pd.DataFrame(data)
+    df_result.to_csv(datapath('labelasset.csv'))
+
+    return df_result
+        
+
+def label_asset_stock_per_day(day, lookback):
+    # 加载时间轴数据
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+
+    start_date = index.min().strftime("%Y-%m-%d")
+    end_date = day.strftime("%Y-%m-%d")
+
+    # 加载数据
+    df_nav_stock = DBData.stock_fund_value(start_date, end_date)
+    df_nav_index = DBData.index_value(start_date, end_date)
+    
+    df_nav_stock.to_csv(datapath('stock_' + day.strftime('%Y-%m-%d') + '.csv'))
+    
+    #
+    # 根据时间轴进行重采样
+    #
+    df_nav_stock = df_nav_stock.reindex(index, method='pad')
+    df_nav_index = df_nav_index.reindex(index, method='pad')
+
+    # #
+    # # 计算涨跌幅
+    # #
+    # df_inc_stock = df_nav_stock.pct_change().fillna(0.0)
+    # df_inc_index = df_nav_index.pct_change().fillna(0.0)
+
+    #
+    # 基于测度筛选基金
+    #
+    df_indicator = FundFilter.stock_fund_filter_new(
+        day, df_nav_stock, df_nav_index[Const.hs300_code])
+
+    #
+    # 打标签确定所有备选基金
+    #
+    df_nav_indicator = df_nav_stock[df_indicator.index]
+    df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
+
+    #
+    # 选择基金
+    #
+    df_stock_fund = FundSelector.select_stock_new(day, df_label, df_indicator)
+
+    return df_stock_fund
+
+def label_asset_bond_per_day(day, lookback):
+    # 加载时间轴数据
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+
+    start_date = index.min().strftime("%Y-%m-%d")
+    end_date = day.strftime("%Y-%m-%d")
+
+    # 加载数据
+    df_nav_bond = DBData.bond_fund_value(start_date, end_date)
+    df_nav_index = DBData.index_value(start_date, end_date)
+
+    df_nav_bond.to_csv(datapath('bond_' + day.strftime('%Y-%m-%d') + '.csv'))
+    
+    #
+    # 根据时间轴进行重采样
+    #
+    df_nav_bond = df_nav_bond.reindex(index, method='pad')
+    df_nav_index = df_nav_index.reindex(index, method='pad')
+
+    # #
+    # # 计算涨跌幅
+    # #
+    # df_inc_bond = df_nav_bond.pct_change().fillna(0.0)
+    # df_inc_index = df_nav_index.pct_change().fillna(0.0)
+
+    #
+    # 基于测度筛选基金
+    #
+    df_indicator = FundFilter.bond_fund_filter_new(
+        day, df_nav_bond, df_nav_index[Const.csibondindex_code])
+
+    #
+    # 打标签确定所有备选基金
+    #
+    df_nav_indicator = df_nav_bond[df_indicator.index]
+    df_label = ST.tag_bond_fund_new(day, df_nav_indicator, df_nav_index)
+
+    #
+    # 选择基金
+    #
+    df_bond_fund = FundSelector.select_bond_new(day, df_label, df_indicator)
+
+    return df_bond_fund
+
+def label_asset_money_per_day(day, lookback):
+    # 加载时间轴数据
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+
+    start_date = index.min().strftime("%Y-%m-%d")
+    end_date = day.strftime("%Y-%m-%d")
+
+    # 加载数据
+    df_nav_money = DBData.money_fund_value(start_date, end_date)
+
+    df_nav_money.to_csv(datapath('money_' + day.strftime('%Y-%m-%d') + '.csv'))
+    
+    #
+    # 根据时间轴进行重采样
+    #
+    df_nav_money = df_nav_money.reindex(index, method='pad')
+
+    # #
+    # # 计算涨跌幅
+    # #
+    # df_inc_money = df_nav_money.pct_change().fillna(0.0)
+    # df_inc_index = df_nav_index.pct_change().fillna(0.0)
+
+    #
+    # 基于测度筛选基金
+    #
+    df_indicator = FundFilter.money_fund_filter_new(day, df_nav_money)
+
+    #
+    # 选择基金
+    #
+    df_money_fund = FundSelector.select_money_new(day, df_indicator)
+
+    return df_money_fund
+
+def label_asset_other_per_day(day, lookback):
+    # 加载时间轴数据
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+
+    start_date = index.min().strftime("%Y-%m-%d")
+    end_date = day.strftime("%Y-%m-%d")
+
+    # 加载数据
+    df_nav_other = DBData.other_fund_value(start_date, end_date)
+    df_nav_other = df_nav_other[['SP500.SPI','GLNC','HSCI.HI']]
+    df_nav_other.to_csv(datapath('other_' + day.strftime('%Y-%m-%d') + '.csv'))
+    
+    #
+    # 根据时间轴进行重采样
+    #
+    df_nav_other = df_nav_other.reindex(index, method='pad')
+
+    # #
+    # # 计算涨跌幅
+    # #
+    # df_inc_other = df_nav_other.pct_change().fillna(0.0)
+
+    #
+    # 基于测度筛选基金
+    #
+    df_indicator = FundFilter.other_fund_filter_new(day, df_nav_other)
+
+    #
+    # 选择基金
+    #
+    df_other_fund = FundSelector.select_other_new(day, df_indicator)
+
+    return df_other_fund
+
+
 def mean_r(d, funddfr, codes):
     r   = 0.0
     num = 1.0 * (len(codes))
@@ -53,11 +295,13 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
     selectcodes = []
 
     print datapath("aa.csv")
-    
+
+    print range(his_week, len(dates))
     for i in range(his_week, len(dates)):
 
 
         if (i - his_week) % interval == 0:
+            print "aa", i-his_week, dates[i]
 
             start_date                    = dates[i - his_week].strftime('%Y-%m-%d')
             end_date                      = dates[i - 1].strftime('%Y-%m-%d')
@@ -79,7 +323,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
             #print
             #print time.time()
-
+            
             label_stock_df.to_csv(datapath('stock_' + dates[i].strftime('%Y-%m-%d') + '.csv'))
 
             codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[Const.hs300_code])
@@ -202,6 +446,8 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
             if i + interval < len(dates):
                  last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
 
+            last_end_date = '2015-04-03'
+
             bond_df = DBData.bond_fund_value(start_date, last_end_date)
             label_bond_df = DFUtil.get_date_df(bond_df, start_date, end_date)
             this_index_df = DFUtil.get_date_df(indexdf, start_date, end_date)
@@ -215,6 +461,7 @@ def bondLabelAsset(allocationdata, dates, his_week, interval):
             allocationdf   = DFUtil.get_date_df(label_bond_df[fund_pool], allocation_start_date, end_date)
             #fund_code, tag = FundSelector.select_bond(allocationdf, fund_tags)
             fund_code, tag = FundSelector.select_bond(label_bond_df, fund_tags, this_index_df[Const.csibondindex_code])
+            print tag
 
             if len(codes) == 1:
                 fund_pool = codes
@@ -343,7 +590,8 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
             last_end_date = dates[-1]
             if i + interval < len(dates):
                  last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
-
+                 
+            last_end_date = '2015-04-03'
 
 
             money_df = DBData.money_fund_value(start_date, last_end_date)
@@ -351,12 +599,10 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
             #this_index_df = DFUtil.get_date_df(indexdf, start_date, end_date)
             funddfr = money_df.pct_change().fillna(0.0)
 
+            fund_codes, tag   = FundSelector.select_money(label_money_df)
+            print tag
 
-            allocationdf      = DFUtil.get_date_df(label_money_df, allocation_start_date, end_date)
-            fund_codes, tag   = FundSelector.select_money(allocationdf)
-
-
-            fund_sharpe       = FundIndicator.fund_sharp_annual(label_money_df)
+            #fund_sharpe       = FundIndicator.fund_sharp_annual(label_money_df)
 
 
             fund_dates.append(end_date)
@@ -423,8 +669,8 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
 
         if (i - his_week) % interval == 0:
 
-            start_date = dates[i - 52].strftime('%Y-%m-%d')
-            end_date = dates[i].strftime('%Y-%m-%d')
+            start_date = dates[i - his_week].strftime('%Y-%m-%d')
+            end_date = dates[i - 1].strftime('%Y-%m-%d')
 
             label_other_df = DFUtil.get_date_df(funddf, start_date, end_date)
 
@@ -433,6 +679,10 @@ def otherLabelAsset(allocationdata, dates, his_week, interval):
             sharpe_dict = {}
             for record in fund_sharpe:
                 sharpe_dict[record[0]] = record[1]
+
+            tmpdf = pd.DataFrame({'sharpe': sharpe_dict})
+            tmpdf.index.name = 'code'
+            tmpdf.to_csv(datapath('other_indicator_' + end_date + '.csv'))
 
             fund_datas.append(['SP500.SPI', 'GLNC', 'HSCI.HI'])
             fund_dates.append(dates[i])
@@ -471,25 +721,25 @@ def labelasset(allocationdata):
 
     # indexdf = DBData.index_value(allocationdata.data_start_date, allocationdata.end_date)[[Const.hs300_code]]
     # dates = indexdf.pct_change().index
-    dates = DBData.trade_dates(allocationdata.data_start_date, allocationdata.end_date)
-    dates = [parse(e).date() for e in dates]
+    dates = DBData.trade_date_index(allocationdata.data_start_date, allocationdata.end_date)
+    dates = [e.date() for e in dates]
 
 
     #allfunddf = Data.funds()
 
     #allfunddf = allocationdata.stock_df
-    stock_df = stockLabelAsset(allocationdata, dates, his_week, interval)
+    #stock_df = stockLabelAsset(allocationdata, dates, his_week, interval)
 
     #bondindexdf = Data.bond_index_value(start_date, end_date, Const.csibondindex_code)
     #allbonddf   = Data.bonds()
     #bondindexdf = allocationdata.index_df[[Const.csibondindex_code]]
     #allbonddf   = allocationdata.bond_df
-    bond_df = bondLabelAsset(allocationdata, dates, his_week, interval)
+    #bond_df = bondLabelAsset(allocationdata, dates, his_week, interval)
 
     #allmoneydf  = Data.moneys()
     #print allmoneydf
     #allmoneydf  = allocationdata.money_df
-    money_df = moneyLabelAsset(allocationdata, dates, his_week, interval)
+    #money_df = moneyLabelAsset(allocationdata, dates, his_week, interval)
 
     #allotherdf  = Data.others()
     #allotherdf  = allocationdata.other_df

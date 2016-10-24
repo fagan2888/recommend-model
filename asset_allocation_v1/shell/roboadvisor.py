@@ -12,6 +12,10 @@ import time
 import Const
 import GeneralizationPosition
 
+import CommandModelRisk
+
+
+
 logger = logging.getLogger(__name__)
 
 def setup_logging(
@@ -42,39 +46,40 @@ def roboadvisor(ctx):
     #config.load()        
 
 @roboadvisor.group()  
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 @click.pass_context
-def portfolio(ctx, datadir, output):
+def portfolio(ctx):
     ''' generate portfolios
     '''
-    ctx.obj['datadir'] = datadir
-    ctx.obj['output'] = output
-    Const.datadir = datadir
     pass;
     
-@portfolio.command()  
+@portfolio.command()
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 # @click.option('-m', '--msg')  
 # @click.option('--dry-run', is_flag=True, help=u'pretend to run')
 # @click.option('--name', prompt='Your name', help='The person to greet.')
 @click.pass_context
-def simple(ctx):
+def simple(ctx, datadir, output):
     '''generate final portfolio using simple average strategy (no cost)
     '''
-    out = ctx.obj['output']
+    out = output
+    Const.datadir = datadir
     #
     # 生成配置数据
     #
     all_code_position = GeneralizationPosition.risk_position()
     
     GeneralizationPosition.output_final_portfolio(all_code_position, out)
-
+    
 @portfolio.command()  
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 @click.pass_context
-def optimize(ctx):
+def optimize(ctx, datadir, output):
     '''generate final portfolio with optimized strategy (cost consider in).  
     '''
-    out = ctx.obj['output']
+    out = output
+    Const.datadir = datadir
     #
     # 生成配置数据
     #
@@ -83,17 +88,51 @@ def optimize(ctx):
     GeneralizationPosition.output_portfolio(all_code_position, out)
 
 @portfolio.command()  
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 @click.pass_context
-def category(ctx):
+def category(ctx, datadir, output):
     '''generate intemediate portfolio for different asset categories 
     '''
-    out = ctx.obj['output']
+    out = output
+    Const.datadir = datadir
     #
     # 生成配置数据
     #
     all_code_position = GeneralizationPosition.risk_position()
     
     GeneralizationPosition.output_category_portfolio(all_code_position, out)
+
+@portfolio.command()
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+# @click.option('-m', '--msg')  
+# @click.option('--dry-run', is_flag=True, help=u'pretend to run')
+# @click.option('--name', prompt='Your name', help='The person to greet.')
+@click.pass_context
+def ncat(ctx, datadir):
+    '''generate final portfolio using simple average strategy (no cost)
+    '''
+    Const.datadir = datadir
+    #
+    # 生成配置数据
+    #
+    GeneralizationPosition.portfolio_category()
+
+@portfolio.command()
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+# @click.option('-m', '--msg')  
+# @click.option('--dry-run', is_flag=True, help=u'pretend to run')
+# @click.option('--name', prompt='Your name', help='The person to greet.')
+@click.pass_context
+def nsimple(ctx, datadir):
+    '''generate final portfolio using simple average strategy (no cost)
+    '''
+    Const.datadir = datadir
+    #
+    # 生成配置数据
+    #
+    GeneralizationPosition.portfolio_simple()
+    
     
 @roboadvisor.group()  
 @click.pass_context
@@ -138,11 +177,9 @@ def model(ctx):
     '''
     click.echo("model")
   
-@model.command()
-@click.pass_context
-def risk(ctx):
-    click.echo("const risk model, not integrated")
-
 if __name__=='__main__':
+    model.add_command(CommandModelRisk.risk)
+
+
     roboadvisor(obj={})  
     

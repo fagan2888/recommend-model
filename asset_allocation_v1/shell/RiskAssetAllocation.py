@@ -50,9 +50,9 @@ def risk_asset_allocation():
 
 
     LabelAsset.labelasset(allocationdata)
-    EqualRiskAssetRatio.equalriskassetratio(allocationdata)
-    EqualRiskAsset.equalriskasset(allocationdata)
-    RiskHighLowRiskAsset.highlowriskasset(allocationdata)
+    EqualRiskAssetRatio.equalriskassetratio(allocationdata.fixed_risk_asset_lookback, allocationdata.fixed_risk_asset_risk_adjust_period)
+    EqualRiskAsset.equalriskasset()
+    RiskHighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
     #HighLowRiskAsset.highlowriskasset(allocationdata)
 
 
