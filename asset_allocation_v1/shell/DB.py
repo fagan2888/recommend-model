@@ -13,6 +13,7 @@ from datetime import datetime
 import FundIndicator
 import AllocationData
 import RiskPosition
+import time
 from Const import datapath
 
 
@@ -1051,6 +1052,21 @@ def insertNav(risk,position,risk_type):
     conn.commit()
     conn.close()
 
+def getBuyStatus(days,funds):
+    conn = MySQLdb.connect(**config.db_base)
+    cur = conn.cursor(MySQLdb.cursors.DictCursor)
+    days.append('2016-09-03')
+    sql = 'select * from fund_status where fs_fund_code in (%s)  and fs_date in (%s) and  fs_subscribe_status in (0,6)' % (','.join(funds),'"'+'","'.join(days)+'"')
+    cur.execute(sql)
+    result = cur.fetchall()
+    tmp = {}
+    for row in  result:
+        if tmp.has_key(str(row['fs_date'])):
+            tmp[str(row['fs_date'])].append(row['fs_fund_code'])
+        else:
+            tmp[str(row['fs_date'])] = [row['fs_fund_code'],]
+    return tmp
+    
 
 
 

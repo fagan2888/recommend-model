@@ -5,10 +5,12 @@
 import os
 import MySQLdb
 import config;
-from datetime import datetime
+from datetime import datetime, timedelta
 import DBData
 from Const import datapath
 
+from inspect import getmembers
+from pprint import pprint
 
 class allocationdata:
 
@@ -43,10 +45,10 @@ class allocationdata:
         conn.close()
 
 
+    yesterday = (datetime.now() - timedelta(days=1)); 
+    start_date = '2010-01-15'
+    end_date = yesterday.strftime("%Y-%m-%d")        
 
-    start_date                              = '2010-01-01'
-
-    end_date                                = datetime.now().strftime('%Y-%m-%d')
     fund_measure_lookback                   = 52              #回溯52个周
     fund_measure_adjust_period              = 26              #26个周重新算基金池
 
@@ -109,9 +111,9 @@ class allocationdata:
 
     def all_dates(self):
 
-        dates = DBData.trade_dates('1900-01-01',self.start_date)
+        dates = DBData.trade_date_index('1900-01-01',self.start_date)
         start_n = len(dates) - self.fund_measure_lookback    - self.fixed_risk_asset_risk_lookback  - 2 * self.allocation_lookback
-        self.data_start_date = dates[len(dates) - self.fund_measure_lookback    - self.fixed_risk_asset_risk_lookback  - 2 * self.allocation_lookback]
+        self.data_start_date = dates[start_n - 1]
         dates = dates[start_n  : len(dates)]
 
         print self.data_start_date
