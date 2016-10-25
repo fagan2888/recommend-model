@@ -31,8 +31,10 @@ if __name__ == '__main__':
     manager_info_df = manager_info_df.reset_index()
     manager_info_df = manager_info_df.set_index('SECODE')
     manager_info_df = manager_info_df[manager_info_df['ISINCUMBENT'] == 1]
+
     #print manager_info_df.head()
-    manager_info_cols = ['PSCODE','PSNAME','GENDER','BIRTHDATE','DEGREE','JOBTITLE','REMARK']
+    #manager_info_cols = ['PSCODE','PSNAME','GENDER','BIRTHDATE','DEGREE','JOBTITLE','REMARK']
+    manager_info_cols = ['PSCODE','PSNAME','JOBTITLE','REMARK']
     manager_info_df = manager_info_df[manager_info_cols]
     manager_info_df['PSCODE'] = manager_info_df['PSCODE'].astype(int)
     manager_info_df = manager_info_df.loc[fund_info_df.index]
@@ -44,7 +46,12 @@ if __name__ == '__main__':
     manager_fund_info_df.reset_index()
     #manager_fund_info_df.set_index(['SECODE'], inplace=True)
     manager_fund_info_df.to_csv('manager_fund_info.csv')
-    manager_fund_info_df['BIRTHDATE'].to_csv('brithdate.csv')
+
+    managersta_df = pd.read_csv('./data/tq_fd_managersta')
+    managersta_cols = ['PSCODE', 'BIRTH', 'GENDER', 'TOTYEARS', 'CURFCOUNT', 'DEGREE']
+    managersta_df = managersta_df[managersta_cols]
+    manager_fund_info_df = pd.merge(manager_fund_info_df, managersta_df, on = 'PSCODE')
+    #print manager_fund_info_df
 
     manager_performance_df = pd.read_csv('./data/tq_fd_mgperformance')
     #manager_performance_df.columns
