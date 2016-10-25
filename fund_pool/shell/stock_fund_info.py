@@ -46,15 +46,15 @@ if __name__ == '__main__':
         codes.append(code)
 
 
-    '''
-    imploded_sids = ','.join([repr(sid.encode('utf8')) for sid in codes])
+    imploded_sids = ','.join([repr(sid) for sid in codes])
     #sql = 'select FDSNAME, FDNATURE, INVESTSTYLE, FOUNDDATE, SECURITYID, FSYMBOL, MANAGERNAME from TQ_FD_BASICINFO where SECURITYID in (' + imploded_sids + ')'
     sql = 'select * from TQ_FD_BASICINFO where SECURITYID in (' + imploded_sids + ')'
     fund_info_df = pd.read_sql(sql, conn, index_col = 'SECURITYID')
     print fund_info_df
-    #fund_info_df.to_csv('tq_fd_basicinfo', encoding = 'utf8')
+    fund_info_df.to_csv('tq_fd_basicinfo', encoding = 'utf8')
 
 
+    '''
     #sql             = 'select MANAGERCODE, MANAGERNAME, NAVRTO, BENCHMARKRTO, TENUREYIELD TENUREYIELDYR, ALLRANK, ALLAVGYIELD, CLASSRANK, RANKTYPE, RTYPEAVGYIELD , SECURITYID from TQ_FD_MGPERFORMANCE where SECURITYID in (' + imploded_sids + ')'
     sql             = 'select * from TQ_FD_MGPERFORMANCE where SECURITYID in (' + imploded_sids + ')'
     mgperformance_df= pd.read_sql(sql, conn, index_col = 'SECURITYID')
@@ -72,12 +72,20 @@ if __name__ == '__main__':
     #managersta_df.to_csv('tq_fd_managersta' ,encoding = 'utf8')
     '''
 
+    '''
     base_sql = 'select * from TQ_FD_DERIVEDN where SECURITYID = %d'
     for code in codes:
         sql = base_sql % code
         print sql
         derivedn_df  = pd.read_sql(sql, conn)
         print derivedn_df
+    '''
+
+    '''
+    sql = 'select * from TQ_FD_MANAGERINFO where POST = 1003'
+    manager_info_df = pd.read_sql(sql, conn)
+    manager_info_df.to_csv('manager_info.csv', encoding='utf8')
+    '''
 
     #derivedn_df.to_csv('tq_fd_derivedn.csv', encoding = 'utf8')
     #mgperformance_df= mgperformance_df.loc[fund_info_df.index]
