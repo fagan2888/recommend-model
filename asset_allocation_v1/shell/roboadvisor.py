@@ -13,6 +13,7 @@ import Const
 import GeneralizationPosition
 
 import CommandModelRisk
+import CommandPoolStock
 
 
 
@@ -176,10 +177,17 @@ def model(ctx):
     '''run models
     '''
     click.echo("model")
-  
+
+@roboadvisor.group()  
+@click.pass_context
+def pool(ctx):
+    '''fund pool group
+    '''
+    click.echo("")
+
 if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
-
+    pool.add_command(CommandPoolStock.stock)
 
     roboadvisor(obj={})  
     
