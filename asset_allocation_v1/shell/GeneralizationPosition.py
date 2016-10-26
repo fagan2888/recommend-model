@@ -11,6 +11,7 @@ import string
 import GeneralizationTrade
 import MySQLdb
 import config
+import DFUtil;
 
 from Const import datapath
 from datetime import datetime
@@ -210,6 +211,55 @@ def portfolio_simple():
 
     return df_result
 
+def portfolio_detail():
+    columns=('risk','date', 'category', 'fund','ratio')
+    #
+    # 中类资产比例和对应基金
+    #
+    df = portfolio_category()
+    print "portfolio_category"
+
+    data = []
+    for key,row in df.iterrows():
+        # codes2 = filter_by_status(date, codes)
+        (risk, date, category) = key
+        ratio = row['ratio']
+        funds = row['xfund'].split(':')
+        data.extend([(risk, date, category, fund, ratio) for (fund, ratio) in split_category_ratio(ratio, funds)])
+
+    df_result = pd.DataFrame(data, columns=columns)
+    print "category to fund finish"
+
+    #
+    # 过滤掉过小的份额配置
+    #
+    df_result = df_result[df_result['ratio'] >= 0.009999]
+    print "fileout small"
+    df_result.to_csv(datapath('tmp-result.csv'), index=False)
+    
+
+    #
+    # 过滤掉与上期换手率小于3%
+    #
+    df_result = DFUtil.filter_by_turnover_rate(df_result, 0.03)
+    print "filter_by_turnover_rate"
+    df_result.to_csv(datapath('tmp-result2.csv'), index=False)
+
+    #
+    # 某天持仓补足100%
+    #
+    df_result = DFUtil.pad_sum_to_one(df_result, [df_result['risk'], df_result['date']])
+    print "pad_sum_to_one"
+    
+    #
+    # 计算资产组合净值
+    #
+    df_result.to_csv(datapath('position-detail.csv'), index=False)
+    df_result.replace({'category':categories_types()}).to_csv(datapath('position-d.csv'), index=False)
+
+    return df_result
+
+
 def filter_by_turnover_rate(df, turnover_rate):
     df_result = pd.DataFrame(columns=['risk', 'date', 'fund', 'ratio'])
     for k0, v0 in df.groupby('risk'):
@@ -266,7 +316,7 @@ def split_category_ratio(ratio, funds):
         count_used = 1;
         
     funds_used = funds[0:count_used]
-    ratio_used = ratio / count_used
+    ratio_used = round(ratio / count_used, 4)
 
     return [(code, ratio_used) for code in funds_used]
 

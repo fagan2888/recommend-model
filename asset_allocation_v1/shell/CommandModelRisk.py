@@ -133,9 +133,13 @@ def risk(ctx, datadir, output, startdate, enddate, label_asset, reshape):
     GeneralizationPosition.portfolio_category()
     print "output category portfolio ok"
 
-    print "output simple postion ...."
-    GeneralizationPosition.portfolio_simple()
-    print "output simple position ok"
+    # print "output simple postion ...."
+    # GeneralizationPosition.portfolio_simple()
+    # print "output simple position ok"
+
+    print "output detail postion ...."
+    GeneralizationPosition.portfolio_detail()
+    print "output detail postion ...."
 
     
 

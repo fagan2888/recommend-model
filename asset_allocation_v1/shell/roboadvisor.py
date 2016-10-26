@@ -133,6 +133,21 @@ def nsimple(ctx, datadir):
     # 生成配置数据
     #
     GeneralizationPosition.portfolio_simple()
+
+@portfolio.command()
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+# @click.option('-m', '--msg')  
+# @click.option('--dry-run', is_flag=True, help=u'pretend to run')
+# @click.option('--name', prompt='Your name', help='The person to greet.')
+@click.pass_context
+def detail(ctx, datadir):
+    '''generate final portfolio using simple average strategy (no cost)
+    '''
+    Const.datadir = datadir
+    #
+    # 生成配置数据
+    #
+    GeneralizationPosition.portfolio_detail()
     
     
 @roboadvisor.group()  

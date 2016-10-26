@@ -113,6 +113,35 @@ def pad_sum_to_one(df, by, ratio='ratio'):
     
     return df
 
+def filter_by_turnover_rate(df, turnover_rate):
+    df_result = pd.DataFrame(columns=['risk', 'date', 'category', 'fund', 'ratio'])
+    for k0, v0 in df.groupby('risk'):
+        df_tmp = filter_by_turnover_rate_per_risk(v0, turnover_rate)
+        if not df_tmp.empty:
+            df_result = pd.concat([df_result, df_tmp])
+            
+    return df_result
+
+def filter_by_turnover_rate_per_risk(df, turnover_rate):
+    df_result = pd.DataFrame(columns=['risk', 'date', 'category', 'fund', 'ratio'])
+    df_last=None
+    for k1, v1 in df.groupby(['risk', 'date']):
+        if df_last is None:
+            df_last = v1[['category', 'fund','ratio']].set_index(['category', 'fund'])
+            df_result = pd.concat([df_result, v1])
+        else:
+            df_current = v1[['category', 'fund', 'ratio']].set_index(['category', 'fund'])
+            df_diff = df_current - df_last
+            xsum = df_diff['ratio'].sum()
+            if df_diff.isnull().values.any() or abs(df_diff['ratio'].sum()) >= turnover_rate:
+                df_result = pd.concat([df_result, v1])
+                df_last = df_current
+                
+    return df_result
+
+def portfolio_import(df):
+    pass;
+
 
 if __name__ == '__main__':
 
