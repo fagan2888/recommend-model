@@ -5,20 +5,29 @@ import pandas as pd
 import numpy  as np
 from datetime import datetime
 import statsmodels.api as sm
+import sklearn
+from sklearn import preprocessing
+from sklearn import linear_model
+
 
 if __name__ == '__main__':
 
     manager_fund_performance_df = pd.read_csv('manager_fund_performance.csv', index_col = 'SECODE')
     fund_nav_df = pd.read_csv('./data/fund_value.csv', index_col = 'date')
-    #print fund_nav_df.columns
-    #print manager_fund_performance_df.columns
+    fund_nav_df.fillna(method = 'pad', inplace = True)
+    #fund_nav_dfr = fund_nav_df.pct_change().fillna(0.0)
+    #fund_nav_df.dropna(axis = 1, inplace = True)
+    cols = fund_nav_df.columns
+    codes = []
+    for col in cols:
+        codes.append((int)(col))
+    mask = manager_fund_performance_df['FSYMBOL'].map( lambda x : x in codes)
+    manager_fund_performance_df = manager_fund_performance_df.loc[mask]
+
 
     feature_cols = ['GENDER', 'DEGREE', 'JOBTITLE','BIRTH', 'FSYMBOL', 'ALLRANK', 'CLASSRANK', 'TOTYEARS', 'CURFCOUNT']
-    #print manager_fund_performance_df.columns
-
-    #print feature_cols
     df = manager_fund_performance_df[feature_cols]
-    #print df['JOBTITLE']
+
 
     X  = []
     y  = []
@@ -67,11 +76,28 @@ if __name__ == '__main__':
         items = classrank.split('/')
         vec.append((float)(items[1]) / (float)(items[0]))
 
-        print fund_nav_df[code]
+        #print fund_nav_df[code]
         #print vec
+        X.append(vec)
 
-        #print vec
-        #print code, gender, degree, jobtitle, allrank, classrank, totyears, curfcount
+        vs = fund_nav_df.iloc[-1025:,][code]
+        r = vs[-1] / vs[0] - 1
+        y.append(r)
 
+    #print X
+    #print y
+    reg = linear_model.LinearRegression()
+    reg.fit(X, y)
+    print reg.coef_
+    print reg.intercept_
+    print reg.score(X, y)
 
-    #print fund_nav_df
+    X = sm.add_constant(X)
+    model  = sm.OLS(y,X)
+    result = model.fit()
+    print result.summary()
+    #df['r'] = y
+    #df.to_csv('df.csv')
+    #print X, y
+    #X_scaled = preprocessing.scale(X)
+    #print X_scaled
