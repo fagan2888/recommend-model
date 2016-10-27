@@ -204,11 +204,11 @@ def stock_fund_value(start_date, end_date):
     #
     # 按照成立时间筛选基金
     #
-    regtime_sql = "SELECT DISTINCT fi_globalid FROM fund_infos WHERE fi_regtime<='%s' and fi_regtime!='0000-00-00'" % (start_date);
+    regtime_sql = "SELECT DISTINCT globalid FROM ra_fund WHERE ra_regtime<='%s' and ra_regtime!='0000-00-00' AND (ra_mask & 0x01) = 0" % (start_date);
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.fi_globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
     sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
@@ -244,11 +244,11 @@ def stock_day_fund_value(start_date, end_date):
     #
     # 按照成立时间筛选基金
     #
-    regtime_sql = "SELECT DISTINCT fi_globalid FROM fund_infos WHERE fi_regtime<='%s' and fi_regtime!='0000-00-00'" % (start_date);
+    regtime_sql = "SELECT DISTINCT globalid FROM ra_fund WHERE ra_regtime<='%s' and ra_regtime!='0000-00-00' AND (ra_mask & 0x01) = 0" % (start_date);
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.fi_globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
     sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
@@ -285,11 +285,11 @@ def bond_fund_value(start_date, end_date):
     #
     # 按照成立时间筛选基金
     #
-    regtime_sql = "SELECT DISTINCT fi_globalid FROM fund_infos WHERE fi_regtime<='%s' and fi_regtime!='0000-00-00'" % (start_date);
+    regtime_sql = "SELECT DISTINCT globalid FROM ra_fund WHERE ra_regtime<='%s' and ra_regtime!='0000-00-00' AND (ra_mask & 0x01) = 0" % (start_date);
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.fi_globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
     sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
@@ -329,11 +329,11 @@ def bond_day_fund_value(start_date, end_date):
     #
     # 按照成立时间筛选基金
     #
-    regtime_sql = "SELECT DISTINCT fi_globalid FROM fund_infos WHERE fi_regtime<='%s' and fi_regtime!='0000-00-00'" % (start_date);
+    regtime_sql = "SELECT DISTINCT globalid FROM ra_fund WHERE ra_regtime<='%s' and ra_regtime!='0000-00-00' AND (ra_mask & 0x01) = 0" % (start_date);
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.fi_globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
     sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
@@ -372,11 +372,11 @@ def money_fund_value(start_date, end_date):
     #
     # 按照成立时间筛选基金
     #
-    regtime_sql = "SELECT DISTINCT fi_globalid FROM fund_infos WHERE fi_regtime<='%s' and fi_regtime!='0000-00-00'" % (start_date);
+    regtime_sql = "SELECT DISTINCT globalid FROM ra_fund WHERE ra_regtime<='%s' and ra_regtime!='0000-00-00' AND (ra_mask & 0x01) = 0" % (start_date);
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.fi_globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
     sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
@@ -414,11 +414,11 @@ def money_day_fund_value(start_date, end_date):
     #
     # 按照成立时间筛选基金
     #
-    regtime_sql = "SELECT DISTINCT fi_globalid FROM fund_infos WHERE fi_regtime<='%s' and fi_regtime!='0000-00-00'" % (start_date);
+    regtime_sql = "SELECT DISTINCT globalid FROM ra_fund WHERE ra_regtime<='%s' and ra_regtime!='0000-00-00' AND (ra_mask & 0x01) = 0" % (start_date);
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.fi_globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
     sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);

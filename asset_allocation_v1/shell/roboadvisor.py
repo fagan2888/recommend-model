@@ -10,6 +10,7 @@ import click
 import time  
 
 import Const
+from Const import datapath
 import GeneralizationPosition
 
 import CommandModelRisk
@@ -136,9 +137,6 @@ def nsimple(ctx, datadir):
 
 @portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-# @click.option('-m', '--msg')  
-# @click.option('--dry-run', is_flag=True, help=u'pretend to run')
-# @click.option('--name', prompt='Your name', help='The person to greet.')
 @click.pass_context
 def detail(ctx, datadir):
     '''generate final portfolio using simple average strategy (no cost)
@@ -148,7 +146,20 @@ def detail(ctx, datadir):
     # 生成配置数据
     #
     GeneralizationPosition.portfolio_detail()
-    
+
+@portfolio.command()  
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--output', '-o', default=None, help=u'file used to store final result')
+@click.pass_context
+def trade(ctx, datadir, output):
+    '''generate final portfolio with optimized strategy (cost consider in).  
+    '''
+    Const.datadir = datadir
+    if output is None:
+        output = datapath('position-z.csv')
+    with (open(output, 'w') if output != '-' else os.fdopen(os.dup(sys.stdout.fileno()), 'w')) as out:
+        GeneralizationPosition.portfolio_trade(out)
+
     
 @roboadvisor.group()  
 @click.pass_context

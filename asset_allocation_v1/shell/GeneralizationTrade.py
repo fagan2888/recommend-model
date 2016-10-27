@@ -64,9 +64,12 @@ def cleanNotBuy(day,funds,buy_list):
         return funds
     tmp = []
     for fund in funds:
-        if buy_list.has_key(day):
-            if fund in buy_list[day]:
-                tmp.append(fund)
+        if fund in ['096001', '320013', '000216', '000071', '213009']:
+            tmp.append(fund)
+        else:
+            if buy_list.has_key(day):
+                if fund in buy_list[day]:
+                    tmp.append(fund)
     return tmp
                 
 def getTrade(position,day_list,risk_list): 

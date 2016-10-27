@@ -27,18 +27,18 @@ import FixRisk
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
+from Const import datapath
 
 import traceback, code
 
 @click.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
 @click.option('--start-date', 'startdate', default='2012-07-15', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--label-asset/--no-label-asset', default=True)
 @click.option('--reshape/--no-reshape', default=True)
 @click.pass_context
-def risk(ctx, datadir, output, startdate, enddate, label_asset, reshape):
+def risk(ctx, datadir, startdate, enddate, label_asset, reshape):
     '''run constant risk model
     '''
     Const.datadir = datadir
@@ -129,17 +129,23 @@ def risk(ctx, datadir, output, startdate, enddate, label_asset, reshape):
     ModelHighLowRisk.asset_alloc_high_low(allocationdata.start_date, allocationdata.end_date, lookback=26, adjust_period=1)
     print "calc high low risk model finished"
 
-    print "output category postion ...."
+    print "output category position ...."
     GeneralizationPosition.portfolio_category()
     print "output category portfolio ok"
 
-    # print "output simple postion ...."
+    # print "output simple position ...."
     # GeneralizationPosition.portfolio_simple()
     # print "output simple position ok"
 
-    print "output detail postion ...."
+    print "output detail position ...."
     GeneralizationPosition.portfolio_detail()
-    print "output detail postion ...."
+    print "output detail position ok"
+
+    print "output trade position ...."
+    outfile = datapath("position-z.csv")
+    with (open(outfile, 'w') if outfile != '-' else os.fdopen(os.dup(sys.stdout.fileno()), 'w')) as out:
+        GeneralizationPosition.portfolio_trade(out)
+    print "output trade position ok"
 
     
 

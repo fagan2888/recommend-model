@@ -211,6 +211,28 @@ def portfolio_simple():
 
     return df_result
 
+def portfolio_trade(out):
+    df = pd.read_csv(datapath('gposition.csv'), index_col=['risk', 'date', 'category'], parse_dates=['date'])
+    
+    lines = []
+    data = []
+    for key,row in df.iterrows():
+        # codes2 = filter_by_status(date, codes)
+        (risk, date, category) = key
+        ratio = row['ratio']
+        funds = row['xfund']
+        lines.append("%s,%.1f,%s,%.4f,%s" % (date.strftime("%Y-%m-%d"), risk, category, ratio, funds))        
+    #
+    # 调用晓彬的代码
+    #
+    positions = GeneralizationTrade.init(lines)
+    positions = clean_min(positions)
+    positions = clean_same(positions)
+
+    for record in positions:
+        risk, date, code, ratio = record
+        out.write("%s,%s,%06s,%.4f\n" % (risk, date, code, ratio))
+
 def portfolio_detail():
     columns=('risk','date', 'category', 'fund','ratio')
     #
