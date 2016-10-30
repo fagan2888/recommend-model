@@ -4,6 +4,7 @@
 import pandas as pd
 import numpy  as np
 import statsmodels.api as sm
+import datetime
 
 
 def alpha_beta(factor_index_df, fund_nav_df):
@@ -133,18 +134,33 @@ if __name__ == '__main__':
 
     factor_index_df  = pd.read_csv('./tmp/factor_index.csv', index_col = 'date', parse_dates = ['date'])
     #factor_index_df  = pd.read_csv('./tmp/factor_index_diff.csv', index_col = 'date', parse_dates = ['date'])
-    fund_nav_df      = pd.read_csv('./data/fund_value.csv', index_col = 'date', parse_dates = ['date'])
+    #fund_nav_df      = pd.read_csv('./data/fund_value.csv', index_col = 'date', parse_dates = ['date'])
+    fund_nav_df      = pd.read_csv('./data/fund_nav.csv', index_col = 'date', parse_dates = ['date'])
     index_df         = pd.read_csv('./data/index_price.csv', index_col = 'date', parse_dates = ['date'])
 
     factor_index_df.dropna(inplace = True)
 
-
     diff_cols       = ['beta', 'market_value', 'momentum', 'dastd', 'bp', 'liquidity']
     factor_index_df = factor_index_df[diff_cols]
+
+    interval = 21 * 3
+    dates = factor_index_df.index
+    for i in range(interval ,len(dates)):
+        if i % interval == 0:
+            d = dates[i]
+            tmp_factor_index_df = factor_index_df.iloc[i - interval : i]
+            #print tmp_factor_index_df
+            alpha_beta_df = alpha_beta(tmp_factor_index_df, fund_nav_df)
+            d_str = datetime.datetime.strftime(d, "%Y-%m-%d")
+            alpha_beta_df.to_csv(d_str + '_alpha_beta.csv')
+            #print d
+            print alpha_beta_df
+
     #alpha_beta_df = alpha_beta(factor_index_df, fund_nav_df)
+    #print alpha_beta_df
 
     #print alpha_beta_df
-    orrel(factor_index_df, fund_nav_df)
-    df = factor_beta_alpha(factor_index_df, index_df)
+    #correl(factor_index_df, fund_nav_df)
+    #df = factor_beta_alpha(factor_index_df, index_df)
     #print df
     #print factor_index_df
