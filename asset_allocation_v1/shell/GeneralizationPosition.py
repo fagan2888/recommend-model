@@ -195,7 +195,7 @@ def portfolio_simple():
     #
     # 过滤掉与上期换手率小于3%
     #
-    df_result = filter_by_turnover_rate(df_result, 0.03)
+    df_result = filter_by_turnover_rate(df_result, 0.1)
     print "filter_by_turnover_rate"
 
     #
@@ -263,7 +263,7 @@ def portfolio_detail():
     #
     # 过滤掉与上期换手率小于3%
     #
-    df_result = DFUtil.filter_by_turnover_rate(df_result, 0.03)
+    df_result = DFUtil.filter_by_turnover_rate(df_result, 0.1)
     print "filter_by_turnover_rate"
     df_result.to_csv(datapath('tmp-result2.csv'), index=False)
 
