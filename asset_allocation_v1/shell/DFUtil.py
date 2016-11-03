@@ -143,7 +143,28 @@ def portfolio_import(df):
     pass;
 
 
-def categories_types():
+def categories_types(as_int=False):
+    if as_int:
+        return {
+            'largecap'        : 11, # 大盘
+            'smallcap'        : 12, # 小盘
+            'rise'            : 13, # 上涨
+            'oscillation'     : 14, # 震荡
+            'decline'         : 15, # 下跌
+            'growth'          : 16, # 成长
+            'value'           : 17, # 价值
+
+            'ratebond'        : 21, # 利率债
+            'creditbond'      : 22, # 信用债
+            'convertiblebond' : 23, # 可转债
+
+            'money'           : 31, # 货币
+
+            'SP500.SPI'       : 41, # 标普
+            'GLNC'            : 42, # 黄金
+            'HSCI.HI'         : 43, # 恒生
+        }
+        
     #
     # 输出配置数据
     #

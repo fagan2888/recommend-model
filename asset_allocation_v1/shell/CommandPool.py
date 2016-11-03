@@ -108,7 +108,7 @@ def stock_update(db, pool, optlimit, optcalc):
 
         df_stock = pd.concat(data_stock, names=['ra_date', 'ra_category', 'ra_fund_code'])
 
-        df_new = df_stock.rename(index=DFUtil.categories_types(), columns={'date':'ra_date', 'category':'ra_category', 'code':'ra_fund_code', 'sharpe':'ra_sharpe',  'jensen':'ra_jensen', 'sortino':'ra_sortino', 'ppw':'ra_ppw'})
+        df_new = df_stock.rename(index=DFUtil.categories_types(True), columns={'date':'ra_date', 'category':'ra_category', 'code':'ra_fund_code', 'sharpe':'ra_sharpe',  'jensen':'ra_jensen', 'sortino':'ra_sortino', 'ppw':'ra_ppw'})
         df_new.drop('stability', axis=1, inplace=True)
 
         df_new = df_new.applymap(lambda x: round(x, 4) if type(x) == float else x)
