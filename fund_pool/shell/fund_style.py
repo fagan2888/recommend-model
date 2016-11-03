@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     df = pd.concat(dfs)
     print df
-    df.to_csv('tq_fd_skdetail')
+    df.to_csv('tq_fd_skdetail', encoding='utf8')
     #print sql
     #df = pd.read_sql(sql, conn, index_col = 'SECURITYID')
     #print df
