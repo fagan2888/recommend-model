@@ -164,6 +164,7 @@ if __name__ == '__main__':
     market_value_df = pd.read_csv('./tmp/market_value.csv', index_col = 'date', parse_dates = ['date'])
     dastd_df        = pd.read_csv('./tmp/stock_dastd.csv', index_col = 'date', parse_dates = ['date'])
     bp_df           = pd.read_csv('./tmp/bp.csv', index_col = 'date', parse_dates = ['date'])
+    pe_df           = pd.read_csv('./tmp/pe.csv', index_col = 'date', parse_dates = ['date'])
     liquidity_df    = pd.read_csv('./tmp/liquidity.csv', index_col = 'date', parse_dates = ['date'])
     cube_size_df    = pd.read_csv('./tmp/cube_size.csv', index_col = 'date', parse_dates = ['date'])
 
@@ -187,9 +188,9 @@ if __name__ == '__main__':
     #market_value_stock_df.to_csv('./tmp/market_value_stock.csv')
     #dfs.append(df)
 
-    df, cube_size_stock_df = index(cube_size_df, stock_df)
-    df.to_csv('./tmp/cube_size_index.csv')
-    cube_size_stock_df.to_csv('./tmp/cube_size_stock.csv')
+    #df, cube_size_stock_df = index(cube_size_df, stock_df)
+    #df.to_csv('./tmp/cube_size_index.csv')
+    #cube_size_stock_df.to_csv('./tmp/cube_size_stock.csv')
     #dfs.append(df)
 
     #df, stock_df = index(dastd_df, stock_df)
@@ -200,6 +201,10 @@ if __name__ == '__main__':
     #df , bp_stock_df = index(bp_df, stock_df)
     #df.to_csv('./tmp/bp_index.csv')
     #dfs.append(df)
+
+    df , pe_stock_df = index(pe_df, stock_df)
+    df.to_csv('./tmp/pe_index.csv')
+    dfs.append(df)
 
     #df = index(liquidity_df, stock_df)
     #df.to_csv('./tmp/liquidity_index.csv')

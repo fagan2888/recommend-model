@@ -223,6 +223,9 @@ def bp(stock_bp):
     stock_bp.to_csv('./tmp/bp.csv')
     return stock_bp
 
+def pe(stock_pe):
+    stock_pe.to_csv('./tmp/pe.csv')
+    return stock_pe
 
 def liquidity(stock_turnover_df):
 
@@ -295,6 +298,7 @@ if __name__ == '__main__':
     stock_df              = pd.read_csv('./data/stock_price_adjust.csv', index_col = 'date', parse_dates = ['date'])
     stock_market_value_df = pd.read_csv('./data/stock_market_value.csv', index_col = 'date', parse_dates = ['date'])
     stock_bp_df           = pd.read_csv('./data/stock_bp.csv', index_col = 'date', parse_dates = ['date'])
+    stock_pe_df           = pd.read_csv('./data/stock_pe.csv', index_col = 'date', parse_dates = ['date'])
     stock_turnover_df     = pd.read_csv('./data/stock_turnover.csv', index_col = 'date', parse_dates = ['date'])
     index_df              = pd.read_csv('./data/index_price.csv', index_col = 'date', parse_dates = ['date'])
 
@@ -309,7 +313,8 @@ if __name__ == '__main__':
     #ht_momentum(stock_dfr, stock_turnover_df)
     #momentum(stock_dfr)
     #cap_size(stock_market_value_df)
-    cube_size(stock_market_value_df)
+    #cube_size(stock_market_value_df)
+    pe(stock_pe_df)
     #dastd(stock_dfr)
     #ht_std(stock_df)
     #bp(stock_bp_df)
