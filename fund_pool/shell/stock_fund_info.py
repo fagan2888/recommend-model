@@ -24,6 +24,7 @@ db_base = {
     "charset": "utf8"
 }
 
+
 '''
 db_base = {
     "host": "101.201.81.170",
