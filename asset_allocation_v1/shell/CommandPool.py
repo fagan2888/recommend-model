@@ -88,8 +88,10 @@ def stock_update(db, pool, optlimit, optcalc):
         # 计算每个调仓点的最新配置
         #
         data_stock = {}
-        for day in label_index:
-            data_stock[day] = LabelAsset.label_asset_stock_per_day(day, lookback, limit)
+        with click.progressbar(length=len(label_index), label='Labeling asset') as bar:
+            for day in label_index:
+                data_stock[day] = LabelAsset.label_asset_stock_per_day(day, lookback, limit)
+                bar.update(1)
 
         df_stock = pd.concat(data_stock, names=['ra_date', 'ra_category', 'ra_fund_code'])
 
