@@ -88,7 +88,7 @@ def stock_update(db, pool, optlimit, optcalc):
         # 计算每个调仓点的最新配置
         #
         data_stock = {}
-        with click.progressbar(length=len(label_index), label='Labeling asset') as bar:
+        with click.progressbar(length=len(label_index), label='calc pool %d' % (pool.id)) as bar:
             for day in label_index:
                 data_stock[day] = LabelAsset.label_asset_stock_per_day(day, lookback, limit)
                 bar.update(1)
