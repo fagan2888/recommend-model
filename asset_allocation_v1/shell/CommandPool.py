@@ -38,6 +38,7 @@ from tabulate import tabulate
 import traceback, code
 
 logger = logging.getLogger(__name__)
+print __name__
 
 @click.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
