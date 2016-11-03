@@ -49,9 +49,13 @@ def all_stock_pe():
         print secode_symbol_dict[secode], 'done'
     stock_df = pd.concat(dfs, axis = 1)
 
-    stock_df = 1.0 / stock_df
+    #stock_df = 1.0 / stock_df
     stock_df.to_csv('stock_pe.csv')
 
 
 if __name__ == '__main__':
     all_stock_pe()
+    #df = pd.read_csv('stock_pe.csv', index_col = 'date', parse_dates = ['date'])
+    #df = 1.0 / df
+    #print df
+    #df.to_csv('stock_pe.csv')
