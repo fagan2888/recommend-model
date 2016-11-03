@@ -28,8 +28,8 @@ from dateutil.parser import parse
 def label_asset_tag(label_index, lookback=52):
     '''perform fund tagging along label_index.
     '''
-    
     # label_index = pd.DatetimeIndex(['2012-10-26', '2015-09-30', '2016-04-08', '2016-10-14'])
+    label_index = pd.DatetimeIndex(['2016-10-14'])
     
     #
     # 计算每个调仓点的最新配置
@@ -300,9 +300,9 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
     poolcodes   = []
     selectcodes = []
 
-    print datapath("aa.csv")
+    #print datapath("aa.csv")
 
-    print range(his_week, len(dates))
+    #print range(his_week, len(dates))
     for i in range(his_week, len(dates)):
 
 
