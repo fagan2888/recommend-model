@@ -38,10 +38,10 @@ def label_asset_tag(label_index, lookback=52):
     data_money = {}
     data_other = {}
     for day in label_index:
-        data_stock[day] = label_asset_stock_per_day(day, lookback)
-        data_bond[day] = label_asset_bond_per_day(day, lookback)
-        data_money[day] = label_asset_money_per_day(day, lookback)
-        data_other[day] = label_asset_other_per_day(day, lookback)
+        data_stock[day] = label_asset_stock_per_day(day, lookback, Const.fund_num)
+        data_bond[day] = label_asset_bond_per_day(day, lookback, Const.fund_num)
+        data_money[day] = label_asset_money_per_day(day, lookback, Const.fund_num)
+        data_other[day] = label_asset_other_per_day(day, lookback, Const.fund_num)
         
     df_stock = pd.concat(data_stock, names=['date', 'category', 'code'])
     df_bond = pd.concat(data_bond, names=['date', 'category', 'code'])
@@ -108,7 +108,7 @@ def label_asset_nav(start_date, end_date):
     return df_result
         
 
-def label_asset_stock_per_day(day, lookback):
+def label_asset_stock_per_day(day, lookback, limit = 5):
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
@@ -148,11 +148,11 @@ def label_asset_stock_per_day(day, lookback):
     #
     # 选择基金
     #
-    df_stock_fund = FundSelector.select_stock_new(day, df_label, df_indicator)
+    df_stock_fund = FundSelector.select_stock_new(day, df_label, df_indicator, limit)
 
     return df_stock_fund
 
-def label_asset_bond_per_day(day, lookback):
+def label_asset_bond_per_day(day, lookback, limit = 5):
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
@@ -192,11 +192,11 @@ def label_asset_bond_per_day(day, lookback):
     #
     # 选择基金
     #
-    df_bond_fund = FundSelector.select_bond_new(day, df_label, df_indicator)
+    df_bond_fund = FundSelector.select_bond_new(day, df_label, df_indicator, limit)
 
     return df_bond_fund
 
-def label_asset_money_per_day(day, lookback):
+def label_asset_money_per_day(day, lookback, limit = 1):
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
@@ -227,7 +227,7 @@ def label_asset_money_per_day(day, lookback):
     #
     # 选择基金
     #
-    df_money_fund = FundSelector.select_money_new(day, df_indicator)
+    df_money_fund = FundSelector.select_money_new(day, df_indicator, limit)
 
     return df_money_fund
 

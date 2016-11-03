@@ -8,14 +8,14 @@ import os
 import sys  
 import click  
 import time  
-
+import pandas as pd
 import Const
 from Const import datapath
 import GeneralizationPosition
 
 import CommandModelRisk
-import CommandPoolStock
-
+import CommandNavStock
+import CommandPool
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,10 @@ def setup_logging(
 @click.pass_context
 def roboadvisor(ctx):
     setup_logging()
-
+    # pd.set_option('display.height', 1000)
+    pd.set_option('display.max_rows', 500)
+    pd.set_option('display.max_columns', 500)
+    pd.set_option('display.width', 1000)
     #config.load()        
 
 @roboadvisor.group()  
@@ -211,9 +214,17 @@ def pool(ctx):
     '''
     click.echo("")
 
+@roboadvisor.group()  
+@click.pass_context
+def nav(ctx):
+    '''fund pool group
+    '''
+    click.echo("")
+
 if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
-    pool.add_command(CommandPoolStock.stock)
+    nav.add_command(CommandNavStock.stock)
+    pool.add_command(CommandPool.stock)
 
     roboadvisor(obj={})  
     

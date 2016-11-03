@@ -17,3 +17,6 @@ db_base = {
     "db":"mofang",
     "charset": "utf8"
 }
+
+db_asset_uri = 'mysql://root:Mofang123@localhost/asset_allocation?charset=utf8&use_unicode=0'
+db_base_uri =  'mysql://root:Mofang123@localhost/mofang?charset=utf8&use_unicode=0'
