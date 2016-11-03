@@ -53,6 +53,58 @@ def beta(stock_dfr, index_dfr):
     return beta_df
 
 
+def ht_momentum(stock_dfr, stock_turnover_df):
+
+    w_df = stock_turnover_df
+    df = w_df * stock_dfr
+    one_month_df = pd.rolling_sum(df, 21)
+    two_month_df = pd.rolling_sum(df, 21 * 2)
+    three_month_df = pd.rolling_sum(df, 21 * 3)
+    six_month_df = pd.rolling_sum(df, 21 * 6)
+    twelve_month_df = pd.rolling_sum(df, 21 * 12)
+    w_sum = 1.0 / 1 + 1.0 / 2 + 1.0 / 3 + 1.0 / 6 + 1.0 / 12
+    w1 = 1.0 / 1 / w_sum
+    w2 = 1.0 / 2 / w_sum
+    w3 = 1.0 / 3 / w_sum
+    w6 = 1.0 / 6 / w_sum
+    w12= 1.0 / 12 / w_sum
+    momentum_df = w1 * one_month_df + w2 * two_month_df + w3 * three_month_df + w6 * six_month_df + w12 * twelve_month_df
+    momentum_df = momentum_df.iloc[252:]
+    #print momentum_df
+    momentum_df.to_csv('./tmp/momentum.csv')
+    return momentum_df
+
+
+def ht_std(stock_dfr):
+
+    stock_dfr = stock_df.pct_change()
+
+    std1m_df = stock_dfr.rolling(window=21).std()
+    std2m_df = stock_dfr.rolling(window=21 * 2).std()
+    std3m_df = stock_dfr.rolling(window=21 * 3).std()
+    std6m_df = stock_dfr.rolling(window=21 * 6).std()
+    std12m_df = stock_dfr.rolling(window=21 * 12).std()
+
+    high_low_1m = stock_df.rolling(window = 21).max() / stock_df.rolling(window = 21).min()
+    high_low_2m = stock_df.rolling(window = 21 * 2).max() / stock_df.rolling(window = 21 * 2).min()
+    high_low_3m = stock_df.rolling(window = 21 * 3).max() / stock_df.rolling(window = 21 * 3).min()
+    high_low_6m = stock_df.rolling(window = 21 * 6).max() / stock_df.rolling(window = 21 * 6).min()
+    high_low_12m = stock_df.rolling(window = 21 * 12).max() / stock_df.rolling(window = 21 * 12).min()
+
+    w_sum = 1.0 / 1 + 1.0 / 2 + 1.0 / 3 + 1.0 / 6 + 1.0 / 12
+    w1 = 1.0 / 1 / w_sum
+    w2 = 1.0 / 2 / w_sum
+    w3 = 1.0 / 3 / w_sum
+    w6 = 1.0 / 6 / w_sum
+    w12= 1.0 / 12 / w_sum
+
+    std_df = w1 * std1m_df + w2 * std2m_df + w3 * std3m_df + w6 * std6m_df + w12 * std12m_df + w1 * high_low_1m + w2 * high_low_2m + w3 * high_low_3m + w6 * high_low_6m + w12 * high_low_12m
+    std_df = std_df.iloc[252:]
+    #print std_df
+    std_df.to_csv('./tmp/stock_dastd.csv')
+    return std_df
+
+
 #momentum factor
 def momentum(stock_dfr):
 
@@ -107,6 +159,12 @@ def cap_size(stock_market_value_df):
     print 'stock cap size done'
     return stock_market_value_df
 
+def cube_size(stock_market_value_df):
+    stock_market_value_df = np.power(stock_market_value_df, 3)
+    stock_market_value_df.index.name = 'date'
+    stock_market_value_df.to_csv('./tmp/cube_size.csv')
+    print 'stock cube size done'
+    return stock_market_value_df
 
 def dastd(stock_dfr):
     back = 252
@@ -248,8 +306,11 @@ if __name__ == '__main__':
     #stock_bp_df = stock_bp_df[stock_df.columns]
 
     #beta(stock_dfr, index_dfr)
-    momentum(stock_dfr)
-    cap_size(stock_market_value_df)
+    #ht_momentum(stock_dfr, stock_turnover_df)
+    #momentum(stock_dfr)
+    #cap_size(stock_market_value_df)
+    cube_size(stock_market_value_df)
     #dastd(stock_dfr)
+    #ht_std(stock_df)
     #bp(stock_bp_df)
     #liquidity(stock_turnover_df)
