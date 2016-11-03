@@ -225,6 +225,7 @@ if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
     nav.add_command(CommandNavStock.stock)
     pool.add_command(CommandPool.stock)
+    pool.add_command(CommandPool.bond)
 
     roboadvisor(obj={})  
     
