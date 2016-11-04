@@ -9,7 +9,7 @@ import datetime
 if __name__ == '__main__':
 
 
-    dates = pd.date_range('2016-01-06', '2016-11-04')
+    dates = pd.date_range('2014-01-02', '2016-11-04')
 
     stock_market_value_df = pd.read_csv('./data/stock_market_value.csv', index_col = 'date', parse_dates = ['date'])
     stock_market_value_df = stock_market_value_df.reindex(dates).fillna(method='pad')
@@ -34,7 +34,8 @@ if __name__ == '__main__':
     fpes = []
     fsizes = []
     fsymbols = []
-    dates = fund_position_df.index.get_level_values(0).unique().values[8:11]
+    dates = fund_position_df.index.get_level_values(0).unique().values[0:11]
+    print dates
     for date in dates:
         print date
         secode_skcode_ratio_df = fund_position_df.loc[date]
