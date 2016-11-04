@@ -877,6 +877,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
     start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
 
+
     capindexdf = indexdf[['399314.SZ', '399316.SZ']]
     largecapindexdf = indexdf[['399314.SZ']]
     smallcapindexdf = indexdf[['399316.SZ']]
@@ -1185,6 +1186,41 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
     start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
+    size_index_df = pd.read_csv('./data/market_value_index.csv', index_col = 'date', parse_dates = ['date'])
+    pe_index_df = pd.read_csv('./data/pe_index.csv', index_col = 'date', parse_dates = ['date'])
+    size_df = pd.read_csv('./data/fsize.csv', index_col = 'date', parse_dates = ['date'])
+    pe_df = pd.read_csv('./data/fpe.csv', index_col = 'date', parse_dates = ['date'])
+
+    size_df = size_df.reindex(size_index_df.index)
+    pe_df = pe_df.reindex(size_index_df.index)
+    size_df.to_csv('tmp.csv')
+    #print pe_df
+    #print size_index_df.index
+    #print df_nav_fund.index
+
+    #pe_index_df = pe_index_df.loc[df_nav_fund.index]
+    #size_index_df = size_index_df.loc[df_nav_fund.index]
+    #print size_df
+
+    #print size_index_df
+    #print pe_index_df
+    #size_dates = size_index_df.index.values
+    #pe_dates = pe_index_df.index.values
+    #nav_dates = df_nav_fund.index.values
+
+    #dates = set(size_dates) & set(pe_dates) & set(nav_dates)
+    #dates = list(dates)
+    #dates.sort()
+
+    #print size_index_df.index
+    #print pe_index_df.index
+    #print size_df.index
+    #print pe_df.index
+    #print df_nav_fund.index
+    #size_index_df = size_index_df[dates]
+    #pe_index_df = pe_index_df[dates]
+    #print size_index_df.index
+    #print pe_index_df.index
 
     capindexdf = df_nav_index[['399314.SZ', '399316.SZ']]
     largecapindexdf = df_nav_index[['399314.SZ']]
