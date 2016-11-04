@@ -224,6 +224,7 @@ def bp(stock_bp):
     return stock_bp
 
 def pe(stock_pe):
+    stock_pe[stock_pe < 0] = np.nan
     stock_pe.to_csv('./tmp/pe.csv')
     return stock_pe
 
