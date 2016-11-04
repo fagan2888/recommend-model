@@ -78,7 +78,7 @@ def stock(ctx, datadir, startdate, enddate, pools, optlist, optlimit, optcalc):
         stock_update(db, pool, optlimit, optcalc)
 
 def stock_update(db, pool, optlimit, optcalc):
-    label_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14'])
+    label_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14', '2016-11-03'])
 
     lookback = pool.ra_lookback
     limit = optlimit
@@ -247,7 +247,7 @@ def bond(ctx, datadir, startdate, enddate, pools, optlist, optlimit, optcalc):
         bond_update(db, pool, optlimit, optcalc)
 
 def bond_update(db, pool, optlimit, optcalc):
-    label_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14'])
+    label_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14', '2016-11-03'])
 
     lookback = pool.ra_lookback
     limit = optlimit
@@ -257,8 +257,10 @@ def bond_update(db, pool, optlimit, optcalc):
         # 计算每个调仓点的最新配置
         #
         data_bond = {}
-        for day in label_index:
-            data_bond[day] = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
+        with click.progressbar(length=len(label_index), label='calc pool %d' % (pool.id)) as bar:
+            for day in label_index:
+                data_bond[day] = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
+                bar.update(1)
 
         df_bond = pd.concat(data_bond, names=['ra_date', 'ra_category', 'ra_fund_code'])
 
