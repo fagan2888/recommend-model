@@ -11,3 +11,4 @@ data/
 nohup.out
 config.py
 *.log
+.DS_Store

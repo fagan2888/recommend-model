@@ -13,11 +13,20 @@
       "formatter": "simple",
       "stream": "ext:\/\/sys.stdout"
     },
+    "query_file_handler": {
+      "class": "logging.handlers.RotatingFileHandler",
+      "level": "INFO",
+      "formatter": "simple",
+      "filename": "./logs/query.log",
+      "maxBytes": 10485760,
+      "backupCount": 20,
+      "encoding": "utf8"
+    },
     "info_file_handler": {
       "class": "logging.handlers.RotatingFileHandler",
       "level": "INFO",
       "formatter": "simple",
-      "filename": "info.log",
+      "filename": "./logs/info.log",
       "maxBytes": 10485760,
       "backupCount": 20,
       "encoding": "utf8"
@@ -26,17 +35,17 @@
       "class": "logging.handlers.RotatingFileHandler",
       "level": "ERROR",
       "formatter": "simple",
-      "filename": "error.log",
+      "filename": "./logs/error.log",
       "maxBytes": 10485760,
       "backupCount": 20,
       "encoding": "utf8"
     }
   },
   "loggers": {
-    "my_module": {
-      "level": "ERROR",
+    "DBData": {
+      "level": "INFO",
       "handlers": [
-        "console"
+        "query_file_handler"
       ],
       "propagate": "no"
     }
@@ -44,7 +53,6 @@
   "root": {
     "level": "INFO",
     "handlers": [
-      "console",
       "info_file_handler",
       "error_file_handler"
     ]
