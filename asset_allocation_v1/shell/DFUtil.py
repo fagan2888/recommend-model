@@ -35,11 +35,14 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     # 动作也是在收盘确认之后发生的
     #
     start_date = df_position.index.min()
-    
+    #print df_inc 
     if start_date not in df_inc.index:
         df_inc.loc[start_date] = 0
 
+    #print df_inc
+    #print start_date
     df = df_inc[start_date:]
+    #print df
 
     assets_s = pd.Series(np.zeros(len(df.columns)), index=df.columns) # 当前资产
     assets_s[0] = 1
@@ -59,6 +62,7 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
 
         # 日末各个基金持仓情况
         df_result.loc[day] = assets_s
+
     #
     # 计算资产组合净值
     #

@@ -27,9 +27,9 @@ from dateutil.parser import parse
 def label_asset_tag(label_index, lookback=52):
     '''perform fund tagging along label_index.
     '''
-    
-    label_index = pd.DatetimeIndex(['2016-10-14'])
-    
+
+    label_index = pd.DatetimeIndex(['2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
+
     #
     # 计算每个调仓点的最新配置
     #
@@ -94,10 +94,14 @@ def label_asset_nav(start_date, end_date):
         else:
             df_nav_fund = DBData.db_fund_value_daily(start_date, end_date, df_position.columns)
         df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
+        #print df_inc_fund
         #
         # 计算组合净值增长率
         #
+        #print df_position
         df_nav_portfolio = DFUtil.portfolio_nav(df_inc_fund, df_position, result_col='portfolio')
+        #print df_nav_portfolio
+        #print df_nav_portfolio
         df_nav_portfolio.to_csv(datapath('category_nav_' + category + '.csv'))
 
         data[category] = df_nav_portfolio['portfolio']
@@ -144,6 +148,9 @@ def label_asset_stock_per_day(day, lookback):
     #
     df_nav_indicator = df_nav_stock[df_indicator.index]
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
+
+    #print df_label
+    #print day
 
     #
     # 选择基金
