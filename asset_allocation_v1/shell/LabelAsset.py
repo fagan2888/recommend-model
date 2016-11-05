@@ -31,6 +31,9 @@ def label_asset_tag(label_index, lookback=52):
     # label_index = pd.DatetimeIndex(['2012-10-26', '2015-09-30', '2016-04-08', '2016-10-14'])
     label_index = pd.DatetimeIndex(['2016-10-14'])
     
+
+    label_index = pd.DatetimeIndex(['2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
+
     #
     # 计算每个调仓点的最新配置
     #
@@ -149,6 +152,9 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #
     df_nav_indicator = df_nav_stock[df_indicator.index]
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
+
+    #print df_label
+    #print day
 
     #
     # 选择基金

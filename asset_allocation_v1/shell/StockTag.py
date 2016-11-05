@@ -338,6 +338,7 @@ def growthfitness(funddf, indexdf, ratio):
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
 
+    #print indexdfr
 
     growthcaptag = {}
 
@@ -348,7 +349,7 @@ def growthfitness(funddf, indexdf, ratio):
     indexr = []
     indexr.append(0)
     for i in range(1 ,len(indexdfr[cols[0]].values)):
-        indexr.append(0.5 * indexdfr['399372.SZ'].values[i]  + 0.5 * indexdfr['399376.SZ'].values[i] - 0.5 * indexdfr['399373.SZ'].values[i] - 0.5 * indexdfr['399377.SZ'].values[i])
+        indexr.append(indexdfr['high_pe'].values[i] - indexdfr['low_pe'].values[i])
 
 
     for i in range(4, len(indexr)):
@@ -413,9 +414,10 @@ def valuefitness(funddf, indexdf, ratio):
     cols   = indexdfr.columns
 
     indexr = []
-    indexr.append(0)
+    indexr.append(0) 
     for i in range(1 ,len(indexdfr[cols[0]].values)):
-        indexr.append(0.5 * indexdfr['399372.SZ'].values[i]  + 0.5 * indexdfr['399376.SZ'].values[i]- 0.5 * indexdfr['399373.SZ'].values[i] - 0.5 * indexdfr['399377.SZ'].values[i])
+        indexr.append(indexdfr['low_pe'].values[i] - indexdfr['high_pe'].values[i])
+        #indexr.append(0.5 * indexdfr['399372.SZ'].values[i]  + 0.5 * indexdfr['399376.SZ'].values[i]- 0.5 * indexdfr['399373.SZ'].values[i] - 0.5 * indexdfr['399377.SZ'].values[i])
 
 
     for i in range(4, len(indexr)):
@@ -493,9 +495,36 @@ def positionprefer(funddf, ratio):
 #大盘偏好
 def largecapprefer(funddf, indexdf, ratio):
 
+    #print indexdf
     largecapprefer = {}
 
+    #print funddf.columns
+    date = funddf.index.values[-1]
+    indexdf = indexdf.loc[date]
+    indexdf.sort()
+    l = len(indexdf)
+    indexdf = indexdf.iloc[(int)(l * 0.5) : l]
+    cols = set(funddf.columns.values)
+    codes = []
+    for code in indexdf.index:
+        c = '%06d' % (int)(code)
+        if c in cols:
+            codes.append(c)
 
+    #print indexdf.index
+    result = []
+    for code in codes:
+        result.append((code, indexdf.loc['%d' % (int)(code)]))
+
+    #print result
+    #print codes
+        #codes.append('%06d' % (int)(code))
+
+    #print cols
+    #print codes
+
+
+    '''
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
 
@@ -529,6 +558,8 @@ def largecapprefer(funddf, indexdf, ratio):
             result.append(sorted_largecapprefer[i])
         # result.append(sorted_largecapprefer[i])
 
+    print result
+    '''
     return result
 
 
@@ -536,6 +567,28 @@ def largecapprefer(funddf, indexdf, ratio):
 def smallcapprefer(funddf, indexdf, ratio):
 
 
+    #largecapprefer = {}
+
+    #print funddf.columns
+    date = funddf.index.values[-1]
+    indexdf = indexdf.loc[date]
+    indexdf.sort()
+    l = len(indexdf)
+    indexdf = indexdf.iloc[0 : (int)(l * 0.5)]
+    cols = set(funddf.columns.values)
+    codes = []
+    for code in indexdf.index:
+        c = '%06d' % (int)(code)
+        if c in cols:
+            codes.append(c)
+
+    #print indexdf.index
+    result = []
+    for code in codes:
+        result.append((code, indexdf.loc['%d' % (int)(code)]))
+
+
+    '''
     smallcapprefer = {}
 
 
@@ -572,6 +625,7 @@ def smallcapprefer(funddf, indexdf, ratio):
         if (sorted_smallcapprefer[i][1]) > 0.95:
             result.append(sorted_smallcapprefer[i])
         # result.append(sorted_smallcapprefer[i])
+    '''
 
     return result
 
@@ -579,6 +633,26 @@ def smallcapprefer(funddf, indexdf, ratio):
 
 def growthcapprefer(funddf, indexdf, ratio):
 
+    date = funddf.index.values[-1]
+    indexdf = indexdf.loc[date]
+    indexdf.sort()
+    l = len(indexdf)
+    indexdf = indexdf.iloc[(int)(l * 0.5) : l]
+    cols = set(funddf.columns.values)
+    codes = []
+    for code in indexdf.index:
+        c = '%06d' % (int)(code)
+        if c in cols:
+            codes.append(c)
+
+    #print indexdf.index
+    result = []
+    for code in codes:
+        result.append((code, indexdf.loc['%d' % (int)(code)]))
+
+
+    '''
+    smallcapprefer = {}
     growthcapprefer = {}
 
 
@@ -618,13 +692,33 @@ def growthcapprefer(funddf, indexdf, ratio):
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_growthcapprefer) * ratio))):
         result.append(sorted_growthcapprefer[i])
-
+    '''
     return result
 
 
 
 def valuecapprefer(funddf, indexdf, ratio):
 
+    date = funddf.index.values[-1]
+    indexdf = indexdf.loc[date]
+    indexdf.sort()
+    l = len(indexdf)
+    indexdf = indexdf.iloc[0 : (int)(l * 0.5)]
+    cols = set(funddf.columns.values)
+    codes = []
+    for code in indexdf.index:
+        c = '%06d' % (int)(code)
+        if c in cols:
+            codes.append(c)
+
+    #print indexdf.index
+    result = []
+    for code in codes:
+        result.append((code, indexdf.loc['%d' % (int)(code)]))
+
+
+    '''
+    smallcapprefer = {}
 
     valuecapprefer = {}
 
@@ -668,7 +762,7 @@ def valuecapprefer(funddf, indexdf, ratio):
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_valuecapprefer) * ratio))):
         result.append(sorted_valuecapprefer[i])
-
+    '''
 
     return result
 
@@ -1178,9 +1272,10 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
     return list(final_codes) , fund_tags
 
+
 def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     daystr = day.strftime("%Y-%m-%d")
-    
+
     dates = df_nav_index.index.values
     dates.sort()
     end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
@@ -1191,15 +1286,25 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     size_df = pd.read_csv('./data/fsize.csv', index_col = 'date', parse_dates = ['date'])
     pe_df = pd.read_csv('./data/fpe.csv', index_col = 'date', parse_dates = ['date'])
 
-    size_df = size_df.reindex(size_index_df.index)
-    pe_df = pe_df.reindex(size_index_df.index)
-    size_df.to_csv('tmp.csv')
+    size_df = size_df.reindex(size_index_df.index).fillna(method='pad')
+    pe_df = pe_df.reindex(size_index_df.index).fillna(method='pad')
+
+    #print size_df.columns
+    #print pe_df.columns
+    #print size_df
+    #print pe_df
+    #size_df.to_csv('tmp.csv')
     #print pe_df
     #print size_index_df.index
     #print df_nav_fund.index
 
-    #pe_index_df = pe_index_df.loc[df_nav_fund.index]
-    #size_index_df = size_index_df.loc[df_nav_fund.index]
+    pe_index_df = pe_index_df.loc[df_nav_fund.index]
+    size_index_df = size_index_df.loc[df_nav_fund.index]
+    size_df = size_df.loc[df_nav_fund.index]
+    pe_df = pe_df.loc[df_nav_fund.index]
+
+    #print size_df
+    #print pe_df
     #print size_df
 
     #print size_index_df
@@ -1225,6 +1330,10 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     capindexdf = df_nav_index[['399314.SZ', '399316.SZ']]
     largecapindexdf = df_nav_index[['399314.SZ']]
     smallcapindexdf = df_nav_index[['399316.SZ']]
+    #largecapindexdf = size_index_df['big_size']
+    #smallcapindexdf = size_index_df['small_size']
+    #print largecapindexdf
+    #print smallcapindexdf
     hs300indexdf = df_nav_index[['000300.SH']]
     growthvalueindexdf = df_nav_index[['399372.SZ', '399373.SZ', '399376.SZ', '399377.SZ']]
 
@@ -1243,18 +1352,20 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     positiondf = positiondf[codes]
 
 
-    largecapfitness_result    = largecapfitness(df_nav_fund, capindexdf, 0.5)
-    smallcapfitness_result    = smallcapfitness(df_nav_fund, capindexdf, 0.5)
+    largecapfitness_result    = largecapfitness(df_nav_fund, size_index_df, 0.5)
+    smallcapfitness_result    = smallcapfitness(df_nav_fund, size_index_df, 0.5)
     risefitness_result    = risefitness(df_nav_fund, hs300indexdf, 0.5)
     declinefitness_result     = declinefitness(df_nav_fund, hs300indexdf, 0.5)
     oscillationfitness_result = oscillationfitness(df_nav_fund, hs300indexdf,  0.5)
-    growthfitness_result      = growthfitness(df_nav_fund, growthvalueindexdf, 0.5)
-    valuefitness_result       = valuefitness(df_nav_fund,  growthvalueindexdf, 0.5)
+    #growthfitness_result      = growthfitness(df_nav_fund, growthvalueindexdf, 0.5)
+    #valuefitness_result       = valuefitness(df_nav_fund,  growthvalueindexdf, 0.5)
+    growthfitness_result      = growthfitness(df_nav_fund, pe_index_df, 0.5)
+    valuefitness_result       = valuefitness(df_nav_fund,  pe_index_df, 0.5)
     positionprefer_result     = positionprefer(positiondf, 0.5)
-    largecapprefer_result     = largecapprefer(df_nav_fund, largecapindexdf, 0.5)
-    smallcapprefer_result     = smallcapprefer(df_nav_fund, smallcapindexdf, 0.5)
-    growthcapprefer_result    = growthcapprefer(df_nav_fund, growthvalueindexdf, 0.5)
-    valuecapprefer_result     = valuecapprefer(df_nav_fund, growthvalueindexdf, 0.5)
+    largecapprefer_result     = largecapprefer(df_nav_fund, size_df, 0.5)
+    smallcapprefer_result     = smallcapprefer(df_nav_fund, size_df, 0.5)
+    growthcapprefer_result    = growthcapprefer(df_nav_fund, pe_df, 0.5)
+    valuecapprefer_result     = valuecapprefer(df_nav_fund, pe_df, 0.5)
 
     data = {
         'high_position_prefer': {k:1 for (k, v) in positionprefer_result},

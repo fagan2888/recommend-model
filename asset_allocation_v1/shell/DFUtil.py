@@ -39,7 +39,7 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     # 动作也是在收盘确认之后发生的
     #
     start_date = df_position.index.min()
-    
+    #print df_inc 
     if start_date not in df_inc.index:
         df_inc.loc[start_date] = 0
         df_inc.sort_index(inplace=True)
