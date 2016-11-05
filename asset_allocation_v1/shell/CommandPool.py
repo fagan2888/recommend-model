@@ -78,7 +78,7 @@ def stock(ctx, datadir, startdate, enddate, pools, optlist, optlimit, optcalc):
         stock_update(db, pool, optlimit, optcalc)
 
 def stock_update(db, pool, optlimit, optcalc):
-    label_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14', '2016-11-03'])
+    label_index = get_adjust_point()
 
     lookback = pool.ra_lookback
     limit = optlimit
@@ -247,7 +247,7 @@ def bond(ctx, datadir, startdate, enddate, pools, optlist, optlimit, optcalc):
         bond_update(db, pool, optlimit, optcalc)
 
 def bond_update(db, pool, optlimit, optcalc):
-    label_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14', '2016-11-03'])
+    label_index = get_adjust_point()
 
     lookback = pool.ra_lookback
     limit = optlimit
@@ -333,3 +333,23 @@ def load_pool_by_type(db, pool_type, pools):
 
     return df_pool
         
+def get_adjust_point():
+    label_index = pd.DatetimeIndex([
+        '2010-01-08',
+        '2010-07-09',
+        '2011-01-07',
+        '2011-07-08',
+        '2012-01-13',
+        '2012-07-20',
+        '2013-01-25',
+        '2013-08-02',
+        '2014-01-30',
+        '2014-08-01',
+        '2015-01-30',
+        '2015-07-31',
+        '2016-01-29',
+        '2016-08-05',
+        '2016-11-05',
+    ])
+
+    return label_index
