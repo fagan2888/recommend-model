@@ -163,6 +163,18 @@ def trade(ctx, datadir, output):
     with (open(output, 'w') if output != '-' else os.fdopen(os.dup(sys.stdout.fileno()), 'w')) as out:
         GeneralizationPosition.portfolio_trade(out)
 
+@portfolio.command()
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.pass_context
+def stockavg(ctx, datadir):
+    '''generate final portfolio using simple average strategy (no cost)
+    '''
+    Const.datadir = datadir
+    #
+    # 生成配置数据
+    #
+    GeneralizationPosition.portfolio_stock_avg()
+
     
 @roboadvisor.group()  
 @click.pass_context

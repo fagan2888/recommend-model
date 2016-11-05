@@ -195,7 +195,7 @@ def portfolio_simple():
     #
     # 过滤掉与上期换手率小于3%
     #
-    df_result = filter_by_turnover_rate(df_result, 0.1)
+    df_result = filter_by_turnover_rate(df_result, 0.03)
     print "filter_by_turnover_rate"
 
     #
@@ -263,7 +263,7 @@ def portfolio_detail():
     #
     # 过滤掉与上期换手率小于3%
     #
-    df_result = DFUtil.filter_by_turnover_rate(df_result, 0.1)
+    df_result = DFUtil.filter_by_turnover_rate(df_result, 0.03)
     print "filter_by_turnover_rate"
     df_result.to_csv(datapath('tmp-result2.csv'), index=False)
 
@@ -280,6 +280,95 @@ def portfolio_detail():
     df_result.replace({'category':categories_types()}).to_csv(datapath('position-d.csv'), index=False)
 
     return df_result
+
+def portfolio_stock_avg():
+    #
+    # 计算各中类资产的配置比例, 确定调仓时间轴
+    #
+    df_portfolio = pd.read_csv(datapath('portfolio_position.csv'), index_col=['risk', 'date'], parse_dates=['date'])
+    
+    ix_date = df_portfolio.index.levels[1]
+
+    #
+    # 合并股票类资产配置结果
+    #
+    df_position = df_portfolio[['GLNC', 'SP500.SPI', 'creditbond', 'ratebond', 'money']].copy()
+    df_position['stock'] = df_portfolio[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value']].sum(axis=1)
+    df_position.columns.name = 'type'
+    df_position = df_position.stack().to_frame('position')
+
+    #
+    # 加载基金池,并根据调仓时间轴整形
+    #
+    df_pool = pd.read_csv(datapath('fund_pool.csv'), index_col = ['category', 'date'], dtype={'code':str}, parse_dates = ['date'], usecols=['date', 'category', 'code'])
+    df_pool.drop(df_pool.index[df_pool.index.get_level_values('category') == 'HSCI.HI'], inplace=True)
+    df_pool.loc['money', 'code'] = '213009'
+    df_pool.loc['GLNC', 'code'] = '000216'
+    df_pool.loc[('GLNC', slice(None, '2013-08-22')), 'code'] = '320013'
+    df_pool.loc['SP500.SPI', 'code'] = '096001'
+
+    df_pool['weight'] = 1.0
+    
+    df_pool.set_index('code', append=True, inplace=True)
+    df_pool = df_pool.groupby(level=(0,1,2)).first()
+    df_pool = df_pool.unstack((0, 2)).reindex(ix_date, method='pad').stack((1,2))
+
+    # df_pool = df_pool.reindex(ix_date, method='pad')
+    df_pool = df_pool.swaplevel(0,1)
+
+    df_pool['type'] = df_pool.index.get_level_values('category')
+    df_pool.loc[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value'], 'type'] = 'stock'
+
+    df_pool = df_pool.reset_index().set_index(['date', 'type', 'code']).sort_index()
+
+    df_pool = df_pool.groupby(level=(0,1,2)).first()
+
+    df_pool['weight'] = df_pool['weight'].groupby(level=(0,1), group_keys=False).apply(lambda x: x / len(x))
+
+    #
+    # 生成配置比例
+    #
+    df_position = df_position.reset_index().set_index(['date', 'type'])
+    df_pool = df_pool.reset_index().set_index(['date', 'type'])
+
+    df_result = df_pool.merge(df_position, left_index=True, right_index=True)
+    df_result = df_result.reset_index().set_index(['risk', 'date', 'type', 'code']).sort_index()
+
+    df_result['ratio'] = df_result['weight'] * df_result['position']
+    
+    df_result.replace({'category':categories_types()}, inplace=True)
+
+    df_result.reset_index(inplace=True)
+
+    df_result = df_result[['risk', 'date', 'category', 'code', 'ratio']]
+    df_result.rename(columns={'code':'fund'}, inplace=True)
+    df_result.to_csv(datapath('position-raw.csv'), index=False)
+    
+    #
+    # 过滤掉过小的份额配置
+    #
+    df_result = df_result[df_result['ratio'] >= 0.009999]
+    df_result.to_csv(datapath('position-nosmall.csv'), index=False)
+    print "fileout small"
+
+    #
+    # 过滤掉与上期换手率小于3%
+    #
+    df_result = DFUtil.filter_by_turnover_rate(df_result, 0.03)
+    print "filter_by_turnover_rate"
+    df_result.to_csv(datapath('position-turnover.csv'), index=False)
+
+
+    #
+    # 某天持仓补足100%
+    #
+    df_result = DFUtil.pad_sum_to_one(df_result, [df_result['risk'], df_result['date']])
+    print "pad_sum_to_one"
+    
+    #
+    # 计算资产组合净值
+    #
+    df_result.to_csv(datapath('position-v.csv'), index=False)
 
 
 def filter_by_turnover_rate(df, turnover_rate):

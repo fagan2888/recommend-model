@@ -132,8 +132,8 @@ def filter_by_turnover_rate_per_risk(df, turnover_rate):
         else:
             df_current = v1[['category', 'fund', 'ratio']].set_index(['category', 'fund'])
             df_diff = df_current - df_last
-            xsum = df_diff['ratio'].sum()
-            if df_diff.isnull().values.any() or abs(df_diff['ratio'].sum()) >= turnover_rate:
+            xsum = df_diff['ratio'].abs().sum()
+            if df_diff.isnull().values.any() or xsum >= turnover_rate:
                 df_result = pd.concat([df_result, v1])
                 df_last = df_current
                 
