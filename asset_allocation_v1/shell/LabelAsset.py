@@ -231,7 +231,7 @@ def label_asset_money_per_day(day, lookback, limit = 1):
 
     return df_money_fund
 
-def label_asset_other_per_day(day, lookback):
+def label_asset_other_per_day(day, lookback, limit):
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
