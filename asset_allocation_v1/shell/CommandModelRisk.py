@@ -59,7 +59,7 @@ def risk(ctx, datadir, startdate, enddate, label_asset, reshape):
     allocationdata.all_dates()
 
     allocationdata.fund_measure_lookback                 = 52
-    allocationdata.fund_measure_adjust_period            = 26
+    allocationdata.fund_measure_adjust_period            = 13
     allocationdata.jensen_ratio                          = 0.5
     allocationdata.sortino_ratio                         = 0.5
     allocationdata.ppw_ratio                             = 0.5
