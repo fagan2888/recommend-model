@@ -150,7 +150,18 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #
     # 打标签确定所有备选基金
     #
-    df_nav_indicator = df_nav_stock[df_indicator.index]
+    code_df = pd.read_csv('./data/codes.csv')
+    code    = []
+    for c in code_df['0'].values:
+        code.append('%06d' % c)
+    #codes = code_df.values
+    #print 'bbbbbbb', codes
+    #df_nav_indicator = df_nav_stock[df_indicator.index]
+    #print df_nav_indicator
+    code = set(df_nav_stock.columns.values)
+    code = list(code)
+    #print code
+    df_nav_indicator = df_nav_stock[code]
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
 
     #print df_label
