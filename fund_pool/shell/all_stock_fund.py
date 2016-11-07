@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
 
     imploded_sids = ','.join([repr(sid.encode('utf8')) for sid in securityids])
-    sql = 'select FDSNAME, MANAGERNAME, FSYMBOL, FOUNDDATE, SECURITYID from TQ_FD_BASICINFO where ISVALID = 1 and SECURITYID in (' + imploded_sids + ')'
+    sql = 'select FDSNAME, MANAGERNAME, FSYMBOL, FOUNDDATE, SECURITYID, SECODE from TQ_FD_BASICINFO where ISVALID = 1 and SECURITYID in (' + imploded_sids + ')'
     df  = pd.read_sql(sql, conn, index_col = 'SECURITYID', parse_dates = ['FOUNDDATE'])
     #print df.loc['161211']
     df.reset_index(inplace = True)

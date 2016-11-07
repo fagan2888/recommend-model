@@ -43,10 +43,14 @@ if __name__ == '__main__':
                 year = int(year.values[0].split('年')[0])
             except:
                 year = 0
+        totalyear[code] = year
         if year >= 3:
             yearcodes.add(code)
             #print code
 
+    for item in totalyear.items():
+        print item[0], item[1]
+    #print totalyear
     #print yearcodes
     #print fund_df
     #print fund_df
@@ -60,7 +64,7 @@ if __name__ == '__main__':
 
     final_codes = size_code &  yearcodes
 
-    df = pd.DataFrame(list(final_codes))
-    df.to_csv('codes.csv')
+    #df = pd.DataFrame(list(final_codes))
+    #df.to_csv('codes.csv')
     #print len(final_codes)
     #print fund_df
