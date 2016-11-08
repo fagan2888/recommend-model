@@ -16,6 +16,7 @@ import GeneralizationPosition
 import CommandModelRisk
 import CommandNavStock
 import CommandPool
+import CommandPortfolio
 
 
 logger = logging.getLogger(__name__)
@@ -238,6 +239,7 @@ if __name__=='__main__':
     nav.add_command(CommandNavStock.stock)
     pool.add_command(CommandPool.stock)
     pool.add_command(CommandPool.bond)
+    portfolio.add_command(CommandPortfolio.turnover)
 
     roboadvisor(obj={})  
     
