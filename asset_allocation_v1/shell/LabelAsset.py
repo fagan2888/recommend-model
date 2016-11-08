@@ -25,6 +25,7 @@ import DFUtil
 from Const import datapath
 from dateutil.parser import parse
 
+
 def label_asset_tag(label_index, lookback=52):
     '''perform fund tagging along label_index.
     '''
@@ -150,19 +151,78 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #
     # 打标签确定所有备选基金
     #
-    code_df = pd.read_csv('./data/codes.csv')
-    code    = []
-    for c in code_df['0'].values:
-        code.append('%06d' % c)
+    #code_df = pd.read_csv('./data/codes.csv')
+    #code    = []
+    #for c in code_df['0'].values:
+    #    code.append('%06d' % c)
     #codes = code_df.values
     #print 'bbbbbbb', codes
     #df_nav_indicator = df_nav_stock[df_indicator.index]
     #print df_nav_indicator
-    code = set(df_nav_stock.columns.values)
-    code = list(code)
+    #code = set(df_nav_stock.columns.values)
+    #code = list(code)
     #print code
-    df_nav_indicator = df_nav_stock[code]
+    #print end_date
+    #print '-----------------', len(df_nav_stock.columns)
+
+    fund_size_df = pd.read_csv('./data/fund_size.csv', index_col = 'date')
+    fund_invshare_df = pd.read_csv('./data/fund_inv_ratio.csv', index_col = 'date')
+    lines = open('data/totalyear').readlines()
+    totalyear = {}
+    for line in lines:
+        vec = line.strip().split()
+        totalyear[vec[0]] = (int)(vec[1])
+    date_size_df = fund_size_df.loc[end_date]
+    date_invshare_df = fund_invshare_df.loc[end_date]
+    date_size_df = date_size_df.dropna()
+    date_invshare_df = date_invshare_df.dropna()
+
+    size_codes = []
+    for code in date_size_df.index:
+        size = date_size_df.loc[code]
+        #print code, size
+        if size >= 20 * 1e8 and size <= 80 * 1e8:
+            #print code, size
+            size_codes.append(code)
+
+    invshare_codes = []
+    for code in date_invshare_df.index:
+        invshare_ratio = date_invshare_df.loc[code]
+        if invshare_ratio > 20:
+            invshare_codes.append(code)
+
+    codes = set(size_codes) & set(invshare_codes)
+
+    year_codes = []
+    vec = end_date.split('-')
+    year = (int)(vec[0])
+    for code, y in totalyear.items():
+        if year == 2015:
+            if y >= 3:
+                year_codes.append(code)
+        elif year == 2016:
+            if y >= 2:
+                year_codes.append(code)
+
+    codes = set(year_codes) & codes
+    #codes = list(codes)
+
+    columns = set(df_nav_stock.columns.values)
+    codes = codes & columns
+    codes = list(codes)
+    print codes
+    #print type(end_date)
+    #print len(size_codes)
+    #print len(date_size_df)
+    #print len(date_invshare_df)
+    #print end_date
+    #print fund_invshare_df
+    #print fund_size_df
+    df_nav_indicator = df_nav_stock
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
+    #codes = set(codes) & set(df_label.index.values)
+    #df_label = df_label.loc[list(codes)]
+    #print df_label
 
     #print df_label
     #print day
