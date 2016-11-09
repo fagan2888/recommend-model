@@ -24,6 +24,8 @@ def select_stock_new(day, df_label, df_indicator):
     data = {}
     for category in categories:
         index_codes = df_label[df_label[category] == 1].index
+        #print index_codes
+        #print df_indicator.index
         df_tmp = df_indicator.loc[index_codes]
         data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:fund_num]
         
