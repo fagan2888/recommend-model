@@ -33,7 +33,7 @@ def label_asset_tag(label_index, lookback=52):
     label_index = pd.DatetimeIndex(['2016-10-14'])
     
 
-    label_index = pd.DatetimeIndex(['2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
+    label_index = pd.DatetimeIndex(['2014-03-31','2014-06-30','2014-09-30','2014-12-31', '2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
 
     #
     # 计算每个调仓点的最新配置
@@ -207,6 +207,8 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     codes = codes & set(invshare_codes)
     print 'invshare done' , len(codes)
 
+
+    '''
     year_codes = []
     remain_codes = []
     vec = end_date.split('-')
@@ -222,7 +224,7 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
                 year_codes.append(code)
             else:
                 remain_codes.append(code)
-
+    '''
 
     #codes = set(year_codes) & codes
     #print end_date, codes
@@ -252,6 +254,7 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #print end_date
     #print fund_invshare_df
     #print fund_size_df
+    #df_nav_indicator = df_nav_stock[df_indicator.index]
     df_nav_indicator = df_nav_stock
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
     #codes = set(codes) & set(df_label.index.values) & set(df_indicator.index.values)
