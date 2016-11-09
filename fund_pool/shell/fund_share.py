@@ -72,6 +72,10 @@ if __name__ == '__main__':
     nav_df = nav_df.loc[dates]
     share_df = share_df.loc[dates]
 
+
     fund_size_df = share_df * nav_df
+    dates = pd.date_range('2014-01-01', '2016-11-09')
+    fund_size_df = fund_size_df.reindex(dates)
+    fund_size_df.fillna(method = 'pad', inplace = True)
     print fund_size_df
     fund_size_df.to_csv('./fund_size.csv')
