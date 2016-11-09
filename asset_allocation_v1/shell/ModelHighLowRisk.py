@@ -3,6 +3,7 @@
 
 import os
 import string
+import click
 import pandas as pd
 import numpy as np
 import FundIndicator
@@ -107,12 +108,15 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
     #
     df_high = pd.DataFrame(index=pd.Index([], name='date'), columns=get_columns('high'))
     df_low =  pd.DataFrame(index=pd.Index([], name='date'), columns=get_columns('low'))
-    for day in adjust_index:
-        print "markowitz:", day
-        # 高风险资产配置
-        df_high.loc[day] = asset_alloc_high_risk_per_day(day, lookback, columns=get_columns('high'))
-        # 底风险资产配置
-        df_low.loc[day] = asset_alloc_low_risk_per_day(day, lookback, columns=get_columns('low'))
+
+    with click.progressbar(length=len(adjust_index), label='markowitz') as bar:
+        for day in adjust_index:
+            # print "markowitz:", day
+            # 高风险资产配置
+            df_high.loc[day] = asset_alloc_high_risk_per_day(day, lookback, columns=get_columns('high'))
+            # 底风险资产配置
+            df_low.loc[day] = asset_alloc_low_risk_per_day(day, lookback, columns=get_columns('low'))
+            bar.update(1)
 
     # df_high.index.name='date'
     # df_low.index.name='date'

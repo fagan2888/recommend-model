@@ -5,6 +5,7 @@ import numpy as np
 import string
 import os
 import sys
+import click
 sys.path.append("windshell")
 import Financial as FIN
 import StockTag as ST
@@ -37,11 +38,13 @@ def label_asset_tag(label_index, lookback=52):
     data_bond = {}
     data_money = {}
     data_other = {}
-    for day in label_index:
-        data_stock[day] = label_asset_stock_per_day(day, lookback, Const.fund_num)
-        data_bond[day] = label_asset_bond_per_day(day, lookback, Const.fund_num)
-        data_money[day] = label_asset_money_per_day(day, lookback, Const.fund_num)
-        data_other[day] = label_asset_other_per_day(day, lookback, Const.fund_num)
+    with click.progressbar(length=len(label_index), label='label asset') as bar:
+        for day in label_index:
+            data_stock[day] = label_asset_stock_per_day(day, lookback, Const.fund_num)
+            data_bond[day] = label_asset_bond_per_day(day, lookback, Const.fund_num)
+            data_money[day] = label_asset_money_per_day(day, lookback, Const.fund_num)
+            data_other[day] = label_asset_other_per_day(day, lookback, Const.fund_num)
+            bar.update(1)
         
     df_stock = pd.concat(data_stock, names=['date', 'category', 'code'])
     df_bond = pd.concat(data_bond, names=['date', 'category', 'code'])
@@ -78,29 +81,31 @@ def label_asset_nav(start_date, end_date):
     df_pool['ratio'] = 1.0
 
     data = {}
-    for category in df_pool.index.levels[0]:
-        #
-        # 生成大类的基金仓位配置矩阵
-        #
-        df_pool_category = df_pool.loc[category, ['ratio']]
-        df_position = df_pool_category.groupby(level=0).apply(lambda x: x / len(x))
-        df_position = df_position.unstack(fill_value=0.0)
-        df_position.columns = df_position.columns.droplevel(0)
-        #
-        # 加载各个基金的日净值数据
-        #
-        if category in ['GLNC', 'HSCI.HI', 'SP500.SPI']:
-            df_nav_fund = DBData.db_index_value_daily(start_date, end_date, df_position.columns)
-        else:
-            df_nav_fund = DBData.db_fund_value_daily(start_date, end_date, df_position.columns)
-        df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
-        #
-        # 计算组合净值增长率
-        #
-        df_nav_portfolio = DFUtil.portfolio_nav(df_inc_fund, df_position, result_col='portfolio')
-        df_nav_portfolio.to_csv(datapath('category_nav_' + category + '.csv'))
+    with click.progressbar(length=len(df_pool.index.levels[0]), label='label nav') as bar:
+        for category in df_pool.index.levels[0]:
+            #
+            # 生成大类的基金仓位配置矩阵
+            #
+            df_pool_category = df_pool.loc[category, ['ratio']]
+            df_position = df_pool_category.groupby(level=0).apply(lambda x: x / len(x))
+            df_position = df_position.unstack(fill_value=0.0)
+            df_position.columns = df_position.columns.droplevel(0)
+            #
+            # 加载各个基金的日净值数据
+            #
+            if category in ['GLNC', 'HSCI.HI', 'SP500.SPI']:
+                df_nav_fund = DBData.db_index_value_daily(start_date, end_date, df_position.columns)
+            else:
+                df_nav_fund = DBData.db_fund_value_daily(start_date, end_date, df_position.columns)
+            df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
+            #
+            # 计算组合净值增长率
+            #
+            df_nav_portfolio = DFUtil.portfolio_nav(df_inc_fund, df_position, result_col='portfolio')
+            df_nav_portfolio.to_csv(datapath('category_nav_' + category + '.csv'))
 
-        data[category] = df_nav_portfolio['portfolio']
+            data[category] = df_nav_portfolio['portfolio']
+            bar.update(1)
 
     df_result = pd.DataFrame(data)
     df_result.to_csv(datapath('labelasset.csv'))
