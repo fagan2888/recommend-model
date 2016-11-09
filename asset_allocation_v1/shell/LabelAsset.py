@@ -192,7 +192,7 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     for code in date_size_df.index:
         size = date_size_df.loc[code]
         #print code, size
-        if size >= sizes[-1 * (int)(0.3 * len(sizes))] and size <= sizes[-1 * (int)(0.1 * len(sizes))]:
+        if size >= sizes[-1 * (int)(0.5 * len(sizes))] and size <= sizes[-1 * (int)(0.1 * len(sizes))]:
             #print code, size
             size_codes.append(code)
     codes = codes & set(size_codes)
@@ -257,11 +257,18 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #df_nav_indicator = df_nav_stock[df_indicator.index]
     df_nav_indicator = df_nav_stock
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
-    #codes = set(codes) & set(df_label.index.values) & set(df_indicator.index.values)
-    #codes = list(codes)
-    #print len(codes)
+    codes = set(codes) & set(df_label.index.values) & set(df_indicator.index.values)
+    codes = list(codes)
+    print len(codes)
+    df_label = df_label.loc[codes]
+    #print end_date
+    #print df_label
+    #df_label.to_csv('df_label.csv')
+    df_indicator = df_indicator.loc[codes]
+    #df_indicator.sort_values('jensen', ascending=False, inplace = True)
+    #df_indicator = df_indicator.iloc[0 : len(codes),]
+    #codes = df_indicator.index.values
     #df_label = df_label.loc[codes]
-    #df_indicator = df_indicator.loc[codes]
 
     #
     # 选择基金

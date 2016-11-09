@@ -52,7 +52,7 @@ def largecapfitness(funddf, indexdf, ratio):
         else:
             largecap.append(-1)
 
-
+    #print 'largecap' , largecap
     for code in funddfr.columns:
 
         fundr = funddfr[code].values
@@ -68,8 +68,10 @@ def largecapfitness(funddf, indexdf, ratio):
     fitness = {}
     for code in largecaptag.keys():
         rs = largecaptag[code]
-        fitness[code] = (np.mean(rs), np.std(rs), (np.mean(rs) - Const.rf) / np.std(rs))
-
+        if len(rs) == 1:
+            fitness[code] = (np.mean(rs), np.mean(rs), np.mean(rs))
+        else:
+            fitness[code] = (np.mean(rs), np.std(rs), (np.mean(rs) - Const.rf) / np.std(rs))
 
     x = fitness
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1][2], reverse=True)
@@ -80,7 +82,7 @@ def largecapfitness(funddf, indexdf, ratio):
     for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
-
+    #print 'largecap' ,result
     return result
 
 
@@ -101,7 +103,7 @@ def smallcapfitness(funddf, indexdf, ratio):
     indexr = []
     indexr.append(0)
     for i in range(1 ,len(indexdfr[cols[0]].values)):
-        indexr.append(indexdfr[cols[0]].values[i] - indexdfr[cols[1]].values[i])
+        indexr.append(indexdfr[cols[1]].values[i] - indexdfr[cols[0]].values[i])
 
 
     for i in range(4, len(indexr)):
@@ -514,7 +516,7 @@ def largecapprefer(funddf, indexdf, ratio):
     #print indexdf.index
     result = []
     for code in codes:
-        result.append((code, indexdf.loc['%d' % (int)(code)]))
+        result.append((code, indexdf.loc[code]))
 
     #print result
     #print codes
@@ -585,7 +587,7 @@ def smallcapprefer(funddf, indexdf, ratio):
     #print indexdf.index
     result = []
     for code in codes:
-        result.append((code, indexdf.loc['%d' % (int)(code)]))
+        result.append((code, indexdf.loc[code]))
 
 
     '''
@@ -1283,7 +1285,7 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
     size_index_df = pd.read_csv('./data/market_value_index.csv', index_col = 'date', parse_dates = ['date'])
     pe_index_df = pd.read_csv('./data/pe_index.csv', index_col = 'date', parse_dates = ['date'])
-    size_df = pd.read_csv('./data/fsize.csv', index_col = 'date', parse_dates = ['date'])
+    size_df = pd.read_csv('./data/fund_size.csv', index_col = 'date', parse_dates = ['date'])
     pe_df = pd.read_csv('./data/fpe.csv', index_col = 'date', parse_dates = ['date'])
 
     size_df = size_df.reindex(size_index_df.index).fillna(method='pad')

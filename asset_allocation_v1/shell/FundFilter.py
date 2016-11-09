@@ -436,24 +436,26 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
     daystr = day.strftime("%Y-%m-%d")
     #按照jensen测度过滤
     jensen_measure = jensenmeasure(df_nav_fund, df_nav_index, rf)
+    #jensen_data    = ratio_filter(jensen_measure, 0.5)
     jensen_data    = ratio_filter(jensen_measure, 1.0)
     #jensen_data    = sf.jensenfilter(funddf, indexdf, rf, 1.0)
 
     #按照索提诺比率过滤
     sortino_measure = sortinomeasure(df_nav_fund, rf)
+    #sortino_data    = ratio_filter(sortino_measure, 0.5)
     sortino_data    = ratio_filter(sortino_measure, 1.0)
     #sortino_data   = sf.sortinofilter(funddf, rf, 1.0)
 
     #按照ppw测度过滤
     ppw_measure    = ppwmeasure(df_nav_fund, df_nav_index, rf)
+    #ppw_data       = ratio_filter(ppw_measure, 1.0)
     ppw_data       = ratio_filter(ppw_measure, 1.0)
-
     #ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 1.0)
     #print ppw_data
 
     stability_measure = stabilitymeasure(df_nav_fund)
-    stability_data    = ratio_filter(stability_measure, 3.0 / 3)
-
+    #stability_data    = ratio_filter(stability_measure, 3.0 / 3)
+    stability_data    = ratio_filter(stability_measure, 1.0)
     #stability_data = sf.stabilityfilter(funddf, 1.0)
 
     sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
