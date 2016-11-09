@@ -29,7 +29,7 @@ def label_asset_tag(label_index, lookback=52):
     '''perform fund tagging along label_index.
     '''
 
-    label_index = pd.DatetimeIndex(['2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
+    label_index = pd.DatetimeIndex(['2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
 
     #
     # 计算每个调仓点的最新配置
@@ -100,6 +100,7 @@ def label_asset_nav(start_date, end_date):
         # 计算组合净值增长率
         #
         #print df_position
+        #print df_inc_fund
         df_nav_portfolio = DFUtil.portfolio_nav(df_inc_fund, df_position, result_col='portfolio')
         #print df_nav_portfolio
         #print df_nav_portfolio
@@ -144,6 +145,11 @@ def label_asset_stock_per_day(day, lookback):
     df_indicator = FundFilter.stock_fund_filter_new(
         day, df_nav_stock, df_nav_index[Const.hs300_code])
 
+    #print df_nav_stock
+    codes = set(df_nav_stock.columns.values)
+    print 'end_date', end_date
+    print 'fund' , len(codes)
+    #print codes
     #
     # 打标签确定所有备选基金
     #
@@ -173,40 +179,69 @@ def label_asset_stock_per_day(day, lookback):
     date_size_df = date_size_df.dropna()
     date_invshare_df = date_invshare_df.dropna()
 
+    sizes = date_size_df.values
+    sizes.sort()
+    #u     = np.mean(sizes)
+    #sigma = np.std(sizes)
+    #print u, sigma, u - sigma
+    #print sizes[-1 * (int)(0.2 * len(sizes))], sizes[-1]
     size_codes = []
     for code in date_size_df.index:
         size = date_size_df.loc[code]
         #print code, size
-        if size >= 20 * 1e8 and size <= 80 * 1e8:
+        if size >= sizes[-1 * (int)(0.3 * len(sizes))] and size <= sizes[-1 * (int)(0.1 * len(sizes))]:
             #print code, size
             size_codes.append(code)
+    codes = codes & set(size_codes)
+    print 'size done', len(codes)
 
     invshare_codes = []
     for code in date_invshare_df.index:
         invshare_ratio = date_invshare_df.loc[code]
-        if invshare_ratio > 20:
+        if invshare_ratio > 40:
             invshare_codes.append(code)
 
-    codes = set(size_codes) & set(invshare_codes)
+    codes = codes & set(invshare_codes)
+    print 'invshare done' , len(codes)
 
     year_codes = []
+    remain_codes = []
     vec = end_date.split('-')
     year = (int)(vec[0])
     for code, y in totalyear.items():
         if year == 2015:
-            if y >= 3:
+            if y >= 7:
                 year_codes.append(code)
+            else:
+                remain_codes.append(code)
         elif year == 2016:
-            if y >= 2:
+            if y >= 6:
                 year_codes.append(code)
+            else:
+                remain_codes.append(code)
 
-    codes = set(year_codes) & codes
+
+    #codes = set(year_codes) & codes
+    #print end_date, codes
+    #print 'year done' , len(codes)
+
+    #print codes
+
+    #cs = []
+    #for code in remain_codes:
+    #    if code in set(codes):
+    #        cs.append(code)
+    #print end_date, cs
+    #codes = set(cs) & codes
+    #print end_date, codes
+    #print end_date, len(codes)
+
     #codes = list(codes)
-
-    columns = set(df_nav_stock.columns.values)
-    codes = codes & columns
+    #columns = set(df_nav_stock.columns.values)
+    #codes = codes & columns
     codes = list(codes)
-    print codes
+    #print len(codes)
+    #print codes
     #print type(end_date)
     #print len(size_codes)
     #print len(date_size_df)
@@ -216,18 +251,16 @@ def label_asset_stock_per_day(day, lookback):
     #print fund_size_df
     df_nav_indicator = df_nav_stock
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
-    #codes = set(codes) & set(df_label.index.values)
-    #df_label = df_label.loc[list(codes)]
-    #print df_label
-
-    #print df_label
-    #print day
+    #codes = set(codes) & set(df_label.index.values) & set(df_indicator.index.values)
+    #codes = list(codes)
+    #print len(codes)
+    #df_label = df_label.loc[codes]
+    #df_indicator = df_indicator.loc[codes]
 
     #
     # 选择基金
     #
     df_stock_fund = FundSelector.select_stock_new(day, df_label, df_indicator)
-
     return df_stock_fund
 
 def label_asset_bond_per_day(day, lookback):
