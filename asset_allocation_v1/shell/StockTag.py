@@ -517,15 +517,8 @@ def largecapprefer(funddf, indexdf, ratio):
     #print indexdf.index
     result = []
     for code in codes:
-        result.append((code, indexdf.loc[code]))
-        largecapprefer[code] = indexdf.loc[code]
+        result.append((code, indexdf.loc['%d' % (int)(code)]))
 
-
-    x = largecapprefer
-    sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-    sorted_largecapprefer = sorted_x
-
-    print sorted_largecapprefer
 
     #print result
     #print codes
@@ -597,13 +590,8 @@ def smallcapprefer(funddf, indexdf, ratio):
     #print indexdf.index
     result = []
     for code in codes:
-        result.append((code, indexdf.loc[code]))
-        smallcapprefer[code] = indexdf.loc[code]
+        result.append((code, indexdf.loc['%d' % (int)(code)]))
 
-    x = smallcapprefer
-    sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-    sorted_smallcapprefer = sorted_x
-    print sorted_smallcapprefer
 
 
     '''
@@ -1301,7 +1289,7 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
     size_index_df = pd.read_csv('./data/market_value_index.csv', index_col = 'date', parse_dates = ['date'])
     pe_index_df = pd.read_csv('./data/pe_index.csv', index_col = 'date', parse_dates = ['date'])
-    size_df = pd.read_csv('./data/fund_size.csv', index_col = 'date', parse_dates = ['date'])
+    size_df = pd.read_csv('./data/fsize.csv', index_col = 'date', parse_dates = ['date'])
     pe_df = pd.read_csv('./data/fpe.csv', index_col = 'date', parse_dates = ['date'])
 
     size_df = size_df.reindex(size_index_df.index).fillna(method='pad')
@@ -1324,7 +1312,6 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     #print size_df
     #print pe_df
     #print size_df
-
     #print size_index_df
     #print pe_index_df
     #size_dates = size_index_df.index.values
