@@ -100,7 +100,10 @@ if __name__ == '__main__':
                 continue
             #print date , col, stock_fund_df.loc[date, col]
             v = eval(stock_fund_df.loc[date, col])
-            df_nav_fund = DBData.db_fund_value_daily(start_date, end_date, v)
+            cs = []
+            for c in v:
+                cs.append('%06d' % (int)(c))
+            df_nav_fund = DBData.db_fund_value_daily(start_date, end_date, cs)
             df_inc_fund = df_nav_fund.pct_change()
             for d in df_inc_fund.index:
                 fr = df_inc_fund.loc[d]
@@ -130,9 +133,7 @@ if __name__ == '__main__':
     df.dropna(inplace = True)
     corr_df = df.corr()
     corr_df.to_csv('corr.csv')
-    #print df
+    print corr_df
     df.to_csv('label_asset.csv')
-
             #for code in v:
             #    codes.add(code)
-

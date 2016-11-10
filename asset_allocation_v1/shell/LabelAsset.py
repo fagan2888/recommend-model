@@ -29,8 +29,8 @@ def label_asset_tag(label_index, lookback=52):
     '''perform fund tagging along label_index.
     '''
 
-    label_index = pd.DatetimeIndex(['2014-03-31','2014-06-30','2014-09-30','2014-12-31', '2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
-
+    #label_index = pd.DatetimeIndex(['2014-03-31','2014-06-30','2014-09-30','2014-12-31', '2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
+    label_index = pd.DatetimeIndex(['2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
     #
     # 计算每个调仓点的最新配置
     #
@@ -189,7 +189,7 @@ def label_asset_stock_per_day(day, lookback):
     for code in date_size_df.index:
         size = date_size_df.loc[code]
         #print code, size
-        if size >= sizes[-1 * (int)(0.5 * len(sizes))] and size <= sizes[-1 * (int)(0.1 * len(sizes))]:
+        if size >= sizes[-1 * (int)(0.3 * len(sizes))] and size <= sizes[-1 * (int)(0.1 * len(sizes))]:
             #print code, size
             size_codes.append(code)
     codes = codes & set(size_codes)
@@ -257,21 +257,22 @@ def label_asset_stock_per_day(day, lookback):
     codes = set(codes) & set(df_label.index.values) & set(df_indicator.index.values)
     codes = list(codes)
     print len(codes)
-    df_label = df_label.loc[codes]
+    #df_label = df_label.loc[codes]
     #print end_date
     #print df_label
     #df_label.to_csv('df_label.csv')
-    df_indicator = df_indicator.loc[codes]
-    #df_indicator.sort_values('jensen', ascending=False, inplace = True)
-    #df_indicator = df_indicator.iloc[0 : len(codes),]
-    #codes = df_indicator.index.values
-    #df_label = df_label.loc[codes]
+    #df_indicator = df_indicator.loc[codes]
+    df_indicator.sort_values('jensen', ascending=False, inplace = True)
+    df_indicator = df_indicator.iloc[0 : len(codes),]
+    codes = df_indicator.index.values
+    df_label = df_label.loc[codes]
 
     #
     # 选择基金
     #
     df_stock_fund = FundSelector.select_stock_new(day, df_label, df_indicator)
     return df_stock_fund
+
 
 def label_asset_bond_per_day(day, lookback):
     # 加载时间轴数据
