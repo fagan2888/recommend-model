@@ -257,15 +257,15 @@ def label_asset_stock_per_day(day, lookback):
     codes = set(codes) & set(df_label.index.values) & set(df_indicator.index.values)
     codes = list(codes)
     print len(codes)
-    #df_label = df_label.loc[codes]
+    df_label = df_label.loc[codes]
     #print end_date
     #print df_label
-    #df_label.to_csv('df_label.csv')
-    #df_indicator = df_indicator.loc[codes]
-    df_indicator.sort_values('jensen', ascending=False, inplace = True)
-    df_indicator = df_indicator.iloc[0 : len(codes),]
-    codes = df_indicator.index.values
-    df_label = df_label.loc[codes]
+    df_label.to_csv('df_label.csv')
+    df_indicator = df_indicator.loc[codes]
+    #df_indicator.sort_values('jensen', ascending=False, inplace = True)
+    #df_indicator = df_indicator.iloc[0 : len(codes),]
+    #codes = df_indicator.index.values
+    #df_label = df_label.loc[codes]
 
     #
     # 选择基金

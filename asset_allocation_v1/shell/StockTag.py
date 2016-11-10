@@ -504,6 +504,7 @@ def largecapprefer(funddf, indexdf, ratio):
     #print funddf.columns
     date = funddf.index.values[-1]
     indexdf = indexdf.loc[date]
+    indexdf.dropna(inplace=True)
     indexdf.sort()
     l = len(indexdf)
     indexdf = indexdf.iloc[(int)(l * 0.5) : l]
@@ -518,6 +519,14 @@ def largecapprefer(funddf, indexdf, ratio):
     result = []
     for code in codes:
         result.append((code, indexdf.loc[code]))
+        largecapprefer[code] = indexdf.loc[code]
+
+
+    x = largecapprefer
+    sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+    sorted_largecapprefer = sorted_x
+
+    print sorted_largecapprefer
 
     #print result
     #print codes
@@ -568,11 +577,12 @@ def largecapprefer(funddf, indexdf, ratio):
 def smallcapprefer(funddf, indexdf, ratio):
 
 
-    #largecapprefer = {}
+    smallcapprefer = {}
 
     #print funddf.columns
     date = funddf.index.values[-1]
     indexdf = indexdf.loc[date]
+    indexdf.dropna(inplace=True)
     indexdf.sort()
     l = len(indexdf)
     indexdf = indexdf.iloc[0 : (int)(l * 0.5)]
@@ -587,6 +597,12 @@ def smallcapprefer(funddf, indexdf, ratio):
     result = []
     for code in codes:
         result.append((code, indexdf.loc[code]))
+        smallcapprefer[code] = indexdf.loc[code]
+
+    x = smallcapprefer
+    sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+    sorted_smallcapprefer = sorted_x
+    print sorted_smallcapprefer
 
 
     '''
