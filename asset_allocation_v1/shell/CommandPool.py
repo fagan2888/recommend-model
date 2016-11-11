@@ -413,7 +413,7 @@ def nav_update(db, pool):
             nav_update_category(db['asset'], pool, category)
             bar.update(1)
         else:
-            nav_update_category(db['asset'], pool)
+            nav_update_category(db['asset'], pool, 0)
             bar.update(1)
     #nav_update_category(db['asset'], pool, 0)
 
