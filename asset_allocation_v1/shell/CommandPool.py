@@ -408,14 +408,14 @@ def nav_update(db, pool):
     categories = df_categories['ra_category']
     categories
     
-    # with click.progressbar(length=len(categories) + 1, label='update nav for pool %d' % (pool.id)) as bar:
-    #     for category in categories:
-    #         nav_update_category(db['asset'], pool, category)
-    #         bar.update(1)
-    #     else:
-    #         nav_update_category(db['asset'], pool)
-    #         bar.update(1)
-    nav_update_category(db['asset'], pool, 0)
+    with click.progressbar(length=len(categories) + 1, label='update nav for pool %d' % (pool.id)) as bar:
+        for category in categories:
+            nav_update_category(db['asset'], pool, category)
+            bar.update(1)
+        else:
+            nav_update_category(db['asset'], pool)
+            bar.update(1)
+    #nav_update_category(db['asset'], pool, 0)
 
 def nav_update_category(db, pool, category):
     # 加载基金列表
