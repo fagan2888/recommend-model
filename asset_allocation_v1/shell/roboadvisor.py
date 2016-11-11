@@ -222,13 +222,6 @@ def model(ctx):
 
 @roboadvisor.group()  
 @click.pass_context
-def pool(ctx):
-    '''fund pool group
-    '''
-    click.echo("")
-
-@roboadvisor.group()  
-@click.pass_context
 def nav(ctx):
     '''fund pool group
     '''
@@ -237,9 +230,10 @@ def nav(ctx):
 if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
     nav.add_command(CommandNavStock.stock)
-    pool.add_command(CommandPool.stock)
-    pool.add_command(CommandPool.bond)
+    # pool.add_command(CommandPool.stock)
+    # pool.add_command(CommandPool.bond)
     portfolio.add_command(CommandPortfolio.turnover)
+    roboadvisor.add_command(CommandPool.pool)
 
     roboadvisor(obj={})  
     

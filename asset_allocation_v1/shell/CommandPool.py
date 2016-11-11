@@ -39,7 +39,14 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.command()
+@click.group()  
+@click.pass_context
+def pool(ctx):
+    '''fund pool group
+    '''
+    click.echo("")
+
+@pool.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
@@ -159,7 +166,7 @@ def fund_code_to_globalid(db, codes):
     
     return df_result['globalid']
     
-def db_batch(db, table, df_new, df_old):
+def db_batch(db, table, df_new, df_old, timestamp=True):
     now = datetime.now()
     index_insert = df_new.index.difference(df_old.index)
     index_delete = df_old.index.difference(df_new.index)
@@ -175,7 +182,8 @@ def db_batch(db, table, df_new, df_old):
         
     if len(index_insert):
         df_insert = df_new.loc[index_insert].copy()
-        df_insert['updated_at'] = df_insert['created_at'] = now
+        if timestamp:
+            df_insert['updated_at'] = df_insert['created_at'] = now
 
         df_insert.to_sql(table.name, db, index=True, if_exists='append')
 
@@ -197,7 +205,8 @@ def db_batch(db, table, df_new, df_old):
 
             dirty = {k:{'old':origin[k], 'new':v} for k,v in columns.iteritems()}
 
-            columns['updated_at'] = now
+            if timestamp:
+                columns['updated_at'] = now
 
             values = {k:v for k,v in columns.iteritems()}
             stmt = table.update(values=values)
@@ -208,7 +217,7 @@ def db_batch(db, table, df_new, df_old):
             stmt.execute()
 
 
-@click.command()
+@pool.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
@@ -324,10 +333,12 @@ def load_pool_by_type(db, pool_type, pools):
         ra_pool.c.ra_lookback,
         ra_pool.c.ra_name,
     ]
+
+    s = select(columns)
     if pools is not None:
-        s = select(columns, and_(ra_pool.c.ra_fund_type == pool_type, ra_pool.c.id.in_(pools.split(','))))
-    else:
-        s = select(columns, ra_pool.c.ra_fund_type == pool_type)
+        s = s.where(ra_pool.c.id.in_(pools.split(',')))
+    if pool_type is not None:
+        s = s.where(ra_pool.c.ra_fund_type == pool_type)
         
     df_pool = pd.read_sql(s, db)
 
@@ -353,3 +364,125 @@ def get_adjust_point():
     ])
 
     return label_index
+
+@pool.command()
+@click.option('--pools', help=u'fund pool to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.pass_context
+def nav(ctx, pools, optlist):
+    ''' calc pool nav and inc
+    '''
+    db_asset = create_engine(config.db_asset_uri)
+    # db_asset.echo = True
+    db_base = create_engine(config.db_base_uri)
+    db = {'asset':db_asset, 'base':db_base}
+
+    df_pool = load_pool_by_type(db['asset'], None, pools)
+
+    if optlist:
+        #print df_pool
+        #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
+        df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_pool, headers='keys', tablefmt='psql')
+        return 0
+    
+    for _, pool in df_pool.iterrows():
+        nav_update(db, pool)
+
+def nav_update(db, pool):
+    df_categories = load_pool_category(db['asset'], pool['id'])
+    categories = df_categories['ra_category']
+    
+    with click.progressbar(length=len(categories), label='update nav for pool %d' % (pool.id)) as bar:
+        for category in categories:
+            nav_update_category(db['asset'], pool, category)
+            bar.update(1)
+
+def nav_update_category(db, pool, category):
+    t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+    
+    # 加载基金列表
+    columns = [
+        t.c.ra_date,
+        t.c.ra_fund_code,
+    ]
+    stmt_select = select(columns, (t.c.ra_pool == pool['id']) & (t.c.ra_category == category))
+    
+    df = pd.read_sql(stmt_select, db, index_col = ['ra_date'], parse_dates=['ra_date'])
+    min_date = df.index.min()
+    max_date = df.index.max()
+
+    # 构建均分仓位
+    df['ra_ratio'] = 1.0
+    df['ra_ratio'] = df['ra_ratio'].groupby(level=0, group_keys=False).apply(lambda x: x / len(x))
+    df.set_index('ra_fund_code', append=True, inplace=True)
+    df_position = df.unstack().fillna(0.0)
+    df_position.columns = df_position.columns.droplevel(0)
+
+    
+    # 加载基金收益率
+    min_date = df_position.index.min()
+    max_date = df_position.index.max()
+
+    df_nav = DBData.db_fund_value_daily(
+        min_date, max_date, codes=df_position.columns)
+    df_inc = df_nav.pct_change().fillna(0.0)
+
+    # 计算复合资产净值
+    df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
+    # df_nav_portfolio.to_csv(datapath('category_nav_' + category + '.csv'))
+
+    df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'ra_nav'}).copy()
+    df_result.index.name = 'ra_date'
+    df_result['ra_inc'] = df_result['ra_nav'].pct_change().fillna(0.0)
+    df_result['ra_pool'] = pool['id']
+    df_result['ra_category'] = category
+    df_result['ra_type'] = pool['ra_type']
+    df_result = df_result.reset_index().set_index(['ra_pool', 'ra_category', 'ra_type', 'ra_date'])
+    
+    df_new = df_result.apply(format_nav_and_inc)
+
+
+    # 加载旧数据
+    t2 = Table('ra_pool_nav', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.ra_pool,
+        t2.c.ra_category,
+        t2.c.ra_type,
+        t2.c.ra_date,
+        t2.c.ra_nav,
+        t2.c.ra_inc,
+    ]
+    stmt_select = select(columns2, (t2.c.ra_pool == pool['id']) & (t2.c.ra_category == category) & (t2.c.ra_type == pool['ra_type']))
+    df_old = pd.read_sql(stmt_select, db, index_col=['ra_pool', 'ra_category', 'ra_type', 'ra_date'], parse_dates=['ra_date'])
+    if not df_old.empty:
+        df_old = df_old.apply(format_nav_and_inc)
+
+    # 更新数据库
+    db_batch(db, t2, df_new, df_old, timestamp=False)
+
+def format_nav_and_inc(x):
+    if x.name == "ra_nav":
+        ret = x.map("{:.6f}".format)
+    elif x.name == "ra_inc":
+        ret = x.map("{:.6f}".format)
+    else:
+        ret = x
+
+    return ret
+    
+    
+def load_pool_category(db, pid):
+    t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+    
+    # 加载就数据
+    columns = [
+        t.c.ra_pool,
+        t.c.ra_category,
+    ]
+    stmt_select = select(columns, t.c.ra_pool == pid).distinct()
+    
+    df = pd.read_sql(stmt_select, db)
+
+    return df
+    
