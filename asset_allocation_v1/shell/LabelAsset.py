@@ -96,7 +96,7 @@ def label_asset_nav(start_date, end_date):
             if category in ['GLNC', 'HSCI.HI', 'SP500.SPI']:
                 df_nav_fund = DBData.db_index_value_daily(start_date, end_date, df_position.columns)
             else:
-                df_nav_fund = DBData.db_fund_value_daily(start_date, end_date, df_position.columns)
+                df_nav_fund = DBData.db_fund_value_daily(start_date, end_date, codes=df_position.columns)
             df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
             #
             # 计算组合净值增长率

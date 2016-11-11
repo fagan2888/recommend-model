@@ -129,6 +129,12 @@ def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True)
     return df.index.sort_values()
 
 def build_sql_trade_date_weekly(start_date, end_date, include_end_date=True):
+    if type(start_date) != str:
+        start_date = start_date.strftime("%Y-%m-%d")
+
+    if type(end_date) != str:
+        end_date = end_date.strftime("%Y-%m-%d")
+        
     if include_end_date:
         condition = "(td_type & 0x02 OR td_date = '%s')" % (end_date)
     else:
@@ -137,14 +143,27 @@ def build_sql_trade_date_weekly(start_date, end_date, include_end_date=True):
     return "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND %s" % (start_date, end_date, condition)
 
 def build_sql_trade_date_daily(start_date, end_date):
+    if type(start_date) != str:
+        start_date = start_date.strftime("%Y-%m-%d")
+
+    if type(end_date) != str:
+        end_date = end_date.strftime("%Y-%m-%d")
+        
     return "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s'" % (start_date, end_date);
 
-def db_fund_value(start_date, end_date, codes=None):          
+def db_fund_value(start_date, end_date, codes=None, fund_ids=None):          
     #
     # 按照周收盘取净值
     #
     date_sql = build_sql_trade_date_weekly(start_date, end_date)
-    if codes is not None:
+    if fund_ids is not None:
+        #
+        # 按照代码筛选基金
+        #
+        code_str = ','.join([repr(e) for e in fund_ids])
+        code_sql = "SELECT globalid FROM ra_fund WHERE globalid IN (%s)" % (code_str);
+        sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.globalid AND A.ra_date = E.td_date ORDER BY A.ra_date" % (code_sql, date_sql)
+    elif codes is not None:
         #
         # 按照代码筛选基金
         #
@@ -163,12 +182,19 @@ def db_fund_value(start_date, end_date, codes=None):
 
     return df
 
-def db_fund_value_daily(start_date, end_date, codes=None):          
+def db_fund_value_daily(start_date, end_date, codes=None, fund_ids=None):          
     #
     # 按照周收盘取净值
     #
     date_sql = build_sql_trade_date_daily(start_date, end_date)
-    if codes is not None:
+    if fund_ids is not None:
+        #
+        # 按照代码筛选基金
+        #
+        code_str = ','.join([repr(e) for e in fund_ids])
+        code_sql = "SELECT globalid FROM ra_fund WHERE globalid IN (%s)" % (code_str);
+        sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.globalid AND A.ra_date = E.td_date ORDER BY A.ra_date" % (code_sql, date_sql)
+    elif codes is not None:
         #
         # 按照代码筛选基金
         #

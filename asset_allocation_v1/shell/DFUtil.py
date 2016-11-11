@@ -41,6 +41,9 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
 
     df = df_inc[start_date:]
 
+    df_position['cash'] = 1 - df_position.sum(axis=1)
+    df_inc['cash'] = 0.0
+
     assets_s = pd.Series(np.zeros(len(df.columns)), index=df.columns) # 当前资产
     assets_s[0] = 1
 
