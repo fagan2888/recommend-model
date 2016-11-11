@@ -64,9 +64,6 @@ def stock(ctx, datadir, startdate, enddate, pools, optlist, optlimit, optcalc):
         yesterday = (datetime.now() - timedelta(days=1)); 
         enddate = yesterday.strftime("%Y-%m-%d")        
     
-    # 加载时间轴数据
-    index = DBData.trade_date_index(startdate, end_date=enddate)
-    
     db_asset = create_engine(config.db_asset_uri)
     # db_asset.echo = True
     db_base = create_engine(config.db_base_uri)
@@ -344,24 +341,41 @@ def load_pool_by_type(db, pool_type, pools):
 
     return df_pool
         
-def get_adjust_point():
-    label_index = pd.DatetimeIndex([
-        '2010-01-08',
-        '2010-07-09',
-        '2011-01-07',
-        '2011-07-08',
-        '2012-01-13',
-        '2012-07-20',
-        '2013-01-25',
-        '2013-08-02',
-        '2014-01-30',
-        '2014-08-01',
-        '2015-01-30',
-        '2015-07-31',
-        '2016-01-29',
-        '2016-08-05',
-        '2016-11-05',
-    ])
+def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=13):
+    # 加载时间轴数据
+    if not enddate:
+        yesterday = (datetime.now() - timedelta(days=1)); 
+        enddate = yesterday.strftime("%Y-%m-%d")        
+
+    index = DBData.trade_date_index(startdate, end_date=enddate)
+    
+    if label_period > 1:
+        label_index = index[::label_period]
+        if index.max() not in label_index:
+            label_index = label_index.insert(len(label_index), index.max())
+    else:
+        label_index = index
+    # label_index = pd.DatetimeIndex([
+    #     '2010-01-08',
+    #     '2010-07-09',
+    #     '2011-01-07',
+    #     '2011-07-08',
+    #     '2012-01-13',
+    #     '2012-07-20',
+    #     '2013-01-25',
+    #     '2013-08-02',
+    #     '2014-01-30',
+    #     '2014-08-01',
+    #     '2015-01-30',
+    #     '2015-07-31',
+    #     '2016-01-29',
+    #     '2016-08-05',
+    #     '2016-11-05',
+    # ])
+    
+    print "adjust point:"
+    for date in label_index:
+        print date.strftime("%Y-%m-%d")
 
     return label_index
 
@@ -392,30 +406,25 @@ def nav(ctx, pools, optlist):
 def nav_update(db, pool):
     df_categories = load_pool_category(db['asset'], pool['id'])
     categories = df_categories['ra_category']
+    categories
     
-    with click.progressbar(length=len(categories), label='update nav for pool %d' % (pool.id)) as bar:
-        for category in categories:
-            nav_update_category(db['asset'], pool, category)
-            bar.update(1)
+    # with click.progressbar(length=len(categories) + 1, label='update nav for pool %d' % (pool.id)) as bar:
+    #     for category in categories:
+    #         nav_update_category(db['asset'], pool, category)
+    #         bar.update(1)
+    #     else:
+    #         nav_update_category(db['asset'], pool)
+    #         bar.update(1)
+    nav_update_category(db['asset'], pool, 0)
 
 def nav_update_category(db, pool, category):
-    t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
-    
     # 加载基金列表
-    columns = [
-        t.c.ra_date,
-        t.c.ra_fund_code,
-    ]
-    stmt_select = select(columns, (t.c.ra_pool == pool['id']) & (t.c.ra_category == category))
-    
-    df = pd.read_sql(stmt_select, db, index_col = ['ra_date'], parse_dates=['ra_date'])
-    min_date = df.index.min()
-    max_date = df.index.max()
+    df = load_fund_category(db, pool['id'], category)
 
     # 构建均分仓位
     df['ra_ratio'] = 1.0
-    df['ra_ratio'] = df['ra_ratio'].groupby(level=0, group_keys=False).apply(lambda x: x / len(x))
     df.set_index('ra_fund_code', append=True, inplace=True)
+    df['ra_ratio'] = df['ra_ratio'].groupby(level=0, group_keys=False).apply(lambda x: x / len(x))
     df_position = df.unstack().fillna(0.0)
     df_position.columns = df_position.columns.droplevel(0)
 
@@ -485,4 +494,22 @@ def load_pool_category(db, pid):
     df = pd.read_sql(stmt_select, db)
 
     return df
+
+def load_fund_category(db, pid, category):
+    # 加载基金列表
+    t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+    columns = [
+        t.c.ra_date,
+        t.c.ra_fund_code,
+    ]
+    s = select(columns, (t.c.ra_pool == pid))
+    if category == 0:
+        s = s.distinct()
+    else:
+        s = s.where(t.c.ra_category == category)
+    
+    df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
+
+    return df
+    
     
