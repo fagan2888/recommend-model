@@ -38,6 +38,7 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     
     if start_date not in df_inc.index:
         df_inc.loc[start_date] = 0
+        df_inc.sort_index(inplace=True)
 
     df = df_inc[start_date:]
 
