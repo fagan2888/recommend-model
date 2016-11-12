@@ -431,7 +431,9 @@ def nav_update_category(db, pool, category):
     
     # 加载基金收益率
     min_date = df_position.index.min()
-    max_date = df_position.index.max()
+    #max_date = df_position.index.max()
+    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
 
     df_nav = DBData.db_fund_value_daily(
         min_date, max_date, codes=df_position.columns)
