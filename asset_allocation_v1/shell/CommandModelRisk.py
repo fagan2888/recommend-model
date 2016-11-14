@@ -141,6 +141,10 @@ def risk(ctx, datadir, startdate, enddate, label_asset, reshape):
     GeneralizationPosition.portfolio_detail()
     print "output detail position ok"
 
+    print "output stockavg position ..."
+    GeneralizationPosition.portfolio_avg_simple()
+    print "output stockavg positon ok"
+
     print "output trade position ...."
     outfile = datapath("position-z.csv")
     with (open(outfile, 'w') if outfile != '-' else os.fdopen(os.dup(sys.stdout.fileno()), 'w')) as out:
