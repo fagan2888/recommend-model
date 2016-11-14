@@ -12,3 +12,4 @@ nohup.out
 config.py
 *.log
 .DS_Store
+logging.json
