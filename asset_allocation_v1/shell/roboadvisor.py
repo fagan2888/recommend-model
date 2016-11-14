@@ -27,7 +27,6 @@ def setup_logging(
     env_key = 'LOG_CFG'):
     
     """Setup logging configuration
-
     """
     path = default_path
     value = os.getenv(env_key, None)
@@ -44,7 +43,11 @@ def setup_logging(
 @click.group(invoke_without_command=True)
 @click.pass_context
 def roboadvisor(ctx):
-    setup_logging()
+    default_dir = os.path.dirname(os.path.realpath(__file__))
+    path = os.path.join(default_dir, "logging.json")
+
+    setup_logging(default_path=path)
+    
     # pd.set_option('display.height', 1000)
     pd.set_option('display.max_rows', 500)
     pd.set_option('display.max_columns', 500)
