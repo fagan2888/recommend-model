@@ -281,7 +281,7 @@ def portfolio_detail():
 
     return df_result
 
-def portfolio_stock_avg():
+def portfolio_avg_simple():
     #
     # 计算各中类资产的配置比例, 确定调仓时间轴
     #

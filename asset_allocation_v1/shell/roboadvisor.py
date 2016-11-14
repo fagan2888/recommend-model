@@ -174,7 +174,7 @@ def stockavg(ctx, datadir):
     #
     # 生成配置数据
     #
-    GeneralizationPosition.portfolio_stock_avg()
+    GeneralizationPosition.portfolio_avg_simple()
 
     
 @roboadvisor.group()  
