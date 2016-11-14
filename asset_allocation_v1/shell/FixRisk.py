@@ -51,7 +51,7 @@ def periodstdmean(df, period):
 def fixrisk(interval=20, short_period=20, long_period=252):
 
     alldf = pd.read_csv(datapath('labelasset.csv'), index_col='date', parse_dates=['date'])
-
+    timing_df = pd.read_csv('./data/000300_signals.csv', index_col = 'date', parse_dates=['date'])
 
     position_datas = []
     position_dates = []
@@ -59,16 +59,6 @@ def fixrisk(interval=20, short_period=20, long_period=252):
     for code in alldf.columns:
 
         df = alldf[[code]]
-
-
-        ma5_df  = df.rolling(window=5).mean()
-        ma5_dfr = ma5_df.pct_change().fillna(0.0)
-        ma10_df  = df.rolling(window=10).mean()
-        ma10_dfr = ma10_df.pct_change().fillna(0.0)
-        ma20_df  = df.rolling(window=20).mean()
-        ma20_dfr = ma20_df.pct_change().fillna(0.0)
-        ma60_df  = df.rolling(window=60).mean()
-        ma60_dfr = ma60_df.pct_change().fillna(0.0)
 
         dfr = df.pct_change().fillna(0.0)
 
@@ -78,15 +68,18 @@ def fixrisk(interval=20, short_period=20, long_period=252):
             'std': interval_df['nav'].rolling(window=short_period).std(),
         }, columns=['std', 'mean'])
 
+        periodstdmean_df.to_csv('periodstdmean.csv')
+
         dates = periodstdmean_df.index
 
         ps    = [0]
         pds   = [dates[long_period]]
 
-
         for i in range(long_period, len(dates) - 1):
 
             d = dates[i]
+
+            signal = timing_df.loc[d].values[0]
 
             risk    = periodstdmean_df.iloc[i, 0]
             r       = periodstdmean_df.iloc[i, 1]
@@ -103,11 +96,7 @@ def fixrisk(interval=20, short_period=20, long_period=252):
             rstd        = np.std(rers)
             rmean       = np.mean(rers)
 
-            if ma5_dfr.loc[d, code] > 0 and ma10_dfr.loc[d, code] > 0 and ma20_dfr.loc[d, code] > 0:
-                position = riskmean / risk
-                if position >= 1.0:
-                    position = 1.0
-            elif risk >= riskmean + 2 * riskstd and r < rmean - 1 * rstd:
+            if risk >= riskmean + 2 * riskstd and r < rmean - 1 * rstd:
                 position = riskmean / risk
             elif risk >= riskmean + 2 * riskstd and r > rmean + 1 * rstd:
                 position = 0.0
@@ -117,11 +106,12 @@ def fixrisk(interval=20, short_period=20, long_period=252):
             else:
                 position = riskmean / risk
 
-            p = ps[-1]
-            if position == 0.0:
-                position = 0
-            elif (not (position <= p * 0.5 or position >= p * 2.0)) and (not (position <= p - 0.2 or position >= p + 0.2)):
-                position = p
+            if (position <= ps[-1] * 0.5 or position <= ps[-1] - 0.2) and signal == -1:
+                pass
+            elif (position >= ps[-1] * 2 or position >= ps[-1] + 0.2 or position == 1.0) and signal == 1:
+                pass
+            else:
+                position = ps[-1]
 
             #if position < 0.1:
             #    position = 0.0
