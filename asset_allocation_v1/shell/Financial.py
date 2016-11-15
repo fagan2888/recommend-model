@@ -58,7 +58,7 @@ def efficient_frontier_spe(return_rate, bound):
         h[2 * n_asset + i, 0] = bound[1][i]
 
 
-    h[3* n_asset, 0]     = 0.40
+    h[3* n_asset, 0]     = 0.50
 
     A          =  matrix(1.0, (1, n_asset))
     b          =  matrix(1.0)
