@@ -256,14 +256,17 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #print fund_size_df
     #df_nav_indicator = df_nav_stock[df_indicator.index]
     df_nav_indicator = df_nav_stock
+    print 'all stock fund', len(df_nav_stock.columns)
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
+    mask = (df_label['largecap'] == 1) | (df_label['smallcap']  == 1) | (df_label['rise'] == 1) | (df_label['decline'] == 1) | (df_label['oscillation'] == 1) | (df_label['growth'] == 1) | (df_label['value'] == 1)
+    df_label = df_label.loc[mask]
+    print 'stock label fund', len(df_label.index)
     codes = set(codes) & set(df_label.index.values) & set(df_indicator.index.values)
     codes = list(codes)
-    print len(codes)
     df_label = df_label.loc[codes]
     #print end_date
     #print df_label
-    df_label.to_csv('df_label.csv')
+    #df_label.to_csv('df_label.csv')
     df_indicator = df_indicator.loc[codes]
     #df_indicator.sort_values('jensen', ascending=False, inplace = True)
     #df_indicator = df_indicator.iloc[0 : len(codes),]
