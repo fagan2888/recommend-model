@@ -4,6 +4,7 @@
 
 import pandas as pd
 import numpy  as np
+import os
 import sys
 sys.path.append('shell')
 import datetime
@@ -51,7 +52,7 @@ def periodstdmean(df, period):
 def fixrisk(interval=20, short_period=20, long_period=252):
 
     alldf = pd.read_csv(datapath('labelasset.csv'), index_col='date', parse_dates=['date'])
-    timing_df = pd.read_csv('./data/000300_signals.csv', index_col = 'date', parse_dates=['date'])
+    timing_df = pd.read_csv(os.path.normpath(datapath( '../csvdata/000300_signals.csv')), index_col = 'date', parse_dates=['date'])
 
     position_datas = []
     position_dates = []
