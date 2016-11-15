@@ -18,7 +18,7 @@ from Const import datapath
 def get_columns(key, includeDate=False):
     columns = {
         'low':['ratebond','creditbond'],
-        'high':['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value', 'SP500.SPI', 'GLNC']
+        'high':['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value', 'SP500.SPI', 'GLNC', 'HSCI.HI']
     }
 
     return columns.get(key)
@@ -45,8 +45,8 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
     #
     # 基于马克维茨进行资产配置
     #
-    uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3]
-    downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3, 0.3]
+    downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     #risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
     risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, [downlimit, uplimit])

@@ -137,6 +137,12 @@ def portfolio_category():
         pd.DataFrame("[u'096001']", index=index, columns=['SP500.SPI']),
         pd.DataFrame(sr_glnc)
     ], axis=1)
+    
+    if 'HSCI.HI' in df_position.columns:
+        df_fund_other = pd.concat([
+            df_fund_other,
+            pd.DataFrame("[u'000071']", index=index, columns=['HSCI.HI']),
+        ], axis=1)
 
     #
     # 生成分类资产配置结果
@@ -292,7 +298,10 @@ def portfolio_avg_simple():
     #
     # 合并股票类资产配置结果
     #
-    df_position = df_portfolio[['GLNC', 'SP500.SPI', 'creditbond', 'ratebond', 'money']].copy()
+    column_position = ['GLNC', 'SP500.SPI', 'creditbond', 'ratebond', 'money']
+    if 'HSCI.HI' in df_portfolio.columns:
+        column_position.append('HSCI.HI')
+    df_position = df_portfolio[column_position].copy()
     df_position['stock'] = df_portfolio[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value']].sum(axis=1)
     df_position.columns.name = 'type'
     df_position = df_position.stack().to_frame('position')
@@ -301,11 +310,14 @@ def portfolio_avg_simple():
     # 加载基金池,并根据调仓时间轴整形
     #
     df_pool = pd.read_csv(datapath('fund_pool.csv'), index_col = ['category', 'date'], dtype={'code':str}, parse_dates = ['date'], usecols=['date', 'category', 'code'])
-    df_pool.drop(df_pool.index[df_pool.index.get_level_values('category') == 'HSCI.HI'], inplace=True)
+    #df_pool.drop(df_pool.index[df_pool.index.get_level_values('category') == 'HSCI.HI'], inplace=True)
     df_pool.loc['money', 'code'] = '213009'
     df_pool.loc['GLNC', 'code'] = '000216'
     df_pool.loc[('GLNC', slice(None, '2013-08-22')), 'code'] = '320013'
     df_pool.loc['SP500.SPI', 'code'] = '096001'
+    if 'HSCI.HI' in df_portfolio.columns:
+        df_pool.loc['HSCI.HI', 'code'] = '000071'
+        
 
     df_pool['weight'] = 1.0
     

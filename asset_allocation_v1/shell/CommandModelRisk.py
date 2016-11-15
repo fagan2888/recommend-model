@@ -37,8 +37,9 @@ import traceback, code
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--label-asset/--no-label-asset', default=True)
 @click.option('--reshape/--no-reshape', default=True)
+@click.option('--markowitz/--no-markowitz', default=True)
 @click.pass_context
-def risk(ctx, datadir, startdate, enddate, label_asset, reshape):
+def risk(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
     '''run constant risk model
     '''
     Const.datadir = datadir
@@ -124,10 +125,11 @@ def risk(ctx, datadir, startdate, enddate, label_asset, reshape):
         EqualRiskAsset.equalriskasset()
         print "calc equal risk nav finished"
 
-    print "calc high low risk model ..."
-    # RiskHighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
-    ModelHighLowRisk.asset_alloc_high_low(allocationdata.start_date, allocationdata.end_date, lookback=26, adjust_period=1)
-    print "calc high low risk model finished"
+    if markowitz:
+        print "calc high low risk model ..."
+        # RiskHighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
+        ModelHighLowRisk.asset_alloc_high_low(allocationdata.start_date, allocationdata.end_date, lookback=26, adjust_period=1)
+        print "calc high low risk model finished"
 
     print "output category position ...."
     GeneralizationPosition.portfolio_category()
