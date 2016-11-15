@@ -13,7 +13,7 @@ import numpy as np
 if __name__ == '__main__':
 
 
-    start_date = '2014-03-31'
+    start_date = '2015-06-30'
     end_date   = '2016-10-31'
 
     stock_fund_df = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
@@ -134,6 +134,6 @@ if __name__ == '__main__':
     corr_df = df.corr()
     corr_df.to_csv('corr.csv')
     print corr_df
-    df.to_csv('label_asset.csv')
+    #df.to_csv('label_asset.csv')
             #for code in v:
             #    codes.add(code)
