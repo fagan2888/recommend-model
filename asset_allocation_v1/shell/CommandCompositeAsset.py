@@ -132,7 +132,7 @@ def nav(ctx, optasset, optlist):
     db_base = create_engine(config.db_base_uri)
     db = {'asset':db_asset, 'base':db_base}
 
-    df_asset = load_asset_by_type(db['asset'], None, assets)
+    df_asset = load_asset_by_type(db['asset'], [2], optasset)
 
     if optlist:
         #print df_asset
@@ -176,13 +176,13 @@ def nav_update_index(db, asset):
     df_result.index.name = 'ra_date'
     df_result['ra_inc'] = df_result['ra_nav'].pct_change().fillna(0.0)
     df_result['ra_asset_id'] = asset['globalid']
-    df_result = df_result.reset_index().set_index(['ra_asset', 'ra_date'])
+    df_result = df_result.reset_index().set_index(['ra_asset_id', 'ra_date'])
     
     df_new = df_result.apply(format_nav_and_inc)
 
 
     # 加载旧数据
-    t2 = Table('ra_composite_asset_nav', MetaData(bind=db), autoload=True)
+    t2 = Table('ra_composite_asset_nav', MetaData(bind=db['asset']), autoload=True)
     columns2 = [
         t2.c.ra_asset_id,
         t2.c.ra_date,
@@ -190,12 +190,12 @@ def nav_update_index(db, asset):
         t2.c.ra_inc,
     ]
     stmt_select = select(columns2, (t2.c.ra_asset_id == asset['globalid']))
-    df_old = pd.read_sql(stmt_select, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
+    df_old = pd.read_sql(stmt_select, db['asset'], index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
     if not df_old.empty:
         df_old = df_old.apply(format_nav_and_inc)
 
     # 更新数据库
-    db_batch(db, t2, df_new, df_old, timestamp=False)
+    db_batch(db['asset'], t2, df_new, df_old, timestamp=False)
 
 def format_nav_and_inc(x):
     if x.name == "ra_nav":

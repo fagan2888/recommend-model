@@ -17,6 +17,7 @@ import CommandModelRisk
 import CommandNavStock
 import CommandPool
 import CommandPortfolio
+import CommandCompositeAsset
 
 
 logger = logging.getLogger(__name__)
