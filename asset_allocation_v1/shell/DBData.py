@@ -207,6 +207,7 @@ def db_fund_value_daily(start_date, end_date, codes=None, fund_ids=None):
         sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) E WHERE A.ra_date = E.td_date ORDER BY A.ra_date" % (date_sql)
         
     logger.debug("db_fund_value: " + sql)
+    #print "db_fund_value", sql
     
     conn  = MySQLdb.connect(**config.db_base)
     df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
@@ -249,6 +250,7 @@ def stock_fund_value(start_date, end_date):
 
 
     logger.debug("stock_fund_value: " + sql)
+    #print "stock_fund_value", sql
     
     conn  = MySQLdb.connect(**config.db_base)
     df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
@@ -333,6 +335,7 @@ def bond_fund_value(start_date, end_date):
     # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010301%%' or b.wf_type like '2001010302%%' or b.wf_type like '2001010305%%') and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010301%%' and wf_type not like '2001010302%%' and wf_type not like '2001010305') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
     logger.debug("bond_fund_value: " + sql)
+    #print "bond_fund_value", sql;
 
     conn  = MySQLdb.connect(**config.db_base)
     df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
@@ -380,6 +383,7 @@ def bond_day_fund_value(start_date, end_date):
     # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010301%%' or b.wf_type like '2001010302%%'  or b.wf_type like '2001010305%%') and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010301%%' and wf_type not like '2001010302%%' and wf_type not like '2001010305%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
     logger.debug(sql)
+    #print sql
     
     conn  = MySQLdb.connect(**config.db_base)
     df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
@@ -492,6 +496,7 @@ def db_index_value(start_date, end_date, codes=None):
         sql = "SELECT ra_date as date, ra_index_code, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date ORDER BY ra_date" % (date_sql)
         
     logger.debug("db_index_value: " + sql)
+    #print "db_index_value", sql
     
     conn  = MySQLdb.connect(**config.db_base)
     df = pd.read_sql(sql, conn, index_col = ['date', 'code'], parse_dates=['date'])
@@ -724,7 +729,7 @@ if __name__ == '__main__':
 
     sql = "SELECT ra_date, ra_code, ra_nav_adjusted FROM `ra_fund_nav` JOIN trade_dates ON ra_date = td_date WHERE ra_code IN ('206018', '100058', '000509') AND ra_date >= '2015-10-20' ORDER BY ra_date"
 
-    print "stock_fund_value", sql
+    #print "stock_fund_value", sql
     
     conn  = MySQLdb.connect(**config.db_base)
     df = pd.read_sql(sql, conn, index_col = ['ra_date', 'ra_code'], parse_dates=['ra_date'])

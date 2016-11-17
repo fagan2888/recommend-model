@@ -13,7 +13,7 @@ import numpy as np
 if __name__ == '__main__':
 
 
-    start_date = '2015-06-30'
+    start_date = '2012-06-30'
     end_date   = '2016-10-31'
 
     stock_fund_df = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
@@ -49,12 +49,14 @@ if __name__ == '__main__':
                 ratio.append(0)
         ratios.append(ratio)
 
+    #print ratios
     cs = []
     for code in codes:
        cs.append('%06d' % (int)(code))
     #print cs
     df_position = pd.DataFrame(ratios, index = dates, columns = cs)
     df_position.index.name = 'date'
+    df_position.to_csv('position.csv')
     #print df_position.columns
     #print df_position
     #print df_position
@@ -67,6 +69,8 @@ if __name__ == '__main__':
 
     #print df_position
 
+
+    '''
     pre_fund_pool = None
     dates = stock_fund_df.index
     for d in dates:
@@ -137,3 +141,4 @@ if __name__ == '__main__':
     #df.to_csv('label_asset.csv')
             #for code in v:
             #    codes.add(code)
+    '''
