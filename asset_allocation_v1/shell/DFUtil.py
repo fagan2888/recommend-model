@@ -35,14 +35,15 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     # 动作也是在收盘确认之后发生的
     #
     start_date = df_position.index.min()
-    #print df_inc 
+    
     if start_date not in df_inc.index:
         df_inc.loc[start_date] = 0
+        df_inc.sort_index(inplace=True)
 
-    #print df_inc
-    #print start_date
     df = df_inc[start_date:]
-    #print df
+
+    df_position['cash'] = 1 - df_position.sum(axis=1)
+    df_inc['cash'] = 0.0
 
     assets_s = pd.Series(np.zeros(len(df.columns)), index=df.columns) # 当前资产
     assets_s[0] = 1
@@ -136,8 +137,8 @@ def filter_by_turnover_rate_per_risk(df, turnover_rate):
         else:
             df_current = v1[['category', 'fund', 'ratio']].set_index(['category', 'fund'])
             df_diff = df_current - df_last
-            xsum = df_diff['ratio'].sum()
-            if df_diff.isnull().values.any() or abs(df_diff['ratio'].sum()) >= turnover_rate:
+            xsum = df_diff['ratio'].abs().sum()
+            if df_diff.isnull().values.any() or xsum >= turnover_rate:
                 df_result = pd.concat([df_result, v1])
                 df_last = df_current
                 
@@ -145,6 +146,52 @@ def filter_by_turnover_rate_per_risk(df, turnover_rate):
 
 def portfolio_import(df):
     pass;
+
+
+def categories_types(as_int=False):
+    if as_int:
+        return {
+            'largecap'        : 11, # 大盘
+            'smallcap'        : 12, # 小盘
+            'rise'            : 13, # 上涨
+            'oscillation'     : 14, # 震荡
+            'decline'         : 15, # 下跌
+            'growth'          : 16, # 成长
+            'value'           : 17, # 价值
+
+            'ratebond'        : 21, # 利率债
+            'creditbond'      : 22, # 信用债
+            'convertiblebond' : 23, # 可转债
+
+            'money'           : 31, # 货币
+
+            'SP500.SPI'       : 41, # 标普
+            'GLNC'            : 42, # 黄金
+            'HSCI.HI'         : 43, # 恒生
+        }
+        
+    #
+    # 输出配置数据
+    #
+    return {
+        'largecap'        : '11', # 大盘
+        'smallcap'        : '12', # 小盘
+        'rise'            : '13', # 上涨
+        'oscillation'     : '14', # 震荡
+        'decline'         : '15', # 下跌
+        'growth'          : '16', # 成长
+        'value'           : '17', # 价值
+
+        'ratebond'        : '21', # 利率债
+        'creditbond'      : '22', # 信用债
+        'convertiblebond' : '23', # 可转债
+
+        'money'           : '31', # 货币
+
+        'SP500.SPI'       : '41', # 标普
+        'GLNC'            : '42', # 黄金
+        'HSCI.HI'         : '43', # 恒生
+    }
 
 
 if __name__ == '__main__':
