@@ -105,7 +105,7 @@ def equalriskasset():
             result_dates.append(d)
 
 
-            logger.info("%s %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f", \
+            logger.debug("%s %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f", \
                         d.strftime("%Y-%m-%d"), asset_values['largecap'][-1], asset_values['smallcap'][-1], asset_values['rise'][-1], \
                         asset_values['oscillation'][-1], asset_values['decline'][-1], asset_values['growth'][-1], \
                         asset_values['value'][-1], asset_values['convertiblebond'][-1], asset_values['SP500.SPI'][-1], \
