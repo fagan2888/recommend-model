@@ -4,13 +4,20 @@
 
 import pandas as pd
 import numpy  as np
+import os
 import sys
 sys.path.append('shell')
 import datetime
 import AllocationData
 from Const import datapath
+import click
+import database
+import logging
+import json
 
+from sqlalchemy import *
 
+logger = logging.getLogger(__name__)
 
 def intervalreturn(df, interval):
 
@@ -46,12 +53,28 @@ def periodstdmean(df, period):
 
     return df
 
+def load_timing_signal(timing_id):
+    # 加载基金列表
+    db = database.connection('asset')
+    t = Table('tc_timing_signal', MetaData(bind=db), autoload=True)
+    columns = [
+        t.c.tc_date,
+        t.c.tc_signal
+    ]
+    s = select(columns, (t.c.tc_timing_id == timing_id))
+
+    df = pd.read_sql(s, db, index_col = ['tc_date'], parse_dates=['tc_date'])
+
+    return df
+
 
 
 def fixrisk(interval=20, short_period=20, long_period=252):
-
+    
+    timing_id = 49101;
     alldf = pd.read_csv(datapath('labelasset.csv'), index_col='date', parse_dates=['date'])
-
+    #timing_df = pd.read_csv(os.path.normpath(datapath( '../csvdata/000300_signals.csv')), index_col = 'date', parse_dates=['date'])
+    timing_df = load_timing_signal(timing_id)
 
     position_datas = []
     position_dates = []
@@ -59,16 +82,6 @@ def fixrisk(interval=20, short_period=20, long_period=252):
     for code in alldf.columns:
 
         df = alldf[[code]]
-
-
-        ma5_df  = df.rolling(window=5).mean()
-        ma5_dfr = ma5_df.pct_change().fillna(0.0)
-        ma10_df  = df.rolling(window=10).mean()
-        ma10_dfr = ma10_df.pct_change().fillna(0.0)
-        ma20_df  = df.rolling(window=20).mean()
-        ma20_dfr = ma20_df.pct_change().fillna(0.0)
-        ma60_df  = df.rolling(window=60).mean()
-        ma60_dfr = ma60_df.pct_change().fillna(0.0)
 
         dfr = df.pct_change().fillna(0.0)
 
@@ -78,56 +91,92 @@ def fixrisk(interval=20, short_period=20, long_period=252):
             'std': interval_df['nav'].rolling(window=short_period).std(),
         }, columns=['std', 'mean'])
 
+        periodstdmean_df.to_csv('periodstdmean.csv')
+
         dates = periodstdmean_df.index
 
         ps    = [0]
         pds   = [dates[long_period]]
 
+        ii = range(long_period, len(dates) - 1)
+        with click.progressbar(length=len(ii), label='reshaping %-15s' % (code)) as bar:
+            for i in ii:
+                bar.update(1)
+                
+                d = dates[i]
 
-        for i in range(long_period, len(dates) - 1):
+                signal = 0
+                if d in timing_df.index:
+                    signal = timing_df.loc[d].values[0]
+                else:
+                    logger.warning("missing timing signal: {'timing_id': %d, 'date': '%s'}", timing_id, d.strftime("%Y-%m-%d"))
 
-            d = dates[i]
+                risk    = periodstdmean_df.iloc[i, 0]
+                r       = periodstdmean_df.iloc[i, 1]
 
-            risk    = periodstdmean_df.iloc[i, 0]
-            r       = periodstdmean_df.iloc[i, 1]
+                risks   = periodstdmean_df.iloc[i - long_period : i, 0]
+                rs      = periodstdmean_df.iloc[i - long_period : i, 1]
 
-            risks   = periodstdmean_df.iloc[i - long_period : i, 0]
-            rs      = periodstdmean_df.iloc[i - long_period : i, 1]
+                rerisks  = risks
+                rers     = rs
 
-            rerisks  = risks
-            rers     = rs
+                riskstd     = np.std(rerisks)
+                riskmean    = np.mean(rerisks)
 
-            riskstd     = np.std(rerisks)
-            riskmean    = np.mean(rerisks)
+                rstd        = np.std(rers)
+                rmean       = np.mean(rers)
 
-            rstd        = np.std(rers)
-            rmean       = np.mean(rers)
+                #
+                # 风险修型规则:
+                #
+                # 1. 波动率大于等于两个标准差 & 收益率小于一个标准差, 则持有部分仓位
+                #
+                #        position = risk20_mean / risk20
+                #    
+                # 2. 波动率大于等于两个标准差 & 收益率大于一个标准差 => 空仓
+                #
+                # 3. 波动率小于波动率均值 则 全仓
+                # 
+                # 4. 其他情况, 则持有部分仓位
+                #
+                #        position = risk20_mean / risk20
+                #
 
-            if ma5_dfr.loc[d, code] > 0 and ma10_dfr.loc[d, code] > 0 and ma20_dfr.loc[d, code] > 0:
-                position = riskmean / risk
-                if position >= 1.0:
+
+                if risk >= riskmean + 2 * riskstd and r < rmean - 1 * rstd:
+                    position = riskmean / risk
+                elif risk >= riskmean + 2 * riskstd and r > rmean + 1 * rstd:
+                    position = 0.0
+                    #position = riskmean / risk
+                elif risk <= riskmean:
                     position = 1.0
-            elif risk >= riskmean + 2 * riskstd and r < rmean - 1 * rstd:
-                position = riskmean / risk
-            elif risk >= riskmean + 2 * riskstd and r > rmean + 1 * rstd:
-                position = 0.0
-                #position = riskmean / risk
-            elif risk <= riskmean:
-                position = 1.0
-            else:
-                position = riskmean / risk
+                else:
+                    position = riskmean / risk
 
-            p = ps[-1]
-            if position == 0.0:
-                position = 0
-            elif (not (position <= p * 0.5 or position >= p * 2.0)) and (not (position <= p - 0.2 or position >= p + 0.2)):
-                position = p
+                #
+                # 择时调整规则
+                #
+                # 1. 择时判断空仓 & 本期仓位小于上期仓位的20%或者是上次仓位的一半以下，
+                #    则降低仓位至风险修型新算出的仓位
+                #    
+                # 2. 择时判断持仓 & 本期仓位大于上期仓位的20%或者是上次仓位的一倍以上，
+                #    则增加仓位至风险修型新算出的仓位
+                #    
+                # 3. 否则, 维持原仓位不变
+                #
 
-            #if position < 0.1:
-            #    position = 0.0
+                if (position <= ps[-1] * 0.5 or position <= ps[-1] - 0.2) and signal == -1:
+                    pass
+                elif (position >= ps[-1] * 2 or position >= ps[-1] + 0.2 or position == 1.0) and signal == 1:
+                    pass
+                else:
+                    position = ps[-1]
 
-            ps.append(position)
-            pds.append(dates[i + 1])
+                #if position < 0.1:
+                #    position = 0.0
+
+                ps.append(position)
+                pds.append(dates[i + 1])
 
         position_datas.append(ps)
         position_dates = pds

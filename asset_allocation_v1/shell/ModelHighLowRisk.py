@@ -4,6 +4,7 @@
 import os
 import string
 import click
+import logging
 import pandas as pd
 import numpy as np
 import FundIndicator
@@ -14,6 +15,8 @@ import DFUtil
 import AllocationData
 
 from Const import datapath
+
+logger = logging.getLogger(__name__)
 
 def get_columns(key, includeDate=False):
     columns = {
@@ -111,7 +114,7 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
 
     with click.progressbar(length=len(adjust_index), label='markowitz') as bar:
         for day in adjust_index:
-            # print "markowitz:", day
+            logger.debug("markowitz: %s", day.strftime("%Y-%m-%d"))
             # 高风险资产配置
             df_high.loc[day] = asset_alloc_high_risk_per_day(day, lookback, columns=get_columns('high'))
             # 底风险资产配置
