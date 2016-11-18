@@ -80,7 +80,9 @@ def fixrisk(interval=20, short_period=20, long_period=252):
 
             d = dates[i]
 
-            signal = timing_df.loc[d].values[0]
+            signal = 0
+            if d in timing_df.index:
+                signal = timing_df.loc[d].values[0]
 
             risk    = periodstdmean_df.iloc[i, 0]
             r       = periodstdmean_df.iloc[i, 1]
@@ -97,6 +99,23 @@ def fixrisk(interval=20, short_period=20, long_period=252):
             rstd        = np.std(rers)
             rmean       = np.mean(rers)
 
+            #
+            # 风险修型规则:
+            #
+            # 1. 波动率大于等于两个标准差 & 收益率小于一个标准差, 则持有部分仓位
+            #
+            #        position = risk20_mean / risk20
+            #    
+            # 2. 波动率大于等于两个标准差 & 收益率大于一个标准差 => 空仓
+            #
+            # 3. 波动率小于波动率均值 则 全仓
+            # 
+            # 4. 其他情况, 则持有部分仓位
+            #
+            #        position = risk20_mean / risk20
+            #
+
+
             if risk >= riskmean + 2 * riskstd and r < rmean - 1 * rstd:
                 position = riskmean / risk
             elif risk >= riskmean + 2 * riskstd and r > rmean + 1 * rstd:
@@ -106,6 +125,18 @@ def fixrisk(interval=20, short_period=20, long_period=252):
                 position = 1.0
             else:
                 position = riskmean / risk
+
+            #
+            # 择时调整规则
+            #
+            # 1. 择时判断空仓 & 本期仓位小于上期仓位的20%或者是上次仓位的一半以下，
+            #    则降低仓位至风险修型新算出的仓位
+            #    
+            # 2. 择时判断持仓 & 本期仓位大于上期仓位的20%或者是上次仓位的一倍以上，
+            #    则增加仓位至风险修型新算出的仓位
+            #    
+            # 3. 否则, 维持原仓位不变
+            #
 
             if (position <= ps[-1] * 0.5 or position <= ps[-1] - 0.2) and signal == -1:
                 pass
