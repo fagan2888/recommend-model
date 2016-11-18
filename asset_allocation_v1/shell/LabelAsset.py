@@ -35,7 +35,7 @@ def label_asset_tag(label_index, lookback=52):
 
     label_index = pd.DatetimeIndex(['2012-06-30','2012-09-30','2012-12-31','2013-03-31','2013-06-30','2013-09-30','2013-12-31','2014-03-31','2014-06-30','2014-09-30','2014-12-31', '2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
     #label_index = pd.DatetimeIndex(['2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
-    
+    #label_index = pd.DatetimeIndex(['2016-09-30'])
     #
     # 计算每个调仓点的最新配置
     #
@@ -148,6 +148,9 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #
     df_indicator = FundFilter.stock_fund_filter_new(
         day, df_nav_stock, df_nav_index[Const.hs300_code])
+    #print df_indicator
+    indicator_codes = df_indicator.index.values
+
 
     #print df_nav_stock
     codes = set(df_nav_stock.columns.values)
@@ -183,27 +186,29 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     date_size_df = date_size_df.dropna()
     date_invshare_df = date_invshare_df.dropna()
 
-    sizes = date_size_df.values
-    sizes.sort()
+    #date_size_df.to_csv('date_size_df.csv')
+    date_size_df.sort()
+    #date_size_df.to_csv('date_size_df_sort.csv')
+
+    l = len(date_size_df)
+    date_size_df = date_size_df.iloc[(int)(0.1 * l) : (int)(0.5 *l)]
+    size_codes = date_size_df.index.values
     #u     = np.mean(sizes)
     #sigma = np.std(sizes)
     #print u, sigma, u - sigma
-    #print sizes[-1 * (int)(0.2 * len(sizes))], sizes[-1]
-    size_codes = []
-    for code in date_size_df.index:
-        size = date_size_df.loc[code]
-        #print code, size
-        if size >= sizes[-1 * (int)(0.3 * len(sizes))] and size <= sizes[-1 * (int)(0.1 * len(sizes))]:
-            #print code, size
-            size_codes.append(code)
     codes = codes & set(size_codes)
     print 'size done', len(codes)
 
-    invshare_codes = []
-    for code in date_invshare_df.index:
-        invshare_ratio = date_invshare_df.loc[code]
-        if invshare_ratio > 40:
-            invshare_codes.append(code)
+
+    date_invshare_df.sort()
+    l = len(date_invshare_df)
+    date_invshare_df = date_invshare_df.iloc[(int)(0.5 * l) : (int)(0.9 * l)]
+    invshare_codes = date_invshare_df.index.values
+    #invshare_codes = []
+    #for code in date_invshare_df.index:
+    #    invshare_ratio = date_invshare_df.loc[code]
+    #    if invshare_ratio > 40:
+    #        invshare_codes.append(code)
 
     codes = codes & set(invshare_codes)
     print 'invshare done' , len(codes)
@@ -255,16 +260,24 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #print end_date
     #print fund_invshare_df
     #print fund_size_df
+    codes = set(codes) & set(df_indicator.index.values)
+    codes = list(codes)
+    print 'measure, invshare, size ' , len(codes)
     #df_nav_indicator = df_nav_stock[df_indicator.index]
-    df_nav_indicator = df_nav_stock
-    print 'all stock fund', len(df_nav_stock.columns)
+    df_nav_indicator = df_nav_stock[codes]
+    #df_nav_indicator = df_nav_stock
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
+    #df_label['largecap'] = 1
+    print 'all stock fund', len(df_label.index)
+    #df_label.to_csv('df_label.csv')
     mask = (df_label['largecap'] == 1) | (df_label['smallcap']  == 1) | (df_label['rise'] == 1) | (df_label['decline'] == 1) | (df_label['oscillation'] == 1) | (df_label['growth'] == 1) | (df_label['value'] == 1)
     df_label = df_label.loc[mask]
-    print 'stock label fund', len(df_label.index)
-    codes = set(codes) & set(df_label.index.values) & set(df_indicator.index.values)
+    codes = set(codes) & set(df_label.index.values)
+    #codes = set(indicator_codes) & set(df_label.index.values)
+    codes = df_label.index.values
     codes = list(codes)
     df_label = df_label.loc[codes]
+    print 'stock label fund', len(df_label.index)
     #print end_date
     #print df_label
     #df_label.to_csv('df_label.csv')

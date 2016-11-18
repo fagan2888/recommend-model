@@ -13,6 +13,7 @@ import numpy as np
 if __name__ == '__main__':
 
 
+    #start_date = '2014-06-30'
     start_date = '2012-06-30'
     end_date   = '2016-10-31'
 
@@ -25,7 +26,7 @@ if __name__ == '__main__':
             v = stock_fund_df.loc[date, col]
             if type(v) is float:
                 continue
-            print date , col, stock_fund_df.loc[date, col]
+            #print date , col, stock_fund_df.loc[date, col]
             v = eval(stock_fund_df.loc[date, col])
             for code in v:
                 codes.add(code)
@@ -56,6 +57,17 @@ if __name__ == '__main__':
     #print cs
     df_position = pd.DataFrame(ratios, index = dates, columns = cs)
     df_position.index.name = 'date'
+    df_position.to_csv('position.csv')
+    df_position.columns.name = 'fund'
+    df_position = df_position.unstack()
+    #print df_position.head()
+    df_position = df_position.to_frame('ratio')
+    print 'aa' , df_position.head()
+    df_position = df_position[ df_position['ratio'] > 0.0]
+    df_position['risk'] = 1.0
+    df_position['category'] = 11
+    df_position = df_position.reset_index().set_index(['risk','date','category','fund'])
+    df_position.sort_index(inplace = True)
     df_position.to_csv('position.csv')
     #print df_position.columns
     #print df_position
