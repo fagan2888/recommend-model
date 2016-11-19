@@ -191,8 +191,26 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #date_size_df.to_csv('date_size_df_sort.csv')
 
     l = len(date_size_df)
-    date_size_df = date_size_df.iloc[(int)(0.1 * l) : (int)(0.5 *l)]
+    date_size_df = date_size_df.iloc[(int)(0.1 * l) : (int)(0.6 *l)]
+    size_codes = []
+    for code in date_size_df.index:
+        size = date_size_df[code]
+        if size >= 1e8:
+            size_codes.append(code)
     size_codes = date_size_df.index.values
+
+
+    '''
+    sizes = date_size_df.values
+    size_mean =  np.mean(sizes)
+    size_std  =  np.std(sizes)
+    size_codes = []
+    for code in date_size_df.index:
+        size = date_size_df[code]
+        if size >= size_mean and size <= size_mean + size_std:
+            size_codes.append(code)
+    '''
+            #print code, size
     #u     = np.mean(sizes)
     #sigma = np.std(sizes)
     #print u, sigma, u - sigma
@@ -260,21 +278,21 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #print end_date
     #print fund_invshare_df
     #print fund_size_df
-    codes = set(codes) & set(df_indicator.index.values)
+    #codes = set(codes) & set(df_indicator.index.values)
     codes = list(codes)
     print 'measure, invshare, size ' , len(codes)
     #df_nav_indicator = df_nav_stock[df_indicator.index]
-    df_nav_indicator = df_nav_stock[codes]
-    #df_nav_indicator = df_nav_stock
+    #df_nav_indicator = df_nav_stock[codes]
+    df_nav_indicator = df_nav_stock
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
     #df_label['largecap'] = 1
     print 'all stock fund', len(df_label.index)
     #df_label.to_csv('df_label.csv')
     mask = (df_label['largecap'] == 1) | (df_label['smallcap']  == 1) | (df_label['rise'] == 1) | (df_label['decline'] == 1) | (df_label['oscillation'] == 1) | (df_label['growth'] == 1) | (df_label['value'] == 1)
     df_label = df_label.loc[mask]
-    codes = set(codes) & set(df_label.index.values)
-    #codes = set(indicator_codes) & set(df_label.index.values)
-    codes = df_label.index.values
+    #codes = set(codes) & set(df_label.index.values)
+    codes = set(codes) & set(indicator_codes) & set(df_label.index.values)
+    #codes = df_label.index.values
     codes = list(codes)
     df_label = df_label.loc[codes]
     print 'stock label fund', len(df_label.index)

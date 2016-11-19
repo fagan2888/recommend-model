@@ -58,6 +58,7 @@ if __name__ == '__main__':
     df_position = pd.DataFrame(ratios, index = dates, columns = cs)
     df_position.index.name = 'date'
     df_position.to_csv('position.csv')
+    '''
     df_position.columns.name = 'fund'
     df_position = df_position.unstack()
     #print df_position.head()
@@ -69,6 +70,7 @@ if __name__ == '__main__':
     df_position = df_position.reset_index().set_index(['risk','date','category','fund'])
     df_position.sort_index(inplace = True)
     df_position.to_csv('position.csv')
+    '''
     #print df_position.columns
     #print df_position
     #print df_position
@@ -78,11 +80,9 @@ if __name__ == '__main__':
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc_fund, df_position, result_col='portfolio')
     print df_nav_portfolio
     df_nav_portfolio['portfolio'].to_csv('fund_pool.csv')
-
     #print df_position
 
 
-    '''
     pre_fund_pool = None
     dates = stock_fund_df.index
     for d in dates:
@@ -99,6 +99,7 @@ if __name__ == '__main__':
             ratio = 1.0 * len(pre_fund_pool & d_cs) / len(d_cs)
             print d, ratio
             pre_fund_pool = d_cs
+    '''
 
     codes = set()
     dates = stock_fund_df.index.values
