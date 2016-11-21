@@ -8,4 +8,3 @@ class RiskManagement(object):
 
     def __init__(self):
         self.max_drawdown = 0.95
-import os
