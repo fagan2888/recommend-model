@@ -25,16 +25,23 @@ def get_move_day(dates, cur_date, counts, previous=True):
     :return: date
     """
 
-    date = (cur_date - datetime.timedelta(days=counts)) if previous else (cur_date + datetime.timedelta(days=counts))
+    # date = (cur_date - datetime.timedelta(days=counts)) if previous else (cur_date + datetime.timedelta(days=counts))
+    date = cur_date
     date_array = list(dates)
     date_num = len(date_array)
-    while date not in date_array:
-        counts += 1
-        date = (cur_date - datetime.timedelta(days=counts)) if previous \
-            else (cur_date + datetime.timedelta(days=counts))
+    date_count = 1
+    previous_count = 0
+    while previous_count < counts:
+        if date in date_array:
+            previous_count += 1
+            if previous_count >= counts:
+                break
+        date = (cur_date - datetime.timedelta(days=date_count)) if previous \
+            else (cur_date + datetime.timedelta(days=date_count))
 
-        if counts > date_num:
+        if date_count > date_num:
             break
+        date_count += 1
 
     return date
 
