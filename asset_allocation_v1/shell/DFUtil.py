@@ -5,7 +5,9 @@ import pandas as pd
 import numpy as np
 import datetime
 import calendar
+from sqlalchemy import *
 
+import database
 
 
 def get_date_df(df, start_date, end_date):
@@ -145,6 +147,30 @@ def filter_by_turnover_rate_per_risk(df, turnover_rate):
 
 def portfolio_import(df):
     pass;
+
+
+def merge_column_for_fund_id_type(df, code, usecols=['globalid', 'ra_type']):
+    sr_code = df[code]
+    
+    db = database.connection('base')
+    # 加载基金列表
+    t = Table('ra_fund', MetaData(bind=db), autoload=True)
+    columns = [
+        t.c.globalid,
+        t.c.ra_code,
+        t.c.ra_type,
+        t.c.ra_name,
+    ]
+    
+    s = select(columns, (t.c.ra_code.in_(sr_code)))
+    
+    df_c2i = pd.read_sql(s, db, index_col = ['ra_code'])
+
+    df_result = df.merge(df_c2i[usecols], left_on=code, right_index=True)
+
+    return df_result
+
+    
 
 
 def categories_types(as_int=False):

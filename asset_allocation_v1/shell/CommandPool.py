@@ -28,6 +28,7 @@ import WeekFund2DayNav
 import FixRisk
 import DFUtil
 import LabelAsset
+import database
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -69,7 +70,7 @@ def stock(ctx, datadir, startdate, enddate, pools, optlist, optlimit, optcalc):
     db_base = create_engine(config.db_base_uri)
     db = {'asset':db_asset, 'base':db_base}
 
-    df_pool = load_pool_by_type(db['asset'], 1, pools)
+    df_pool = load_pool_by_type(1, pools)
 
     if optlist:
         #print df_pool
@@ -240,7 +241,7 @@ def bond(ctx, datadir, startdate, enddate, pools, optlist, optlimit, optcalc):
     db_base = create_engine(config.db_base_uri)
     db = {'asset':db_asset, 'base':db_base}
 
-    df_pool = load_pool_by_type(db['asset'], 2, pools)
+    df_pool = load_pool_by_type(2, pools)
 
     if optlist:
         #print df_pool
@@ -318,7 +319,8 @@ def bond_update(db, pool, optlimit, optcalc):
     db_batch(db['asset'], ra_pool_fund, df_new, df_old)
 
 
-def load_pool_by_type(db, pool_type, pools):
+def load_pool_by_type(pool_type, pools):
+    db = database.connection('asset')
     metadata = MetaData(bind=db)
     ra_pool = Table('ra_pool', metadata, autoload=True)
 
@@ -391,7 +393,7 @@ def nav(ctx, pools, optlist):
     db_base = create_engine(config.db_base_uri)
     db = {'asset':db_asset, 'base':db_base}
 
-    df_pool = load_pool_by_type(db['asset'], None, pools)
+    df_pool = load_pool_by_type(None, pools)
 
     if optlist:
         #print df_pool
@@ -515,3 +517,142 @@ def load_fund_category(db, pid, category):
     return df
     
     
+@pool.command(name='import')
+@click.option('--id', 'optid', type=int, help=u'specify fund pool id')
+@click.option('--name', 'optname', type=int, help=u'specify fund pool name')
+@click.option('--otype', 'optotype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
+@click.option('--dtype', 'optdtype', type=click.Choice(['1', '2']), default='2', help=u'date type(1:day, 2:week)')
+@click.option('--ftype', 'optftype', type=click.Choice(['0', '1', '2', '3', '4']), default='0', help=u'fund type(0:unknow; 1:stock; 2:bond; 3:money; 4:other)')
+@click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
+@click.argument('csv', type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=False), required=True)
+@click.pass_context
+def import_command(ctx, csv, optid, optname, optotype, optdtype, optftype, optreplace):
+    '''
+    import fund pool from csv file
+    '''
+
+    #
+    # 处理id参数
+    #
+    if optid is not None:
+        #
+        # 检查id是否存在
+        #
+        df_existed = load_pool_by_type(None, [optid])
+        if not df_existed.empty:
+            if optreplace:
+                click.echo(click.style("allocation instance [optId] existed, will replace!", fg="yellow"))
+            else:
+                click.echo(click.style("allocation instance [optId] existed, import aborted!", fg="red"))
+            return -1;
+    else:
+        #
+        # 自动生成id
+        #
+        prefix = optotype + optdtype + optftype
+        between_min, between_max = ('%s00' % (prefix), '%s99' % (prefix))
+
+        max_id = query_max_pool_id_between(between_min, between_max)
+        if max_id is None:
+            optid = between_min;
+        else:
+            if max_id >= between_max:
+                click.echo(click.style("run out of instance id [maxId], import aborted!", fg="red"))
+                return -1
+
+            if optreplace:
+                optid = max_id
+            else:
+                optid = max_id + 1;
+
+    #
+    # 处理name参数
+    #
+    if optname is None:
+        optname = os.path.basename(csv);
+
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    ra_pool = Table('ra_pool', metadata, autoload=True)
+    ra_pool_fund = Table('ra_pool_fund', metadata, autoload=True)
+
+    #
+    # 处理替换
+    #
+    if optreplace:
+        ra_pool.delete(ra_pool.c.id == optid).execute()
+        ra_pool_fund.delete(ra_pool_fund.c.ra_pool_id == optid).execute()
+
+    now = datetime.now()
+    #
+    # 导入数据
+    #
+    row = {
+        'id': optid, 'ra_type':optotype, 'ra_date_type':optdtype
+        , 'ra_fund_type':optftype, 'ra_name': optname
+        , 'created_at': func.now(), 'updated_at': func.now()
+    }
+    ra_pool.insert(row).execute()
+
+    df = pd.read_csv(csv, parse_dates=['date'], dtype={'code':str})
+    df = df.replace({'category':DFUtil.categories_types()})
+    df = df.rename(columns={'date':'ra_date', 'category':'ra_category', 'code':'ra_fund_code', 'sharpe':'ra_sharpe',  'jensen':'ra_jensen', 'sortino':'ra_sortino', 'ppw':'ra_ppw', 'level':'ra_fund_level'})
+
+    if 'ra_fund_level' not in df.columns:
+        df['ra_fund_level'] = 1
+
+    if 'ra_jensen' not in df.columns:
+        df['ra_jensen'] = 0.0
+    else:
+        df['ra_jensen'] = np.round(df['ra_jensen'])
+
+    if 'ra_sharpe' not in df.columns:
+        df['ra_sharpe'] = 0.0
+    else:
+        df['ra_sharpe'] = np.round(df['ra_sharpe'])
+
+    if 'ra_ppw' not in df.columns:
+        df['ra_ppw'] = 0.0
+    else:
+        df['ra_ppw'] = np.round(df['ra_ppw'])
+
+    if 'ra_sortino' not in df.columns:
+        df['ra_sortino'] = 0.0
+    else:
+        df['ra_sortino'] = np.round(df['ra_sortino'])
+
+    if 'stability' in df.columns:
+        df =  df.drop('stability', axis = 1)
+
+
+    #
+    # 翻译基金代码 => 基金ID
+    #
+    df_tosave = DFUtil.merge_column_for_fund_id_type(df, 'ra_fund_code')
+    df_tosave = df_tosave.rename(columns={'globalid':'ra_fund_id', 'ra_type':'ra_fund_type'})
+    df_tosave['ra_pool'] = optid
+    df_tosave.set_index(['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'], inplace=True)
+
+    df_tosave['updated_at'] = df_tosave['created_at'] = now
+
+    df_tosave.to_sql(ra_pool_fund.name, db, index=True, if_exists='append')
+
+    if len(df_tosave.index) > 1:
+        logger.info("insert %s (%5d) : %s " % (ra_pool_fund.name, len(df_tosave.index), df_tosave.index[0]))
+
+    click.echo(click.style("import complement! instance id [%d]" % (optid), fg='green'))
+    
+    
+    return 0
+
+def query_max_pool_id_between(min_id, max_id):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('ra_pool', metadata, autoload=True)
+
+    columns = [ t.c.id ]
+
+    s = select([func.max(t.c.id).label('maxid')]).where(t.c.id.between(min_id, max_id))
+
+    return s.execute().scalar()
