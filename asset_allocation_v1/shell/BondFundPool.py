@@ -31,14 +31,15 @@ def load_save_fund_types():
     df.to_csv('../tmp/fund_types.csv', encoding='utf8')
 
     # 加载基金最低申购金额
-    sql_fund_buy_amount = 'select fi_code, fi_amount, fi_yingmi_subscribe_status from fund_infos'
-    df_fund_buy_amount = pd.read_sql(sql_fund_buy_amount, conn_mofang, index_col = 'fi_code')
-    df_fund_buy_amount.to_csv("../tmp/bondfunds_buy_amount.csv", encoding="utf8")
+    #sql_fund_buy_amount = 'select fi_code, fi_amount, fi_yingmi_subscribe_status from fund_infos'
+    #df_fund_buy_amount = pd.read_sql(sql_fund_buy_amount, conn_mofang, index_col = 'fi_code')
+    #df_fund_buy_amount.to_csv("../tmp/bondfunds_buy_amount.csv", encoding="utf8")
 
-def load_bond_funds(types):
+def load_bond_funds(types, ftime):
     """
     加载types里指定分类代码的债券基金
     :param types: 债券基金分类代码
+    :param ftime: 筛选时间点
     :return: 返回相应代码基金,以dataframe格式返回
     """
     # load_save_fund_types()
@@ -59,7 +60,7 @@ def load_bond_funds(types):
     # 得到基金基本信息（财富）
     imploded_sids = ','.join([repr(sid) for sid in securityids])
     # print imploded_sids
-    sql_base_info = 'select FDSNAME, MANAGERNAME, FSYMBOL, FOUNDDATE, ENDDATE, SECURITYID, KEEPERNAME from TQ_FD_BASICINFO where ISVALID = 1 and ENDDATE = ' + end_date_str + ' and OPERATEPERIOD is null and SECURITYID in (' + imploded_sids + ')'
+    sql_base_info = 'select FDSNAME, MANAGERNAME, FSYMBOL, FOUNDDATE, ENDDATE, SECURITYID, KEEPERNAME from TQ_FD_BASICINFO where ISVALID = 1 and ENDDATE = ' + end_date_str + ' and OUTSUBBEGDATE >= ' + ftime + ' and OPERATEPERIOD is null and SECURITYID in (' + imploded_sids + ')'
     df_base_info  = pd.read_sql(sql_base_info, conn, index_col = 'SECURITYID', parse_dates = ['FOUNDDATE', 'ENDDATE'])
 
     # 得到基金份额
