@@ -9,12 +9,17 @@ import utils
 
 class BondFundFilter(object):
     def __init__(self):
+        # 回测开始时间
+        self.test_start = datetime.datetime(2015, 1, 1)
+        # 回测结束时间
+        self.test_end = datetime.datetime(2015, 12, 31)
         # 过滤的中间结果目录
         self.tmp_file = "../tmp/bond_filter_tmp.csv"
         # 基金类型
         self.types = [200204, 200301, 200302] #, 200306]
-        # 债券基金过滤条件(0：所有条件, 1：基金代码，2：基金年限，3：基金份额，4：基金规模，5：基金经理)
-        self.filter_type = [0, 1, 2, 3]
+        # 债券基金过滤条件(0：所有条件, 1：基金类型，2：基金年限，3：基金份额，
+        # 4：基金规模，5：基金经理，6：机构持有比例，7：基金中股票比例)
+        self.filter_type = [0]
         # 基金成立年限
         self.fund_age = 1
 
@@ -45,8 +50,38 @@ class BondFundFilter(object):
         self.fund_ratio_triple_quarter_ago = 50
 
     def filter_bond(filter_type):
-        if filter_type == 0:
-            return None
+        for ftype in self.types:
+            if ftype == 0:
+                tmpclass.filter_types()
+                tmpclass.filter_found_years()
+                tmpclass.filter_share()
+                tmpclass.filter_volume()
+                tmpclass.filter_manager()
+                tmpclass.filter_ins_holding()
+                tmpclass.filter_stock_ratio()
+                print "all filter apply"
+            elif ftype == 1:
+                tmpclass.filter_types()
+                print "filter types"
+            elif ftype == 2:
+                tmpclass.filter_found_years()
+                print "filter years"
+            elif ftype == 3:
+                tmpclass.filter_share()
+                print "filter share"
+            elif ftype == 4:
+                tmpclass.filter_volume()
+                print "filter volume"
+            elif ftype == 5:
+                tmpclass.filter_manager()
+                print "filter manager"
+            elif ftype == 6:
+                tmpclass.filter_ins_holding()
+                print "filter inst. "
+            elif ftype == 7:
+                tmpclass.filter_stock_ratio()
+                print "filter stock holding ratio"
+        return None
     def cal_sharpe(self):
         fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], \
             parse_dates=['FOUNDDATE', 'ENDDATE'])
