@@ -33,7 +33,8 @@ def label_asset_tag(label_index, lookback=52):
     label_index = pd.DatetimeIndex(['2016-10-14'])
     
 
-    #label_index = pd.DatetimeIndex(['2012-06-30','2012-09-30','2012-12-31','2013-03-31','2013-06-30','2013-09-30','2013-12-31','2014-03-31','2014-06-30','2014-09-30','2014-12-31', '2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
+    label_index = pd.DatetimeIndex(['2012-06-30','2012-09-30','2012-12-31','2013-03-31','2013-06-30','2013-09-30','2013-12-31','2014-03-31','2014-06-30','2014-09-30','2014-12-31', '2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
+    '''
     label_index = pd.DatetimeIndex([
         '2012-04-27',
         '2012-07-27',
@@ -54,6 +55,7 @@ def label_asset_tag(label_index, lookback=52):
         '2016-05-13',
         '2016-08-12',
     ])
+    '''
     #label_index = pd.DatetimeIndex(['2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
     #label_index = pd.DatetimeIndex(['2016-09-30'])
     #
@@ -310,8 +312,8 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #df_label.to_csv('df_label.csv')
     mask = (df_label['largecap'] == 1) | (df_label['smallcap']  == 1) | (df_label['rise'] == 1) | (df_label['decline'] == 1) | (df_label['oscillation'] == 1) | (df_label['growth'] == 1) | (df_label['value'] == 1)
     df_label = df_label.loc[mask]
-    #codes = set(codes) & set(df_label.index.values)
-    codes = set(codes) & set(indicator_codes) & set(df_label.index.values)
+    codes = set(codes) & set(df_label.index.values)
+    #codes = set(codes) & set(indicator_codes) & set(df_label.index.values)
     #codes = df_label.index.values
     codes = list(codes)
     df_label = df_label.loc[codes]
