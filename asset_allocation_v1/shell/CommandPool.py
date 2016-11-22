@@ -70,7 +70,7 @@ def stock(ctx, datadir, startdate, enddate, pools, optlist, optlimit, optcalc):
     db_base = create_engine(config.db_base_uri)
     db = {'asset':db_asset, 'base':db_base}
 
-    df_pool = load_pool_by_type(1, pools)
+    df_pool = load_pools(pools, 1)
 
     if optlist:
         #print df_pool
@@ -241,7 +241,7 @@ def bond(ctx, datadir, startdate, enddate, pools, optlist, optlimit, optcalc):
     db_base = create_engine(config.db_base_uri)
     db = {'asset':db_asset, 'base':db_base}
 
-    df_pool = load_pool_by_type(2, pools)
+    df_pool = load_pools(pools, 2)
 
     if optlist:
         #print df_pool
@@ -319,7 +319,7 @@ def bond_update(db, pool, optlimit, optcalc):
     db_batch(db['asset'], ra_pool_fund, df_new, df_old)
 
 
-def load_pool_by_type(pool_type, pools):
+def load_pools(pools, pool_type=None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     ra_pool = Table('ra_pool', metadata, autoload=True)
@@ -393,7 +393,7 @@ def nav(ctx, pools, optlist):
     db_base = create_engine(config.db_base_uri)
     db = {'asset':db_asset, 'base':db_base}
 
-    df_pool = load_pool_by_type(None, pools)
+    df_pool = load_pools(pools)
 
     if optlist:
         #print df_pool
@@ -406,9 +406,8 @@ def nav(ctx, pools, optlist):
         nav_update(db, pool)
 
 def nav_update(db, pool):
-    df_categories = load_pool_category(db['asset'], pool['id'])
+    df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
-    categories
     
     with click.progressbar(length=len(categories) + 1, label='update nav for pool %d' % (pool.id)) as bar:
         for category in categories:
@@ -421,7 +420,7 @@ def nav_update(db, pool):
 
 def nav_update_category(db, pool, category):
     # 加载基金列表
-    df = load_fund_category(db, pool['id'], category)
+    df = load_fund_category(pool['id'], category)
 
     # 构建均分仓位
     df['ra_ratio'] = 1.0
@@ -485,7 +484,8 @@ def format_nav_and_inc(x):
     return ret
     
     
-def load_pool_category(db, pid):
+def load_pool_category(pid):
+    db = database.connection('asset')
     t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
     
     # 加载就数据
@@ -499,7 +499,8 @@ def load_pool_category(db, pid):
 
     return df
 
-def load_fund_category(db, pid, category):
+def load_fund_category(pid, category):
+    db = database.connection('asset')
     # 加载基金列表
     t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
     columns = [
@@ -538,7 +539,7 @@ def import_command(ctx, csv, optid, optname, optotype, optdtype, optftype, optre
         #
         # 检查id是否存在
         #
-        df_existed = load_pool_by_type(None, [optid])
+        df_existed = load_pools(str(optid))
         if not df_existed.empty:
             if optreplace:
                 click.echo(click.style("allocation instance [optId] existed, will replace!", fg="yellow"))
@@ -656,3 +657,75 @@ def query_max_pool_id_between(min_id, max_id):
     s = select([func.max(t.c.id).label('maxid')]).where(t.c.id.between(min_id, max_id))
 
     return s.execute().scalar()
+
+@pool.command()
+@click.option('--id', 'optid', help=u'specify fund pool id (e.g. 12101,92101')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.pass_context
+def turnover(ctx, optid, optlist):
+    ''' calc pool turnover
+    '''
+    df_pool = load_pools(optid)
+
+    if optlist:
+        #print df_pool
+        #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
+        df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_pool, headers='keys', tablefmt='psql')
+        return 0
+    
+    for _, pool in df_pool.iterrows():
+        turnover_update(pool)
+
+def turnover_update(pool):
+    df_categories = load_pool_category(pool['id'])
+    categories = df_categories['ra_category']
+    
+    with click.progressbar(length=len(categories) + 1, label='update turnover for pool %d' % (pool.id)) as bar:
+        for category in categories:
+            turnover_update_category(pool, category)
+            bar.update(1)
+        else:
+            turnover_update_category(pool, 0)
+            bar.update(1)
+
+def turnover_update_category(pool, category):
+    # 加载基金列表
+    df = load_fund_category(pool['id'], category)
+
+    # 构建均分仓位
+    df['mask'] = 1
+    df.set_index('ra_fund_code', append=True, inplace=True)
+    df = df.unstack(fill_value=0)
+    df_prev = df.shift(1).fillna(0).astype(int)
+
+    df_prev.iloc[0] = df.iloc[0]
+    
+    df_and = np.bitwise_and(df, df_prev)
+
+    df_new = (1 - df_and.sum(axis=1) / df_prev.sum(axis=1)).to_frame('ra_turnover')
+    df_new['ra_pool'] = pool['id']
+    df_new['ra_category'] = category
+
+    df_new = df_new.reset_index().set_index(['ra_pool', 'ra_category', 'ra_date'])
+    
+    df_new = df_new.applymap("{:.4f}".format)
+
+
+    db = database.connection('asset')
+    # 加载旧数据
+    t2 = Table('ra_pool_criteria', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.ra_pool,
+        t2.c.ra_category,
+        t2.c.ra_date,
+        t2.c.ra_turnover,
+    ]
+    stmt_select = select(columns2, (t2.c.ra_pool == pool['id']) & (t2.c.ra_category == category))
+    df_old = pd.read_sql(stmt_select, db, index_col=['ra_pool', 'ra_category', 'ra_date'], parse_dates=['ra_date'])
+    if not df_old.empty:
+        df_old = df_old.applymap("{:.4f}".format)
+
+    # 更新数据库
+    db_batch(db, t2, df_new, df_old, timestamp=False)
+    
