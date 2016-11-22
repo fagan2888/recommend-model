@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 def pool(ctx):
     '''fund pool group
     '''
-    click.echo("")
+    pass
 
 @pool.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
@@ -641,7 +641,7 @@ def import_command(ctx, csv, optid, optname, optotype, optdtype, optftype, optre
     if len(df_tosave.index) > 1:
         logger.info("insert %s (%5d) : %s " % (ra_pool_fund.name, len(df_tosave.index), df_tosave.index[0]))
 
-    click.echo(click.style("import complement! instance id [%d]" % (optid), fg='green'))
+    click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
     
     
     return 0
