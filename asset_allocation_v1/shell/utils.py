@@ -53,3 +53,15 @@ def sigmoid(x):
     :return: data array of sigmoid
     """
     return 1.0 / (1.0 + np.exp(-x))
+def get_nav(ratios):
+    nav_list = []
+    nav = 1.0
+    for ratio in ratios:
+        nav *= (1.0 + ratio)
+        nav_list.append(nav)
+
+    return nav_list
+
+def get_var(ratios):
+    rs = np.array(ratios)
+    return np.std(rs)

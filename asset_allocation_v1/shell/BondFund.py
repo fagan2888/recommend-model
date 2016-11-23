@@ -12,7 +12,12 @@ class BondFundFilter(object):
         # 回测开始时间
         self.test_start = datetime.datetime(2015, 1, 1)
         # 回测结束时间
-        self.test_end = datetime.datetime(2015, 12, 31)
+        self.test_end = datetime.datetime(2016, 1, 5)
+        # 沪深300指数数据
+        sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
+        sh300 = sh300[sh300.index.get_level_values(0) >= self.test_start]
+        sh300 = sh300[sh300.index.get_level_values(0) <= self.test_end]
+        self.trade_dates = sh300.index
         # 过滤的中间结果目录
         self.tmp_file = "../tmp/bond_filter_tmp.csv"
         # 基金类型
@@ -20,9 +25,9 @@ class BondFundFilter(object):
         # 债券基金过滤条件(0：所有条件, 1：基金类型，2：基金年限，3：基金份额，
         # 4：基金规模，5：基金经理，6：机构持有比例，7：基金中股票比例
         # 8：sharpe比率和波动率过滤)
-        self.filter_type = [0]
+        self.filter_type = [8]
         # 基金成立年限
-        self.fund_age = 1
+        self.fund_age = 2
 
         # 基金规模
         self.fund_volume = 300000000.0
@@ -36,6 +41,7 @@ class BondFundFilter(object):
         # 基金经理
         self.manager_num = 5
         self.cur_manager_days = 360
+        self.hold_manager_days = 360 * 1.5
 
         # 机构持有比例
         self.holding_ratio = 0.8
@@ -51,53 +57,116 @@ class BondFundFilter(object):
         self.return_std = 0.1
 
     def filter_bond(self):
-        self.filter_types()
         choose_date = self.test_start
+        #self.filter_types(choose_date)
+        holdings = {}
         while choose_date <= self.test_end:
-            self.filter_types(choose_date)
-            for ftype in self.filter_type:
-                if ftype == 0:
-                    self.filter_types()
-                    self.filter_found_years()
-                    self.filter_share()
-                    self.filter_volume()
-                    self.filter_manager()
-                    self.filter_ins_holding()
-                    self.filter_stock_ratio()
-                    self.filter_sharpe_std()
-                    print "all filter apply"
-                elif ftype == 1:
-                    self.filter_types()
-                    print "filter types"
-                elif ftype == 2:
-                    self.filter_found_years()
-                    print "filter years"
-                elif ftype == 3:
-                    self.filter_share()
-                    print "filter share"
-                elif ftype == 4:
-                    self.filter_volume()
-                    print "filter volume"
-                elif ftype == 5:
-                    self.filter_manager()
-                    print "filter manager"
-                elif ftype == 6:
-                    self.filter_ins_holding()
-                    print "filter inst. "
-                elif ftype == 7:
-                    self.filter_stock_ratio()
-                    print "filter stock holding ratio"
-                elif ftype == 8:
-                    self.filter_sharpe_std()
-                    print "filter sharpe and std"
+            print choose_date
+            if choose_date in self.trade_dates:
+                self.filter_types(choose_date)
+                for ftype in self.filter_type:
+                    if ftype == 0:
+                        #self.filter_types()
+                        self.filter_found_years()
+                        self.filter_share()
+                        self.filter_volume()
+                        self.filter_manager()
+                        self.filter_ins_holding()
+                        self.filter_stock_ratio()
+                        self.filter_sharpe_std()
+                        print "all filter apply"
+                    elif ftype == 1:
+                        self.filter_types()
+                        print "filter types"
+                    elif ftype == 2:
+                        self.filter_found_years(choose_date)
+                        print "filter years"
+                    elif ftype == 3:
+                        self.filter_share()
+                        print "filter share"
+                    elif ftype == 4:
+                        self.filter_volume()
+                        print "filter volume"
+                    elif ftype == 5:
+                        self.filter_manager()
+                        print "filter manager"
+                    elif ftype == 6:
+                        self.filter_ins_holding()
+                        print "filter inst. "
+                    elif ftype == 7:
+                        self.filter_stock_ratio()
+                        print "filter stock holding ratio"
+                    elif ftype == 8:
+                        self.filter_sharpe_std(choose_date)
+                        print "filter sharpe and std"
+                fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], \
+                    parse_dates=['FOUNDDATE', 'ENDDATE'])
+                holdings[choose_date] = list(fund_base_info.index)
             choose_date = choose_date + datetime.timedelta(days=1)
+        tmp_df = pd.DataFrame(holdings.items(), columns=['date', 'sids'])
+        tmp_df.to_csv("../tmp/bond_holdings.csv")
         return None
-    def filter_sharpe_std(self):
+    def cal_eval(self):
+        holdings = pd.read_csv("../tmp/bond_holdings.csv", index_col=['date'], parse_dates=['date'])
+        fund_nav_pct = pd.read_csv("../tmp/bondfunds_nav.csv", \
+            index_col=['SECURITYID', 'NAVDATE'], parse_dates=['NAVDATE'])
+        eval_start = datetime.datetime(2016, 1, 4)
+        eval_end = datetime.datetime(2016, 6, 30)
+        sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
+        sh300 = sh300[sh300.index.get_level_values(0) >= eval_start]
+        sh300 = sh300[sh300.index.get_level_values(0) <= eval_end]
+        dates = sh300.index
+        ratio_000300 = np.array(sh300['ratio']) / 100.0
+        ratio_dict = {}
+        ratio_list = []
+        all_fund_ratio = []
+        one_row = holdings.loc[eval_start]
+        cur_sids = eval(one_row['sids'])
+        sid_num = len(cur_sids)
+        for date in dates:
+            print date
+            total_ratio = 0.0
+            for sid in cur_sids:
+                str_date = date.strftime("%Y%m%d")
+                try:
+                    one_ratio = fund_nav_pct.loc[sid, str_date]
+                    cur_ratio = one_ratio['GROWRATE']
+                except:
+                    print str(sid) + ": no pct"
+                    cur_ratio = 0.0
+                all_fund_ratio.append(cur_ratio)
+                total_ratio += cur_ratio
+            avg_ratio = total_ratio / sid_num
+            ratio_dict= avg_ratio
+            ratio_list.append(avg_ratio)
+        date_num = len(dates)
+        all_fund_ratio = np.array(all_fund_ratio)
+        all_fund_ratio = all_fund_ratio.reshape((sid_num, date_num), order='F')
+        # 基金之间的相关性
+        corrcoef_inter = np.corrcoef(all_fund_ratio)
+        # 基金池与沪深300相关性
+        tmp_list = []
+        tmp_list.append(ratio_000300)
+        tmp_list.append(ratio_list)
+        corrcoef_000300 = np.corrcoef(tmp_list)
+        nav_list = utils.get_nav(ratio_list)
+        variance = utils.get_var(nav_list)
+        union_data = {}
+        union_data['ratio'] = ratio_list
+        union_data['nav'] = nav_list
+        union_data['var'] = variance
+        union_data['coef'] = np.average(corrcoef_inter)
+        union_data['coef_000300'] = np.average(corrcoef_000300)
+        tmp_df = pd.DataFrame(union_data, index=dates)
+        tmp_df.to_csv("../tmp/bond_ratios.csv")
+
+
+    def filter_sharpe_std(self, choose_date):
         fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], \
             parse_dates=['FOUNDDATE', 'ENDDATE'])
         fund_nav = pd.read_csv("../tmp/bondfunds_nav.csv", \
             index_col=['SECURITYID', 'NAVDATE'], parse_dates=['NAVDATE'])
-        today = datetime.date.today()
+        today = choose_date #datetime.date.today()
         # now = datetime.datetime(today.year, today.month, today.day)
         one_year_delta = datetime.timedelta(days=self.days_one)
         two_year_delta = datetime.timedelta(days=self.days_two)
@@ -105,9 +174,9 @@ class BondFundFilter(object):
         pre_one_year = today - one_year_delta
         pre_two_year = today - two_year_delta
         pre_five_year = today - three_year_delta
-        pre_one_year = datetime.datetime.strptime(str(pre_one_year),'%Y-%m-%d')
-        pre_two_year = datetime.datetime.strptime(str(pre_two_year),'%Y-%m-%d')
-        pre_five_year = datetime.datetime.strptime(str(pre_five_year),'%Y-%m-%d')
+        pre_one_year = pre_one_year.strftime('%Y-%m-%d') #datetime.datetime.strptime(str(pre_one_year),'%Y-%m-%d')
+        pre_two_year = pre_two_year.strftime('%Y-%m-%d') #datetime.datetime.strptime(str(pre_two_year),'%Y-%m-%d')
+        pre_five_year = pre_five_year.strftime('%Y-%m-%d') #datetime.datetime.strptime(str(pre_five_year),'%Y-%m-%d')
         sids = set(fund_base_info.index)
         fund_sharpe = {}
         one_sharpe = list()
@@ -155,7 +224,7 @@ class BondFundFilter(object):
             if return_std_one > self.return_std or return_std_two > self.return_std \
                 or return_std_five > self.return_std:
                 delete_list.add(sid)
-            print return_std_one, return_std_two, return_std_five
+            #print return_std_one, return_std_two, return_std_five
             one_sharpe.append(sharpe_one)
             two_sharpe.append(sharpe_two)
             five_sharpe.append(sharpe_five)
@@ -250,7 +319,7 @@ class BondFundFilter(object):
             max_days = max(delta.days)
             if max_days < self.cur_manager_days:
                 delete_list.add(sid)
-            if manager_num >= self.manager_num and max_days <= self.cur_manager_days:
+            if manager_num >= self.manager_num and max_days <= self.hold_manager_days:
                 delete_list.add(sid)
         print "filter manager before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
@@ -332,8 +401,14 @@ class BondFundFilter(object):
             fshare = fshare.dropna(inplace=False)
             share_one = fshare[-1]
             share_two = fshare[-2]
-            share_three = fshare[-3]
-            share_four = fshare[-4]
+            try:
+                share_three = fshare[-3]
+            except:
+                share_three = share_two
+            try:
+                share_four = fshare[-4]
+            except:
+                share_four = share_three
             share_found = fshare[0]
             if share_one < share_two * self.share_ratio or \
                 share_two < share_three * self.share_ratio or \
@@ -354,17 +429,18 @@ class BondFundFilter(object):
         """
         按基金类型过滤
         """
-        BondFundPool.load_bond_funds(self.types, choose_date.strftime("%Y%m%d"))
+        #print choose_date.strftime("%Y-%m-%d")
+        BondFundPool.load_bond_funds(self.types, choose_date.strftime("%Y%m%d"), choose_date.strftime("%Y%m%d"))
         fund_base_info = pd.read_csv("../tmp/bondfunds_base_info.csv", index_col=['SECURITYID'], parse_dates=['FOUNDDATE', 'ENDDATE'])
         fund_base_info.to_csv(self.tmp_file, encoding="utf8")
 
-    def filter_found_years(self):
+    def filter_found_years(self, choose_date):
         """
         按基金成立时间长度过滤
         """
         fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], parse_dates=['FOUNDDATE', 'ENDDATE'])
         indexs = fund_base_info.index
-        one_year_ago = datetime.datetime.now() - datetime.timedelta(365*self.fund_age)
+        one_year_ago = choose_date - datetime.timedelta(365*self.fund_age)
         print "filter year before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info[fund_base_info['FOUNDDATE'] <= one_year_ago]
         print "filter year after: " + str(len(fund_base_info))
@@ -380,4 +456,5 @@ if __name__ == "__main__":
     #tmpclass.filter_ins_holding()
     #tmpclass.filter_stock_ratio()
     #tmpclass.cal_sharpe()
-    tmpclass.filter_bond()
+    #tmpclass.filter_bond()
+    tmpclass.cal_eval()

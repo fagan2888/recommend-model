@@ -35,7 +35,7 @@ def load_save_fund_types():
     #df_fund_buy_amount = pd.read_sql(sql_fund_buy_amount, conn_mofang, index_col = 'fi_code')
     #df_fund_buy_amount.to_csv("../tmp/bondfunds_buy_amount.csv", encoding="utf8")
 
-def load_bond_funds(types, ftime):
+def load_bond_funds(types, ftime, otime):
     """
     加载types里指定分类代码的债券基金
     :param types: 债券基金分类代码
@@ -60,9 +60,11 @@ def load_bond_funds(types, ftime):
     # 得到基金基本信息（财富）
     imploded_sids = ','.join([repr(sid) for sid in securityids])
     # print imploded_sids
-    sql_base_info = 'select FDSNAME, MANAGERNAME, FSYMBOL, FOUNDDATE, ENDDATE, SECURITYID, KEEPERNAME from TQ_FD_BASICINFO where ISVALID = 1 and ENDDATE = ' + end_date_str + ' and OUTSUBBEGDATE >= ' + ftime + ' and OPERATEPERIOD is null and SECURITYID in (' + imploded_sids + ')'
+    sql_base_info = 'select FDSNAME, MANAGERNAME, FSYMBOL, FOUNDDATE, ENDDATE, OUTSUBBEGDATE, SECURITYID, KEEPERNAME from TQ_FD_BASICINFO where ISVALID = 1 and ENDDATE = ' + end_date_str + ' and OUTSUBBEGDATE <= ' + otime + ' and FOUNDDATE <= ' + ftime + ' and OPERATEPERIOD is null and SECURITYID in (' + imploded_sids + ')'
     df_base_info  = pd.read_sql(sql_base_info, conn, index_col = 'SECURITYID', parse_dates = ['FOUNDDATE', 'ENDDATE'])
-
+    df_base_info.to_csv("../tmp/bondfunds_base_info.csv", encoding="utf8")
+    #load_fund_append(imploded_sids)
+def load_fund_append(imploded_sids):
     # 得到基金份额
     sql_share = 'select SECURITYID, ENDDATE, TOTALSHARE from TQ_FD_FSHARE where ISVALID = 1 and SECURITYID in (' + imploded_sids + ')'
     df_share = pd.read_sql(sql_share, conn, index_col = ['ENDDATE', 'SECURITYID'], parse_dates = ['ENDDATE'])
@@ -70,7 +72,7 @@ def load_bond_funds(types, ftime):
     df_share.columns = df_share.columns.droplevel(0)
 
     # 得到基金净值
-    sql_nav = 'select SECURITYID, UNITNAV, NAVDATE from TQ_QT_FDNAV where ISVALID = 1 and SECURITYID in (' + imploded_sids + ')'
+    sql_nav = 'select SECURITYID, UNITNAV, GROWRATE, NAVDATE from TQ_QT_FDNAV where ISVALID = 1 and SECURITYID in (' + imploded_sids + ')'
     df_nav = pd.read_sql(sql_nav, conn, index_col = ['SECURITYID', 'NAVDATE'], parse_dates = ['NAVDATE'])
 
     # 基金经理
@@ -83,13 +85,15 @@ def load_bond_funds(types, ftime):
     # 基金资产组合
     sql_asset_port = 'select SECURITYID, REPORTDATE, SKRATIO from TQ_FD_ASSETPORTFOLIO where ISVALID = 1 and SECURITYID in (' + imploded_sids + ')'
     df_asset_port = pd.read_sql(sql_asset_port, conn, index_col = ['SECURITYID', 'REPORTDATE'], parse_dates = ['REPORTDATE'])
+    # 基金净值增长率
+    #sql_nav_pct = 'select SECURITYID, REPORTDATE, SKRATIO from TQ_FD_ASSETPORTFOLIO where ISVALID = 1 and SECURITYID in (' + imploded_sids + ')'
     #df_nav = df_nav.groupby(level = (0, 1)).first()
     #print df.loc['161211']
     #df.reset_index(inplace = True)
     #df = df.sort_values(by = ['FOUNDDATE'])
     #df = df.groupby(['FSYMBOL']).last()
     #df.set_index('SECURITYID')
-    df_base_info.to_csv("../tmp/bondfunds_base_info.csv", encoding="utf8")
+    #df_base_info.to_csv("../tmp/bondfunds_base_info.csv", encoding="utf8")
     df_share.to_csv("../tmp/bondfunds_share.csv", encoding="utf8")
     df_nav.to_csv("../tmp/bondfunds_nav.csv", encoding="utf8")
     df_manager.to_csv("../tmp/bondfunds_manager.csv", encoding="utf8")
