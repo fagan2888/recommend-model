@@ -728,4 +728,82 @@ def turnover_update_category(pool, category):
 
     # 更新数据库
     db_batch(db, t2, df_new, df_old, timestamp=False)
+
+@pool.command()
+@click.option('--id', 'optid', help=u'specify fund pool id (e.g. 12101,92101')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.pass_context
+def corr(ctx, optid, optlist):
+    ''' calc pool corr
+    '''
+    df_pool = load_pools(optid)
+
+    if optlist:
+        #print df_pool
+        #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
+        df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_pool, headers='keys', tablefmt='psql')
+        return 0
+    
+    for _, pool in df_pool.iterrows():
+        corr_update(pool)
+
+def corr_update(pool):
+    df_categories = load_pool_category(pool['id'])
+    categories = df_categories['ra_category']
+    
+    with click.progressbar(length=len(categories) + 1, label='update corr for pool %d' % (pool.id)) as bar:
+        for category in categories:
+            corr_update_category(pool, category, 52)
+            bar.update(1)
+        else:
+            corr_update_category(pool, 0, 52)
+            bar.update(1)
+
+def corr_update_category(pool, category, lookback):
+    # 加载基金列表
+    df = load_fund_category(pool['id'], category)
+
+    data = {}
+    for k0, v0 in df.groupby(level=0):
+        index = DBData.trade_date_lookback_index(end_date=k0, lookback=lookback)
+        start_date = index.min().strftime("%Y-%m-%d")
+        end_date = k0
+        
+        df_nav = DBData.db_fund_value_daily(start_date, end_date, codes=v0['ra_fund_code'])
+        df_inc = df_nav.pct_change().fillna(0.0)
+        df_corr = df_inc.corr()
+        df_corr.fillna(0.0, inplace=True)
+
+        if df_corr.empty:
+            data[k0] = 0.0
+        else:
+            data[k0] = np.mean(df_corr.values)
+
+    df_new = pd.DataFrame({'ra_corr': data})
+    df_new.index.name = 'ra_date'
+    df_new['ra_pool'] = pool['id']
+    df_new['ra_category'] = category
+
+    df_new = df_new.reset_index().set_index(['ra_pool', 'ra_category', 'ra_date'])
+    
+    df_new = df_new.applymap("{:.4f}".format)
+
+
+    db = database.connection('asset')
+    # 加载旧数据
+    t2 = Table('ra_pool_criteria', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.ra_pool,
+        t2.c.ra_category,
+        t2.c.ra_date,
+        t2.c.ra_corr,
+    ]
+    stmt_select = select(columns2, (t2.c.ra_pool == pool['id']) & (t2.c.ra_category == category))
+    df_old = pd.read_sql(stmt_select, db, index_col=['ra_pool', 'ra_category', 'ra_date'], parse_dates=['ra_date'])
+    if not df_old.empty:
+        df_old = df_old.applymap("{:.4f}".format)
+
+    # 更新数据库
+    db_batch(db, t2, df_new, df_old, timestamp=False)
     
