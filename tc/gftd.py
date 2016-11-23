@@ -8,11 +8,14 @@ import pandas as pd
 import datetime
 import numpy as np
 import os
+from load_data import load_index
 
 class GFTD(object):
 
-    def __init__(self, file_handle):
-        self.data = pd.read_csv(file_handle, index_col="Date", parse_dates=["Date"], low_memory=False)
+    def __init__(self, index_code, stime, etime):
+        #self.data = pd.read_csv(file_handle, index_col="Date", parse_dates=["Date"], low_memory=False)
+        self.index_code = index_code
+        self.data = load_index(index_code, stime, etime)
         # 择开始时间
         self.s_date = datetime.datetime(2013, 1, 1)
         # 择结束日期
@@ -77,7 +80,7 @@ class GFTD(object):
 
         # cal the nav and max drawdown
         union_data = self.cal_nav_maxdown(union_data)
-        union_data.to_csv("gftd_rsult.csv")
+        union_data.to_csv(self.index_code + " gftd_result.csv")
 
         # cal the chance of winning and holding ratio
         win, total, win_ratio, holding_days = self.win_ratio(union_data)
