@@ -96,7 +96,7 @@ if __name__ == '__main__':
         if pre_fund_pool is None:
             pre_fund_pool = d_cs
         else:
-            ratio = 1.0 * len(pre_fund_pool & d_cs) / len(d_cs)
+            ratio = 1.0 - 1.0 * len(pre_fund_pool & d_cs) / len(pre_fund_pool)
             print d, ratio
             pre_fund_pool = d_cs
     '''

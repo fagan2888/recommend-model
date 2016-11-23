@@ -1372,6 +1372,24 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     growthcapprefer_result    = growthcapprefer(df_nav_fund, pe_df, 0.5)
     valuecapprefer_result     = valuecapprefer(df_nav_fund, pe_df, 0.5)
 
+
+    '''
+    largecapfitness_result    = largecapfitness(df_nav_fund, size_index_df, 0.25)
+    smallcapfitness_result    = smallcapfitness(df_nav_fund, size_index_df, 0.25)
+    risefitness_result    = risefitness(df_nav_fund, hs300indexdf, 0.25)
+    declinefitness_result     = declinefitness(df_nav_fund, hs300indexdf, 0.25)
+    oscillationfitness_result = oscillationfitness(df_nav_fund, hs300indexdf,  0.25)
+    #growthfitness_result      = growthfitness(df_nav_fund, growthvalueindexdf, 0.5)
+    #valuefitness_result       = valuefitness(df_nav_fund,  growthvalueindexdf, 0.5)
+    growthfitness_result      = growthfitness(df_nav_fund, pe_index_df, 0.25)
+    valuefitness_result       = valuefitness(df_nav_fund,  pe_index_df, 0.25)
+    positionprefer_result     = positionprefer(positiondf, 0.25)
+    largecapprefer_result     = largecapprefer(df_nav_fund, size_df, 0.25)
+    smallcapprefer_result     = smallcapprefer(df_nav_fund, size_df, 0.25)
+    growthcapprefer_result    = growthcapprefer(df_nav_fund, pe_df, 0.25)
+    valuecapprefer_result     = valuecapprefer(df_nav_fund, pe_df, 0.25)
+    '''
+
     data = {
         'high_position_prefer': {k:1 for (k, v) in positionprefer_result},
         'largecap_prefer': {k:1 for (k, v) in largecapprefer_result},
