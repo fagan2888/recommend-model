@@ -10,7 +10,7 @@ import utils
 class BondFundFilter(object):
     def __init__(self):
         # 回测开始时间
-        self.test_start = datetime.datetime(2015, 1, 1)
+        self.test_start = datetime.datetime(2016, 1, 4)
         # 回测结束时间
         self.test_end = datetime.datetime(2016, 1, 5)
         # 沪深300指数数据
@@ -456,5 +456,5 @@ if __name__ == "__main__":
     #tmpclass.filter_ins_holding()
     #tmpclass.filter_stock_ratio()
     #tmpclass.cal_sharpe()
-    #tmpclass.filter_bond()
+    tmpclass.filter_bond()
     tmpclass.cal_eval()

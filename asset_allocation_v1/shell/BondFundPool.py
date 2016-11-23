@@ -105,5 +105,5 @@ def load_fund_append(imploded_sids):
     #print df[:-1]
 
 if __name__ == "__main__":
-    #load_bond_funds([200204, 200301, 200302]) #, 200306])
+    #load_bond_funds([200301, 200302]) #, 200306])
     print "fund pool"
