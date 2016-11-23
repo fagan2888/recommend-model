@@ -10,9 +10,9 @@ import utils
 class BondFundFilter(object):
     def __init__(self):
         # 回测开始时间
-        self.test_start = datetime.datetime(2016, 1, 4)
+        self.test_start = datetime.datetime(2015, 7, 1)
         # 回测结束时间
-        self.test_end = datetime.datetime(2016, 1, 5)
+        self.test_end = datetime.datetime(2015, 7, 1)
         # 沪深300指数数据
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= self.test_start]
@@ -446,16 +446,78 @@ class BondFundFilter(object):
         print "filter year after: " + str(len(fund_base_info))
         fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
     def cal_sharpe_nav(self):
-        bindex = pd.read_csv("../tmp/bondindex.csv", index_col=['date'], parse_dates=['date'])
-        start = datetime.datetime(2016, 1, 4)
-        end = datetime.datetime(2016, 6, 30)
-        bindex = bindex[bindex.index.get_level_values(0) >= start]
-        bindex = bindex[bindex.index.get_level_values(0) <= end]
-        ratios = np.array(bindex['ratio'])
-        ratios = ratios / 100.0
-        print start
-        print utils.get_nav(ratios)[-1]
-        print utils.get_var(ratios)
+        #bindex = pd.read_csv("../tmp/bondindex.csv", index_col=['date'], parse_dates=['date'])
+        #start = datetime.datetime(2016, 1, 4)
+        #end = datetime.datetime(2016, 6, 30)
+        #bindex = bindex[bindex.index.get_level_values(0) >= start]
+        #bindex = bindex[bindex.index.get_level_values(0) <= end]
+        #bindex = bindex.pct_change()
+        #ratios = np.array(bindex['close'][1:])
+        #ratios = ratios / 100.0
+        #sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
+        #sh300 = sh300[sh300.index.get_level_values(0) >= start]
+        #sh300 = sh300[sh300.index.get_level_values(0) <= end]
+        #print start
+        #print utils.get_nav(ratios)[-1]
+        #print utils.get_var(ratios)
+        fund_base_info = pd.read_csv("../tmp/bondfunds_base_info.csv", index_col=['SECURITYID'], parse_dates=['FOUNDDATE', 'ENDDATE'])
+        fund_nav_pct = pd.read_csv("../tmp/bondfunds_nav.csv", \
+            index_col=['SECURITYID', 'NAVDATE'], parse_dates=['NAVDATE'])
+        sids = fund_base_info.index
+        eval_start = datetime.datetime(2015, 7, 1)
+        eval_end = datetime.datetime(2015, 12, 31)
+        sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
+        sh300 = sh300[sh300.index.get_level_values(0) >= eval_start]
+        sh300 = sh300[sh300.index.get_level_values(0) <= eval_end]
+        dates = sh300.index
+        ratio_000300 = np.array(sh300['ratio']) / 100.0
+        ratio_dict = {}
+        ratio_list = []
+        all_fund_ratio = []
+        cur_sids = sids
+        sid_num = len(cur_sids)
+        for date in dates:
+            print date
+            total_ratio = 0.0
+            for sid in cur_sids:
+                str_date = date.strftime("%Y%m%d")
+                try:
+                    one_ratio = fund_nav_pct.loc[sid, str_date]
+                    cur_ratio = one_ratio['GROWRATE']
+                except:
+                    print str(sid) + ": no pct"
+                    cur_ratio = 0.0
+                all_fund_ratio.append(cur_ratio)
+                total_ratio += cur_ratio
+            avg_ratio = total_ratio / sid_num
+            ratio_dict= avg_ratio
+            ratio_list.append(avg_ratio)
+        date_num = len(dates)
+        all_fund_ratio = np.array(all_fund_ratio)
+        all_fund_ratio = all_fund_ratio.reshape((sid_num, date_num), order='F')
+        # 基金之间的相关性
+        corrcoef_inter = np.corrcoef(all_fund_ratio)
+        corrcoef_inter = np.nan_to_num(corrcoef_inter)
+        print corrcoef_inter
+        # 基金池与沪深300相关性
+        tmp_list = []
+        tmp_list.append(ratio_000300)
+        tmp_list.append(ratio_list)
+        corrcoef_000300 = np.corrcoef(tmp_list)
+        nav_list = utils.get_nav(ratio_list)
+        variance = utils.get_var(nav_list)
+        print "nav:", nav_list[-1]
+        print "var:", variance
+        print "coef:", np.average(corrcoef_inter)
+        print "coef_000300:", np.average(corrcoef_000300)
+        #union_data = {}
+        #union_data['ratio'] = ratio_list
+        #union_data['nav'] = nav_list
+        #union_data['var'] = variance
+        #union_data['coef'] = np.average(corrcoef_inter)
+        #union_data['coef_000300'] = np.average(corrcoef_000300)
+        #tmp_df = pd.DataFrame(union_data, index=dates)
+        #tmp_df.to_csv("../tmp/bond_ratios.csv")
 if __name__ == "__main__":
     tmpclass = BondFundFilter()
     #tmpclass.filter_types()
