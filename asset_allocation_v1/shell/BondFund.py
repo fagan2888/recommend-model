@@ -445,7 +445,17 @@ class BondFundFilter(object):
         fund_base_info = fund_base_info[fund_base_info['FOUNDDATE'] <= one_year_ago]
         print "filter year after: " + str(len(fund_base_info))
         fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
-
+    def cal_sharpe_nav(self):
+        bindex = pd.read_csv("../tmp/bondindex.csv", index_col=['date'], parse_dates=['date'])
+        start = datetime.datetime(2016, 1, 4)
+        end = datetime.datetime(2016, 6, 30)
+        bindex = bindex[bindex.index.get_level_values(0) >= start]
+        bindex = bindex[bindex.index.get_level_values(0) <= end]
+        ratios = np.array(bindex['ratio'])
+        ratios = ratios / 100.0
+        print start
+        print utils.get_nav(ratios)[-1]
+        print utils.get_var(ratios)
 if __name__ == "__main__":
     tmpclass = BondFundFilter()
     #tmpclass.filter_types()
@@ -456,5 +466,6 @@ if __name__ == "__main__":
     #tmpclass.filter_ins_holding()
     #tmpclass.filter_stock_ratio()
     #tmpclass.cal_sharpe()
-    tmpclass.filter_bond()
-    tmpclass.cal_eval()
+    #tmpclass.filter_bond()
+    #tmpclass.cal_eval()
+    tmpclass.cal_sharpe_nav()
