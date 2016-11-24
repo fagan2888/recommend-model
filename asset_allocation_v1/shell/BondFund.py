@@ -10,9 +10,9 @@ import utils
 class BondFundFilter(object):
     def __init__(self):
         # 回测开始时间
-        self.test_start = datetime.datetime(2015, 7, 1)
+        self.test_start = datetime.datetime(2015, 1, 5)
         # 回测结束时间
-        self.test_end = datetime.datetime(2015, 7, 1)
+        self.test_end = datetime.datetime(2015, 5, 5)
         # 沪深300指数数据
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= self.test_start]
@@ -464,8 +464,9 @@ class BondFundFilter(object):
         fund_nav_pct = pd.read_csv("../tmp/bondfunds_nav.csv", \
             index_col=['SECURITYID', 'NAVDATE'], parse_dates=['NAVDATE'])
         sids = fund_base_info.index
-        eval_start = datetime.datetime(2015, 7, 1)
-        eval_end = datetime.datetime(2015, 12, 31)
+        eval_start = datetime.datetime(2016, 1, 4)
+        eval_end = datetime.datetime(2016, 6, 30)
+        self.filter_types(eval_start)
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= eval_start]
         sh300 = sh300[sh300.index.get_level_values(0) <= eval_end]
@@ -510,14 +511,14 @@ class BondFundFilter(object):
         print "var:", variance
         print "coef:", np.average(corrcoef_inter)
         print "coef_000300:", np.average(corrcoef_000300)
-        #union_data = {}
-        #union_data['ratio'] = ratio_list
-        #union_data['nav'] = nav_list
-        #union_data['var'] = variance
-        #union_data['coef'] = np.average(corrcoef_inter)
-        #union_data['coef_000300'] = np.average(corrcoef_000300)
-        #tmp_df = pd.DataFrame(union_data, index=dates)
-        #tmp_df.to_csv("../tmp/bond_ratios.csv")
+        union_data = {}
+        union_data['ratio'] = ratio_list
+        union_data['nav'] = nav_list
+        union_data['var'] = variance
+        union_data['coef'] = np.average(corrcoef_inter)
+        union_data['coef_000300'] = np.average(corrcoef_000300)
+        tmp_df = pd.DataFrame(union_data, index=dates)
+        tmp_df.to_csv("../tmp/bond_ratios.csv")
 if __name__ == "__main__":
     tmpclass = BondFundFilter()
     #tmpclass.filter_types()
