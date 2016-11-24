@@ -1,15 +1,13 @@
 #coding=utf8
 
-
 import MySQLdb
 import pandas as pd
 import datetime
 
 
-
 if __name__ == '__main__':
 
-    stock_fund_df = pd.read_csv('./tmp/stock_fund.csv', index_col = 'date', parse_dates = ['date'])
+    stock_fund_df = pd.read_csv('./tmp/stock_fund_level0.csv', index_col = 'date', parse_dates = ['date'])
 
 
     print 'category,date,code'

@@ -307,7 +307,7 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #df_nav_indicator = df_nav_stock[codes]
     df_nav_indicator = df_nav_stock
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
-    df_label.to_csv('df_label_%s.csv' % end_date)
+    #df_label.to_csv('df_label_%s.csv' % end_date)
     #df_label['largecap'] = 1
     print 'all stock fund', len(df_label.index)
     #df_label.to_csv('df_label.csv')
