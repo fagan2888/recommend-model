@@ -10,9 +10,9 @@ import utils
 class BondFundFilter(object):
     def __init__(self):
         # 回测开始时间
-        self.test_start = datetime.datetime(2016, 1, 4)
+        self.test_start = datetime.datetime(2015, 7, 1)
         # 回测结束时间
-        self.test_end = datetime.datetime(2016, 1, 4)
+        self.test_end = datetime.datetime(2015, 12, 31)
         # 沪深300指数数据
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= self.test_start]
@@ -25,7 +25,7 @@ class BondFundFilter(object):
         # 债券基金过滤条件(0：所有条件, 1：基金类型，2：基金年限，3：基金份额，
         # 4：基金规模，5：基金经理，6：机构持有比例，7：基金中股票比例
         # 8：sharpe比率和波动率过滤)
-        self.filter_type = [4]
+        self.filter_type = [5]
         # 基金成立年限
         self.fund_age = 2
 
@@ -41,7 +41,7 @@ class BondFundFilter(object):
         # 基金经理
         self.manager_num = 5
         self.cur_manager_days = 360
-        self.hold_manager_days = 360 * 1.5
+        self.hold_manager_days = 360 * 2.0
 
         # 机构持有比例
         self.holding_ratio = 0.8
@@ -82,14 +82,14 @@ class BondFundFilter(object):
                         self.filter_found_years(choose_date, para)
                         #print "filter years"
                     elif ftype == 3:
-                        self.filter_share()
-                        print "filter share"
+                        self.filter_share(para)
+                        #print "filter share"
                     elif ftype == 4:
                         self.filter_volume(para)
                         #print "filter volume"
                     elif ftype == 5:
-                        self.filter_manager()
-                        print "filter manager"
+                        self.filter_manager(para)
+                        #print "filter manager"
                     elif ftype == 6:
                         self.filter_ins_holding()
                         print "filter inst. "
@@ -110,8 +110,8 @@ class BondFundFilter(object):
         holdings = pd.read_csv("../tmp/bond_holdings.csv", index_col=['date'], parse_dates=['date'])
         fund_nav_pct = pd.read_csv("../tmp/bondfunds_nav.csv", \
             index_col=['SECURITYID', 'NAVDATE'], parse_dates=['NAVDATE'])
-        eval_start = datetime.datetime(2016, 1, 4)
-        eval_end = datetime.datetime(2016, 6, 30)
+        eval_start = datetime.datetime(2015, 7, 1)
+        eval_end = datetime.datetime(2015, 12, 31)
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= eval_start]
         sh300 = sh300[sh300.index.get_level_values(0) <= eval_end]
@@ -306,7 +306,7 @@ class BondFundFilter(object):
         print "filter ins. holding after: " + str(len(fund_base_info))
         fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
         return None
-    def filter_manager(self):
+    def filter_manager(self, para):
         fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], \
             parse_dates=['FOUNDDATE', 'ENDDATE'])
         fund_manager = pd.read_csv("../tmp/bondfunds_manager.csv", \
@@ -323,13 +323,13 @@ class BondFundFilter(object):
             manager_num_now = len(set(fund_manager_filter_now.index.get_level_values(3)))
             delta = now - fund_manager_filter_now.index.get_level_values('BEGINDATE')
             max_days = max(delta.days)
-            if max_days < self.cur_manager_days:
+            if max_days < self.cur_manager_days * 1.5:
                 delete_list.add(sid)
-            if manager_num >= self.manager_num and max_days <= self.hold_manager_days:
+            if manager_num >= para and max_days <= self.hold_manager_days:
                 delete_list.add(sid)
-        print "filter manager before: " + str(len(fund_base_info))
+        #print "filter manager before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
-        print "filter manager after: " + str(len(fund_base_info))
+        #print "filter manager after: " + str(len(fund_base_info))
         fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
         return None
     def filter_volume(self, para):
@@ -393,10 +393,11 @@ class BondFundFilter(object):
         #print "filter volume after: " + str(len(fund_base_info))
         fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
 
-    def filter_share(self):
+    def filter_share(self, para):
         """
         按份额过滤
         """
+        self.share_ratio = para
         fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], parse_dates=['FOUNDDATE', 'ENDDATE'])
         fund_share = pd.read_csv("../tmp/bondfunds_share.csv", index_col=['ENDDATE'], parse_dates=['ENDDATE'])
         sids = set(fund_base_info.index)
@@ -424,13 +425,13 @@ class BondFundFilter(object):
                 delete_list.add(sid)
             if share_one < share_two and share_two < share_three and share_three < share_four:
                 delete_list.add(sid)
-            if share_one < share_found * self.share_ratio:
+            if share_one < share_found * 0.5:
                 delete_list.add(sid)
 
         contains = sids - delete_list
-        print "filter share before: " + str(len(fund_base_info))
+        #print "filter share before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
-        print "filter share after: " + str(len(fund_base_info))
+        #print "filter share after: " + str(len(fund_base_info))
         fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
 
     def filter_types(self, choose_date):
@@ -539,9 +540,11 @@ if __name__ == "__main__":
     #tmpclass.cal_sharpe()
     years = 0.5
     volumes = 1.0
-    while volumes <= 4:
-        print "volume:", volumes
-        tmpclass.filter_bond(volumes)
+    shares = 0.8
+    mana = 4
+    while mana <= 8:
+        print "mana:", mana
+        tmpclass.filter_bond(mana)
         tmpclass.cal_eval()
-        volumes += 0.3
+        mana += 1
     #tmpclass.cal_sharpe_nav()
