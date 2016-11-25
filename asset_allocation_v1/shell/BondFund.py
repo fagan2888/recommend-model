@@ -10,9 +10,9 @@ import utils
 class BondFundFilter(object):
     def __init__(self):
         # 回测开始时间
-        self.test_start = datetime.datetime(2015, 1, 5)
+        self.test_start = datetime.datetime(2016, 1, 4)
         # 回测结束时间
-        self.test_end = datetime.datetime(2015, 5, 5)
+        self.test_end = datetime.datetime(2016, 1, 4)
         # 沪深300指数数据
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= self.test_start]
@@ -25,7 +25,7 @@ class BondFundFilter(object):
         # 债券基金过滤条件(0：所有条件, 1：基金类型，2：基金年限，3：基金份额，
         # 4：基金规模，5：基金经理，6：机构持有比例，7：基金中股票比例
         # 8：sharpe比率和波动率过滤)
-        self.filter_type = [8]
+        self.filter_type = [4]
         # 基金成立年限
         self.fund_age = 2
 
@@ -56,12 +56,12 @@ class BondFundFilter(object):
         self.sharpe = 1.0
         self.return_std = 0.1
 
-    def filter_bond(self):
+    def filter_bond(self, para):
         choose_date = self.test_start
         #self.filter_types(choose_date)
         holdings = {}
         while choose_date <= self.test_end:
-            print choose_date
+            #print choose_date
             if choose_date in self.trade_dates:
                 self.filter_types(choose_date)
                 for ftype in self.filter_type:
@@ -79,14 +79,14 @@ class BondFundFilter(object):
                         self.filter_types()
                         print "filter types"
                     elif ftype == 2:
-                        self.filter_found_years(choose_date)
-                        print "filter years"
+                        self.filter_found_years(choose_date, para)
+                        #print "filter years"
                     elif ftype == 3:
                         self.filter_share()
                         print "filter share"
                     elif ftype == 4:
-                        self.filter_volume()
-                        print "filter volume"
+                        self.filter_volume(para)
+                        #print "filter volume"
                     elif ftype == 5:
                         self.filter_manager()
                         print "filter manager"
@@ -124,7 +124,7 @@ class BondFundFilter(object):
         cur_sids = eval(one_row['sids'])
         sid_num = len(cur_sids)
         for date in dates:
-            print date
+            #print date
             total_ratio = 0.0
             for sid in cur_sids:
                 str_date = date.strftime("%Y%m%d")
@@ -132,7 +132,7 @@ class BondFundFilter(object):
                     one_ratio = fund_nav_pct.loc[sid, str_date]
                     cur_ratio = one_ratio['GROWRATE']
                 except:
-                    print str(sid) + ": no pct"
+                    #print str(sid) + ": no pct"
                     cur_ratio = 0.0
                 all_fund_ratio.append(cur_ratio)
                 total_ratio += cur_ratio
@@ -151,14 +151,20 @@ class BondFundFilter(object):
         corrcoef_000300 = np.corrcoef(tmp_list)
         nav_list = utils.get_nav(ratio_list)
         variance = utils.get_var(nav_list)
-        union_data = {}
-        union_data['ratio'] = ratio_list
-        union_data['nav'] = nav_list
-        union_data['var'] = variance
-        union_data['coef'] = np.average(corrcoef_inter)
-        union_data['coef_000300'] = np.average(corrcoef_000300)
-        tmp_df = pd.DataFrame(union_data, index=dates)
-        tmp_df.to_csv("../tmp/bond_ratios.csv")
+        one_ratios = ratio_list
+        mean_ratio = np.mean(one_ratios)
+        anal_ratio = mean_ratio * 252.0
+        return_std_five = np.std(one_ratios) * np.sqrt(252.0)
+        sharpe_five = (anal_ratio - 0.03) / return_std_five
+        #union_data = {}
+        #union_data['ratio'] = ratio_list
+        #union_data['nav'] = nav_list
+        #union_data['var'] = variance
+        #union_data['coef'] = np.average(corrcoef_inter)
+        #union_data['coef_000300'] = np.average(corrcoef_000300)
+        print nav_list[-1], variance, np.average(corrcoef_inter), np.average(corrcoef_000300), sharpe_five
+        #tmp_df = pd.DataFrame(union_data, index=dates)
+        #tmp_df.to_csv("../tmp/bond_ratios.csv")
 
 
     def filter_sharpe_std(self, choose_date):
@@ -326,7 +332,8 @@ class BondFundFilter(object):
         print "filter manager after: " + str(len(fund_base_info))
         fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
         return None
-    def filter_volume(self):
+    def filter_volume(self, para):
+        self.fund_volume = para
         fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], parse_dates=['FOUNDDATE', 'ENDDATE'])
         fund_share = pd.read_csv("../tmp/bondfunds_share.csv", index_col=['ENDDATE'], parse_dates=['ENDDATE'])
         fund_nav = pd.read_csv("../tmp/bondfunds_nav.csv", index_col=['SECURITYID', 'NAVDATE'], parse_dates=['NAVDATE'])
@@ -358,31 +365,32 @@ class BondFundFilter(object):
                 volume_four = share_four * fund_nav.loc[sid, date_four]['UNITNAV']
                 volume_found = share_found * 1.0 #fund_nav.loc[sid, date_found]['UNITNAV']
             else:
-                print sid
+                #print sid
                 volume_one = share_one * 1.0
                 volume_two = share_two * 1.0
                 volume_three = share_three * 1.0
                 volume_four = share_four * 1.0
                 volume_found = share_found * 1.0
-
+            # 2
             if volume_one <= volume_two * self.fund_volume_new or \
                 volume_two <= volume_three * self.fund_volume_pre_quarter or \
                 volume_three <= volume_four * self.fund_volume_six_month_ago:
                 delete_list.add(sid)
-
+            # 4
             if volume_one <= volume_found * self.fund_volume_found:
                 delete_list.add(sid)
-
-            if volume_three < volume_four and volume_four < volume_found:
+            # 3
+            if volume_one < volume_two and volume_two < volume_three and \
+                volume_three < volume_four:
                 delete_list.add(sid)
-
+            # 1
             if volume_one < self.fund_volume or volume_two < self.fund_volume \
-                or volume_three < self.fund_volume:
+                or volume_three < self.fund_volume or volume_four < self.fund_volume:
                 delete_list.add(sid)
 
-        print "filter volume before: " + str(len(fund_base_info))
+        #print "filter volume before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
-        print "filter volume after: " + str(len(fund_base_info))
+        #print "filter volume after: " + str(len(fund_base_info))
         fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
 
     def filter_share(self):
@@ -434,16 +442,16 @@ class BondFundFilter(object):
         fund_base_info = pd.read_csv("../tmp/bondfunds_base_info.csv", index_col=['SECURITYID'], parse_dates=['FOUNDDATE', 'ENDDATE'])
         fund_base_info.to_csv(self.tmp_file, encoding="utf8")
 
-    def filter_found_years(self, choose_date):
+    def filter_found_years(self, choose_date, para):
         """
         按基金成立时间长度过滤
         """
         fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], parse_dates=['FOUNDDATE', 'ENDDATE'])
         indexs = fund_base_info.index
-        one_year_ago = choose_date - datetime.timedelta(365*self.fund_age)
-        print "filter year before: " + str(len(fund_base_info))
+        one_year_ago = choose_date - datetime.timedelta(365*para)
+        #print "filter year before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info[fund_base_info['FOUNDDATE'] <= one_year_ago]
-        print "filter year after: " + str(len(fund_base_info))
+        #print "filter year after: " + str(len(fund_base_info))
         fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
     def cal_sharpe_nav(self):
         #bindex = pd.read_csv("../tmp/bondindex.csv", index_col=['date'], parse_dates=['date'])
@@ -529,6 +537,11 @@ if __name__ == "__main__":
     #tmpclass.filter_ins_holding()
     #tmpclass.filter_stock_ratio()
     #tmpclass.cal_sharpe()
-    #tmpclass.filter_bond()
-    #tmpclass.cal_eval()
-    tmpclass.cal_sharpe_nav()
+    years = 0.5
+    volumes = 1.0
+    while volumes <= 4:
+        print "volume:", volumes
+        tmpclass.filter_bond(volumes)
+        tmpclass.cal_eval()
+        volumes += 0.3
+    #tmpclass.cal_sharpe_nav()
