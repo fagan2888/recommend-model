@@ -53,3 +53,26 @@ def sigmoid(x):
     :return: data array of sigmoid
     """
     return 1.0 / (1.0 + np.exp(-x))
+
+def cal_nav_maxdrawdown(return_lsit):
+    """
+    :usage: 根据收益率列表求净值
+    :param retun_lsit: 收益率列表
+    :return: 净值列表
+    """
+    num = len(return_lsit)
+    nav_list = []
+    max_drawdown_list = []
+    cur_nav = 1.0
+    max_nav = 1.0
+    for i in range(num):
+        cur_nav *= (1.0 + return_lsit[i])
+        nav_list.append(cur_nav)
+        if cur_nav < max_nav:
+            drawdown = (cur_nav - max_nav) / max_nav
+            max_drawdown_list.append(drawdown)
+        else:
+            max_drawdown_list.append(0.0)
+            max_nav = cur_nav
+
+    return [nav_list, max_drawdown_list]

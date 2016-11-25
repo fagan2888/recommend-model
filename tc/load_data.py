@@ -15,10 +15,20 @@ db_base = {
 conn  = MySQLdb.connect(**db_base)
 def load_index(symbol, stime, etime):
     cursor = conn.cursor()
-    sql   = 'select SECODE from TQ_IX_BASICINFO where SYMBOL = ' + symbol
+    sql   = "select SECODE from TQ_IX_BASICINFO where SYMBOL = '%s'" % (symbol)
     cursor.execute(sql)
     secode = cursor.fetchone()[0]
     sql_index = 'select TRADEDATE AS date, LCLOSE AS close_pre, TCLOSE AS close, TOPEN AS open, THIGH AS high, TLOW AS low, VOL AS volume, AMOUNT AS amount, `CHANGE` AS returns, PCHG AS ratio FROM TQ_QT_INDEX where ISVALID = 1 and TRADEDATE >= ' + stime + ' and TRADEDATE <= ' + etime + ' and SECODE = ' + secode + ' ORDER BY TRADEDATE ASC'
+    index_df = pd.read_sql(sql_index, conn, index_col = ['date'], parse_dates = ['date'])
+    conn.close()
+    return index_df
+
+def load_gold_index(symbol, stime, etime):
+    cursor = conn.cursor()
+    sql   = "select SECODE from TQ_IX_BASICINFO where SYMBOL = '%s'" % (symbol)
+    cursor.execute(sql)
+    secode = cursor.fetchone()[0]
+    sql_index = 'select TRADEDATE AS date, LCLOSE AS close_pre, TCLOSE AS close, TOPEN AS open, THIGH AS high, TLOW AS low, VOL AS volume, AMOUNT AS amount, `CHANGE` AS returns, PCHG AS ratio FROM TQ_QT_FUTURESINDEX where ISVALID = 1 and TRADEDATE >= ' + stime + ' and TRADEDATE <= ' + etime + ' and SECODE = ' + secode + ' ORDER BY TRADEDATE ASC'
     index_df = pd.read_sql(sql_index, conn, index_col = ['date'], parse_dates = ['date'])
     conn.close()
     return index_df
