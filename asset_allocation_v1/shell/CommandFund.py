@@ -155,7 +155,8 @@ def corr_update_fund(corr, fund, df_inc_index):
     
     # print df_inc_index.head()
     # print fund, df_inc_fund.head()
-    df_inc = pd.DataFrame({'ra_index':df_inc_index.ix[df_inc_fund.index, 0], 'ra_fund':df_inc_fund.iloc[:, 0]})
+    df_inc = pd.DataFrame({'ra_index':df_inc_index.iloc[:, 0], 'ra_fund':df_inc_fund.ix[df_inc_index.index, 0]})
+    df_inc.fillna(0.0, inplace=True)
     df_corr = df_inc.corr()
     df_corr.fillna(0.0, inplace=True)
 
