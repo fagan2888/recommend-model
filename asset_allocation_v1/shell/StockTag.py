@@ -1357,8 +1357,8 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
     positiondf = positiondf[codes]
 
-    '''
     largecapfitness_result    = largecapfitness(df_nav_fund, size_index_df, 0.5)
+    print 'largecapfitness', largecapfitness_result
     smallcapfitness_result    = smallcapfitness(df_nav_fund, size_index_df, 0.5)
     risefitness_result    = risefitness(df_nav_fund, hs300indexdf, 0.5)
     declinefitness_result     = declinefitness(df_nav_fund, hs300indexdf, 0.5)
@@ -1372,8 +1372,8 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     smallcapprefer_result     = smallcapprefer(df_nav_fund, size_df, 0.5)
     growthcapprefer_result    = growthcapprefer(df_nav_fund, pe_df, 0.5)
     valuecapprefer_result     = valuecapprefer(df_nav_fund, pe_df, 0.5)
-    '''
 
+    '''
     largecapfitness_result    = largecapfitness(df_nav_fund, size_index_df, 0.1)
     smallcapfitness_result    = smallcapfitness(df_nav_fund, size_index_df, 0.1)
     risefitness_result    = risefitness(df_nav_fund, hs300indexdf, 0.1)
@@ -1388,7 +1388,7 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     smallcapprefer_result     = smallcapprefer(df_nav_fund, size_df, 0.1)
     growthcapprefer_result    = growthcapprefer(df_nav_fund, pe_df, 0.1)
     valuecapprefer_result     = valuecapprefer(df_nav_fund, pe_df, 0.1)
-
+    '''
 
 
 
