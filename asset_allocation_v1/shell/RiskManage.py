@@ -4,6 +4,7 @@ import datetime
 import numpy as np
 import utils
 import os
+from scipy import stats
 class RiskManagement(object):
 
     def __init__(self):
@@ -66,16 +67,24 @@ class RiskManagement(object):
         gold_pct = np.array(pct_origin[start_time:test_end]['GLNC'].values)
         #pct_range = pct_origin[pct_origin.index.get_level_values(0) >= start_time]
         #pct_range = pct_range[pct_range.index.get_level_values(0) <= test_end]
-        [nav, maxdown_sh] = utils.cal_nav_maxdrawdown(list(pct_origin[start_time:test_end]['sh000300'].values))
-        [nav, maxdown_sp] = utils.cal_nav_maxdrawdown(list(pct_origin[start_time:test_end]['SP500.SPI'].values))
-        [nav, maxdown_hs] = utils.cal_nav_maxdrawdown(list(pct_origin[start_time:test_end]['HSCI.HI'].values))
-        [nav, maxdown_gold] = utils.cal_nav_maxdrawdown(list(pct_origin[start_time:test_end]['GLNC'].values))
-        del nav
-        print min(maxdown_sh), min(maxdown_sp), min(maxdown_hs), min(maxdown_gold)
+        [nav_sh, maxdown_sh] = utils.cal_nav_maxdrawdown(list(pct_origin[start_time:test_end]['sh000300'].values))
+        [nav_sp, maxdown_sp] = utils.cal_nav_maxdrawdown(list(pct_origin[start_time:test_end]['SP500.SPI'].values))
+        [nav_hs, maxdown_hs] = utils.cal_nav_maxdrawdown(list(pct_origin[start_time:test_end]['HSCI.HI'].values))
+        [nav_gold, maxdown_gold] = utils.cal_nav_maxdrawdown(list(pct_origin[start_time:test_end]['GLNC'].values))
+        #sh_pct_week = sh_pct[::5]
+        #sp_pct_week = sp_pct[::5]
+        #hs_pct_week = hs_pct[::5]
+        #gold_pct_week = gold_pct[::5]
+        #print min(maxdown_sh), min(maxdown_sp), min(maxdown_hs), min(maxdown_gold)
         maxdown_sh_ori = pd.DataFrame({"maxdown":maxdown_sh}, index=dates)
         maxdown_sp_ori = pd.DataFrame({"maxdown":maxdown_sp}, index=dates)
         maxdown_hs_ori = pd.DataFrame({"maxdown":maxdown_hs}, index=dates)
         maxdown_gold_ori= pd.DataFrame({"maxdown":maxdown_gold}, index=dates)
+
+        nav_sh_ori = pd.DataFrame({"maxdown":maxdown_sh}, index=dates)
+        nav_sp_ori = pd.DataFrame({"maxdown":maxdown_sp}, index=dates)
+        nav_hs_ori = pd.DataFrame({"maxdown":maxdown_hs}, index=dates)
+        nav_gold_ori= pd.DataFrame({"maxdown":maxdown_gold}, index=dates)
 
         sh_ttypes = np.ones(len(sh_weight))
         sp_ttypes = np.ones(len(sp_weight))
@@ -99,6 +108,47 @@ class RiskManagement(object):
                 maxdown_sp = maxdown_sp_ori[maxdown_sp_ori.index.get_level_values(0)<=inter_date]['maxdown']
                 maxdown_hs = maxdown_hs_ori[maxdown_hs_ori.index.get_level_values(0)<=inter_date]['maxdown']
                 maxdown_gold = maxdown_gold_ori[maxdown_gold_ori.index.get_level_values(0)<=inter_date]['maxdown']
+
+                sh_pct_tmp = np.array(pct_origin[start_time:inter_date]['sh000300'].values)
+                sp_pct_tmp = np.array(pct_origin[start_time:inter_date]['SP500.SPI'].values)
+                hs_pct_tmp = np.array(pct_origin[start_time:inter_date]['HSCI.HI'].values)
+                gold_pct_tmp = np.array(pct_origin[start_time:inter_date]['GLNC'].values)
+
+                sh_pct_tmp = np.append([0.0], sh_pct_tmp[-5*54:])
+                sp_pct_tmp = np.append([0.0], sp_pct_tmp[-5*54:])
+                hs_pct_tmp = np.append([0.0], hs_pct_tmp[-5*54:])
+                gold_pct_tmp = np.append([0.0], gold_pct_tmp[-5*54:])
+
+                [nav_sh, maxdown_tmp] = utils.cal_nav_maxdrawdown(list(sh_pct_tmp))
+                [nav_sp, maxdown_tmp] = utils.cal_nav_maxdrawdown(list(sp_pct_tmp))
+                [nav_hs, maxdown_tmp] = utils.cal_nav_maxdrawdown(list(hs_pct_tmp))
+                [nav_gold, maxdown_tmp] = utils.cal_nav_maxdrawdown(list(gold_pct_tmp))
+
+                nav_sh = nav_sh[::5]
+                nav_sp = nav_sp[::5]
+                nav_hs = nav_hs[::5]
+                nav_gold = nav_gold[::5]
+
+                pct_sh_week = np.diff(nav_sh)
+                pct_sp_week = np.diff(nav_sp)
+                pct_hs_week = np.diff(nav_hs)
+                pct_gold_week = np.diff(nav_gold)
+
+                pct_sh_week = np.append([0.0], pct_sh_week)
+                pct_sp_week = np.append([0.0], pct_sp_week)
+                pct_hs_week = np.append([0.0], pct_hs_week)
+                pct_gold_week = np.append([0.0], pct_gold_week)
+
+                [nav_sh_week, maxdown_sh_week] = utils.cal_nav_maxdrawdown(list(pct_sh_week))
+                [nav_sp_week, maxdown_sp_week] = utils.cal_nav_maxdrawdown(list(pct_sp_week))
+                [nav_hs_week, maxdown_hs_week] = utils.cal_nav_maxdrawdown(list(pct_hs_week))
+                [nav_gold_week, maxdown_gold_week] = utils.cal_nav_maxdrawdown(list(pct_gold_week))
+
+                maxdown_sh_week = np.array(maxdown_sh_week[1:])
+                maxdown_sp_week = np.array(maxdown_sp_week[1:])
+                maxdown_hs_week = np.array(maxdown_hs_week[1:])
+                maxdown_gold_week = np.array(maxdown_gold_week[1:])
+
                 cur_weights = weights_origin.loc[inter_date]
                 cur_sh_w = cur_weights['sh000300']
                 cur_sp_w = cur_weights['SP500.SPI']
@@ -109,9 +159,19 @@ class RiskManagement(object):
                 date_gold = utils.get_move_day(dates_gold, inter_date, 1)
                 for cur_ass in self.assets:
                     if cur_ass == 'sh000300':
-                        maxdown_now = maxdown_sh[-1]
-                        pre_maxdown = min(maxdown_sh[-252:-1])
-                        if maxdown_now < pre_maxdown * 0.95 and sh_risk == False:
+                        #maxdown_now = maxdown_sh[-1]
+                        #pre_maxdown = min(maxdown_sh[-252:-1])
+                        maxdown_now = maxdown_sh_week[-1]
+                        pre_maxdowns = maxdown_sh_week[:-1]
+                        pre_md_mean = pre_maxdowns.mean()
+                        pre_md_std = pre_maxdowns.std()
+                        conf_int_95 = stats.norm.interval(0.95, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_75 = stats.norm.interval(0.75, loc=pre_md_mean, scale=pre_md_std)
+                        base_line_95 = min(conf_int_95)
+                        base_line_75 = min(conf_int_75)
+                        #print pre_md_mean, pre_md_std, conf_int
+                        #os._exit(0)
+                        if maxdown_now < base_line_95 and sh_risk == False:
                             #sh_weight.append(0.0)
                             print inter_date, cur_ass
                             risk_times += 1
@@ -126,7 +186,7 @@ class RiskManagement(object):
                                 if signal == 1:
                                     sh_risk = False
                                     sh_risk_days = 0
-                                elif maxdown_now > pre_maxdown * 0.75:
+                                elif maxdown_now > base_line_75:
                                     sh_risk = False
                                     sh_risk_days = 0
                         else:
@@ -136,9 +196,17 @@ class RiskManagement(object):
                         #    #sh_weight.append(0.0)
                         #    sh_risk = True
                     if cur_ass == 'SP500.SPI':
-                        maxdown_now = maxdown_sp[-1]
-                        pre_maxdown = min(maxdown_sp[-252:-1])
-                        if maxdown_now < pre_maxdown * 0.95 and sp_risk == False:
+                        #maxdown_now = maxdown_sp[-1]
+                        #pre_maxdown = min(maxdown_sp[-252:-1])
+                        maxdown_now = maxdown_sp_week[-1]
+                        pre_maxdowns = maxdown_sp_week[:-1]
+                        pre_md_mean = pre_maxdowns.mean()
+                        pre_md_std = pre_maxdowns.std()
+                        conf_int_95 = stats.norm.interval(0.95, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_75 = stats.norm.interval(0.75, loc=pre_md_mean, scale=pre_md_std)
+                        base_line_95 = min(conf_int_95)
+                        base_line_75 = min(conf_int_75)
+                        if maxdown_now < base_line_95 and sp_risk == False:
                             #sh_weight.append(0.0)
                             print inter_date, cur_ass
                             risk_times += 1
@@ -153,7 +221,7 @@ class RiskManagement(object):
                                 if signal == 1:
                                     sp_risk = False
                                     sp_risk_days = 0
-                                elif maxdown_now > pre_maxdown * 0.75:
+                                elif maxdown_now > base_line_75:
                                     sp_risk = False
                                     sp_risk_days = 0
                         else:
@@ -163,9 +231,17 @@ class RiskManagement(object):
                         #    #sh_weight.append(0.0)
                         #    sp_risk = True
                     if cur_ass == 'HSCI.HI':
-                        maxdown_now = maxdown_hs[-1]
-                        pre_maxdown = min(maxdown_hs[-252:-1])
-                        if maxdown_now < pre_maxdown * 0.95 and hs_risk == False:
+                        #maxdown_now = maxdown_hs[-1]
+                        #pre_maxdown = min(maxdown_hs[-252:-1])
+                        maxdown_now = maxdown_hs_week[-1]
+                        pre_maxdowns = maxdown_hs_week[:-1]
+                        pre_md_mean = pre_maxdowns.mean()
+                        pre_md_std = pre_maxdowns.std()
+                        conf_int_95 = stats.norm.interval(0.95, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_75 = stats.norm.interval(0.75, loc=pre_md_mean, scale=pre_md_std)
+                        base_line_95 = min(conf_int_95)
+                        base_line_75 = min(conf_int_75)
+                        if maxdown_now < base_line_95 and hs_risk == False:
                             #sh_weight.append(0.0)
                             print inter_date, cur_ass
                             risk_times += 1
@@ -180,7 +256,7 @@ class RiskManagement(object):
                                 if signal == 1:
                                     hs_risk = False
                                     hs_risk_days = 0
-                                elif maxdown_now > pre_maxdown * 0.75:
+                                elif maxdown_now > base_line_75:
                                     hs_risk = False
                                     hs_risk_days = 0
                         else:
@@ -190,9 +266,17 @@ class RiskManagement(object):
                         #    #sh_weight.append(0.0)
                         #    hs_risk = True
                     if cur_ass == 'GLNC':
-                        maxdown_now = maxdown_gold[-1]
-                        pre_maxdown = min(maxdown_gold[-252:-1])
-                        if maxdown_now < pre_maxdown * 0.95 and gold_risk == False:
+                        #maxdown_now = maxdown_gold[-1]
+                        #pre_maxdown = min(maxdown_gold[-252:-1])
+                        maxdown_now = maxdown_gold_week[-1]
+                        pre_maxdowns = maxdown_gold_week[:-1]
+                        pre_md_mean = pre_maxdowns.mean()
+                        pre_md_std = pre_maxdowns.std()
+                        conf_int_95 = stats.norm.interval(0.95, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_75 = stats.norm.interval(0.75, loc=pre_md_mean, scale=pre_md_std)
+                        base_line_95 = min(conf_int_95)
+                        base_line_75 = min(conf_int_75)
+                        if maxdown_now < base_line_95 and gold_risk == False:
                             #sh_weight.append(0.0)
                             print inter_date, cur_ass
                             risk_times += 1
@@ -207,7 +291,7 @@ class RiskManagement(object):
                                 if signal == 1:
                                     gold_risk = False
                                     gold_risk_days = 0
-                                elif maxdown_now > pre_maxdown * 0.75:
+                                elif maxdown_now > base_line_75:
                                     gold_risk = False
                                     gold_risk_days = 0
                         else:
