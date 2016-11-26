@@ -25,6 +25,8 @@ class RiskManagement(object):
         self.tc_gold = pd.read_csv(self.file_dir + "gold_gftd.csv", \
             index_col=['date'], parse_dates=['date'])
         self.assets = ['sh000300', 'SP500.SPI', 'GLNC', 'HSCI.HI']
+        self.sell_base_ratio = 0.97
+        self.buy_base_ratio = 0.75
     def risk_control(self):
         dates = self.port_weight.index
         dates_sp = self.tc_sp.index
@@ -165,8 +167,8 @@ class RiskManagement(object):
                         pre_maxdowns = maxdown_sh_week[:-1]
                         pre_md_mean = pre_maxdowns.mean()
                         pre_md_std = pre_maxdowns.std()
-                        conf_int_95 = stats.norm.interval(0.95, loc=pre_md_mean, scale=pre_md_std)
-                        conf_int_75 = stats.norm.interval(0.75, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_95 = stats.norm.interval(self.sell_base_ratio, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_75 = stats.norm.interval(self.buy_base_ratio, loc=pre_md_mean, scale=pre_md_std)
                         base_line_95 = min(conf_int_95)
                         base_line_75 = min(conf_int_75)
                         #print pre_md_mean, pre_md_std, conf_int
@@ -202,8 +204,8 @@ class RiskManagement(object):
                         pre_maxdowns = maxdown_sp_week[:-1]
                         pre_md_mean = pre_maxdowns.mean()
                         pre_md_std = pre_maxdowns.std()
-                        conf_int_95 = stats.norm.interval(0.95, loc=pre_md_mean, scale=pre_md_std)
-                        conf_int_75 = stats.norm.interval(0.75, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_95 = stats.norm.interval(self.sell_base_ratio, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_75 = stats.norm.interval(self.buy_base_ratio, loc=pre_md_mean, scale=pre_md_std)
                         base_line_95 = min(conf_int_95)
                         base_line_75 = min(conf_int_75)
                         if maxdown_now < base_line_95 and sp_risk == False:
@@ -237,8 +239,8 @@ class RiskManagement(object):
                         pre_maxdowns = maxdown_hs_week[:-1]
                         pre_md_mean = pre_maxdowns.mean()
                         pre_md_std = pre_maxdowns.std()
-                        conf_int_95 = stats.norm.interval(0.95, loc=pre_md_mean, scale=pre_md_std)
-                        conf_int_75 = stats.norm.interval(0.75, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_95 = stats.norm.interval(self.sell_base_ratio, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_75 = stats.norm.interval(self.buy_base_ratio, loc=pre_md_mean, scale=pre_md_std)
                         base_line_95 = min(conf_int_95)
                         base_line_75 = min(conf_int_75)
                         if maxdown_now < base_line_95 and hs_risk == False:
@@ -272,8 +274,8 @@ class RiskManagement(object):
                         pre_maxdowns = maxdown_gold_week[:-1]
                         pre_md_mean = pre_maxdowns.mean()
                         pre_md_std = pre_maxdowns.std()
-                        conf_int_95 = stats.norm.interval(0.95, loc=pre_md_mean, scale=pre_md_std)
-                        conf_int_75 = stats.norm.interval(0.75, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_95 = stats.norm.interval(self.sell_base_ratio, loc=pre_md_mean, scale=pre_md_std)
+                        conf_int_75 = stats.norm.interval(self.buy_base_ratio, loc=pre_md_mean, scale=pre_md_std)
                         base_line_95 = min(conf_int_95)
                         base_line_75 = min(conf_int_75)
                         if maxdown_now < base_line_95 and gold_risk == False:
