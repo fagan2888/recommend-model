@@ -12,15 +12,16 @@ import numpy as np
 if __name__ == '__main__':
 
 
-    start_date = '2014-10-31'
+    start_date = '2015-10-31'
     end_date   = '2016-10-31'
 
     df_nav_fund = DBData.stock_day_fund_value(start_date, end_date)
     df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
-
+    #print df_inc_fund
     df_nav_index = DBData.db_index_value_daily(start_date, end_date)
     df_nav_index = df_nav_index[['000905.SH']]
     df_inc_index = df_nav_index.pct_change().fillna(0.0)
+    #print df_inc_index
 
     dates = df_inc_fund.index
 
@@ -36,6 +37,7 @@ if __name__ == '__main__':
             else:
                 decline.append(ir - fr)
         vs.append([np.mean(rise), np.mean(decline)])
+        print col, 'done'
 
     df = pd.DataFrame(vs, index = df_inc_fund.columns, columns = ['rise', 'decline'])
     print df
