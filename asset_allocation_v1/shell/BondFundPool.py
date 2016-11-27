@@ -63,7 +63,7 @@ def load_bond_funds(types, ftime, otime):
     sql_base_info = 'select FDSNAME, MANAGERNAME, FSYMBOL, FOUNDDATE, ENDDATE, OUTSUBBEGDATE, SECURITYID, KEEPERNAME from TQ_FD_BASICINFO where ISVALID = 1 and ENDDATE = ' + end_date_str + ' and OUTSUBBEGDATE <= ' + otime + ' and FOUNDDATE <= ' + ftime + ' and OPERATEPERIOD is null and SECURITYID in (' + imploded_sids + ')'
     df_base_info  = pd.read_sql(sql_base_info, conn, index_col = 'SECURITYID', parse_dates = ['FOUNDDATE', 'ENDDATE'])
     df_base_info.to_csv("../tmp/bondfunds_base_info.csv", encoding="utf8")
-    #load_fund_append(imploded_sids)
+    load_fund_append(imploded_sids)
 def load_fund_append(imploded_sids):
     # 得到基金份额
     sql_share = 'select SECURITYID, ENDDATE, TOTALSHARE from TQ_FD_FSHARE where ISVALID = 1 and SECURITYID in (' + imploded_sids + ')'
