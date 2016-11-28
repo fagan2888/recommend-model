@@ -1370,7 +1370,7 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     valuefitness_result       = valuefitness(df_nav_fund,  pe_index_df, 0.5)
     positionprefer_result     = positionprefer(positiondf, 0.5)
     largecapprefer_result     = largecapprefer(df_nav_fund, size_df, 0.5)
-    print largecapprefer_result
+    #print largecapprefer_result
     smallcapprefer_result     = smallcapprefer(df_nav_fund, size_df, 0.5)
     growthcapprefer_result    = growthcapprefer(df_nav_fund, pe_df, 0.5)
     valuecapprefer_result     = valuecapprefer(df_nav_fund, pe_df, 0.5)

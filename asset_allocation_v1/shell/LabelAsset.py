@@ -33,7 +33,7 @@ def label_asset_tag(label_index, lookback=52):
     label_index = pd.DatetimeIndex(['2016-10-14'])
     
 
-    #label_index = pd.DatetimeIndex(['2012-06-30','2012-09-30','2012-12-31','2013-03-31','2013-06-30','2013-09-30','2013-12-31','2014-03-31','2014-06-30','2014-09-30','2014-12-31', '2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
+    label_index = pd.DatetimeIndex(['2012-06-30','2012-09-30','2012-12-31','2013-03-31','2013-06-30','2013-09-30','2013-12-31','2014-03-31','2014-06-30','2014-09-30','2014-12-31', '2015-03-31','2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
     '''
     label_index = pd.DatetimeIndex([
         '2012-04-27',
@@ -56,7 +56,7 @@ def label_asset_tag(label_index, lookback=52):
         '2016-08-12',
     ])
     '''
-    label_index = pd.DatetimeIndex(['2016-09-30'])
+    #label_index = pd.DatetimeIndex(['2016-09-30'])
     #label_index = pd.DatetimeIndex(['2015-06-30','2015-09-30','2015-12-31','2016-03-31','2016-06-30', '2016-09-30'])
     #label_index = pd.DatetimeIndex(['2016-09-30'])
     #
@@ -215,6 +215,8 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
 
     l = len(date_size_df)
     date_size_df = date_size_df.iloc[(int)(0.1 * l) : (int)(0.6 *l)]
+    #date_size_df = date_size_df.iloc[(int)(0.5 *l) : l]
+    #date_size_df = date_size_df
     size_codes = []
     for code in date_size_df.index:
         size = date_size_df[code]
@@ -302,7 +304,7 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     #print fund_invshare_df
     #print fund_size_df
     #codes = set(codes) & set(df_indicator.index.values)
-    codes = list(codes)
+    #codes = list(codes)
     print 'measure, invshare, size ' , len(codes)
     #df_nav_indicator = df_nav_stock[df_indicator.index]
     #df_nav_indicator = df_nav_stock[codes]
