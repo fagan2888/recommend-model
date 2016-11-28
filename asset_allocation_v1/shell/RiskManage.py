@@ -5,10 +5,12 @@ import numpy as np
 import utils
 import os
 from scipy import stats
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mtlab
 class RiskManagement(object):
 
     def __init__(self):
-        self.file_dir = "/home/data/yitao/recommend-model/recommend_model/asset_allocation_v1/tmp/"
+        self.file_dir = "./datas/"
         # 配置活跃幅
         self.port_pct = pd.read_csv(self.file_dir + "port_pct.csv", \
             index_col=['date'], parse_dates=['date'])
@@ -159,20 +161,51 @@ class RiskManagement(object):
                 date_sp = utils.get_move_day(dates_sp, inter_date, 1)
                 date_hs = utils.get_move_day(dates_hs, inter_date, 1)
                 date_gold = utils.get_move_day(dates_gold, inter_date, 1)
+                # print inter_date
                 for cur_ass in self.assets:
                     if cur_ass == 'sh000300':
                         #maxdown_now = maxdown_sh[-1]
-                        #pre_maxdown = min(maxdown_sh[-252:-1])
+                        # pre_maxdown_days = min(maxdown_sh[-252:-1])
                         maxdown_now = maxdown_sh_week[-1]
                         pre_maxdowns = maxdown_sh_week[:-1]
+                        pre_maxdowns = np.log(pre_maxdowns + abs(min(pre_maxdowns)) + 1.0)
+                        maxdown_now = np.log(maxdown_sh_week[-1] + abs(min(maxdown_sh_week)) + 1.0)
                         pre_md_mean = pre_maxdowns.mean()
-                        pre_md_std = pre_maxdowns.std()
+                        pre_md_std = pre_maxdowns.std(ddof=1)
                         conf_int_95 = stats.norm.interval(self.sell_base_ratio, loc=pre_md_mean, scale=pre_md_std)
                         conf_int_75 = stats.norm.interval(self.buy_base_ratio, loc=pre_md_mean, scale=pre_md_std)
                         base_line_95 = min(conf_int_95)
                         base_line_75 = min(conf_int_75)
-                        #print pre_md_mean, pre_md_std, conf_int
-                        #os._exit(0)
+                        # print base_line_95
+                        # print base_line_75
+                        # os._exit(0)
+                        # print inter_date
+                        # print pre_md_mean
+                        exp_date = datetime.datetime(2017, 5, 5)
+                        if inter_date == exp_date:
+                            (mu, sigma) = stats.norm.fit(pre_maxdowns)
+                            # s = np.random.normal(pre_md_mean, pre_md_std, 1000)
+                            count, bins, ignored = plt.hist(pre_maxdowns, len(pre_maxdowns), normed=False)
+                            # print type(bins)
+                            # plt.plot(pre_maxdowns)
+                            y = mtlab.normpdf(bins, mu, sigma)
+                            y1= mtlab.normpdf(bins, pre_md_mean, pre_md_std)
+                            print pre_md_mean, pre_md_std
+                            print mu, sigma
+                            plt.plot(bins, y, 'r--', label='Norm. Dis.', linewidth=2)
+                            # plt.plot(bins, y1, 'g--', label="Week Dis. Norm.", linewidth=2)
+                            plt.legend(loc='upper left')
+                            plt.xlabel("maxdown")
+                            plt.ylabel("numbers")
+                            plt.title('Hist of maxdown: mu='+str("%.3f" % mu)+',sigma='+str("%.3f" % sigma) \
+                                      + '.97='+str("%.3f" % base_line_95) +',75='+str("%.3f" % base_line_75))
+                            # plt.title('Hist of maxdown: mu1='+str("%.3f" % mu)+',sig1='+str("%.3f" % sigma) \
+                            #           + ' mu2='+str("%.3f" % pre_md_mean) + ',sig2='+str("%.3f" % pre_md_std))
+                            # plt.plot(bins, 1/(pre_md_std * np.sqrt(2 * np.pi)) * \
+                            #          np.exp(-(bins - pre_md_mean)**2 / (2 * pre_md_std**2)), linewidth=2, color='r')
+                            plt.show()
+                            print pre_md_mean, pre_md_std, base_line_95, base_line_75
+                            os._exit(0)
                         if maxdown_now < base_line_95 and sh_risk == False:
                             #sh_weight.append(0.0)
                             print inter_date, cur_ass
@@ -381,7 +414,7 @@ class RiskManagement(object):
         union_data['total_nav'] = total_nav
         union_data['total_maxdown'] = total_maxdown
         union_data = pd.DataFrame(union_data, index=dates)
-        union_data.to_csv("../tmp/risk_result.csv")
+        union_data.to_csv("risk_result.csv")
 
 if __name__ == '__main__':
     tmpclass = RiskManagement()
