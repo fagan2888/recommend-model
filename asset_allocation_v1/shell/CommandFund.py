@@ -67,8 +67,8 @@ def corr(ctx, optid, optfund, optlist):
     if optlist:
         #print df_pool
         #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
-        df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
-        print tabulate(df_pool, headers='keys', tablefmt='psql')
+        df_corr['ra_name'] = df_corr['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_corr, headers='keys', tablefmt='psql')
         return 0
     
     for _, corr in df_corr.iterrows():
@@ -189,3 +189,30 @@ def load_ra_corr(corrs):
 
     return df
     
+@fund.command(name='type')
+@click.option('--id', 'optid', help=u'specify type id (e.g. 1001,1002')
+@click.option('--fund', 'optfund', help=u'specify fund code (e.g. 519983,213009')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list fund to update')
+@click.pass_context
+def type_command(ctx, optid, optfund, optlist):
+    ''' calc fund type base on corr
+    '''
+    types = None
+    if optid is not None:
+        types = optid.split(',')
+
+    codes = None
+    if optfund is not None:
+        codes = optfund.split(',')
+        
+    df_corr = load_ra_corr(corrs)
+
+    if optlist:
+        #print df_pool
+        #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
+        df_corr['ra_name'] = df_corr['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_corr, headers='keys', tablefmt='psql')
+        return 0
+    
+    for _, corr in df_corr.iterrows():
+        corr_update(corr, codes)

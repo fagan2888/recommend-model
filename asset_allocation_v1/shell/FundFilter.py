@@ -256,7 +256,7 @@ def ratio_filter(measure, ratio):
 
 
     result = []
-    for i in range(0, (int)(len(sorted_measure) * ratio)):
+    for i in range(0, (int)(math.ceil(len(sorted_measure) * ratio))):
         result.append(sorted_measure[i])
 
 
@@ -480,7 +480,13 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
 
     df_result.index.name = 'code'
     df_result.to_csv(datapath('stock_bindicator_selected_' + daystr + '.csv'));
-    df_result.dropna(inplace=True)
+    #
+    # 检查是否结果集为空, 如果不为空, 则取交集, 否则, 直接取jensen结果
+    #
+    if not df_result.loc[(df_result.notnull()).all(axis=1)].empty:
+        df_result.dropna(inplace=True)
+    else:
+        df_result = df_indicator.loc[df_result['jensen'].notnull()]
     df_result.to_csv(datapath('stock_indicator_selected_' + daystr + '.csv'))
 
     return df_result
@@ -708,7 +714,13 @@ def bond_fund_filter_new(day, df_nav_fund, df_nav_index):
 
     df_result.index.name = 'code'
     df_result.to_csv(datapath('bond_bindicator_selected_' + daystr + '.csv'), columns=columns);
-    df_result.dropna(inplace=True)
+    #
+    # 检查是否结果集为空, 如果不为空, 则取交集, 否则, 直接取jensen结果
+    #
+    if not df_result.loc[(df_result.notnull()).all(axis=1)].empty:
+        df_result.dropna(inplace=True)
+    else:
+        df_result = df_indicator.loc[df_result['jensen'].notnull()]
     df_result.to_csv(datapath('bond_indicator_selected_' + daystr + '.csv'), columns=columns)
 
     return df_result

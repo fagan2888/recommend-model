@@ -29,7 +29,7 @@ def label_asset_tag(label_index, lookback=52):
     '''perform fund tagging along label_index.
     '''
     
-    # label_index = pd.DatetimeIndex(['2015-04-03', '2015-09-30', '2016-04-08', '2016-10-14'])
+    # label_index = pd.DatetimeIndex(['2012-10-26', '2015-09-30', '2016-04-08', '2016-10-14'])
     
     #
     # 计算每个调仓点的最新配置
@@ -197,6 +197,7 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
     #
     # 选择基金
     #
+    print day, df_label, df_indicator
     df_bond_fund = FundSelector.select_bond_new(day, df_label, df_indicator, limit)
 
     return df_bond_fund

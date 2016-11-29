@@ -229,7 +229,8 @@ def stock_fund_value(start_date, end_date):
     #
     # 按照基金类型筛选基金
     #
-    type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type like '20010101%%' OR wf_type like '2001010201%%' OR wf_type like '2001010202%%' OR wf_type like '2001010204%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
+    #type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type like '20010101%%' OR wf_type like '2001010201%%' OR wf_type like '2001010202%%' OR wf_type like '2001010204%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
+    type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l2_type IN ('200101', '200102', '200104', '200201', '200202')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
     #
     # 按照成立时间筛选基金
     #
@@ -237,10 +238,10 @@ def stock_fund_value(start_date, end_date):
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.yt_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.yt_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
-    sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
+    sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.yt_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
     
     # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010101%%' or b.wf_type like '2001010201%%' or b.wf_type like '2001010202%%' or b.wf_type like '2001010204%%'  ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010101%%' and wf_type not like '2001010201%%' and wf_type not like '2001010202%%' and wf_type not like '2001010204%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
@@ -269,7 +270,9 @@ def stock_day_fund_value(start_date, end_date):
     #
     # 按照基金类型筛选基金
     #
-    type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type like '20010101%%' OR wf_type like '2001010201%%' OR wf_type like '2001010202%%' OR wf_type like '2001010204%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
+    # type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type like '20010101%%' OR wf_type like '2001010201%%' OR wf_type like '2001010202%%' OR wf_type like '2001010204%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
+    type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l2_type IN ('200101', '200102', '200104', '200201', '200202')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
+
     #
     # 按照成立时间筛选基金
     #
@@ -277,10 +280,10 @@ def stock_day_fund_value(start_date, end_date):
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.yt_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.yt_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
-    sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
+    sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.yt_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
 
     # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '20010101%%' or b.wf_type like '2001010201%%' or b.wf_type like '2001010202%%' or b.wf_type like '2001010204%%'  ) and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '20010101%%' and wf_type not like '2001010201%%' and wf_type not like '2001010202%%' and wf_type not like '2001010204%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
@@ -310,7 +313,9 @@ def bond_fund_value(start_date, end_date):
     #
     # 按照基金类型筛选基金
     #
-    type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type LIKE '2001010301%%' OR wf_type LIKE '2001010302%%' OR wf_type LIKE '2001010305%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
+    # type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type LIKE '2001010301%%' OR wf_type LIKE '2001010302%%' OR wf_type LIKE '2001010305%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
+    # type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l3_type IN ('20030101', '20030102', '20030104', '20030105', '20030201', '20030202', '20030601', '20030602')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
+    type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l2_type IN ('200301', '200306')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
     #
     # 按照成立时间筛选基金
     #
@@ -318,10 +323,10 @@ def bond_fund_value(start_date, end_date):
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.yt_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.yt_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
-    sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
+    sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.yt_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
     
     # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select c.iv_time from (select iv_time,DATE_FORMAT(`iv_time`,'%%Y%%u') week from (select * from index_value where iv_index_id =120000001 order by iv_time desc) as k group by iv_index_id,week order by week desc) as c) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010301%%' or b.wf_type like '2001010302%%' or b.wf_type like '2001010305%%') and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010301%%' and wf_type not like '2001010302%%' and wf_type not like '2001010305') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
@@ -354,7 +359,10 @@ def bond_day_fund_value(start_date, end_date):
     #
     # 按照基金类型筛选基金
     #
-    type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type LIKE '2001010301%%' OR wf_type LIKE '2001010302%%' OR wf_type LIKE '2001010305%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
+    # type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type LIKE '2001010301%%' OR wf_type LIKE '2001010302%%' OR wf_type LIKE '2001010305%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
+    # type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l3_type IN ('20030101', '20030102', '20030104', '20030105', '20030201', '20030202', '20030601', '20030602')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
+    type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l2_type IN ('200301', '200306')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
+
     #
     # 按照成立时间筛选基金
     #
@@ -362,10 +370,10 @@ def bond_day_fund_value(start_date, end_date):
     #
     # 使用inner jion 求交集
     #
-    intersected = "SELECT B.wf_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.wf_fund_id = C.globalid" % (type_sql, regtime_sql);
+    intersected = "SELECT B.yt_fund_id FROM (%s) AS B JOIN (%s) AS C ON B.yt_fund_id = C.globalid" % (type_sql, regtime_sql);
     #
     #
-    sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.wf_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
+    sql = "SELECT A.ra_date as date, A.ra_code as code, A.ra_nav_adjusted FROM ra_fund_nav A, (%s) D, (%s) E WHERE A.ra_fund_id = D.yt_fund_id AND A.ra_date = E.td_date ORDER BY A.ra_date" % (intersected, date_sql);
 
     # sql = "select a.* from (wind_fund_value a inner join wind_fund_type b on a.wf_fund_id=b.wf_fund_id ) inner join (select iv_time from index_value where iv_index_id =120000001 order by iv_time desc) as d  on d.iv_time=a.wf_time where b.wf_flag=1 and (b.wf_type like '2001010301%%' or b.wf_type like '2001010302%%'  or b.wf_type like '2001010305%%') and b.wf_fund_code in (select fi_code from fund_infos where fi_regtime<='%s' and fi_regtime!='0000-00-00') and b.wf_fund_code not in (select wf_fund_code FROM wind_fund_type WHERE wf_end_time is not null and wf_end_time>='%s' and wf_type not like '2001010301%%' and wf_type not like '2001010302%%' and wf_type not like '2001010305%%') and a.wf_time>='%s' and a.wf_time<='%s'" % (start_date, end_date, start_date, end_date)
 
