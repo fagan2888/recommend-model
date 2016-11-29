@@ -9,7 +9,10 @@ import datetime
 if __name__ == '__main__':
 
 
-    dates = pd.date_range('2010-01-01', '2016-11-04').values
+    reallocation_dates = pd.DatetimeIndex(['2012-06-30','2012-12-31','2013-06-30','2013-12-31','2014-06-30','2014-12-31','2015-06-30','2015-12-31','2016-06-30'])
+
+    dates = pd.date_range('2010-01-01','2016-10-31')
+
     #print dates
     stock_market_value_df = pd.read_csv('./data/stock_market_value.csv', index_col = 'date', parse_dates = ['date'])
     stock_market_value_df = stock_market_value_df.reindex(dates).fillna(method='pad')
@@ -18,11 +21,23 @@ if __name__ == '__main__':
     stock_pe_df           = stock_pe_df.reindex(dates).fillna(method='pad')
     all_fund_df           = pd.read_csv('./data/all_stock_fund.csv', index_col = 'SECODE')['FSYMBOL']
     stock_code_df         = pd.read_csv('./data/stock_code.csv', index_col = ['SECODE'])['SYMBOL']
-    fund_position_df      = pd.read_csv('./data/tq_fd_skdetail', index_col = ['ENDDATE', 'SECODE', 'SKCODE'], parse_dates = ['ENDDATE'])['ACCSTKRTO']
-    fund_position_df      = fund_position_df[fund_position_df.index.get_level_values(0) >= dates[0]]
-    fund_position_df      = fund_position_df[fund_position_df.index.get_level_values(0) <= dates[-1]]
+    fund_position_df      = pd.read_csv('./data/tq_fd_skdetail.csv', index_col = ['ENDDATE'], parse_dates = ['ENDDATE'])
+    #fund_position_df      = fund_position_df.loc[reallocation_dates]
     #print fund_position_df
 
+    fund_position_df = fund_position_df.loc[reallocation_dates]
+    #print reallocation_dates
+    #print fund_position_df.index
+    #print fund_position_df['SECODE']
+    fund_position_df = fund_position_df.reset_index()
+    fund_position_df = fund_position_df.set_index(['SECODE'])
+    secodes = list(set(fund_position_df.index.values) & set(all_fund_df.index.values))
+    fund_position_df = fund_position_df.loc[secodes]
+    #print fund_position_df['ENDDATE']
+    fund_position_df = fund_position_df.reset_index()
+    #print fund_position_df['ENDDATE']
+    fund_position_df = fund_position_df.set_index(['ENDDATE', 'SECODE', 'SKCODE'])['NAVRTO']
+    #print fund_position_df.index.get_level_values(0).unique()
 
     stock_code_dict = {}
     for secode in stock_code_df.index:
@@ -34,13 +49,14 @@ if __name__ == '__main__':
         fcode = all_fund_df.loc[secode]
         fund_code_dict[secode] = fcode
 
+    '''
     secodes = []
     fpes = []
     fsizes = []
     fsymbols = []
-    dates = fund_position_df.index.get_level_values(0).unique()[0:27]
+    dates = fund_position_df.index.get_level_values(0).unique()
+
     for date in dates:
-        print date
         secode_skcode_ratio_df = fund_position_df.loc[date]
         secodes = secode_skcode_ratio_df.index.get_level_values(0).unique()
         symbols = []
@@ -54,12 +70,13 @@ if __name__ == '__main__':
             fpe = 0
             fsize = 0
             allratio = 0
+            n = 0
             for skcode in skcode_ratio_df.index:
                 if not stock_code_dict.has_key(skcode):
                     continue
                 code = '%06d'  % stock_code_dict[skcode]
                 ratio  = skcode_ratio_df[skcode] / 100.0
-                allratio = allratio +　ratio
+                allratio = allratio + ratio
                 size = stock_market_value_df.loc[date, code]
                 pe = stock_pe_df.loc[date, code]
                 if np.isnan(ratio) or np.isnan(size) or np.isnan(pe):
@@ -80,5 +97,51 @@ if __name__ == '__main__':
 
     fsize_df = pd.DataFrame(fsizes, index = dates, columns = fsymbols)
     fpe_df = pd.DataFrame(fpes, index = dates, columns = fsymbols)
+    fsize_df.to_csv('fsize.csv')
+    fpe_df.to_csv('fpe.csv')
+    '''
+
+    fsize_dict = {}
+    fpe_dict   = {}
+
+    dates = fund_position_df.index.get_level_values(0).unique().values
+    dates.sort()
+    for date in dates:
+        secode_skcode_ratio_df = fund_position_df.loc[date]
+        secodes = secode_skcode_ratio_df.index.get_level_values(0).unique()
+        for secode in secodes:
+            skcode_ratio_df = secode_skcode_ratio_df.loc[secode]
+            fund_code = fund_code_dict[secode]
+            fund_size = 0
+            fund_pe   = 0
+            allratio = 0
+            for skcode in skcode_ratio_df.index:
+                if not stock_code_dict.has_key(skcode):
+                    continue
+                code = '%06d'  % stock_code_dict[skcode]
+                ratio  = skcode_ratio_df[skcode]
+                size = stock_market_value_df.loc[date, code]
+                pe = stock_pe_df.loc[date, code]
+                #print date, skcode, ratio, size, pe
+                fund_size += ratio * size
+                fund_pe += ratio * pe
+                allratio += ratio
+            if allratio <= 0.1:
+                continue
+            #print date, fund_code, allratio #,fund_size, fund_pe
+            fcode ='%06d'  % fund_code_dict[secode]
+            print date, fcode, 'done'
+            fsize = fsize_dict.setdefault(date, {})
+            fsize[fcode] = fund_size
+            fpe = fpe_dict.setdefault(date, {})
+            fpe[fcode] = fund_pe
+
+    #print fsize_dict
+    fsize_df = pd.DataFrame(fsize_dict).T
+    #print fpe_dict
+    fpe_df   = pd.DataFrame(fpe_dict).T
+
+    print fsize_df
+    print fpe_df
     fsize_df.to_csv('fsize.csv')
     fpe_df.to_csv('fpe.csv')
