@@ -298,11 +298,12 @@ def portfolio_avg_simple():
     #
     # 合并股票类资产配置结果
     #
-    column_position = ['GLNC', 'SP500.SPI', 'creditbond', 'ratebond', 'money']
+    column_position = ['GLNC', 'SP500.SPI', 'money']
     if 'HSCI.HI' in df_portfolio.columns:
         column_position.append('HSCI.HI')
     df_position = df_portfolio[column_position].copy()
     df_position['stock'] = df_portfolio[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value']].sum(axis=1)
+    df_position['bond'] = df_portfolio[['creditbond', 'ratebond']].sum(axis=1)
     df_position.columns.name = 'type'
     df_position = df_position.stack().to_frame('position')
 
@@ -330,6 +331,7 @@ def portfolio_avg_simple():
 
     df_pool['type'] = df_pool.index.get_level_values('category')
     df_pool.loc[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value'], 'type'] = 'stock'
+    df_pool.loc[['creditbond', 'ratebond'], 'type'] = 'bond'
 
     df_pool = df_pool.reset_index().set_index(['date', 'type', 'code']).sort_index()
 
