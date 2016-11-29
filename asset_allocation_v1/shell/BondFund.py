@@ -10,14 +10,14 @@ import utils
 class BondFundFilter(object):
     def __init__(self):
         # 回测开始时间
-        self.test_start = datetime.datetime(2015, 1, 5)
+        self.test_start = datetime.datetime(2016, 11, 25)
         # 回测结束时间
-        self.test_end = datetime.datetime(2015, 1, 5)
+        self.test_end = datetime.datetime(2016, 11, 25)
         # 沪深300指数数据
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= self.test_start]
         sh300 = sh300[sh300.index.get_level_values(0) <= self.test_end]
-        self.trade_dates = sh300.index
+        self.trade_dates = list(sh300.index)
         # 过滤的中间结果目录
         self.tmp_file = "../tmp/bond_filter_tmp.csv"
         # 基金类型
@@ -27,7 +27,7 @@ class BondFundFilter(object):
         # 8：sharpe比率和波动率过滤)
         self.filter_type = [0]
         # 基金成立年限
-        self.fund_age = 1.3
+        self.fund_age = 1.0
 
         # 基金规模
         self.fund_volume = 200000000.0
@@ -39,8 +39,8 @@ class BondFundFilter(object):
         # 基金份额
         self.share_ratio = 0.8
         # 基金经理
-        self.manager_num = 0
-        self.cur_manager_days = 360 * 1.25
+        self.manager_num = 5
+        self.cur_manager_days = 360 * 1.5
         self.hold_manager_days = 360 * 2.0
 
         # 机构持有比例
@@ -51,10 +51,10 @@ class BondFundFilter(object):
         self.days_two = 365 * 2
         self.days_three = 365 * 5
         # 股票市值占比
-        self.stock_ratio = 50
+        self.stock_ratio = 10
         # sharpe/std
-        self.sharpe_one = 0.7
-        self.sharpe_two = 0.5
+        self.sharpe_one = 0.5
+        self.sharpe_two = 0.3
         self.sharpe_five = 0.3
         self.return_std = 0.95
 
@@ -63,6 +63,7 @@ class BondFundFilter(object):
         #self.filter_types(choose_date)
         print choose_date
         holdings = {}
+        self.trade_dates.append(datetime.datetime(2016, 11, 25))
         while choose_date <= self.test_end:
             print choose_date
             if choose_date in self.trade_dates:
@@ -229,7 +230,7 @@ class BondFundFilter(object):
             anal_ratio = mean_ratio * 252.0
             return_std_five = np.std(one_ratios) * np.sqrt(252.0)
             sharpe_five = (anal_ratio - 0.03) / return_std_five
-            if sharpe_one < self.sharpe_one or sharpe_two < self.sharpe_two or sharpe_five < self.sharpe_five:
+            if sharpe_one < self.sharpe_one or sharpe_two < self.sharpe_two: #or sharpe_five < self.sharpe_five:
                 print sharpe_one, sharpe_two, sharpe_five
                 delete_list.add(sid)
             if return_std_one > self.return_std or return_std_two > self.return_std \
@@ -425,17 +426,18 @@ class BondFundFilter(object):
                 share_three = fshare[-3]
             except:
                 share_three = share_two
+                print "no share report"
             try:
                 share_four = fshare[-4]
+                print "no share report"
             except:
                 share_four = share_three
             share_found = fshare[0]
             if share_one < share_two * self.share_ratio or \
-                share_two < share_three * self.share_ratio or \
-                share_three < share_four * self.share_ratio:
-                print sid
+                share_two < share_three * self.share_ratio:
+                #share_three < share_four * self.share_ratio:
                 delete_list.add(sid)
-            if share_one < share_two and share_two < share_three and share_three < share_four:
+            if share_one < share_two and share_two < share_three: # and share_three < share_four:
                 delete_list.add(sid)
             if share_one < share_found * 0.5:
                 delete_list.add(sid)
@@ -572,6 +574,6 @@ if __name__ == "__main__":
     #    tmpclass.filter_bond(volume_ratio)
     #    tmpclass.cal_eval()
     #    volume_ratio += 0.1
-    #tmpclass.filter_bond()
+    tmpclass.filter_bond()
     #tmpclass.cal_eval()
-    tmpclass.cal_sharpe_nav()
+    #tmpclass.cal_sharpe_nav()
