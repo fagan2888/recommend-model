@@ -106,14 +106,18 @@ if __name__ == '__main__':
 
     dates = fund_position_df.index.get_level_values(0).unique().values
     dates.sort()
+    #dates = [dates[-1]]
     for date in dates:
         secode_skcode_ratio_df = fund_position_df.loc[date]
         secodes = secode_skcode_ratio_df.index.get_level_values(0).unique()
         for secode in secodes:
             skcode_ratio_df = secode_skcode_ratio_df.loc[secode]
             fund_code = fund_code_dict[secode]
-            fund_size = 0
-            fund_pe   = 0
+            fcode ='%06d'  % fund_code_dict[secode]
+            ratios = []
+            pes    = []
+            sizes  = []
+
             allratio = 0
             for skcode in skcode_ratio_df.index:
                 if not stock_code_dict.has_key(skcode):
@@ -122,15 +126,45 @@ if __name__ == '__main__':
                 ratio  = skcode_ratio_df[skcode]
                 size = stock_market_value_df.loc[date, code]
                 pe = stock_pe_df.loc[date, code]
-                #print date, skcode, ratio, size, pe
-                fund_size += ratio * size
-                fund_pe += ratio * pe
-                allratio += ratio
+                if np.isnan(ratio) or np.isnan(size) or np.isnan(pe):
+                    continue
+                #print date, fcode, code, ratio, size, pe
+                allratio = allratio + ratio
+                ratios.append(ratio)
+                sizes.append(size * ratio)
+                pes.append(pe * ratio)
+
             if allratio <= 0.1:
                 continue
+
+            size_mean = np.mean(sizes)
+            size_std  = np.std(sizes)
+            pe_mean = np.mean(pes)
+            pe_std  = np.std(pes)
+
+            fcode ='%06d'  % fund_code_dict[secode]
+            fund_size = 0
+            sratio = 0
+            for i in range(0, len(sizes)):
+                s = sizes[i]
+                if s >= size_mean - 2 * size_std and s <= size_mean + 2 * size_std:
+                    sratio += ratios[i]
+                    fund_size += s
+
+            fund_pe   = 0
+            pratio = 0
+            for i in range(0, len(pes)):
+                p = pes[i]
+                if p >= pe_mean - 2 * pe_std and p <= pe_mean + 2 * pe_std:
+                    pratio += ratios[i]
+                    fund_pe += p
+
+            fund_size = fund_size / sratio
+            fund_pe   = fund_pe / pratio
+
             #print date, fund_code, allratio #,fund_size, fund_pe
             fcode ='%06d'  % fund_code_dict[secode]
-            print date, fcode, 'done'
+            print date, fcode, 'done', fund_size, fund_pe
             fsize = fsize_dict.setdefault(date, {})
             fsize[fcode] = fund_size
             fpe = fpe_dict.setdefault(date, {})
@@ -141,7 +175,7 @@ if __name__ == '__main__':
     #print fpe_dict
     fpe_df   = pd.DataFrame(fpe_dict).T
 
-    print fsize_df
-    print fpe_df
+    #print fsize_df
+    #print fpe_df
     fsize_df.to_csv('fsize.csv')
     fpe_df.to_csv('fpe.csv')

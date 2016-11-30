@@ -23,6 +23,8 @@ def largecapfitness(funddf, indexdf, ratio):
 
     funddfr = funddf.pct_change()
     indexdfr = indexdf.pct_change()
+    #print indexdfr
+    #indexdfr.to_csv('market_value_index.csv')
 
     largecaptag = {}
 
@@ -517,9 +519,10 @@ def largecapprefer(funddf, indexdf, ratio):
     #print indexdf.index
     result = []
     for code in codes:
-        result.append((code, indexdf.loc['%d' % (int)(code)]))
+        #print code
+        result.append((code, indexdf.loc['%06d' % (int)(code)]))
 
-
+    #print result
     #print result
     #print codes
         #codes.append('%06d' % (int)(code))
@@ -564,6 +567,7 @@ def largecapprefer(funddf, indexdf, ratio):
 
     print result
     '''
+
     return result
 
 
@@ -590,7 +594,7 @@ def smallcapprefer(funddf, indexdf, ratio):
     #print indexdf.index
     result = []
     for code in codes:
-        result.append((code, indexdf.loc['%d' % (int)(code)]))
+        result.append((code, indexdf.loc['%06d' % (int)(code)]))
 
 
 
@@ -654,7 +658,7 @@ def growthcapprefer(funddf, indexdf, ratio):
     #print indexdf.index
     result = []
     for code in codes:
-        result.append((code, indexdf.loc['%d' % (int)(code)]))
+        result.append((code, indexdf.loc['%06d' % (int)(code)]))
 
 
     '''
@@ -720,7 +724,7 @@ def valuecapprefer(funddf, indexdf, ratio):
     #print indexdf.index
     result = []
     for code in codes:
-        result.append((code, indexdf.loc['%d' % (int)(code)]))
+        result.append((code, indexdf.loc['%06d' % (int)(code)]))
 
 
     '''
@@ -1309,6 +1313,9 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     size_index_df = size_index_df.loc[df_nav_fund.index]
     size_df = size_df.loc[df_nav_fund.index]
     pe_df = pe_df.loc[df_nav_fund.index]
+
+    #print size_index_df
+    #print pe_index_df
 
     #print size_df
     #print pe_df
