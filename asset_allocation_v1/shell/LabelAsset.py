@@ -197,7 +197,7 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
     #
     # 选择基金
     #
-    print day, df_label, df_indicator
+    # print day, df_label, df_indicator
     df_bond_fund = FundSelector.select_bond_new(day, df_label, df_indicator, limit)
 
     return df_bond_fund

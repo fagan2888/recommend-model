@@ -368,8 +368,9 @@ def portfolio_avg_simple():
     #
     # 过滤掉与上期换手率小于3%
     #
-    df_result = DFUtil.filter_by_turnover_rate(df_result, 0.03)
-    print "filter_by_turnover_rate"
+    thresh_hold = 0.20
+    df_result = DFUtil.filter_by_turnover_rate(df_result, thresh_hold)
+    print "filter_by_turnover_rate %.2f" % (thresh_hold)
     df_result.to_csv(datapath('position-turnover.csv'), index=False)
 
 
