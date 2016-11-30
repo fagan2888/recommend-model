@@ -18,6 +18,7 @@ import AllocationData
 from Const import datapath
 from dateutil.parser import parse
 
+
 #大盘适应度
 def largecapfitness(funddf, indexdf, ratio):
 
@@ -38,6 +39,7 @@ def largecapfitness(funddf, indexdf, ratio):
         indexr.append(indexdfr[cols[0]].values[i] - indexdfr[cols[1]].values[i])
 
 
+    '''
     for i in range(4, len(indexr)):
         n = 0
         for j in range(0, 4):
@@ -53,38 +55,47 @@ def largecapfitness(funddf, indexdf, ratio):
             largecap.append(1)
         else:
             largecap.append(-1)
+    '''
 
-    #print 'largecap' , largecap
+    for i in range(0, len(indexr)):
+        r = indexr[i]
+        if r == 0:
+            largecap.append(0)
+        elif r > 0:
+            largecap.append(1)
+        else:
+            largecap.append(-1)
+
     for code in funddfr.columns:
 
         fundr = funddfr[code].values
         largecapr = []
         for i in range(0, len(largecap)):
             tag = largecap[i]
-            if tag == 1 and (not isnan(fundr[i + 4])):
-                largecapr.append(fundr[i + 4])
+            #if tag == 1 and (not isnan(fundr[i + 4])):
+                #largecapr.append(fundr[i + 4])
+            if tag == 1 and (not isnan(fundr[i])):
+                largecapr.append(fundr[i])
 
         largecaptag[code] = largecapr
-
 
     fitness = {}
     for code in largecaptag.keys():
         rs = largecaptag[code]
-        if len(rs) == 1:
-            fitness[code] = (np.mean(rs), np.mean(rs), np.mean(rs))
-        else:
-            fitness[code] = (np.mean(rs), np.std(rs), (np.mean(rs) - Const.rf) / np.std(rs))
+        #if len(rs) == 1:
+        #    fitness[code] = (np.mean(rs), np.mean(rs), np.mean(rs))
+        fitness[code] = (np.mean(rs), np.std(rs), (np.mean(rs) - Const.rf) / np.std(rs))
 
     x = fitness
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1][2], reverse=True)
     sorted_fitness = sorted_x
 
-
+    #print sorted_fitness
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
-    #print 'largecap' ,result
+    print 'largecap' ,result
     return result
 
 
@@ -108,6 +119,7 @@ def smallcapfitness(funddf, indexdf, ratio):
         indexr.append(indexdfr[cols[1]].values[i] - indexdfr[cols[0]].values[i])
 
 
+    '''
     for i in range(4, len(indexr)):
         n = 0
         for j in range(0, 4):
@@ -123,6 +135,16 @@ def smallcapfitness(funddf, indexdf, ratio):
             smallcap.append(1)
         else:
             smallcap.append(-1)
+    '''
+
+    for i in range(0, len(indexr)):
+        r = indexr[i]
+        if r == 0:
+            smallcap.append(0)
+        elif r > 0:
+            smallcap.append(1)
+        else:
+            smallcap.append(-1)
 
 
     for code in funddfr.columns:
@@ -131,9 +153,10 @@ def smallcapfitness(funddf, indexdf, ratio):
         smallcapr = []
         for i in range(0, len(smallcap)):
             tag = smallcap[i]
-            if tag == -1 and (not isnan(fundr[i + 4])):
-                smallcapr.append(fundr[i + 4])
-
+            #if tag == -1 and (not isnan(fundr[i + 4])):
+            #    smallcapr.append(fundr[i + 4])
+            if tag == 1 and (not isnan(fundr[i])):
+                smallcapr.append(fundr[i])
         smallcaptag[code] = smallcapr
 
 
@@ -177,7 +200,6 @@ def risefitness(funddf, indexdf, ratio):
                 n = n + 1
             else:
                 n = n - 1
-
 
         if n == 0:
             rise.append(0)
@@ -1292,13 +1314,13 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
     start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
-    size_index_df = pd.read_csv('./data/market_value_index.csv', index_col = 'date', parse_dates = ['date'])
-    pe_index_df = pd.read_csv('./data/pe_index.csv', index_col = 'date', parse_dates = ['date'])
+    #size_index_df = pd.read_csv('./data/market_value_index.csv', index_col = 'date', parse_dates = ['date'])
+    #pe_index_df = pd.read_csv('./data/pe_index.csv', index_col = 'date', parse_dates = ['date'])
     size_df = pd.read_csv('./data/fsize.csv', index_col = 'date', parse_dates = ['date'])
     pe_df = pd.read_csv('./data/fpe.csv', index_col = 'date', parse_dates = ['date'])
 
-    size_df = size_df.reindex(size_index_df.index).fillna(method='pad')
-    pe_df = pe_df.reindex(size_index_df.index).fillna(method='pad')
+    size_df = size_df.reindex(df_nav_index.index).fillna(method='pad')
+    pe_df = pe_df.reindex(df_nav_index.index).fillna(method='pad')
 
     #print size_df.columns
     #print pe_df.columns
@@ -1309,8 +1331,8 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     #print size_index_df.index
     #print df_nav_fund.index
 
-    pe_index_df = pe_index_df.loc[df_nav_fund.index]
-    size_index_df = size_index_df.loc[df_nav_fund.index]
+    #pe_index_df = pe_index_df.loc[df_nav_fund.index]
+    #size_index_df = size_index_df.loc[df_nav_fund.index]
     size_df = size_df.loc[df_nav_fund.index]
     pe_df = pe_df.loc[df_nav_fund.index]
 
@@ -1364,17 +1386,18 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
     positiondf = positiondf[codes]
 
-    largecapfitness_result    = largecapfitness(df_nav_fund, size_index_df, 0.5)
+    largecapfitness_result    = largecapfitness(df_nav_fund, capindexdf, 0.5)
+    #print largecapfitness_result
     #print 'largecapfitness', largecapfitness_result
-    smallcapfitness_result    = smallcapfitness(df_nav_fund, size_index_df, 0.5)
+    smallcapfitness_result    = smallcapfitness(df_nav_fund, capindexdf, 0.5)
     risefitness_result    = risefitness(df_nav_fund, hs300indexdf, 0.5)
     #print risefitness_result
     declinefitness_result     = declinefitness(df_nav_fund, hs300indexdf, 0.5)
     oscillationfitness_result = oscillationfitness(df_nav_fund, hs300indexdf,  0.5)
     #growthfitness_result      = growthfitness(df_nav_fund, growthvalueindexdf, 0.5)
     #valuefitness_result       = valuefitness(df_nav_fund,  growthvalueindexdf, 0.5)
-    growthfitness_result      = growthfitness(df_nav_fund, pe_index_df, 0.5)
-    valuefitness_result       = valuefitness(df_nav_fund,  pe_index_df, 0.5)
+    growthfitness_result      = growthfitness(df_nav_fund, growthvalueindexdf, 0.5)
+    valuefitness_result       = valuefitness(df_nav_fund,  growthvalueindexdf, 0.5)
     positionprefer_result     = positionprefer(positiondf, 0.5)
     largecapprefer_result     = largecapprefer(df_nav_fund, size_df, 0.5)
     #print largecapprefer_result
