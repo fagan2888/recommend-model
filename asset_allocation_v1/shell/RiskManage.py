@@ -19,7 +19,7 @@ import matplotlib.mlab as mtlab
 class RiskManagement(object):
 
     def __init__(self):
-        self.file_dir = "./datas/"
+        self.file_dir = "../tmp/"
         # 配置活跃幅
         self.port_pct = pd.read_csv(self.file_dir + "port_pct.csv",
                                     index_col=['date'], parse_dates=['date'])
@@ -103,6 +103,7 @@ class RiskManagement(object):
         maxdown_hs_ori = pd.DataFrame({"maxdown":maxdown_hs}, index=dates)
         maxdown_gold_ori = pd.DataFrame({"maxdown":maxdown_gold}, index=dates)
 
+        back_date = len(sh_weight)
         # 是否按比例配置资产（风控作用之前的时间都按修型结果配置）
         sh_ttypes = np.ones(len(sh_weight))
         sp_ttypes = np.ones(len(sp_weight))
@@ -128,6 +129,35 @@ class RiskManagement(object):
 
         # 0.97在所有资产中起作次数
         risk_times = 0
+        # 风控信号记录
+        #沪深300 0.95起作用
+        sh_95 = list(np.zeros(back_date))
+        # 沪深300 0.75起作用
+        sh_75 = list(np.zeros(back_date))
+        # 沪深300 择时信号起作用
+        sh_signal = list(np.zeros(back_date))
+        # 沪深300 1.25起作用
+        sh_125 = list(np.zeros(back_date))
+
+        sp_95 = list(np.zeros(back_date))
+        sp_75 = list(np.zeros(back_date))
+        sp_signal = list(np.zeros(back_date))
+        sp_125 = list(np.zeros(back_date))
+
+        hs_95 = list(np.zeros(back_date))
+        hs_75 = list(np.zeros(back_date))
+        hs_signal = list(np.zeros(back_date))
+        hs_125 = list(np.zeros(back_date))
+
+        gold_95 = list(np.zeros(back_date))
+        gold_75 = list(np.zeros(back_date))
+        gold_signal = list(np.zeros(back_date))
+        gold_125 = list(np.zeros(back_date))
+
+        total_95 = list(np.zeros(back_date))
+        total_75 = list(np.zeros(back_date))
+        total_signal = list(np.zeros(back_date))
+        total_125 = list(np.zeros(back_date))
 
         # 每天风控
         while inter_date <= test_end:
@@ -260,36 +290,63 @@ class RiskManagement(object):
                             # sh_weight.append(0.0)
                             # sh_ttypes = np.append(sh_ttypes, 0.0)
                             # 0.97风控天数加1
+                            sh_95.append(1)
                             sh_risk_days += 1
+                            # 无条件空仓5天后
                             if sh_risk_days > 5:
                                 #sh_risk == False
                                 signal = self.tc_000300.loc[inter_date]['trade_types']
+                                # 择时信号买入而且择时信号在此风控周期内未起作用
                                 if signal == 1 and not sh_signal_effect:
                                     print inter_date, cur_ass + " signal effects"
                                     # sh_risk = False
                                     # sh_risk_days = 0
                                     sh_signal_effect = True
+                                # 0.75风控点起作用
                                 if maxdown_now >= base_line_75:
                                     print inter_date, cur_ass + " 75 effects"
                                     sh_risk = False
                                     sh_risk_days = 0
-                                if sh_signal_effect:
+                                # 风控周期结束
+                                if not sh_risk:
+                                    sh_weight.append(cur_sh_w)
+                                    sh_ttypes = np.append(sh_ttypes, 1.0)
+                                    # 跳出风控周期后不再看择时信号
+                                    sh_signal_effect = False
+                                # 风控周期内看择时信号
+                                elif sh_signal_effect:
+                                    # 未达到1.25VaR，达到的话空仓
                                     if maxdown_now <= base_line_95 * 1.25:
                                         sh_weight.append(0.0)
                                         sh_ttypes = np.append(sh_ttypes, 0.0)
+                                        # sh_signal_effect = False
                                     else:
                                         sh_weight.append(cur_sh_w)
                                         sh_ttypes = np.append(sh_ttypes, 1.0)
-                                elif not sh_risk:
+                                else:
                                     sh_weight.append(cur_sh_w)
                                     sh_ttypes = np.append(sh_ttypes, 1.0)
-                                else:
-                                    sh_weight.append(0.0)
-                                    sh_ttypes = np.append(sh_ttypes, 0.0)
+                                ## 择时信号起作用
+                                #if sh_signal_effect:
+                                #    # 未达到1.25VaR，达到的话空仓
+                                #    if maxdown_now <= base_line_95 * 1.25:
+                                #        sh_weight.append(0.0)
+                                #        sh_ttypes = np.append(sh_ttypes, 0.0)
+                                #    else:
+                                #        sh_weight.append(cur_sh_w)
+                                #        sh_ttypes = np.append(sh_ttypes, 1.0)
+                                ## 风控周期未结束
+                                #elif not sh_risk:
+                                #    sh_weight.append(cur_sh_w)
+                                #    sh_ttypes = np.append(sh_ttypes, 1.0)
+                                #else:
+                                #    sh_weight.append(0.0)
+                                #    sh_ttypes = np.append(sh_ttypes, 0.0)
                             else:
                                 sh_weight.append(0.0)
                                 sh_ttypes = np.append(sh_ttypes, 0.0)
                         else:
+                            sh_95.append(0)
                             sh_weight.append(cur_sh_w)
                             sh_ttypes = np.append(sh_ttypes, 1.0)
                         #if maxdown_now < pre_maxdown * 0.95 and sh_risk == False:
@@ -314,6 +371,7 @@ class RiskManagement(object):
                         if sp_risk:
                             # sp_weight.append(0.0)
                             # sp_ttypes = np.append(sp_ttypes, 0.0)
+                            sp_95.append(1)
                             sp_risk_days += 1
                             if sp_risk_days > 5:
                                 #sh_risk == False
@@ -323,20 +381,22 @@ class RiskManagement(object):
                                     # sp_risk = False
                                     # sp_risk_days = 0
                                     sp_signal_effect = True
+
                                 if maxdown_now > base_line_75:
                                     print inter_date, cur_ass + " 75 effects"
                                     sp_risk = False
                                     sp_risk_days = 0
-                                if sp_signal_effect:
+                                if not sp_risk:
+                                    sp_weight.append(cur_sp_w)
+                                    sp_ttypes = np.append(sp_ttypes, 1.0)
+                                    sp_signal_effect = False
+                                elif sp_signal_effect:
                                     if maxdown_now <= base_line_95 * 1.25:
                                         sp_weight.append(0.0)
                                         sp_ttypes = np.append(sp_ttypes, 0.0)
                                     else:
                                         sp_weight.append(cur_sp_w)
                                         sp_ttypes = np.append(sp_ttypes, 1.0)
-                                elif not sp_risk:
-                                    sp_weight.append(cur_sp_w)
-                                    sp_ttypes = np.append(sp_ttypes, 1.0)
                                 else:
                                     sp_weight.append(0.0)
                                     sp_ttypes = np.append(sp_ttypes, 0.0)
@@ -344,6 +404,7 @@ class RiskManagement(object):
                                 sp_weight.append(0.0)
                                 sp_ttypes = np.append(sp_ttypes, 0.0)
                         else:
+                            sp_95.append(1)
                             sp_weight.append(cur_sp_w)
                             sp_ttypes = np.append(sp_ttypes, 1.0)
                         #if maxdown_now < pre_maxdown * 0.95 and sp_risk == False:
@@ -368,6 +429,7 @@ class RiskManagement(object):
                         if hs_risk:
                             # hs_weight.append(0.0)
                             # hs_ttypes = np.append(hs_ttypes, 0.0)
+                            hs_95.append(1)
                             hs_risk_days += 1
                             if hs_risk_days > 5:
                                 #sh_risk == False
@@ -381,16 +443,18 @@ class RiskManagement(object):
                                     print inter_date, cur_ass + " 75 effects"
                                     hs_risk = False
                                     hs_risk_days = 0
-                                if hs_signal_effect:
+
+                                if not hs_risk:
+                                    hs_weight.append(cur_hs_w)
+                                    hs_ttypes = np.append(hs_ttypes, 1.0)
+                                    hs_signal_effect = False
+                                elif hs_signal_effect:
                                     if maxdown_now <= base_line_95 * 1.25:
                                         hs_weight.append(0.0)
                                         hs_ttypes = np.append(hs_ttypes, 0.0)
                                     else:
                                         hs_weight.append(cur_hs_w)
                                         hs_ttypes = np.append(hs_ttypes, 1.0)
-                                elif not hs_risk:
-                                    hs_weight.append(cur_hs_w)
-                                    hs_ttypes = np.append(hs_ttypes, 1.0)
                                 else:
                                     hs_weight.append(0.0)
                                     hs_ttypes = np.append(hs_ttypes, 0.0)
@@ -399,6 +463,7 @@ class RiskManagement(object):
                                 hs_weight.append(0.0)
                                 hs_ttypes = np.append(hs_ttypes, 0.0)
                         else:
+                            hs_95.append(0)
                             hs_weight.append(cur_hs_w)
                             hs_ttypes = np.append(hs_ttypes, 1.0)
                         #if maxdown_now < pre_maxdown * 0.95 and hs_risk == False:
@@ -423,6 +488,7 @@ class RiskManagement(object):
                         if gold_risk:
                             # gold_weight.append(0.0)
                             # gold_ttypes = np.append(gold_ttypes, 0.0)
+                            gold_95.append(1)
                             gold_risk_days += 1
                             if gold_risk_days > 5:
                                 #sh_risk == False
@@ -437,16 +503,17 @@ class RiskManagement(object):
                                     gold_risk = False
                                     gold_risk_days = 0
 
-                                if gold_signal_effect:
+                                if not gold_risk:
+                                    gold_weight.append(cur_gold_w)
+                                    gold_ttypes = np.append(gold_ttypes, 1.0)
+                                    gold_signal_effect = False
+                                elif gold_signal_effect:
                                     if maxdown_now <= base_line_95 * 1.25:
                                         gold_weight.append(0.0)
                                         gold_ttypes = np.append(gold_ttypes, 0.0)
                                     else:
                                         gold_weight.append(cur_gold_w)
                                         gold_ttypes = np.append(gold_ttypes, 1.0)
-                                elif not gold_risk:
-                                    gold_weight.append(cur_gold_w)
-                                    gold_ttypes = np.append(gold_ttypes, 1.0)
                                 else:
                                     gold_weight.append(0.0)
                                     gold_ttypes = np.append(gold_ttypes, 0.0)
@@ -454,11 +521,16 @@ class RiskManagement(object):
                                 gold_weight.append(0.0)
                                 gold_ttypes = np.append(gold_ttypes, 0.0)
                         else:
+                            gold_95.append(0)
                             gold_weight.append(cur_gold_w)
                             gold_ttypes = np.append(gold_ttypes, 1.0)
                         #if maxdown_now < pre_maxdown * 0.95 and gold_risk == False:
                         #    #sh_weight.append(0.0)
                         #    gold_risk = True
+                if sh_risk or sp_risk or hs_risk or gold_risk:
+                    total_95.append(1)
+                else:
+                    total_95.append(0)
 
             inter_date += datetime.timedelta(days=1)
         print "risk times:", risk_times
@@ -539,6 +611,8 @@ class RiskManagement(object):
 
         union_data['total_nav'] = total_nav
         union_data['total_maxdown'] = total_maxdown
+        union_data['total_95'] = total_95
+        union_data['sh_95'] = sh_95
         union_data = pd.DataFrame(union_data, index=dates)
         union_data.to_csv("risk_result.csv")
 
