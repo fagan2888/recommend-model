@@ -324,8 +324,8 @@ class RiskManagement(object):
                                         sh_weight.append(cur_sh_w)
                                         sh_ttypes = np.append(sh_ttypes, 1.0)
                                 else:
-                                    sh_weight.append(cur_sh_w)
-                                    sh_ttypes = np.append(sh_ttypes, 1.0)
+                                    sh_weight.append(0.0)
+                                    sh_ttypes = np.append(sh_ttypes, 0.0)
                                 ## 择时信号起作用
                                 #if sh_signal_effect:
                                 #    # 未达到1.25VaR，达到的话空仓
