@@ -95,7 +95,7 @@ def largecapfitness(funddf, indexdf, ratio):
     for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
-    print 'largecap' ,result
+    #print 'largecap' ,result
     return result
 
 
@@ -175,6 +175,7 @@ def smallcapfitness(funddf, indexdf, ratio):
     for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
 
+    #print 'smallcapfitness', result
 
     return result
 
@@ -192,6 +193,7 @@ def risefitness(funddf, indexdf, ratio):
 
     indexr = indexdfr.values
 
+    '''
     for i in range(4, len(indexr)):
         n = 0
         for j in range(0, 4):
@@ -207,6 +209,16 @@ def risefitness(funddf, indexdf, ratio):
             rise.append(1)
         else:
             rise.append(-1)
+    '''
+
+    for i in range(0, len(indexr)):
+        r = indexr[i]
+        if r == 0:
+            rise.append(0)
+        elif r > 0:
+            rise.append(1)
+        else:
+            rise.append(-1)
 
     for code in funddfr.columns:
 
@@ -214,8 +226,8 @@ def risefitness(funddf, indexdf, ratio):
         riser = []
         for i in range(0, len(rise)):
             tag = rise[i]
-            if tag == 1 and (not isnan(fundr[i + 4])):
-                riser.append(fundr[i + 4])
+            if tag == 1 and (not isnan(fundr[i])):
+                riser.append(fundr[i])
 
         risetag[code] = riser
 
@@ -252,6 +264,7 @@ def declinefitness(funddf, indexdf, ratio):
 
     indexr = indexdfr.values
 
+    '''
     for i in range(4, len(indexr)):
         n = 0
         for j in range(0, 4):
@@ -267,6 +280,18 @@ def declinefitness(funddf, indexdf, ratio):
             decline.append(1)
         else:
             decline.append(-1)
+    '''
+
+    for i in range(0, len(indexr)):
+
+        r = indexr[i]
+        if r == 0:
+            decline.append(0)
+        elif r > 0:
+            decline.append(-1)
+        else:
+            decline.append(1)
+
 
     for code in funddfr.columns:
 
@@ -274,8 +299,8 @@ def declinefitness(funddf, indexdf, ratio):
         decliner = []
         for i in range(0, len(decline)):
             tag = decline[i]
-            if tag == -1 and (not isnan(fundr[i + 4])):
-                decliner.append(fundr[i + 4])
+            if tag == -1 and (not isnan(fundr[i])):
+                decliner.append(fundr[i])
 
         declinetag[code] = decliner
 
@@ -375,9 +400,10 @@ def growthfitness(funddf, indexdf, ratio):
     indexr = []
     indexr.append(0)
     for i in range(1 ,len(indexdfr[cols[0]].values)):
-        indexr.append(indexdfr['high_pe'].values[i] - indexdfr['low_pe'].values[i])
+        #indexr.append(indexdfr['high_pe'].values[i] - indexdfr['low_pe'].values[i])
+        indexr.append(0.5 * indexdfr['399372.SZ'].values[i]  + 0.5 * indexdfr['399376.SZ'].values[i]- 0.5 * indexdfr['399373.SZ'].values[i] - 0.5 * indexdfr['399377.SZ'].values[i])
 
-
+    '''
     for i in range(4, len(indexr)):
         n = 0
         for j in range(0, 4):
@@ -393,7 +419,16 @@ def growthfitness(funddf, indexdf, ratio):
             growthcap.append(1)
         else:
             growthcap.append(-1)
+    '''
 
+    for i in range(0, len(indexr)):
+        r = indexr[i]
+        if r == 0:
+            growthcap.append(0)
+        elif r > 0:
+            growthcap.append(1)
+        else:
+            growthcap.append(-1)
 
     for code in funddfr.columns:
 
@@ -401,8 +436,8 @@ def growthfitness(funddf, indexdf, ratio):
         growthcapr = []
         for i in range(0, len(growthcap)):
             tag = growthcap[i]
-            if tag == 1 and (not isnan(fundr[i + 4])):
-                growthcapr.append(fundr[i + 4])
+            if tag == 1 and (not isnan(fundr[i])):
+                growthcapr.append(fundr[i])
 
         growthcaptag[code] = growthcapr
 
@@ -442,10 +477,11 @@ def valuefitness(funddf, indexdf, ratio):
     indexr = []
     indexr.append(0) 
     for i in range(1 ,len(indexdfr[cols[0]].values)):
-        indexr.append(indexdfr['low_pe'].values[i] - indexdfr['high_pe'].values[i])
-        #indexr.append(0.5 * indexdfr['399372.SZ'].values[i]  + 0.5 * indexdfr['399376.SZ'].values[i]- 0.5 * indexdfr['399373.SZ'].values[i] - 0.5 * indexdfr['399377.SZ'].values[i])
+        #indexr.append(indexdfr['low_pe'].values[i] - indexdfr['high_pe'].values[i])
+        indexr.append(0.5 * indexdfr['399372.SZ'].values[i]  + 0.5 * indexdfr['399376.SZ'].values[i]- 0.5 * indexdfr['399373.SZ'].values[i] - 0.5 * indexdfr['399377.SZ'].values[i])
 
 
+    '''
     for i in range(4, len(indexr)):
         n = 0
         for j in range(0, 4):
@@ -461,7 +497,16 @@ def valuefitness(funddf, indexdf, ratio):
             valuecap.append(1)
         else:
             valuecap.append(-1)
+    '''
 
+    for i in range(0, len(indexr)):
+        r = indexr[i]
+        if r == 0:
+            valuecap.append(0)
+        elif r > 0:
+            valuecap.append(-1)
+        else:
+            valuecap.append(1)
 
     for code in funddfr.columns:
 
@@ -469,8 +514,8 @@ def valuefitness(funddf, indexdf, ratio):
         valuecapr = []
         for i in range(0, len(valuecap)):
             tag = valuecap[i]
-            if tag == -1 and (not isnan(fundr[i + 4])):
-                valuecapr.append(fundr[i + 4])
+            if tag == -1 and (not isnan(fundr[i])):
+                valuecapr.append(fundr[i])
 
         valuecaptag[code] = valuecapr
 

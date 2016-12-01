@@ -99,7 +99,6 @@ if __name__ == '__main__':
             ratio = 1.0 - 1.0 * len(pre_fund_pool & d_cs) / len(pre_fund_pool)
             print d, ratio
             pre_fund_pool = d_cs
-    '''
 
     codes = set()
     dates = stock_fund_df.index.values
@@ -154,4 +153,3 @@ if __name__ == '__main__':
     #df.to_csv('label_asset.csv')
             #for code in v:
             #    codes.add(code)
-    '''
