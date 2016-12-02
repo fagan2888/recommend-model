@@ -19,7 +19,7 @@ class GFTD(object):
         # 择开始时间
         self.s_date = datetime.datetime(2010, 1, 1)
         # 择结束日期
-        self.e_date = datetime.datetime(2016, 11, 28)
+        self.e_date = datetime.datetime(2016, 12, 1)
         self.n1 = 4
         self.n2 = 4
         self.n3 = 4
