@@ -33,7 +33,7 @@ import traceback, code
 
 @click.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--start-date', 'startdate', default='2012-07-15', help=u'start date to calc')
+@click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--label-asset/--no-label-asset', default=True)
 @click.option('--reshape/--no-reshape', default=True)
@@ -82,8 +82,8 @@ def risk(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
     # [XXX] 由于马克维茨需要之前的之前allock_lookback周的数据, 所
     # 以我们需要添加一些调仓点
     #
-    lookback = allocationdata.fund_measure_lookback + allocationdata.fixed_risk_asset_risk_lookback  + allocationdata.allocation_lookback
-    print lookback
+    lookback = allocationdata.fund_measure_lookback + allocationdata.fixed_risk_asset_risk_lookback  + allocationdata.allocation_lookback + 1
+    #print lookback
     tmp_index = DBData.trade_date_lookback_index(allocationdata.start_date, lookback=lookback)
     if label_period > 1:
         lookback_index = tmp_index[::-label_period]
@@ -96,7 +96,9 @@ def risk(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
     # 合并调仓点
     #
     label_index = label_index.union(lookback_index)
-    print "adjust poit", list(label_index)
+    print "adjust point:"
+    for date in label_index:
+        print date.strftime("%Y-%m-%d")
 
     #
     # 净值数据的开始日期

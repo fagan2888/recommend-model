@@ -122,6 +122,8 @@ def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True)
         
     sql = "SELECT td_date as date, td_type FROM trade_dates WHERE td_date <= '%s' AND %s ORDER By td_date DESC LIMIT %d" % (end_date, condition, lookback)
 
+    # print sql
+
     conn  = MySQLdb.connect(**config.db_base)
     df = pd.read_sql(sql, conn, index_col = 'date', parse_dates=['date'])
     conn.close()
