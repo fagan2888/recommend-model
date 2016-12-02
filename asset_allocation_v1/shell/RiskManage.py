@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created at Nov 23, 2016
 Author: shengyitao
@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib.mlab as mtlab
 
 
-class RiskManagement(object):
+class RiskManage(object):
 
     def __init__(self):
         self.file_dir = "../tmp/"
@@ -617,5 +617,5 @@ class RiskManagement(object):
         union_data.to_csv("risk_result.csv")
 
 if __name__ == '__main__':
-    tmpclass = RiskManagement()
+    tmpclass = RiskManage()
     tmpclass.risk_control()
