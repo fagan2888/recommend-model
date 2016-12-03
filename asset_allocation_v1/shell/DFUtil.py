@@ -146,15 +146,23 @@ def filter_by_turnover_rate_per_risk(df, turnover_rate):
 def portfolio_import(df):
     pass;
 
-def nav_drawdown(df):
+def nav_drawdown(df_nav):
     ''' calc drawdown base on nav
     '''
-    return df/df.cummax() - 1;
+    return df_nav/df_nav.cummax() - 1
 
-def inc_drawdown(df):
+def inc_drawdown(df_inc):
     ''' calc drawdown base on inc
     '''
-    pass;
+    df_nav = (df_inc + 1).cumprod()
+    return df_nav/df_nav.cummax() - 1
+
+def nav_drawdown_window(df_nav, window, min_periods=1):
+    ''' calc drawdown base on nav
+    '''
+    df_max = df_nav.rolling(window=window, min_periods=min_periods).max()
+    return df_nav/df_max - 1
+
 
 def categories_types(as_int=False):
     if as_int:

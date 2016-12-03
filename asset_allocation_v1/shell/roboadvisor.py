@@ -18,6 +18,7 @@ import CommandNavStock
 import CommandPool
 import CommandPortfolio
 import CommandCompositeAsset
+import CommandRiskManage
 
 
 logger = logging.getLogger(__name__)
@@ -113,6 +114,7 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandPortfolio.portfolio)
     roboadvisor.add_command(CommandPool.pool)
     roboadvisor.add_command(CommandCompositeAsset.composite)
+    roboadvisor.add_command(CommandRiskManage.riskmgr)
 
     roboadvisor(obj={})  
     

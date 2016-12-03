@@ -174,10 +174,10 @@ class RiskManage(object):
                 gold_pct_tmp = np.array(pct_origin[start_time:inter_date]['GLNC'].values)
 
                 # 取过去一年各资产涨跌幅
-                sh_pct_tmp = np.append([0.0], sh_pct_tmp[-5*54:])
-                sp_pct_tmp = np.append([0.0], sp_pct_tmp[-5*54:])
-                hs_pct_tmp = np.append([0.0], hs_pct_tmp[-5*54:])
-                gold_pct_tmp = np.append([0.0], gold_pct_tmp[-5*54:])
+                sh_pct_tmp = np.append([0.0], sh_pct_tmp[-5*53:])
+                sp_pct_tmp = np.append([0.0], sp_pct_tmp[-5*53:])
+                hs_pct_tmp = np.append([0.0], hs_pct_tmp[-5*53:])
+                gold_pct_tmp = np.append([0.0], gold_pct_tmp[-5*53:])
 
                 # 计算过去一年净值
                 [nav_sh, maxdown_tmp] = utils.cal_nav_maxdrawdown(list(sh_pct_tmp))
@@ -615,6 +615,9 @@ class RiskManage(object):
         union_data['sh_95'] = sh_95
         union_data = pd.DataFrame(union_data, index=dates)
         union_data.to_csv("risk_result.csv")
+        xx = pd.DataFrame({'sh000300':sh_weight}, index=dates)
+        xx.index.name='date'
+        xx.to_csv('risk_sh000300.csv')
 
 if __name__ == '__main__':
     tmpclass = RiskManage()
