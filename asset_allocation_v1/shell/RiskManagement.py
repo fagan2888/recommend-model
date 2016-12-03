@@ -15,6 +15,13 @@ import click
 import DFUtil
 from scipy import stats
 
+def confidence_interval(x, interval):
+    d = x / np.maximum.accumulate(x) - 1
+    return min(stats.norm.interval(interval, d.mean(), d.std(ddof=1)))
+    # if (abs(x[-1] - 1.075027) < 0.000001):
+    #     print "aa\n", d
+    #     print "bb", bb, d.mean(), d.std(ddof=1)
+    # return bb
 
 
 class RiskManagement(object):
@@ -35,7 +42,7 @@ class RiskManagement(object):
 
         Return:
         dataframe, echo column is the new position of the asset after risk management
-        """        
+        """
 
         #
         # 计算回撤矩阵 和 0.97, 0.75置信区间
@@ -46,13 +53,14 @@ class RiskManagement(object):
         with click.progressbar(length=5, label='calc drawdown') as bar:
             for i in xrange(0, 5):
                 bar.update(1)
-                df_tmp = DFUtil.nav_drawdown_window(df_nav[i::5], 52)
-                df_c97 = df_tmp.rolling(window=52, min_periods=52).apply(
-                    lambda x: min(stats.norm.interval(0.97, x.mean(), x.std())))
-                df_c97 = df_tmp.rolling(window=52, min_periods=52).apply(f97)
+                df_tmp = DFUtil.nav_drawdown_window(df_nav[i::5], 53)
+                # df_c97 = df_tmp.rolling(window=52, min_periods=52).apply(
+                #     lambda x: min(stats.norm.interval(0.97, x.mean(), x.std())))
+                # df_c75 = df_tmp.rolling(window=52, min_periods=52).apply(
+                #     lambda x: min(stats.norm.interval(0.75, x.mean(), x.std())))
+                df_c97 = df_nav[i::5].rolling(window=52, min_periods=52).apply(confidence_interval, args=(0.97,))
+                df_c75 = df_nav[i::5].rolling(window=52, min_periods=52).apply(confidence_interval, args=(0.75,))
                 df_c97 = df_c97.shift(1)
-                df_c75 = df_tmp.rolling(window=52, min_periods=52).apply(
-                    lambda x: min(stats.norm.interval(0.75, x.mean(), x.std())))
                 df_c75 = df_c75.shift(1)
 
                 drawdown.append(df_tmp)

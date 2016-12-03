@@ -174,10 +174,10 @@ class RiskManage(object):
                 gold_pct_tmp = np.array(pct_origin[start_time:inter_date]['GLNC'].values)
 
                 # 取过去一年各资产涨跌幅
-                sh_pct_tmp = np.append([0.0], sh_pct_tmp[-5*53:])
-                sp_pct_tmp = np.append([0.0], sp_pct_tmp[-5*53:])
-                hs_pct_tmp = np.append([0.0], hs_pct_tmp[-5*53:])
-                gold_pct_tmp = np.append([0.0], gold_pct_tmp[-5*53:])
+                sh_pct_tmp = np.append([0.0], sh_pct_tmp[-5*52:])
+                sp_pct_tmp = np.append([0.0], sp_pct_tmp[-5*52:])
+                hs_pct_tmp = np.append([0.0], hs_pct_tmp[-5*52:])
+                gold_pct_tmp = np.append([0.0], gold_pct_tmp[-5*52:])
 
                 # 计算过去一年净值
                 [nav_sh, maxdown_tmp] = utils.cal_nav_maxdrawdown(list(sh_pct_tmp))
