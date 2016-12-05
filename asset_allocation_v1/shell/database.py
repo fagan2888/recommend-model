@@ -213,3 +213,34 @@ def base_ra_index_find(globalid):
 
     return s.execute().first()
 
+def asset_allocation_instance_nav_load(inst, xtype, allocs=None, begin=None, end=None):
+    db = connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('allocation_instance_nav', metadata, autoload=True)
+    t2 = Table('trade_dates', metadata, autoload=True)
+
+    columns = [
+        t1.c.ai_inst_id,
+        t1.c.ai_alloc_id,
+        t1.c.ai_date,
+        t1.c.ai_nav,
+    ]
+
+    s = select(columns) \
+        .select_from(t1.join(t2, t1.c.ai_date == t2.c.td_date)) \
+        .where(t1.c.ai_inst_id == inst) \
+        .where(t1.c.ai_type == xtype);
+    if allocs is not None:
+        s = s.where(t1.c.ai_alloc_id.in_(allocs))
+    if begin is not None:
+        s = s.where(t1.c.ai_date >= begin)
+    if end is not None:
+        s = s.where(t1.c.ai_date <= end)
+        
+    df = pd.read_sql(s, db, index_col = ['ai_inst_id', 'ai_date', 'ai_alloc_id'], parse_dates=['ai_date'])
+
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
+    
