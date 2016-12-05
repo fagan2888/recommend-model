@@ -512,7 +512,7 @@ def import_command(ctx, csv, optid, optname, optotype, optdtype, optftype, optre
 
     df_tosave['updated_at'] = df_tosave['created_at'] = now
 
-    df_tosave.to_sql(ra_pool_fund.name, db, index=True, if_exists='append')
+    df_tosave.to_sql(ra_pool_fund.name, db, index=True, if_exists='append', chunksize = 100)
 
     if len(df_tosave.index) > 1:
         logger.info("insert %s (%5d) : %s " % (ra_pool_fund.name, len(df_tosave.index), df_tosave.index[0]))
