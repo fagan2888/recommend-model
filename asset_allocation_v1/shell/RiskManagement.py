@@ -16,13 +16,12 @@ import DFUtil
 from scipy import stats
 
 def confidence_interval(x, interval):
-    d = x / np.maximum.accumulate(x) - 1
-    return min(stats.norm.interval(interval, d.mean(), d.std(ddof=1)))
+    # d = x / np.maximum.accumulate(x) - 1
+    return min(stats.norm.interval(interval, x.mean(), x.std(ddof=1)))
     # if (abs(x[-1] - 1.075027) < 0.000001):
     #     print "aa\n", d
     #     print "bb", bb, d.mean(), d.std(ddof=1)
     # return bb
-
 
 class RiskManagement(object):
 
@@ -32,12 +31,55 @@ class RiskManagement(object):
         # 买入置信区间
         self.threshhold_buy = 0.75
 
-    def perform(self, df_nav, df_pos, df_timing):
+    def perform(self, asset, df):
+        """Perform risk management base on df_nav and df_pos
+        
+        Keyword arguments:
+        asset -- string, asset name
+        df_nav -- dataframe, columns=['nav', 'timing']
+
+        Return:
+        dataframe, echo column is the new position of the asset after risk management
+        """
+
+        #
+        # 计算回撤矩阵 和 0.97, 0.75置信区间
+        #
+        drawdown = []
+        confidence97 = []
+        confidence75 = []
+
+        sr_nav = df['nav']
+        sr_drawdown = sr_nav.rolling(window=5).apply(
+            lambda x:(x/np.maximum.accumulate(x) - 1).min())
+
+        sr_c97 = sr_drawdown.rolling(window=252, min_periods=252).apply(confidence_interval, args=(0.97,))
+        sr_c75 = sr_drawdown.rolling(window=252, min_periods=252).apply(confidence_interval, args=(0.75,))
+        sr_c97 = sr_c97.shift(1)
+        sr_c75 = sr_c75.shift(1)
+
+        result = {}
+        df = pd.DataFrame({
+            'drawdown' : sr_drawdown,
+            'c97' :      sr_c97,
+            'c75' :      sr_c75,
+            'timing':    df['timing'],
+        })
+
+        with click.progressbar(length=len(df.index), label='riskmgr %-20s' % (asset)) as bar:
+            (pos, action) = self.control(df, bar)
+      
+        # return (pos, action)
+        df_result = pd.DataFrame({'rm_pos': pos, 'rm_action': action})
+        df_result.index.name = 'rm_date'
+
+        return df_result
+
+    def perform2(self, df_nav, df_timing):
         """Perform risk management base on df_nav and df_pos
         
         Keyword arguments:
         df_nav -- dataframe, each column is nav of single asset, indexed by dates
-        df_pos -- dataframe, each column is position of single asset, indexed by date
         df_timing -- dataframe, each column is signal of timing, index by date
 
         Return:
@@ -73,25 +115,21 @@ class RiskManagement(object):
 
         result = {}
         for asset in df_nav.columns:
-            start = df_pos.index.min()
-            index = df_nav.truncate(before=start).index
             df = pd.DataFrame({
-                'pos' :      df_pos[asset].reindex(index, method='pad'),
-                'drawdown' : df_drawdown.loc[start:, asset],
-                'c97' :      df_confidence97.loc[start:, asset],
-                'c75' :      df_confidence75.loc[start:, asset],
-                'timing':    df_timing[asset].reindex(index, method='pad'),
+                'drawdown' : df_drawdown[asset],
+                'c97' :      df_confidence97[asset],
+                'c75' :      df_confidence75[asset],
+                'timing':    df_timing[asset].reindex(df_nav.index, method='pad'),
             })
 
             with click.progressbar(length=len(df.index), label='riskmgr %s' % (asset)) as bar:
                 (pos, action) = self.control(df, bar)
-                result[(asset, 'pos')] = pos
-                result[(asset, 'action')] = action
+                result[(asset, 'rm_pos')] = pos
+                result[(asset, 'rm_action')] = action
 
         df_result = pd.DataFrame(result)
         df_result.index.name = 'date'
         df_result.columns.names = ['asset', 'p&a']
-        print df_result.head()
 
         return df_result
 
@@ -99,13 +137,11 @@ class RiskManagement(object):
         '''Perform core risk management actually
 
         Keyword arguments:
-        df -- dataframe, columns=['pos', 'drawdown', 'c97', 'c75'] index='date'
+        df -- dataframe, columns=['drawdown', 'c97', 'c75', 'timing'] index='date'
 
         Return:
         dict, key=date, value=new_postion
         '''
-        print "\n"
-        print df.loc['2014-03']
         result_pos = {}
         result_action = {}
         status, empty_days, timing_status = (0, 0, 0)
@@ -115,8 +151,8 @@ class RiskManagement(object):
                 bar.update(1)
                 
             # 初始化变量
-            pos, drawdown, c97, c75, timing = (
-                row['pos'], row['drawdown'], row['c97'], row['c75'], row['timing'])
+            drawdown, c97, c75, timing = (
+                row['drawdown'], row['c97'], row['c75'], row['timing'])
             #
             # 检测风控状态是否需要改变
             #
@@ -135,14 +171,14 @@ class RiskManagement(object):
                 #
                 # 不在风控周期内, 则持有原仓位
                 #
-                cur, action = (pos, 0)
+                cur, action = (1, 0)
             else:
                 #
                 # 风控中
                 #
                 if empty_days < 5:
                     # choice 1: 无条件空仓5天
-                    cur, action = (0.0, 1)
+                    cur, action = (0, 1)
                     empty_days += 1
                 else:
                     #
@@ -155,18 +191,18 @@ class RiskManagement(object):
 
                     if timing_status == 0:
                         # 尚未检测到择时信号, 则空仓
-                        cur, action = (0.0, 2)
+                        cur, action = (0, 2)
                     else:
                         # 当前回撤落在 0.97置信区间内:
                         if drawdown >= c97:
-                            cur, action = (pos, 3)
+                            cur, action = (1, 3)
                         elif drawdown <= c97 * 1.25:
-                            cur, action = (0.0, 4)
+                            cur, action = (0, 4)
                         else:
                             if last == 0:
-                                cur, action = (0.0, 5)
+                                cur, action = (0, 5)
                             else:
-                                cur, action = (pos, 5)
+                                cur, action = (1, 5)
                     
             # 记录当日风控结果, 并调整last
             result_pos[day] = last = cur

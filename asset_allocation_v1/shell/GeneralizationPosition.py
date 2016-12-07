@@ -291,7 +291,8 @@ def portfolio_avg_simple():
     #
     # 计算各中类资产的配置比例, 确定调仓时间轴
     #
-    df_portfolio = pd.read_csv(datapath('portfolio_position.csv'), index_col=['risk', 'date'], parse_dates=['date'])
+    # df_portfolio = pd.read_csv(datapath('portfolio_position.csv'), index_col=['risk', 'date'], parse_dates=['date'])
+    df_portfolio = pd.read_csv(datapath('riskmgr_position.csv'), index_col=['risk', 'date'], parse_dates=['date'])
     
     ix_date = df_portfolio.index.levels[1]
 
