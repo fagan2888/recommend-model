@@ -15,6 +15,7 @@ import GeneralizationPosition
 
 import CommandModelRisk
 import CommandNavStock
+import CommandExport
 import CommandFund
 import CommandPool
 import CommandPortfolio
@@ -112,6 +113,7 @@ if __name__=='__main__':
     # pool.add_command(CommandPool.stock)
     # pool.add_command(CommandPool.bond)
     roboadvisor.add_command(CommandPortfolio.portfolio)
+    roboadvisor.add_command(CommandExport.export)
     roboadvisor.add_command(CommandFund.fund)
     roboadvisor.add_command(CommandPool.pool)
     roboadvisor.add_command(CommandCompositeAsset.composite)

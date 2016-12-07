@@ -89,6 +89,33 @@ def batch(db, table, df_new, df_old, timestamp=True):
             logger.info("update %s : {key: %s, dirties: %s " % (table.name, str(pkeys), str(dirty)))
             stmt.execute()
 
+#
+# base.trade_dates
+#
+def base_trade_dates_load_index(begin_date=None, end_date=None):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('trade_dates', metadata, autoload=True)
+
+    columns = [
+        t1.c.td_date,
+        t1.c.td_type,
+    ]
+
+    s = select(columns)
+    
+    if begin_date is not None:
+        s = s.where(t1.c.td_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.td_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['td_date'], parse_dates=['td_date'])
+
+    return df.index
+
+#
+# base.ra_fund
+#
 def base_ra_fund_find(globalid):
     db = connection('base')
     metadata = MetaData(bind=db)
@@ -134,6 +161,9 @@ def base_ra_fund_load(globalids=None, codes=None):
 
     return df
 
+#
+# base.ra_fund_nav
+#
 def base_ra_fund_nav_load_weekly(begin_date, end_date, fund_ids=None, codes=None):
     db = connection('base')
     metadata = MetaData(bind=db)
@@ -194,7 +224,35 @@ def base_ra_fund_nav_load_daily(begin_date, end_date, fund_ids=None, codes=None)
 
     return df
 
+def base_ra_fund_nav_load_series(code, reindex=None, begin_date=None, end_date=None):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_fund_nav', metadata, autoload=True)
 
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav_adjusted.label('nav'),
+    ]
+
+    s = select(columns) \
+        .where((t1.c.ra_code == code) | (t1.c.ra_fund_id == code))
+
+    # s = select(columns).where(t1.c.ra_fund_id == id_)
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df['nav']
+
+#
+# base.ra_index
+#
 def base_ra_index_find(globalid):
     db = connection('base')
     metadata = MetaData(bind=db)
@@ -212,7 +270,37 @@ def base_ra_index_find(globalid):
     s = select(columns).where(t.c.globalid == globalid)
 
     return s.execute().first()
+#
+# base.ra_index_nav
+#
+def base_ra_index_nav_load_series(id_, reindex=None, begin_date=None, end_date=None):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_index_nav', metadata, autoload=True)
 
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav.label('nav'),
+    ]
+
+    s = select(columns).where(t1.c.ra_index_id == id_)
+    
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df['nav']
+
+
+#
+# asset.allocation_instance_nav
+#
 def asset_allocation_instance_nav_load(inst, xtype, allocs=None, begin=None, end=None):
     db = connection('asset')
     metadata = MetaData(bind=db)
@@ -243,4 +331,89 @@ def asset_allocation_instance_nav_load(inst, xtype, allocs=None, begin=None, end
     df.columns = df.columns.droplevel(0)
 
     return df
+
+def asset_allocation_instance_nav_load_series(
+        id_, alloc_id, xtype, reindex=None, begin_date=None, end_date=None):
+    db = connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('allocation_instance_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ai_date.label('date'),
+        t1.c.ai_nav.label('nav'),
+    ]
+
+    s = select(columns) \
+        .where(t1.c.ai_inst_id == id_) \
+        .where(t1.c.ai_alloc_id == alloc_id) \
+        .where(t1.c.ai_type == xtype)
     
+    if begin_date is not None:
+        s = s.where(t1.c.ai_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ai_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df['nav']
+
+#
+# asset.ra_composite_asset_nav
+#
+def asset_ra_composite_asset_load_series(id_, reindex=None, begin_date=None, end_date=None):
+    db = connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_composite_asset_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav.label('nav'),
+    ]
+
+    s = select(columns).where(t1.c.ra_asset_id == id_)
+    
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df['nav']
+
+#
+# asset.ra_pool_nav
+#
+def asset_ra_pool_nav_load_series(id_, category, xtype, reindex=None, begin_date=None, end_date=None):
+    db = connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_pool_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav.label('nav'),
+    ]
+
+    s = select(columns) \
+        .where(t1.c.ra_pool == id_) \
+        .where(t1.c.ra_category == category) \
+        .where(t1.c.ra_type == xtype)
+    
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df['nav']
+
