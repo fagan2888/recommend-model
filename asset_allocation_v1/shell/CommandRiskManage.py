@@ -43,6 +43,7 @@ def riskmgr(ctx):
     pass
 
 
+
 @riskmgr.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2012-07-15', help=u'start date to calc')
@@ -102,12 +103,12 @@ def simple(ctx, datadir, optinst, startdate, enddate):
 
     tasks = {
         'largecap'       : [49101, 11],
-        'smallcap'       : [49101, 12],
-        'rise'           : [49101, 13],
-        'oscillation'    : [49101, 14],
-        'decline'        : [49101, 15],
-        'growth'         : [49101, 16],
-        'value'          : [49101, 17],
+        'smallcap'       : None, #[49101, 12],
+        'rise'           : None, #[49101, 13],
+        'oscillation'    : None, #[49101, 14],
+        'decline'        : None, #[49101, 15],
+        'growth'         : None, #[49101, 16],
+        'value'          : None, #[49101, 17],
         'SP500.SPI'      : None, #[49201, 41],
         'GLNC'           : None, #[49301, 42],
         'HSCI.HI'        : None, #[49401, 43],
@@ -164,23 +165,21 @@ def simple(ctx, datadir, optinst, startdate, enddate):
     #
     df_pos_markowitz = pd.read_csv(datapath('portfolio_position.csv'), index_col=['date'], parse_dates=['date'])
 
-    print df_pos_markowitz.head()
-    
     df_pos_riskmgr = database.asset_rm_risk_mgr_pos_load(optinst)
-
-    print df_pos_riskmgr.head()
 
     for column in df_pos_riskmgr.columns:
         category = DFUtil.categories_name(column)
+                
         if category in df_pos_markowitz:
-            df_pos_tmp = df_pos_riskmgr[column].reindex(df_pos_markowitz.index)
-            print "-----------------------------------------"
-            print df_pos_markowitz[category].loc['2013-10-11']
-            print df_pos_tmp.loc['2013-10-11']
+            df_pos_tmp = df_pos_riskmgr[11].reindex(df_pos_markowitz.index)
             df_pos_markowitz[category] = df_pos_markowitz[category] * df_pos_tmp
-            print df_pos_markowitz[category].loc['2013-10-11']
 
-    print df_pos_markowitz.loc['2013-10-11']
     df_result = df_pos_markowitz.reset_index().set_index(['risk', 'date'])
+
+    #
+    # 调整货币的比例, 总和达到1
+    #
+    df_result['money'] = (1 - (df_result.sum(axis=1) - df_result['money']))
+    
     df_result.to_csv(datapath('riskmgr_position.csv'))
 
