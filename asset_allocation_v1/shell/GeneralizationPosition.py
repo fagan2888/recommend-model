@@ -287,12 +287,13 @@ def portfolio_detail():
 
     return df_result
 
-def portfolio_avg_simple():
+def portfolio_avg_simple(position_input, position_output):
     #
     # 计算各中类资产的配置比例, 确定调仓时间轴
     #
     # df_portfolio = pd.read_csv(datapath('portfolio_position.csv'), index_col=['risk', 'date'], parse_dates=['date'])
-    df_portfolio = pd.read_csv(datapath('riskmgr_position.csv'), index_col=['risk', 'date'], parse_dates=['date'])
+    # df_portfolio = pd.read_csv(datapath('riskmgr_position.csv'), index_col=['risk', 'date'], parse_dates=['date'])
+    df_portfolio = pd.read_csv(position_input, index_col=['risk', 'date'], parse_dates=['date'])
     
     ix_date = df_portfolio.index.levels[1]
 
@@ -321,14 +322,13 @@ def portfolio_avg_simple():
         
 
     df_pool['weight'] = 1.0
-    
     df_pool.set_index('code', append=True, inplace=True)
     df_pool = df_pool.groupby(level=(0,1,2)).first()
+
     df_pool = df_pool.unstack((0, 2)).reindex(ix_date, method='pad').stack((1,2))
 
     # df_pool = df_pool.reindex(ix_date, method='pad')
-    df_pool = df_pool.swaplevel(0,1)
-
+    df_pool = df_pool.swaplevel(0,1).sort_index()
     df_pool['type'] = df_pool.index.get_level_values('category')
     df_pool.loc[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value'], 'type'] = 'stock'
 
@@ -355,13 +355,13 @@ def portfolio_avg_simple():
 
     df_result = df_result[['risk', 'date', 'category', 'code', 'ratio']]
     df_result.rename(columns={'code':'fund'}, inplace=True)
-    df_result.to_csv(datapath('position-raw.csv'), index=False)
+    # df_result.to_csv(datapath('position-raw.csv'), index=False)
     
     #
     # 过滤掉过小的份额配置
     #
     df_result = df_result[df_result['ratio'] >= 0.0009999]
-    df_result.to_csv(datapath('position-nosmall.csv'), index=False)
+    # df_result.to_csv(datapath('position-nosmall.csv'), index=False)
     print "fileout small"
 
     #
@@ -369,7 +369,7 @@ def portfolio_avg_simple():
     #
     df_result = DFUtil.filter_by_turnover_rate(df_result, 0.03)
     print "filter_by_turnover_rate"
-    df_result.to_csv(datapath('position-turnover.csv'), index=False)
+    # df_result.to_csv(datapath('position-turnover.csv'), index=False)
 
 
     #
@@ -381,7 +381,7 @@ def portfolio_avg_simple():
     #
     # 计算资产组合净值
     #
-    df_result.to_csv(datapath('position-v.csv'), index=False)
+    df_result.to_csv(position_output, index=False)
 
 
 def filter_by_turnover_rate(df, turnover_rate):

@@ -61,20 +61,22 @@ def test(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
         yesterday = (datetime.now() - timedelta(days=1)); 
         enddate = yesterday.strftime("%Y-%m-%d")        
 
-    df_inc = pd.read_csv(datapath('port_pct.csv'),  index_col=['date'], parse_dates=['date'])
-    df_nav = (df_inc + 1).cumprod()
+    df_nav = pd.read_csv(datapath('../csvdata/000300_nav_2012.csv'),  index_col=['date'], parse_dates=['date'])
+    #df_nav = pd.read_csv(datapath('dd.csv'),  index_col=['td_date'], parse_dates=['td_date'])
 
-    df_pos = pd.read_csv(datapath('port_weight.csv'),  index_col=['date'], parse_dates=['date'])
+    #df_pos = pd.read_csv(datapath('port_weight.csv'),  index_col=['date'], parse_dates=['date'])
 
     df_timing = pd.read_csv(datapath('hs_gftd.csv'),  index_col=['date'], parse_dates=['date'], usecols=['date', 'trade_types'])
+    #df_timing = pd.read_csv(datapath('../csvdata/000300_gftd_result.csv'),  index_col=['date'], parse_dates=['date'], usecols=['date', 'trade_types'])
     df_timing = df_timing.rename(columns={'trade_types':'sh000300'})
 
-    print df_nav.head()
-    print df_pos.head()
-    print df_timing.head()
+    df = pd.DataFrame({
+        'nav': df_nav.iloc[:, 0],
+        'timing': df_timing['sh000300'].reindex(df_nav.index, method='pad')
+    })
 
     risk_mgr = RiskManagement.RiskManagement()
-    df_result = risk_mgr.perform(df_nav[['sh000300']], df_pos[['sh000300']], df_timing[['sh000300']])
+    df_result = risk_mgr.perform('sh000300', df)
 
     df_result.to_csv(datapath('riskmgr_result.csv'))
 
@@ -103,15 +105,15 @@ def simple(ctx, datadir, optinst, startdate, enddate):
 
     tasks = {
         'largecap'       : [49101, 11],
-        'smallcap'       : None, #[49101, 12],
-        'rise'           : None, #[49101, 13],
-        'oscillation'    : None, #[49101, 14],
-        'decline'        : None, #[49101, 15],
-        'growth'         : None, #[49101, 16],
-        'value'          : None, #[49101, 17],
-        'SP500.SPI'      : None, #[49201, 41],
-        'GLNC'           : None, #[49301, 42],
-        'HSCI.HI'        : None, #[49401, 43],
+        'smallcap'       : [49101, 12],
+        'rise'           : [49101, 13],
+        'oscillation'    : [49101, 14],
+        'decline'        : [49101, 15],
+        'growth'         : [49101, 16],
+        'value'          : [49101, 17],
+        'SP500.SPI'      : [49201, 41],
+        'GLNC'           : [49301, 42],
+        'HSCI.HI'        : [49401, 43],
         'convertiblebond': None,
         'creditbond'     : None,
         'money'          : None,
@@ -169,9 +171,15 @@ def simple(ctx, datadir, optinst, startdate, enddate):
 
     for column in df_pos_riskmgr.columns:
         category = DFUtil.categories_name(column)
+        # if column < 20:
+        #     rmc = 11
+        # else:
+        #     rmc = column
+        rmc = column
+        print "use column %d for category %s" % (rmc, category)
                 
         if category in df_pos_markowitz:
-            df_pos_tmp = df_pos_riskmgr[11].reindex(df_pos_markowitz.index)
+            df_pos_tmp = df_pos_riskmgr[rmc].reindex(df_pos_markowitz.index)
             df_pos_markowitz[category] = df_pos_markowitz[category] * df_pos_tmp
 
     df_result = df_pos_markowitz.reset_index().set_index(['risk', 'date'])

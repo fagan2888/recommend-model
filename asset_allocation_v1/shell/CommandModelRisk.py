@@ -24,6 +24,7 @@ import GeneralizationPosition
 import Const
 import WeekFund2DayNav
 import FixRisk
+import CommandRiskManage
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -32,17 +33,22 @@ from Const import datapath
 import traceback, code
 
 @click.command()
+@click.option('--inst', 'optinst', default=None, help=u'instance id')
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2012-07-15', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--label-asset/--no-label-asset', default=True)
 @click.option('--reshape/--no-reshape', default=True)
 @click.option('--markowitz/--no-markowitz', default=True)
+@click.option('--riskmgr/--no-riskmgr', default=True)
 @click.pass_context
-def risk(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
+def risk(ctx, optinst, datadir, startdate, enddate, label_asset, reshape, markowitz, riskmgr):
     '''run constant risk model
     '''
     Const.datadir = datadir
+
+    if optinst is None:
+        optinst = asset_allocation_instance_new_globalid(type=1)
 
     if not enddate:
         yesterday = (datetime.now() - timedelta(days=1)); 
@@ -135,24 +141,24 @@ def risk(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
     GeneralizationPosition.portfolio_category()
     print "output category portfolio ok"
 
-    # print "output simple position ...."
-    # GeneralizationPosition.portfolio_simple()
-    # print "output simple position ok"
+    # print "output detail position ...."
+    # GeneralizationPosition.portfolio_detail()
+    # print "output detail position ok"
 
-    print "output detail position ...."
-    GeneralizationPosition.portfolio_detail()
-    print "output detail position ok"
+    print "perform risk management ..."
+    ctx.invoke(CommandRiskManage.simple, optinst=optinst)
+    print "perform risk management done"
 
     print "output stockavg position ..."
-    GeneralizationPosition.portfolio_avg_simple()
-    print "output stockavg positon ok"
+    GeneralizationPosition.portfolio_avg_simple(
+        datapath('riskmgr_position.csv'), datapath('position-r.csv'))
+    print "output stockavg positon done"
 
-    # print "output trade position ...."
-    # outfile = datapath("position-z.csv")
-    # with (open(outfile, 'w') if outfile != '-' else os.fdopen(os.dup(sys.stdout.fileno()), 'w')) as out:
-    #     GeneralizationPosition.portfolio_trade(out)
-    # print "output trade position ok"
+    if riskmgr is False:
+        print "output stockavg position without risk management ..."
+        GeneralizationPosition.portfolio_avg_simple(
+            datapath('portfolio_position.csv'), datapath('position-v.csv'))
+        print "output stockavg position without risk management done"
 
-    
 
 

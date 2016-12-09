@@ -112,8 +112,7 @@ def load_inc_csv(csv, columns=None, reindex=None):
 def pad_sum_to_one(df, by, ratio='ratio'):
     df3 = df[ratio].groupby(by).agg(['sum', 'idxmax'])
     df.ix[df3['idxmax'], ratio] += (1 - df3['sum']).values
-
-    print df[ratio].groupby(by).sum()
+    # print df[ratio].groupby(by).sum()
     
     return df
 

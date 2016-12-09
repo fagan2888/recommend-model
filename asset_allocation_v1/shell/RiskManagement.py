@@ -17,12 +17,13 @@ from scipy import stats
 
 def confidence_interval(x, interval):
     # d = x / np.maximum.accumulate(x) - 1
+    d = x[::5]
     return min(stats.norm.interval(interval, x.mean(), x.std(ddof=1)))
     # if (abs(x[-1] - 1.075027) < 0.000001):
     #     print "aa\n", d
     #     print "bb", bb, d.mean(), d.std(ddof=1)
     # return bb
-
+    
 class RiskManagement(object):
 
     def __init__(self):
@@ -32,6 +33,93 @@ class RiskManagement(object):
         self.threshhold_buy = 0.75
 
     def perform(self, asset, df):
+        """Perform risk management base on df_nav and df_pos
+        
+        Keyword arguments:
+        asset -- string, asset name
+        df_nav -- dataframe, columns=['nav', 'timing']
+
+        Return:
+        dataframe, echo column is the new position of the asset after risk management
+        """
+
+        #
+        # 计算回撤矩阵 和 0.97, 0.75置信区间
+        #
+        inc5d = []
+        confidence97 = []
+        confidence75 = []
+
+        sr_nav = pd.Series(np.log(df['nav']), index=df.index)
+        sr_inc5d = sr_nav.rolling(window=6).apply(lambda x: x[-1] - x[0])
+
+        sr_c97 = sr_inc5d.rolling(window=256, min_periods=256).apply(confidence_interval, args=(0.97,))
+        sr_c75 = sr_inc5d.rolling(window=256, min_periods=256).apply(confidence_interval, args=(0.75,))
+        sr_c97 = sr_c97.shift(5)
+        sr_c75 = sr_c75.shift(5)
+
+        result = {}
+        df = pd.DataFrame({
+            'drawdown' : sr_inc5d,
+            'c97' :      sr_c97,
+            'c75' :      sr_c75,
+            'timing':    df['timing'],
+        })
+
+        with click.progressbar(length=len(df.index), label='riskmgr %-20s' % (asset)) as bar:
+            (pos, action) = self.control(df, bar)
+      
+        # return (pos, action)
+        df_result = pd.DataFrame({'rm_pos': pos, 'rm_action': action})
+        df_result.index.name = 'rm_date'
+
+        return df_result
+        
+    def perform4(self, asset, df):
+        """Perform risk management base on df_nav and df_pos
+        
+        Keyword arguments:
+        asset -- string, asset name
+        df_nav -- dataframe, columns=['nav', 'timing']
+
+        Return:
+        dataframe, echo column is the new position of the asset after risk management
+        """
+
+        #
+        # 计算回撤矩阵 和 0.97, 0.75置信区间
+        #
+        drawdown = []
+        confidence97 = []
+        confidence75 = []
+
+        sr_nav = df['nav']
+        sr_drawdown = sr_nav.rolling(window=5).apply(
+            lambda x:(x/np.maximum.accumulate(x) - 1).min())
+
+        sr_c97 = sr_drawdown.rolling(window=256, min_periods=256).apply(confidence_interval, args=(0.97,))
+        sr_c75 = sr_drawdown.rolling(window=256, min_periods=256).apply(confidence_interval, args=(0.75,))
+        sr_c97 = sr_c97.shift(5)
+        sr_c75 = sr_c75.shift(5)
+
+        result = {}
+        df = pd.DataFrame({
+            'drawdown' : sr_drawdown,
+            'c97' :      sr_c97,
+            'c75' :      sr_c75,
+            'timing':    df['timing'],
+        })
+
+        with click.progressbar(length=len(df.index), label='riskmgr %-20s' % (asset)) as bar:
+            (pos, action) = self.control(df, bar)
+      
+        # return (pos, action)
+        df_result = pd.DataFrame({'rm_pos': pos, 'rm_action': action})
+        df_result.index.name = 'rm_date'
+
+        return df_result
+
+    def perform252(self, asset, df):
         """Perform risk management base on df_nav and df_pos
         
         Keyword arguments:
@@ -75,7 +163,68 @@ class RiskManagement(object):
 
         return df_result
 
-    def perform2(self, df_nav, df_timing):
+    def perform3(self, asset, df):
+        """Perform risk management base on df_nav and df_pos
+        
+        Keyword arguments:
+        asset -- string, asset name
+        df_nav -- dataframe, columns=['nav', 'timing']
+
+        Return:
+        dataframe, echo column is the new position of the asset after risk management
+        """
+
+        #
+        # 计算回撤矩阵 和 0.97, 0.75置信区间
+        #
+        drawdown = []
+        confidence97 = []
+        confidence75 = []
+
+        sr_nav = df['nav']
+
+        with click.progressbar(length=5, label='calc drawdown') as bar:
+            for i in xrange(0, 5):
+                bar.update(1)
+
+                sr_slice = sr_nav[i::5]
+                sr_tmp =  sr_slice/ sr_slice.rolling(window=53, min_periods=1).max() - 1
+                # df_c97 = df_tmp.rolling(window=52, min_periods=52).apply(
+                #     lambda x: min(stats.norm.interval(0.97, x.mean(), x.std())))
+                # df_c75 = df_tmp.rolling(window=52, min_periods=52).apply(
+                #     lambda x: min(stats.norm.interval(0.75, x.mean(), x.std())))
+                sr_c97_tmp = sr_slice[i::5].rolling(window=52, min_periods=52).apply(confidence_interval, args=(0.97,))
+                sr_c75_tmp = sr_slice[i::5].rolling(window=52, min_periods=52).apply(confidence_interval, args=(0.75,))
+                sr_c97_tmp = sr_c97_tmp.shift(1)
+                sr_c75_tmp = sr_c75_tmp.shift(1)
+
+                drawdown.append(sr_tmp)
+                confidence97.append(sr_c97_tmp)
+                confidence75.append(sr_c75_tmp)
+
+        sr_drawdown = pd.concat(drawdown).sort_index()
+        sr_c97 = pd.concat(confidence97).sort_index()
+        sr_c75 = pd.concat(confidence75).sort_index()
+
+        result = {}
+        df = pd.DataFrame({
+            'drawdown' : sr_drawdown,
+            'c97' :      sr_c97,
+            'c75' :      sr_c75,
+            'timing':    df['timing'],
+        })
+
+        with click.progressbar(length=len(df.index), label='riskmgr %-20s' % (asset)) as bar:
+            (pos, action) = self.control(df, bar)
+      
+        # return (pos, action)
+        df_result = pd.DataFrame({'rm_pos': pos, 'rm_action': action})
+        df_result.index.name = 'rm_date'
+
+        return df_result
+    
+    
+    def performb(self, df_nav, df_timing):
         """Perform risk management base on df_nav and df_pos
         
         Keyword arguments:
