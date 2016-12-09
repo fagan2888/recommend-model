@@ -114,8 +114,7 @@ def load_inc_csv(csv, columns=None, reindex=None):
 def pad_sum_to_one(df, by, ratio='ratio'):
     df3 = df[ratio].groupby(by).agg(['sum', 'idxmax'])
     df.ix[df3['idxmax'], ratio] += (1 - df3['sum']).values
-
-    print df[ratio].groupby(by).sum()
+    # print df[ratio].groupby(by).sum()
     
     return df
 
@@ -147,6 +146,30 @@ def filter_by_turnover_rate_per_risk(df, turnover_rate):
 
 def portfolio_import(df):
     pass;
+
+def nav_drawdown(df_nav):
+    ''' calc drawdown base on nav
+    '''
+    return df_nav/df_nav.cummax() - 1
+
+def inc_drawdown(df_inc):
+    ''' calc drawdown base on inc
+    '''
+    df_nav = (df_inc + 1).cumprod()
+    return df_nav/df_nav.cummax() - 1
+
+def nav_drawdown_window(df_nav, window, min_periods=1):
+    ''' calc drawdown base on nav
+    '''
+    df_max = df_nav.rolling(window=window, min_periods=min_periods).max()
+    return df_nav/df_max - 1
+
+def nav_max_drawdown_window(df_nav, window, min_periods=1):
+    ''' calc max draw base on slice window of nav
+    '''
+    return df_nav.rolling(
+        window=window, min_periods=min_periods).apply(
+            lambda x:(x/np.maximum.accumulate(x) - 1).min())
 
 
 def merge_column_for_fund_id_type(df, code, usecols=['globalid', 'ra_type']):
@@ -217,6 +240,33 @@ def categories_types(as_int=False):
         'GLNC'            : '42', # 黄金
         'HSCI.HI'         : '43', # 恒生
     }
+
+def categories_name(category, default='unknown'):
+    tls = {
+        11 : 'largecap'       , # 大盘
+        12 : 'smallcap'       , # 小盘
+        13 : 'rise'           , # 上涨
+        14 : 'oscillation'    , # 震荡
+        15 : 'decline'        , # 下跌
+        16 : 'growth'         , # 成长
+        17 : 'value'          , # 价值
+        
+        21 : 'ratebond'       , # 利率债
+        22 : 'creditbond'     , # 信用债
+        23 : 'convertiblebond', # 可转债
+        
+        31 : 'money'          , # 货币
+        
+        41 : 'SP500.SPI'      , # 标普
+        42 : 'GLNC'           , # 黄金
+        43 : 'HSCI.HI'        , # 恒生
+    }        
+
+    if category in tls:
+        return tls[category]
+    else:
+        return default
+    
 
 
 if __name__ == '__main__':

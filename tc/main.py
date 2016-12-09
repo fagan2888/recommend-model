@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 
 import momen
-
+import gftd
 
 if __name__ == "__main__":
-    print "hello"
+    gftd_ins = gftd.GFTD('HSI001', '20100101', '20161122')

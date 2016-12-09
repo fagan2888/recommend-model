@@ -155,15 +155,37 @@ def trade(ctx, datadir, output):
 
 @portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--input', '-i', 'optinput', type=click.Path(exists=True), help=u'portfolio position file as input') 
+@click.option('--output', '-o', 'optoutput', type=click.Path(), help=u'file position file to output') 
 @click.pass_context
-def stockavg(ctx, datadir):
+def stockavg(ctx, datadir, optinput, optoutput):
     '''generate final portfolio using simple average strategy (no cost)
     '''
     Const.datadir = datadir
     #
     # 生成配置数据
     #
-    GeneralizationPosition.portfolio_avg_simple()
+    output = None
+    if optinput is None:
+        if os.path.isfile(datapath('riskmgr_position.csv')):
+            optinput = datapath('riskmgr_position.csv')
+            output = datapath('position-r.csv')
+        elif os.path.isfile(datapath('portfolio_position.csv')):
+            optinput = datapath('portfolio_position.csv')
+            output = datapath('position-v.csv')
+        else:
+            click.echo(click.style("error: mising position file!", fg="yellow"))
+            return -1
+        
+    if optoutput is None:
+        if output is None:
+            optoutput = datapath('position-v.csv')
+        else:
+            optoutput = output
+                
+        
+    print "convert portfilio position  %s to final position %s" % (optinput, optoutput)
+    GeneralizationPosition.portfolio_avg_simple(optinput, optoutput)
 
 @portfolio.command()
 @click.option('--inst', 'optInst', help=u'portfolio id to calc turnover')
