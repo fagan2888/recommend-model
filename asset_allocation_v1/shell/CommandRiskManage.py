@@ -31,7 +31,7 @@ import DFUtil
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
-from sqlalchemy import MetaData, Table,select
+from sqlalchemy import MetaData, Table, select, func
 
 import traceback, code
 
@@ -97,6 +97,8 @@ def simple(ctx, datadir, optinst, startdate, enddate):
         
     if optinst is None:
         optinst = 2016120600
+
+    make_rm_risk_mgr_if_not_exist(optinst)
 
     df_nav = pd.read_csv(datapath('equalriskasset.csv'),  index_col=['date'], parse_dates=['date'])
     if not startdate:
@@ -198,3 +200,23 @@ def simple(ctx, datadir, optinst, startdate, enddate):
     
     df_result.to_csv(datapath('riskmgr_position.csv'))
 
+def make_rm_risk_mgr_if_not_exist(id_):
+    db = database.connection('asset')
+    t2 = Table('rm_risk_mgr', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.globalid,
+        t2.c.rm_inst_id,
+    ]
+    s = select(columns2, (t2.c.globalid == id_))
+    df = pd.read_sql(s, db, index_col=['globalid'])
+    if not df.empty:
+        return True
+    #
+    # 导入数据
+    #
+    row = {
+        'globalid': id_, 'rm_inst_id': id_, 'created_at': func.now(), 'updated_at': func.now()
+    }
+    t2.insert(row).execute()
+
+    return True
