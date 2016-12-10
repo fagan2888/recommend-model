@@ -81,7 +81,7 @@ def test(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
     df_result.to_csv(datapath('riskmgr_result.csv'))
 
 @riskmgr.command()
-@click.option('--inst', 'optinst',  help=u'risk mgr id')
+@click.option('--inst', 'optinst', type=int, help=u'risk mgr id')
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
@@ -93,7 +93,10 @@ def simple(ctx, datadir, optinst, startdate, enddate):
 
     if not enddate:
         yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        enddate = yesterday.strftime("%Y-%m-%d")
+        
+    if optinst is None:
+        optinst = 2016120600
 
     df_nav = pd.read_csv(datapath('equalriskasset.csv'),  index_col=['date'], parse_dates=['date'])
     if not startdate:
@@ -141,6 +144,8 @@ def simple(ctx, datadir, optinst, startdate, enddate):
         df_new['rm_risk_mgr_id'] = optinst
         df_new['rm_category'] = category
         df_new = df_new.reset_index().set_index(['rm_risk_mgr_id', 'rm_category', 'rm_date'])
+        if not df_new.empty:
+            df_new = df_new.applymap("{:.0f}".format)
         
         #
         # 保存风控仓位到数据库
@@ -151,15 +156,17 @@ def simple(ctx, datadir, optinst, startdate, enddate):
             t2.c.rm_risk_mgr_id,
             t2.c.rm_category,
             t2.c.rm_date,
-            t2.c.rm_pos,
             t2.c.rm_action,
+            t2.c.rm_pos,
         ]
         s = select(columns2, (t2.c.rm_risk_mgr_id == optinst) & (t2.c.rm_category == category))
         df_old = pd.read_sql(s, db, index_col=['rm_risk_mgr_id', 'rm_category', 'rm_date'], parse_dates=['rm_date'])
         if not df_old.empty:
-            df_old = df_old.applymap("{:.4f}".format)
+            df_old = df_old.applymap("{:.0f}".format)
 
         # 更新数据库
+        # print df_new.head()
+        # print df_old.head()
         database.batch(db, t2, df_new, df_old, timestamp=False)
 
     #
@@ -176,7 +183,7 @@ def simple(ctx, datadir, optinst, startdate, enddate):
         # else:
         #     rmc = column
         rmc = column
-        print "use column %d for category %s" % (rmc, category)
+        # print "use column %d for category %s" % (rmc, category)
                 
         if category in df_pos_markowitz:
             df_pos_tmp = df_pos_riskmgr[rmc].reindex(df_pos_markowitz.index)

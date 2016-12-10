@@ -466,7 +466,38 @@ def base_ra_index_nav_load_series(id_, reindex=None, begin_date=None, end_date=N
         df = df.reindex(reindex)
 
     return df['nav']
+#
+# asset.allocation_instance
+#
+def asset_allocation_instance_new_globalid(xtype=1, replace=False):
+    db = connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('allocation_instances', metadata, autoload=True)
 
+    today = datetime.now().strftime("%Y%m%d")
+    if xtype == 9:
+        between_min, between_max = ('%s90' % (today), '%s99' % (today))
+    else:
+        between_min, between_max = ('%s00' % (today), '%s89' % (today))
+
+    columns = [ t.c.id ]
+
+    s = select([func.max(t.c.id).label('maxid')]).where(t.c.id.between(between_min, between_max))
+
+    max_id = s.execute().scalar()
+
+    if max_id is None:
+        ret = int(between_min)
+    else:
+        if max_id >= between_max:
+            logger.warning("run out of allocation instance id [%s]!", max_id)
+            ret = None
+        else:
+            if replace:
+                ret = max_id
+            else:
+                ret = max_id + 1
+    return ret
 
 #
 # asset.allocation_instance_nav

@@ -25,6 +25,7 @@ import Const
 import WeekFund2DayNav
 import FixRisk
 import CommandRiskManage
+import database
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -33,7 +34,8 @@ from Const import datapath
 import traceback, code
 
 @click.command()
-@click.option('--inst', 'optinst', default=None, help=u'instance id')
+@click.option('--inst', 'optinst', type=int, default=None, help=u'instance id')
+@click.option('--type', 'opttype', type=int, default=1, help=u'instance type(1:experimental;9:online)')
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
@@ -42,13 +44,16 @@ import traceback, code
 @click.option('--markowitz/--no-markowitz', default=True)
 @click.option('--riskmgr/--no-riskmgr', default=True)
 @click.pass_context
-def risk(ctx, optinst, datadir, startdate, enddate, label_asset, reshape, markowitz, riskmgr):
+def risk(ctx, optinst, opttype, datadir, startdate, enddate, label_asset, reshape, markowitz, riskmgr):
     '''run constant risk model
     '''
     Const.datadir = datadir
 
+    if opttype != 9:
+        opttype = 1
+
     if optinst is None:
-        optinst = asset_allocation_instance_new_globalid(type=1)
+        optinst = database.asset_allocation_instance_new_globalid(xtype=opttype)
 
     if not enddate:
         yesterday = (datetime.now() - timedelta(days=1)); 
