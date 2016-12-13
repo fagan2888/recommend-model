@@ -153,7 +153,7 @@ def risk(ctx, optinst, opttype, datadir, startdate, enddate, label_asset, reshap
     # print "output detail position ok"
 
     print "perform risk management ..."
-    ctx.invoke(CommandRiskManage.simple, optinst=optinst)
+    ctx.invoke(CommandRiskManage.simple, datadir=datadir, optinst=optinst)
     print "perform risk management done"
 
     print "output stockavg position ..."

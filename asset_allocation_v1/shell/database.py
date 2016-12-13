@@ -164,6 +164,15 @@ def base_trade_dates_load_index(begin_date=None, end_date=None):
     ]
 
     s = select(columns)
+    if begin_date is not None:
+        s = s.where(t1.c.td_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.td_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['td_date'], parse_dates=['td_date'])
+
+    return df.index
+
 def asset_tc_timing_signal_load(timings, begin_date=None, end_date=None):
     db = connection('asset')
     metadata = MetaData(bind=db)

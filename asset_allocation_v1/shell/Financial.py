@@ -39,7 +39,7 @@ def efficient_frontier_spe(return_rate, bound):
         G[n_asset + i, i ]     = -1
         G[2 * n_asset + i, i ] = 1
 
-    for n in range(6, 8):
+    for n in range(6, 9):
         G[3 * n_asset, n]     = 1
     '''
     for n in range(7, 10):
