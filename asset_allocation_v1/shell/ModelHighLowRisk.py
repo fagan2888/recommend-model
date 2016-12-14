@@ -48,11 +48,21 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
     #
     # 基于马克维茨进行资产配置
     #
-    uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3, 0.3]
-    downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    # uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3, 0.3]
+    # downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    bound = [
+        {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        {'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
+        {'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
+        {'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
+    ]
 
-    #risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
-    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, [downlimit, uplimit])
+    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
