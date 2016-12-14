@@ -43,8 +43,9 @@ import traceback, code
 @click.option('--reshape/--no-reshape', default=True)
 @click.option('--markowitz/--no-markowitz', default=True)
 @click.option('--riskmgr/--no-riskmgr', default=True)
+@click.option('--exclude-category', 'excluded_category', help=u'category to excluded(e.g. rise,decline,SP500.SPI,GLNC,HSCI.HI')
 @click.pass_context
-def risk(ctx, optinst, opttype, datadir, startdate, enddate, label_asset, reshape, markowitz, riskmgr):
+def risk(ctx, optinst, opttype, datadir, startdate, enddate, label_asset, reshape, markowitz, riskmgr, excluded_category):
     '''run constant risk model
     '''
     Const.datadir = datadir
@@ -57,7 +58,13 @@ def risk(ctx, optinst, opttype, datadir, startdate, enddate, label_asset, reshap
 
     if not enddate:
         yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        enddate = yesterday.strftime("%Y-%m-%d")
+
+    if excluded_category is not None:
+        excluded = [s.strip() for s in excluded_category.split(',')]
+    else:
+        excluded = []
+        
 
     # 加载时间轴数据
     index = DBData.trade_date_index(startdate, end_date=enddate)
@@ -139,9 +146,10 @@ def risk(ctx, optinst, opttype, datadir, startdate, enddate, label_asset, reshap
         print "calc equal risk nav finished"
 
     if markowitz:
+        
         print "calc high low risk model ..."
         # RiskHighLowRiskAsset.highlowriskasset(allocationdata.allocation_lookback, allocationdata.allocation_adjust_period)
-        ModelHighLowRisk.asset_alloc_high_low(allocationdata.start_date, allocationdata.end_date, lookback=26, adjust_period=1)
+        ModelHighLowRisk.asset_alloc_high_low(allocationdata.start_date, allocationdata.end_date, lookback=26, adjust_period=1, excluded=excluded)
         print "calc high low risk model finished"
 
     print "output category position ...."
@@ -166,6 +174,4 @@ def risk(ctx, optinst, opttype, datadir, startdate, enddate, label_asset, reshap
         GeneralizationPosition.portfolio_avg_simple(
             datapath('portfolio_position.csv'), datapath('position-v.csv'))
         print "output stockavg position without risk management done"
-
-
 
