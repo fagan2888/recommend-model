@@ -342,3 +342,69 @@ def export_nav(ctx, optInst, opttype, optAlloc, startdate, enddate, optlist):
 
     print "export allocation instance [%s] to file %s" % (optInst, path)
 
+@portfolio.command()
+@click.option('--from', 'optfrom', help=u'portfolio id to convert from')
+@click.option('--to', 'optto', help=u'portfolio id to convert to')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.pass_context
+def convert1(ctx, optfrom, optto, optlist):
+    '''convert bond and money to bank
+    '''    
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('allocation_instance_position_detail', metadata, autoload=True)
+    t2 = Table('allocation_instance_position', metadata, autoload=True)
+
+    columns = [
+        t1.c.ai_inst_type,
+        t1.c.ai_alloc_id,
+        t1.c.ai_transfer_date,
+        t1.c.ai_category,
+        t1.c.ai_fund_id,
+        t1.c.ai_fund_code,
+        t1.c.ai_fund_ratio,
+    ]
+
+    s = select(columns).where(t1.c.ai_inst_id == optfrom)
+        
+    df = pd.read_sql(s, db, index_col = ['ai_alloc_id', 'ai_transfer_date'], parse_dates=['ai_transfer_date'])
+
+    mask = (df['ai_category'] >= 20) & (df['ai_category'] < 30)
+    df.loc[mask, 'ai_fund_id'] =  33056942
+    df.loc[mask, 'ai_fund_code'] = '999002'
+    #df.loc[maks, 'ai_category'] = 51
+
+    mask = (df['ai_category'] >= 30) & (df['ai_category'] < 40)
+    df.loc[mask, 'ai_fund_id'] =  33056941
+    df.loc[mask, 'ai_fund_code'] = '999001'
+    #df.loc[maks, 'ai_category'] = 52
+
+    df.set_index(['ai_category', 'ai_fund_id'], append=True, inplace=True)
+    df_result = df.groupby(level=(0, 1, 2, 3)).agg({'ai_inst_type':'first', 'ai_fund_code':'first', 'ai_fund_ratio':'sum'})
+
+    t1.delete(t1.c.ai_inst_id == optto).execute()
+
+    df_result['ai_inst_id'] = optto
+    df_result['updated_at'] = df_result['created_at'] = datetime.now()
+
+    df_result = df_result.reset_index().set_index(['ai_inst_id', 'ai_alloc_id', 'ai_transfer_date', 'ai_category', 'ai_fund_id'])
+    
+    df_result.to_sql(t1.name, db, index=True, if_exists='append', flavor='mysql', chunksize=500)
+
+
+    df_result = df_result.reset_index().set_index(['ai_inst_id', 'ai_alloc_id', 'ai_transfer_date', 'ai_fund_id'])
+    df_result['ai_fund_type'] = df_result['ai_category'].floordiv(10)
+    df_result =  df_result.drop('ai_category', axis = 1)
+    
+    df_result = df_result.groupby(level=(0, 1, 2, 3)).agg({
+        'ai_inst_type':'first', 'ai_fund_code':'first', 'ai_fund_type':'first', 'ai_fund_ratio':'sum', 'updated_at':'first', 'created_at':'first'
+    })
+    print df_result.head()
+
+    t2.delete(t2.c.ai_inst_id == optto).execute()
+    df_result.to_sql(t2.name, db, index=True, if_exists='append', flavor='mysql', chunksize=500)
+    
+
+
+    

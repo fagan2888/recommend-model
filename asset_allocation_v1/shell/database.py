@@ -58,7 +58,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
         if timestamp:
             df_insert['updated_at'] = df_insert['created_at'] = datetime.now()
 
-        df_insert.to_sql(table.name, db, index=True, if_exists='append')
+        df_insert.to_sql(table.name, db, index=True, if_exists='append', chunksize=500)
 
         if len(index_insert) > 1:
             logger.info("insert %s (%5d) : %s " % (table.name, len(index_insert), index_insert[0]))
@@ -521,6 +521,28 @@ def asset_allocation_instance_nav_load_series(
         df = df.reindex(reindex)
 
     return df['nav']
+
+def asset_allocation_instance_position_detail_load(id_):
+    db = connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('allocation_instance_position_detail', metadata, autoload=True)
+
+    columns = [
+        t1.c.ai_inst_type,
+        t1.c.ai_alloc_id,
+        t1.c.ai_transfer_date,
+        t1.c.ai_category,
+        t1.c.ai_fund_id,
+        t1.c.ai_fund_code,
+        t1.c.ai_fund_ratio,
+    ]
+
+    s = select(columns).where(t1.c.ai_inst_id == id_)
+        
+    df = pd.read_sql(s, db, index_col = ['ai_alloc_id', 'ai_transfer_date', 'ai_category', 'ai_fund_id'], parse_dates=['ai_transfer_date'])
+
+    return df
+    
 
 #
 # asset.ra_composite_asset_nav
