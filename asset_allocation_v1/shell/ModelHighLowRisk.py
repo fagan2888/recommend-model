@@ -18,20 +18,30 @@ from Const import datapath
 
 logger = logging.getLogger(__name__)
 
-def get_columns(key, includeDate=False):
+def get_columns(key, excluded):
+    if excluded is None:
+        excluded = []
+        
     columns = {
-        'low':['ratebond','creditbond'],
-        'high':['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value', 'SP500.SPI', 'GLNC', 'HSCI.HI']
+        'low':[e for e in ['ratebond','creditbond'] if e not in excluded],
+        'high':[e for e in ['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value', 'SP500.SPI', 'GLNC', 'HSCI.HI'] if e not in excluded]
     }
 
     return columns.get(key)
+# def get_columns(key, includeDate=False):
+#     columns = {
+#         'low':['ratebond','creditbond'],
+#         'high':['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value', 'SP500.SPI', 'GLNC', 'HSCI.HI']
+#     }
+
+#     return columns.get(key)
 
 def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
     '''perform asset allocation of high risk asset for single day
     '''
     if columns and 'date' not in columns:
         columns.insert(0, 'date')
-    
+
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
@@ -48,11 +58,25 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
     #
     # 基于马克维茨进行资产配置
     #
-    uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3, 0.3]
-    downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    # uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3, 0.3]
+    # downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    bound_set = {
+        'largecap': {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        'smallcap': {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        'rise':     {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        'decline':  {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        'growth':   {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        'value':    {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        'SP500.SPI':{'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
+        'GLNC':     {'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
+        'HSCI.HI':  {'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
+    }
 
-    #risk, returns, ws, sharpe = PF.markowitz_r(allocation_dfr, None)
-    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, [downlimit, uplimit])
+    bound = []
+    for asset in df_inc.columns:
+        bound.append(bound_set[asset])
+
+    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -92,7 +116,7 @@ def asset_alloc_low_risk_per_day(day, lookback, df_inc=None, columns=None):
     return sr_result
 
 
-def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=None):
+def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=None, excluded=None):
     '''perform asset allocation with constant-risk + high_low model.
     '''
     # 加载时间轴数据
@@ -109,16 +133,16 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
     #
     # 计算每个调仓点的最新配置
     #
-    df_high = pd.DataFrame(index=pd.Index([], name='date'), columns=get_columns('high'))
-    df_low =  pd.DataFrame(index=pd.Index([], name='date'), columns=get_columns('low'))
+    df_high = pd.DataFrame(index=pd.Index([], name='date'), columns=get_columns('high', excluded))
+    df_low =  pd.DataFrame(index=pd.Index([], name='date'), columns=get_columns('low', excluded))
 
     with click.progressbar(length=len(adjust_index), label='markowitz') as bar:
         for day in adjust_index:
             logger.debug("markowitz: %s", day.strftime("%Y-%m-%d"))
             # 高风险资产配置
-            df_high.loc[day] = asset_alloc_high_risk_per_day(day, lookback, columns=get_columns('high'))
+            df_high.loc[day] = asset_alloc_high_risk_per_day(day, lookback, columns=get_columns('high', excluded))
             # 底风险资产配置
-            df_low.loc[day] = asset_alloc_low_risk_per_day(day, lookback, columns=get_columns('low'))
+            df_low.loc[day] = asset_alloc_low_risk_per_day(day, lookback, columns=get_columns('low', excluded))
             bar.update(1)
 
     # df_high.index.name='date'
@@ -133,15 +157,15 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
     #
     # 计算高风险资产的资产净值
     #
-    df_inc = DFUtil.load_inc_csv(datapath('equalriskasset.csv'), get_columns('high'), index)
-    df_nav_high = DFUtil.portfolio_nav(df_inc, df_high[get_columns('high')])
+    df_inc = DFUtil.load_inc_csv(datapath('equalriskasset.csv'), get_columns('high', excluded), index)
+    df_nav_high = DFUtil.portfolio_nav(df_inc, df_high[get_columns('high', excluded)])
     df_nav_high.to_csv(datapath('high_nav.csv'), index_label='date')
     
     #
     # 计算低风险资产的资产净值
     #
-    df_inc = DFUtil.load_inc_csv(datapath('labelasset.csv'), get_columns('low'), index)
-    df_nav_low = DFUtil.portfolio_nav(df_inc, df_low[get_columns('low')])
+    df_inc = DFUtil.load_inc_csv(datapath('labelasset.csv'), get_columns('low', excluded), index)
+    df_nav_low = DFUtil.portfolio_nav(df_inc, df_low[get_columns('low', excluded)])
     df_nav_low.to_csv(datapath('low_nav.csv'), index_label='date')
         
     #

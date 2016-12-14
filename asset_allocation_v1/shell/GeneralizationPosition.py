@@ -298,14 +298,17 @@ def portfolio_avg_simple(position_input, position_output):
     ix_date = df_portfolio.index.levels[1]
 
     #
-    # 合并股票类资产配置结果
+    # 抽取黄金,标普,恒生和货币
     #
-    column_position = ['GLNC', 'SP500.SPI', 'money']
-    if 'HSCI.HI' in df_portfolio.columns:
-        column_position.append('HSCI.HI')
+    column_position = [e for e in ['GLNC', 'SP500.SPI', 'HSCI.HI','money'] if e in df_portfolio.columns]
     df_position = df_portfolio[column_position].copy()
-    df_position['stock'] = df_portfolio[['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value']].sum(axis=1)
-    df_position['bond'] = df_portfolio[['creditbond', 'ratebond']].sum(axis=1)
+    #  合并股票类资产配置结果
+    stock_columns = [e for e in ['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value'] if e in df_portfolio.columns]
+    df_position['stock'] = df_portfolio[stock_columns].sum(axis=1)
+    #  合并债券类资产配置结果
+    bond_columns = [e for e in ['creditbond', 'ratebond'] if e in df_portfolio.columns]
+    df_position['bond'] = df_portfolio[bond_columns].sum(axis=1)
+
     df_position.columns.name = 'type'
     df_position = df_position.stack().to_frame('position')
 
