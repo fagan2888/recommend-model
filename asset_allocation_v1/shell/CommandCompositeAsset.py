@@ -167,6 +167,10 @@ def nav_update_fund(db, asset):
         min_date, max_date, codes=df_position.columns)
     df_inc = df_nav.pct_change().fillna(0.0)
 
+    if df_inc.empty:
+        click.echo(click.style("\nskipping due to fund/index nav for asset %d" % (asset['globalid']), fg='yellow'))
+        return False
+
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
     # df_nav_portfolio.to_csv(datapath('category_nav_' + category + '.csv'))
