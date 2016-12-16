@@ -238,7 +238,7 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=13):
     return label_index
 
 @pool.command()
-@click.option('--id', help=u'ids of fund pool to update')
+@click.option('--id', 'optid', help=u'ids of fund pool to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.pass_context
 def nav(ctx, optid, optlist):
