@@ -131,7 +131,7 @@ def asset_rm_risk_mgr_pos_load(
     s = select(columns).where(t1.c.rm_risk_mgr_id == riskmgr_id);
 
     if categories is not None:
-        if hasattr(categories, "__iter__") or not isinstance(categories, str):
+        if hasattr(categories, "__iter__") and not isinstance(categories, str):
             s = s.where(t1.c.rm_category.in_(categories))
         else:
             s = s.where(t1.c.rm_category == categories)
@@ -215,7 +215,7 @@ def asset_rm_risk_mgr_pos_load(
     s = select(columns).where(t1.c.rm_risk_mgr_id == riskmgr_id);
 
     if categories is not None:
-        if hasattr(categories, "__iter__") or not isinstance(categories, str):
+        if hasattr(categories, "__iter__") and not isinstance(categories, str):
             s = s.where(t1.c.rm_category.in_(categories))
         else:
             s = s.where(t1.c.rm_category == categories)
