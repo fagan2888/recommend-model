@@ -56,8 +56,9 @@ def pool(ctx):
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--calc/--no-calc', 'optcalc', default=True, help=u're calc label')
 @click.option('--limit', 'optlimit', type=int, default=5, help=u'how many fund selected for each category')
+@click.option('--points', 'optpoints', help=u'Adjust points')
 @click.pass_context
-def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod):
+def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
     '''run constant risk model
     '''    
     Const.datadir = datadir
@@ -78,7 +79,11 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, op
         print tabulate(df_pool, headers='keys', tablefmt='psql')
         return 0
 
-    adjust_points = get_adjust_point(label_period=optperiod)
+    if optpoints is not None:
+        adjust_points=pd.DatetimeIndex(optpoints.split(','))
+    else:
+        adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate)
+        
     print "adjust point:"
     for date in adjust_points:
         print date.strftime("%Y-%m-%d")

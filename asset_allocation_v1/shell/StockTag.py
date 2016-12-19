@@ -264,7 +264,6 @@ def declinefitness(funddf, indexdf, ratio):
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1][2], reverse=True)
     sorted_fitness = sorted_x
 
-
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
@@ -526,7 +525,8 @@ def largecapprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_largecapprefer) * ratio))):
-        result.append(sorted_largecapprefer[i])
+        if (sorted_largecapprefer[i][1]) > 0.92:
+            result.append(sorted_largecapprefer[i])
 
     return result
 
@@ -568,7 +568,8 @@ def smallcapprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_smallcapprefer) * ratio))):
-        result.append(sorted_smallcapprefer[i])
+        if (sorted_smallcapprefer[i][1]) > 0.95:
+            result.append(sorted_smallcapprefer[i])
 
     return result
 
@@ -1234,10 +1235,9 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
     df_label = pd.DataFrame(data, columns=["high_position_prefer","largecap_prefer","smallcap_prefer","growth_prefer","value_prefer","largecap_fitness","smallcap_fitness","rise_fitness","decline_fitness","oscillation_fitness","growth_fitness","value_fitness"])
     df_label.index.name = 'code'
-    df_label.to_csv(datapath('stock_blabel_' + daystr + '.csv'))
     df_label.fillna(0, inplace=True)
     df_label = df_label.applymap(lambda x: int(round(x)))
-    df_label.to_csv(datapath('stock_label_' + daystr + '.csv'))
+    df_label.to_csv(datapath('stock_blabel_' + daystr + '.csv'))
 
     columns = ['largecap', 'smallcap', 'rise', 'decline', 'oscillation', 'growth', 'value']
     df_result = pd.DataFrame(0, index=df_label.index, columns=columns)
@@ -1262,6 +1262,8 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
     mask = (df_label['value_prefer'] == 1) & (df_label['value_fitness'] == 1) 
     df_result.loc[mask, 'value'] = 1
+    
+    df_result.to_csv(datapath('stock_label_' + daystr + '.csv'))
 
     return df_result
 
