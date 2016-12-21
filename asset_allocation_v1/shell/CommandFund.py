@@ -216,3 +216,102 @@ def type_command(ctx, optid, optfund, optlist):
     
     for _, corr in df_corr.iterrows():
         corr_update(corr, codes)
+
+@fund.command()
+@click.option('--id', 'optid', help=u'specify ra_measure_id (e.g. 1001,1002')
+@click.option('--fund', 'optfund', help=u'specify fund code (e.g. 519983,213009')
+@click.option('--points', 'optpoints', help=u'specify calc point (e.g. 2010-01-08,2010-01-15)')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list corr to update')
+@click.pass_context
+def measure(ctx, optid, optfund, optpoints, optlist):
+    ''' calc fund measure
+    '''
+    measures = None
+    if optid is not None:
+        measures = optid.split(',')
+
+    codes = None
+    if optfund is not None:
+        codes = optfund.split(',')
+        
+    df_measure = database.base_ra_measure_load(measures)
+
+    if optlist:
+        #print df_pool
+        #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
+        df_measure['ra_name'] = df_measure['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_measure, headers='keys', tablefmt='psql')
+        return 0
+
+    # if optpoints is not None:
+    #     adjust_points = pd.DatetimeIndex(optpoints.split(','))
+    # else:
+    #     # 加载时间轴数据
+    #     if not enddate:
+    #         yesterday = (datetime.now() - timedelta(days=1)); 
+    #         enddate = yesterday.strftime("%Y-%m-%d")        
+
+    #     adjust_points = DBData.trade_date_index('2010-01-08', end_date=enddate)
+    
+    for _, measure in df_measure.iterrows():
+        if measure['globalid'] == 1001:
+            sharpe_update(measure, codes)
+        
+def sharpe_update(measure, codes):
+    #
+    # 加载基金列表
+    #
+    df_fund = database.base_ra_fund_load(codes=codes)
+    
+    data = []
+    with click.progressbar(length=len(df_fund.index), label='update sharpe %d' % (measure['globalid'])) as bar:
+        for _,fund in df_fund.iterrows():
+            bar.update(1)
+            tmp = sharpe_update_fund(measure, fund)
+
+def sharpe_update_fund(measure, fund):
+    yesterday = (datetime.now() - timedelta(days=1)); 
+    enddate = yesterday.strftime("%Y-%m-%d")        
+    #
+    # 加载基金数据
+    #
+    df_nav_fund = database.base_ra_fund_nav_load_weekly('2008-01-01', enddate, codes=[fund['ra_code']])
+    if df_nav_fund.empty:
+        logger.warn("missing nav for fund [id: %d, code:%s]", fund['globalid'], fund['ra_code'])
+        return None
+    
+    df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
+
+    df_new = DFUtil.rolling_sharpe(df_inc_fund, 0.03, window=52, min_periods=52)
+    df_new.dropna(inplace=True)
+    df_new.index.name='ra_date'
+    df_new = df_new.rename(columns={fund['ra_code']:'ra_value'})
+    
+    df_new['ra_measure_id'] = measure['globalid']
+    df_new['ra_fund_id'] = fund['globalid']
+    df_new['ra_fund_code'] = fund['ra_code']
+    
+    df_new = df_new.reset_index().set_index(['ra_measure_id', 'ra_fund_id', 'ra_date'])
+    df_new['ra_value'] = df_new['ra_value'].map("{:.4f}".format)
+    
+    db = database.connection('base')
+    # 加载旧数据
+    t2 = Table('ra_measure_fund', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.ra_measure_id,
+        t2.c.ra_fund_id,
+        t2.c.ra_date,
+        t2.c.ra_value,
+        t2.c.ra_fund_code,
+    ]
+    stmt_select = select(columns2) \
+                  .where(t2.c.ra_measure_id == measure['globalid']) \
+                  .where(t2.c.ra_fund_code == fund['ra_code'])
+        
+    df_old = pd.read_sql(
+        stmt_select, db, index_col=['ra_measure_id', 'ra_fund_id', 'ra_date'], parse_dates=['ra_date'])
+    if not df_old.empty:
+        df_old['ra_value'] = df_old['ra_value'].map("{:.4f}".format)
+
+    # 更新数据库
+    database.batch(db, t2, df_new, df_old, timestamp=True)

@@ -330,6 +330,210 @@ def asset_rm_risk_mgr_signal_load(
     return df.index
 
 #
+# base.ra_fund
+#
+def base_ra_fund_find(globalid):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t = Table('ra_fund', metadata, autoload=True)
+
+    columns = [
+        t.c.globalid,
+        t.c.ra_code,
+        t.c.ra_name,
+        t.c.ra_type,
+        t.c.ra_type_calc,
+        t.c.ra_regtime,
+        t.c.ra_volume,
+    ]
+
+    s = select(columns).where(t.c.globalid == globalid)
+
+    return s.execute().first()
+
+def base_ra_fund_load(globalids=None, codes=None):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t = Table('ra_fund', metadata, autoload=True)
+
+    columns = [
+        t.c.globalid,
+        t.c.ra_code,
+        t.c.ra_name,
+        t.c.ra_type,
+        t.c.ra_type_calc,
+        t.c.ra_regtime,
+        t.c.ra_volume,
+    ]
+
+    s = select(columns)
+    if globalids is not None:
+        s = s.where(t.c.globalid.in_(globalids))
+
+    if codes is not None:
+        s = s.where(t.c.ra_code.in_(codes))
+
+    df = pd.read_sql(s, db)
+
+    return df
+
+#
+# base.ra_fund_nav
+#
+def base_ra_fund_nav_load_weekly(begin_date, end_date, fund_ids=None, codes=None):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_fund_nav', metadata, autoload=True)
+    t2 = Table('trade_dates', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_code.label('code'),
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav_adjusted,
+    ]
+
+    s = select(columns) \
+        .select_from(t1.join(t2, t1.c.ra_date == t2.c.td_date)) \
+        .where(t1.c.ra_date.between(begin_date, end_date)) \
+        .where(t2.c.td_date.between(begin_date, end_date) & (t2.c.td_type.op('&')(0x02) | (t2.c.td_date == end_date)))
+    
+    if fund_ids is not None:
+        s = s.where(t1.c.ra_fund_id.in_(fund_ids))
+
+    if codes is not None:
+        s = s.where(t1.c.ra_code.in_(codes))
+
+    df = pd.read_sql(s, db, index_col = ['date', 'code'], parse_dates=['date'])
+
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
+
+def base_ra_fund_nav_load_daily(begin_date, end_date, fund_ids=None, codes=None):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_fund_nav', metadata, autoload=True)
+    t2 = Table('trade_dates', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_code.label('code'),
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav_adjusted,
+    ]
+
+    s = select(columns) \
+        .select_from(t1.join(t2, t1.c.ra_date == t2.c.td_date)) \
+        .where(t1.c.ra_date.between(begin_date, end_date)) \
+        .where(t2.c.td_date.between(begin_date, end_date))
+    
+    if fund_ids is not None:
+        s = s.where(t1.c.ra_fund_id.in_(fund_ids))
+
+    if codes is not None:
+        s = s.where(t1.c.ra_code.in_(codes))
+
+    df = pd.read_sql(s, db, index_col = ['date', 'code'], parse_dates=['date'])
+
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
+
+def base_ra_fund_nav_load_series(code, reindex=None, begin_date=None, end_date=None):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_fund_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav_adjusted.label('nav'),
+    ]
+
+    s = select(columns) \
+        .where((t1.c.ra_code == code) | (t1.c.ra_fund_id == code))
+
+    # s = select(columns).where(t1.c.ra_fund_id == id_)
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df['nav']
+
+#
+# base.ra_index
+#
+def base_ra_index_find(globalid):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t = Table('ra_index', metadata, autoload=True)
+
+    columns = [
+        t.c.globalid,
+        t.c.ra_code,
+        t.c.ra_name,
+        t.c.ra_announce_date,
+        t.c.ra_begin_date,
+        t.c.ra_base_date,
+    ]
+
+    s = select(columns).where(t.c.globalid == globalid)
+
+    return s.execute().first()
+#
+# base.ra_index_nav
+#
+def base_ra_index_nav_load_series(id_, reindex=None, begin_date=None, end_date=None):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_index_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav.label('nav'),
+    ]
+
+    s = select(columns).where(t1.c.ra_index_id == id_)
+    
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df['nav']
+#
+# base.ra_measure
+#
+def base_ra_measure_load(ids):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t = Table('ra_measure', metadata, autoload=True)
+
+    columns = [
+        t.c.globalid,
+        t.c.ra_name,
+    ]
+
+    s = select(columns)
+    if ids is not None:
+        s = s.where(t.c.globalid.in_(ids))
+
+    df = pd.read_sql(s, db)
+
+    return df
+
+#
 # asset.allocation_instance
 #
 def asset_allocation_instance_new_globalid(xtype=1, replace=False):

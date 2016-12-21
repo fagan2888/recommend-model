@@ -257,6 +257,13 @@ def nav_max_drawdown_window(df_nav, window, min_periods=1):
         window=window, min_periods=min_periods).apply(
             lambda x:(x/np.maximum.accumulate(x) - 1).min())
 
+def rolling_sharpe(df_inc, rf, window, min_periods):
+    def sharpe(x):
+        anual_inc = np.prod(1 + x) ** (48.0 / len(x)) - 1
+        anual_stdev = x.std(ddof=1) * 6.92820323 # sqrt(48.0);
+        return (anual_inc - rf) / anual_stdev
+
+    return df_inc.rolling(window=window, min_periods=min_periods).apply(sharpe)
 
 def merge_column_for_fund_id_type(df, code, usecols=['globalid', 'ra_type']):
     sr_code = df[code]
