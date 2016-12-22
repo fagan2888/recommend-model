@@ -620,3 +620,32 @@ def asset_ra_pool_nav_load_series(id_, category, xtype, reindex=None, begin_date
 
     return df['nav']
 
+#
+# asset.risk_asset_allocation_nav
+#
+def asset_risk_asset_allocation_nav_load_series(
+        alloc_id, xtype, reindex=None, begin_date=None, end_date=None):
+    db = connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('risk_asset_allocation_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav.label('nav'),
+    ]
+
+    s = select(columns) \
+        .where(t1.c.ra_alloc_id == alloc_id) \
+        .where(t1.c.ra_type == xtype)
+    
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df['nav']
