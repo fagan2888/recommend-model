@@ -317,7 +317,7 @@ def bond_fund_value(start_date, end_date):
     #
     # type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type LIKE '2001010301%%' OR wf_type LIKE '2001010302%%' OR wf_type LIKE '2001010305%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
     # type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l3_type IN ('20030101', '20030102', '20030104', '20030105', '20030201', '20030202', '20030601', '20030602')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
-    type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l2_type IN ('200301', '200306')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
+    type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l2_type IN ('200301')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
     #
     # 按照成立时间筛选基金
     #
@@ -363,7 +363,7 @@ def bond_day_fund_value(start_date, end_date):
     #
     # type_sql = "SELECT DISTINCT wf_fund_id FROM wind_fund_type WHERE (wf_type LIKE '2001010301%%' OR wf_type LIKE '2001010302%%' OR wf_type LIKE '2001010305%%') AND (wf_start_time <= '%s' AND (wf_end_time IS NULL OR wf_end_time >= '%s'))" % (end_date, end_date);
     # type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l3_type IN ('20030101', '20030102', '20030104', '20030105', '20030201', '20030202', '20030601', '20030602')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
-    type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l2_type IN ('200301', '200306')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
+    type_sql = "SELECT DISTINCT yt_fund_id FROM yinhe_type WHERE (yt_l2_type IN ('200301')) AND (yt_begin_date <= '%s' AND (yt_end_date = '0000-00-00' OR yt_end_date >= '%s'))" % (end_date, end_date)
 
     #
     # 按照成立时间筛选基金

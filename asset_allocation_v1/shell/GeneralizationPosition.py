@@ -152,6 +152,7 @@ def portfolio_category():
 
     df_result = pd.concat({'ratio':df_position, 'xfund':df_fund}, axis=1, names=('xtype','category'))
     df_result = df_result.stack(1)
+    df_result.to_csv(datapath('dd.csv'))
 
     #
     # 滤掉过小的份额配置
