@@ -159,32 +159,36 @@ def modify_index(factor_df, stock_df):
 
 if __name__ == '__main__':
 
-    beta_df         = pd.read_csv('./tmp/beta.csv', index_col = 'date', parse_dates = ['date'])
-    momentum_df     = pd.read_csv('./tmp/momentum.csv', index_col = 'date', parse_dates = ['date'])
-    market_value_df = pd.read_csv('./tmp/market_value.csv', index_col = 'date', parse_dates = ['date'])
-    dastd_df        = pd.read_csv('./tmp/stock_dastd.csv', index_col = 'date', parse_dates = ['date'])
-    bp_df           = pd.read_csv('./tmp/bp.csv', index_col = 'date', parse_dates = ['date'])
-    pe_df           = pd.read_csv('./tmp/pe.csv', index_col = 'date', parse_dates = ['date'])
-    liquidity_df    = pd.read_csv('./tmp/liquidity.csv', index_col = 'date', parse_dates = ['date'])
-    cube_size_df    = pd.read_csv('./tmp/cube_size.csv', index_col = 'date', parse_dates = ['date'])
+
+    beta_df         = pd.read_csv('./data/beta.csv', index_col = 'date', parse_dates = ['date'])
+    momentum_df     = pd.read_csv('./data/momentum.csv', index_col = 'date', parse_dates = ['date'])
+    market_value_df = pd.read_csv('./data/market_value.csv', index_col = 'date', parse_dates = ['date'])
+    dastd_df        = pd.read_csv('./data/stock_dastd.csv', index_col = 'date', parse_dates = ['date'])
+    bp_df           = pd.read_csv('./data/bp.csv', index_col = 'date', parse_dates = ['date'])
+    pe_df           = pd.read_csv('./data/pe.csv', index_col = 'date', parse_dates = ['date'])
+    liquidity_df    = pd.read_csv('./data/liquidity.csv', index_col = 'date', parse_dates = ['date'])
+    #cube_size_df    = pd.read_csv('./tmp/cube_size.csv', index_col = 'date', parse_dates = ['date'])
 
     stock_df        = pd.read_csv('./data/stock_price_adjust.csv', index_col = 'date', parse_dates = ['date'])
-
-    dfs = []
+    #stock_df.pct_change()
+    #dfs = []
 
     #df, stock_df = index(beta_df, stock_df)
-    #df.to_csv('./tmp/beta_index.csv')
+    #df.to_csv('./data/beta_index.csv')
+    print 'beta index done' 
     #stock_df.to_csv('./tmp/beta_stock_df.csv')
     #dfs.append(df)
 
     #df, momentum_stock_df = index(momentum_df, stock_df)
     #df, momentum_stock_df = modify_index(momentum_df, stock_df)
-    #df.to_csv('./tmp/momentum_index.csv')
+    #df.to_csv('./data/momentum_index.csv')
+    print 'momentum index done'
     #momentum_stock_df.to_csv('./tmp/momentum_stock.csv')
     #dfs.append(df)
 
     #df, market_value_stock_df = index(market_value_df, stock_df)
-    #df.to_csv('./tmp/market_value_index.csv')
+    #df.to_csv('./data/market_value_index.csv')
+    print 'market value index done'
     #market_value_stock_df.to_csv('./tmp/market_value_stock.csv')
     #dfs.append(df)
 
@@ -194,18 +198,21 @@ if __name__ == '__main__':
     #dfs.append(df)
 
     #df, stock_df = index(dastd_df, stock_df)
-    #df.to_csv('./tmp/dastd_index.csv')
+    #df.to_csv('./data/dastd_index.csv')
+    print 'dastd index done'
     #stock_df.to_csv('./tmp/dastd_stock.csv')
     #dfs.append(df)
 
     #df , bp_stock_df = index(bp_df, stock_df)
-    #df.to_csv('./tmp/bp_index.csv')
+    #df.to_csv('./data/bp_index.csv')
+    print 'bp index done'
     #dfs.append(df)
 
-    df , pe_stock_df = index(pe_df, stock_df)
-    df.to_csv('./tmp/pe_index.csv')
-    dfs.append(df)
+    #df , pe_stock_df = index(pe_df, stock_df)
+    #df.to_csv('./data/pe_index.csv')
+    print 'pe index done'
 
-    #df = index(liquidity_df, stock_df)
-    #df.to_csv('./tmp/liquidity_index.csv')
+    df , liquidity_stock_df = index(liquidity_df, stock_df)
+    df.to_csv('./data/liquidity_index.csv')
+    print 'liquidity index done'
     #dfs.append(df)

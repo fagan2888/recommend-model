@@ -8,11 +8,11 @@ import datetime
 
 
 db_params = {
-            "host": "101.201.81.170",
+            "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
             "port": 3306,
-            "user": "wind",
-            "passwd": "wind",
-            "db":"caihui_test",
+            "user": "koudai",
+            "passwd": "Mofang123",
+            "db":"caihui",
             "charset": "utf8"
         }
 
@@ -40,7 +40,7 @@ def all_stock_pe():
 
     dfs = []
     for secode in secodes:
-        sql = 'select TRADEDATE, PETTM from TQ_SK_FININDIC where SECODE = %s order by TRADEDATE asc' % secode
+        sql = "select TRADEDATE, PETTM from TQ_SK_FININDIC where SECODE = '%s' order by TRADEDATE asc" % secode
         df = pd.read_sql(sql, conn, index_col = 'TRADEDATE', parse_dates = ['TRADEDATE'])
         df.index.name = 'date'
         df.columns    = [secode_symbol_dict[secode]]

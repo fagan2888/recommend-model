@@ -8,14 +8,13 @@ import datetime
 
 
 db_params = {
-            "host": "101.201.81.170",
+            "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
             "port": 3306,
-            "user": "wind",
-            "passwd": "wind",
-            "db":"caihui_test",
+            "user": "koudai",
+            "passwd": "Mofang123",
+            "db":"caihui",
             "charset": "utf8"
         }
-
 
 #所有股票的收盘价
 def all_stock_market_value():
@@ -40,7 +39,8 @@ def all_stock_market_value():
 
     dfs = []
     for secode in secodes:
-        sql = 'select TRADEDATE, TOTMKTCAP from TQ_QT_SKDAILYPRICE where SECODE = %s order by TRADEDATE asc' % secode
+        sql = "select TRADEDATE, TOTMKTCAP from TQ_QT_SKDAILYPRICE where SECODE = '%s' order by TRADEDATE asc" % secode
+        #print sql
         df = pd.read_sql(sql, conn, index_col = 'TRADEDATE', parse_dates = ['TRADEDATE'])
         df.index.name = 'date'
         df.columns    = [secode_symbol_dict[secode]]

@@ -1,10 +1,12 @@
 #coding=utf8
 
 
+
 import MySQLdb
 import pandas as pd
 import numpy  as np
 import datetime
+
 
 
 db_params = {
@@ -17,11 +19,13 @@ db_params = {
         }
 
 
-#所有股票的换手率
-def all_stock_turnover():
+
+if __name__ == '__main__':
+
 
     conn = MySQLdb.connect(**db_params)
     cur  = conn.cursor()
+
 
     sql = 'select SECODE, SYMBOL from TQ_SK_BASICINFO'
     cur.execute(sql)
@@ -35,25 +39,10 @@ def all_stock_turnover():
             secode_symbol_dict[secode] = symbol
     cur.close()
 
-    #print secode_symbol_dict
-    secodes = secode_symbol_dict.keys()
+    #imploded_secodes = ','.join([repr(seid) for seid in secodes])
+    imploded_symbols = ','.join([repr(seid.encode('utf8')) for seid in secode_symbol_dict.values()])
 
-    dfs = []
-    for secode in secodes:
-        sql = "select TRADEDATE, TURNRATE from TQ_QT_SKDAILYPRICE where SECODE = '%s' order by TRADEDATE asc" % secode
-        df = pd.read_sql(sql, conn, index_col = 'TRADEDATE', parse_dates = ['TRADEDATE'])
-        df.index.name = 'date'
-        df.columns    = [secode_symbol_dict[secode]]
-        df = df.replace(0.00, np.nan)
-        dfs.append(df)
-        print secode_symbol_dict[secode], 'done'
-    stock_df = pd.concat(dfs, axis = 1)
+    sql = 'select SYMBOL, SWLEVEL1CODE from tq_sk_basicinfo where SYMBOL in (' + imploded_symbols + ')'
 
-    stock_df = stock_df / 100.0
-    stock_df.to_csv('stock_turnover.csv')
-
-    return 0
-
-
-if __name__ == '__main__':
-    all_stock_turnover()
+    df = pd.read_sql(sql, conn, index_col = ['SYMBOL'])
+    print df

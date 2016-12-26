@@ -239,6 +239,8 @@ if __name__ == '__main__':
 
     stock_df              = pd.read_csv('./data/stock_price_adjust.csv', index_col = 'date', parse_dates = ['date'])
     stock_market_value_df = pd.read_csv('./data/stock_market_value.csv', index_col = 'date', parse_dates = ['date'])
+    stock_df = stock_df[-1000:]
+    stock_market_value_df = stock_market_value_df[-1000:]
     #stock_pe_df           = pd.read_csv('./data/stock_pe.csv', index_col = 'date', parse_dates = ['date'])
     #stock_bp_df           = pd.read_csv('./data/stock_bp.csv', index_col = 'date', parse_dates = ['date'])
     #stock_turnover_df     = pd.read_csv('./data/stock_turnover.csv', index_col = 'date', parse_dates = ['date'])

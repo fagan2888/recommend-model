@@ -8,11 +8,11 @@ import datetime
 
 
 db_params = {
-            "host": "101.201.81.170",
+            "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
             "port": 3306,
-            "user": "wind",
-            "passwd": "wind",
-            "db":"caihui_test",
+            "user": "koudai",
+            "passwd": "Mofang123",
+            "db":"caihui",
             "charset": "utf8"
         }
 
@@ -40,7 +40,7 @@ def all_stock_price():
 
     dfs = []
     for secode in secodes:
-        sql = 'select TRADEDATE, TCLOSEAF from TQ_SK_DQUOTEINDIC where SECODE = %s order by TRADEDATE asc' % secode
+        sql = "select TRADEDATE, TCLOSEAF from TQ_SK_DQUOTEINDIC where SECODE = '%s' order by TRADEDATE asc" % secode
         df = pd.read_sql(sql, conn, index_col = 'TRADEDATE', parse_dates = ['TRADEDATE'])
         df.index.name = 'date'
         df.columns    = [secode_symbol_dict[secode]]
@@ -77,7 +77,7 @@ def all_stock_price_update():
 
     sql = 'select distinct TRADEDATE from TQ_QT_SKDAILYPRICE'
     cur = conn.cursor()
-    cur.execute(sql) 
+    cur.execute(sql)
 
     dates = []
     for record in cur.fetchall():
@@ -88,8 +88,8 @@ def all_stock_price_update():
     end_date = dates[-1]
 
     sql = 'select SECODE, TCLOSE from TQ_QT_SKDAILYPRICE where TRADEDATE = %s' % end_date
-  
-    symbol_close_dict = {} 
+
+    symbol_close_dict = {}
     cur = conn.cursor()
     cur.execute(sql)
     for record in cur.fetchall():
@@ -104,7 +104,7 @@ def all_stock_price_update():
     conn.close()
 
     end_date = datetime.datetime.strptime(end_date, '%Y%m%d')
- 
+
     cols = stock_df.columns
     vs   = []
     for symbol in cols:
@@ -112,7 +112,7 @@ def all_stock_price_update():
             v = symbol_close_dict[symbol]
             if v == 0.00:
                 v = np.nan
-            vs.append(v)     
+            vs.append(v)
         else:
             vs.append(np.nan)
 

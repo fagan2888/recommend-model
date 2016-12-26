@@ -43,7 +43,7 @@ def beta(stock_dfr, index_dfr):
                     beta.append(np.nan)
         betas.append(beta)
         ds.append(d)
-        print d
+        print 'beta', d
 
     beta_df = pd.DataFrame(betas, index = ds, columns = stock_dfr.columns)
     #print beta_df
@@ -140,7 +140,7 @@ def momentum(stock_dfr):
         moment = []
         for col in cols:
             moment.append(momentum_df[col])
-        print d
+        print 'moment', d
         momentums.append(moment)
         ds.append(d)
 
@@ -254,7 +254,7 @@ def liquidity(stock_turnover_df):
                 vs.append(np.nan)
         values.append(vs)
         ds.append(d)
-        print d
+        print 'liquidity', d
     stoq_df = pd.DataFrame(values, index = ds, columns = codes)
 
 
@@ -281,7 +281,7 @@ def liquidity(stock_turnover_df):
                 vs.append(np.nan)
         values.append(vs)
         ds.append(d)
-        print d
+        print 'liquidity', d
     stoa_df = pd.DataFrame(values, index = ds, columns = codes)
 
 
@@ -303,20 +303,38 @@ if __name__ == '__main__':
     stock_turnover_df     = pd.read_csv('./data/stock_turnover.csv', index_col = 'date', parse_dates = ['date'])
     index_df              = pd.read_csv('./data/index_price.csv', index_col = 'date', parse_dates = ['date'])
 
-    index_df = index_df[['000300']]
-    stock_dfr = stock_df.pct_change()
-    index_dfr = index_df.pct_change().fillna(0.0)
-    stock_market_value_df = stock_market_value_df.fillna(method = 'pad')
-    #stock_market_value_df = stock_market_value_df[stock_df.columns]
-    #stock_bp_df = stock_bp_df[stock_df.columns]
+    #codes = set(stock_df.columns) & set(stock_market_value_df.columns) & set(stock_bp_df.columns) & set(stock_pe_df.columns) & set(stock_turnover_df.columns)
+    codes = stock_df.columns & stock_market_value_df.columns & stock_bp_df.columns & stock_pe_df.columns & stock_turnover_df.columns
+    dates = index_df.index & stock_df.index & stock_market_value_df.index & stock_bp_df.index & stock_pe_df.index & stock_turnover_df.index
+    #codes = list(codes)
+    dates = dates[-1500:]
+    print dates
 
-    #beta(stock_dfr, index_dfr)
+    index_df = index_df[['000300']]
+    index_dfr = index_df.pct_change().fillna(0.0)
+    stock_dfr = stock_df.pct_change()
+    stock_market_value_df = stock_market_value_df.fillna(method = 'pad')
+
+
+    stock_dfr = stock_dfr[codes]
+    stock_market_value_df = stock_market_value_df[codes]
+    stock_bp_df = stock_bp_df[codes]
+    stock_pe_df = stock_pe_df[codes]
+    stock_turnover_df = stock_turnover_df[codes]
+
+    stock_dfr = stock_dfr.loc[dates]
+    stock_market_value_df = stock_market_value_df.loc[dates]
+    stock_bp_df = stock_bp_df.loc[dates]
+    stock_pe_df = stock_pe_df.loc[dates]
+    stock_turnover_df = stock_turnover_df.loc[dates]
+
+    beta(stock_dfr, index_dfr)
     #ht_momentum(stock_dfr, stock_turnover_df)
-    #momentum(stock_dfr)
-    #cap_size(stock_market_value_df)
+    momentum(stock_dfr)
+    cap_size(stock_market_value_df)
     #cube_size(stock_market_value_df)
     pe(stock_pe_df)
-    #dastd(stock_dfr)
+    dastd(stock_dfr)
     #ht_std(stock_df)
-    #bp(stock_bp_df)
-    #liquidity(stock_turnover_df)
+    bp(stock_bp_df)
+    liquidity(stock_turnover_df)
