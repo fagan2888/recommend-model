@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created at Sep 14, 2016
 Author: shengyitao
@@ -80,7 +80,9 @@ class GFTD(object):
 
         # cal the nav and max drawdown
         union_data = self.cal_nav_maxdown(union_data)
-        union_data.to_csv(self.index_code + "_gftd_result.csv")
+        tt = "../asset_allocation_v1/tmp/" + self.index_code + "_gftd_result.csv"
+        print "save result to %s" % (tt)
+        union_data.to_csv(tt)
 
         # cal the chance of winning and holding ratio
         win, total, win_ratio, holding_days = self.win_ratio(union_data)

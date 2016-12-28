@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 import datetime
 import math
 import numpy as np
@@ -76,3 +76,29 @@ def cal_nav_maxdrawdown(return_lsit):
             max_nav = cur_nav
 
     return [nav_list, max_drawdown_list]
+
+
+def rolling_window(a, window, axis=-1):                                            
+  '''Return a windowed array.
+
+  from github of joe-antognini's code.
+  https://gist.github.com/joe-antognini/ebef3ecfb7624d2980eae7ead8007cfc
+                                                                                   
+  Parameters:                                                                      
+    a: A numpy array                                                               
+    window: The size of the window                                                 
+                                                                                   
+  Returns:                                                                         
+    An array that has been windowed                                                
+  '''                                                                              
+                                                                                   
+  if axis == -1:                                                                   
+    axis = a.ndim - 1                                                              
+                                                                                   
+  if 0 <= axis <= a.ndim - 1:                                                      
+    shape = (a.shape[:axis] + (a.shape[axis] - window + 1, window) +               
+      a.shape[axis+1:])                                                            
+    strides = a.strides[:axis] + (a.strides[axis],) + a.strides[axis:]             
+    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)        
+  else:                                                                            
+    raise ValueError('rolling_window: axis out of bounds')   

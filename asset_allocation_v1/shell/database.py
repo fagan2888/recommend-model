@@ -40,6 +40,30 @@ def connection(key):
 
     return None
 
+def format(df, columns=[], fmter=None, kwcolumns=[]):
+    if columns and fmter:
+        for column in columns:
+            if column in df.columns and column not in kwcolumns:
+                df[column] = df[column].map(fmter)
+
+    if kwcolumns:
+        for k, v in kwcolumns:
+            if v and k in df.columns:
+                df[k] = df[k].map(v)
+    return df
+
+def number_format(df, columns=[], precision=2, kwcolumns=[]):
+    if columns:
+        for column in columns:
+            if column in df.columns and column not in kwcolumns:
+                df[column] = df[column].map(("{:.%df}" % (precision)).format)
+
+    if kwcolumns:
+        for k, v in kwcolumns:
+            if v and k in df.columns:
+                df[k] = df[k].map(("{:.%df}" % (v)).format)
+    return df
+                
 def batch(db, table, df_new, df_old, timestamp=True):
     index_insert = df_new.index.difference(df_old.index)
     index_delete = df_old.index.difference(df_new.index)
