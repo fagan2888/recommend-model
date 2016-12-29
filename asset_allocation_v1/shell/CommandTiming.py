@@ -22,6 +22,8 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
+from tabulate import tabulate
+
 
 import traceback, code
 
@@ -38,11 +40,8 @@ def timing(ctx):
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2012-07-15', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
-@click.option('--label-asset/--no-label-asset', default=True)
-@click.option('--reshape/--no-reshape', default=True)
-@click.option('--markowitz/--no-markowitz', default=True)
 @click.pass_context
-def test(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
+def test(ctx, datadir, startdate, enddate):
     '''run risk management using simple strategy
     '''
     Const.datadir = datadir
@@ -69,7 +68,7 @@ def test(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
 
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD().timing(df_nav)
-    df_new['tc_timing_id'] = 41101
+    df_new['tc_timing_id'] = 41102
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
 
     # print df_new[df_new['tc_stop'].isnull()].head()
@@ -109,7 +108,7 @@ def test(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
         t2.c.tc_signal,
         t2.c.tc_stop,
     ]
-    s = select(columns2, (t2.c.tc_timing_id == 41101))
+    s = select(columns2, (t2.c.tc_timing_id == 41102))
     df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
     if not df_old.empty:
         df_old = database.number_format(df_old, columns=formaters, precision=4)
@@ -120,6 +119,83 @@ def test(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
     database.batch(db, t2, df_new, df_old, timestamp=False)
     print "total signal: %d, %.2f/year" % (num_signal, num_signal * 250/len(df_new))
     
+
+@timing.command()
+@click.option('--id', 'optid', help=u'ids of fund pool to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.pass_context
+def nav(ctx, optid, optlist):
+    ''' calc pool nav and inc
+    '''
+    if optid is not None:
+        timings = [s.strip() for s in optid.split(',')]
+    else:
+        timings = None
+
+    df_timing = database.asset_tc_timing_load(timings)
+
+    if optlist:
+
+        df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_timing, headers='keys', tablefmt='psql')
+        return 0
+    
+    with click.progressbar(length=len(df_timing), label='update nav') as bar:
+        for _, timing in df_timing.iterrows():
+            bar.update(1)
+            nav_update(timing)
+
+def nav_update(timing):
+    timing_id = timing['globalid']
+    # 加载择时信号
+    df_position = database.asset_tc_timing_scratch_load_signal(timing_id)
+    # 构建仓位
+    df_position.loc[df_position[timing_id] < 1, timing_id] = 0
+    
+    # 加载基金收益率
+    min_date = df_position.index.min()
+    #max_date = df_position.index.max()
+    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
+
+    df_nav = database.base_ra_index_nav_load_series(
+        timing['tc_index_id'], begin_date=min_date, end_date=max_date, mask=0)
+    df_inc = df_nav.pct_change().fillna(0.0).to_frame(timing_id)
+
+    print df_nav.head(35)
+    print df_inc.head(35)
+
+    
+    # 计算复合资产净值
+    df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
+    print df_nav_portfolio.head(35)
+
+
+    df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'tc_nav'}).copy()
+    df_result.index.name = 'tc_date'
+    df_result['tc_inc'] = df_result['tc_nav'].pct_change().fillna(0.0)
+    df_result['tc_timing_id'] = timing['globalid']
+    df_result = df_result.reset_index().set_index(['tc_timing_id', 'tc_date'])
+    
+    df_new = database.number_format(df_result, columns=['tc_nav', 'tc_inc'], precision=6)
+
+
+    # 加载旧数据
+    db = database.connection('asset')
+    t2 = Table('tc_timing_nav', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.tc_timing_id,
+        t2.c.tc_date,
+        t2.c.tc_nav,
+        t2.c.tc_inc,
+    ]
+    stmt_select = select(columns2, (t2.c.tc_timing_id == timing['globalid']))
+    df_old = pd.read_sql(stmt_select, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
+    if not df_old.empty:
+        df_old = database.number_format(df_old, columns=['tc_nav', 'tc_inc'], precision=6)
+
+    # 更新数据库
+    database.batch(db, t2, df_new, df_old, timestamp=False)
     
     #print df_result.head()
 

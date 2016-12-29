@@ -15,7 +15,6 @@ import Const
 
 from sqlalchemy import *
 
-
 from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
@@ -112,6 +111,58 @@ def batch(db, table, df_new, df_old, timestamp=True):
 
             logger.info("update %s : {key: %s, dirties: %s " % (table.name, str(pkeys), str(dirty)))
             stmt.execute()
+#
+# tc_timing
+#
+def asset_tc_timing_load(timings):
+    db = connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('tc_timing', metadata, autoload=True)
+
+    columns = [
+        t1.c.globalid,
+        t1.c.tc_type,
+        t1.c.tc_method,
+        t1.c.tc_index_id,
+        t1.c.tc_begin_date,
+        t1.c.tc_name,
+    ]
+
+    s = select(columns)
+
+    if timings is not None:
+        s = s.where(t1.c.globalid.in_(timings))
+    
+    df = pd.read_sql(s, db)
+
+    return df
+
+def asset_tc_timing_scratch_load_signal(timings):
+    db = connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('tc_timing_scratch', metadata, autoload=True)
+
+    columns = [
+        t1.c.tc_timing_id,
+        t1.c.tc_date,
+        t1.c.tc_signal,
+    ]
+
+    s = select(columns)
+
+    if timings is not None:
+        if hasattr(timings, "__iter__") and not isinstance(timings, str):
+            s = s.where(t1.c.tc_timing_id.in_(timings))
+        else:
+            s = s.where(t1.c.tc_timing_id == timings)
+    
+    df = pd.read_sql(s, db, index_col = ['tc_date', 'tc_timing_id'], parse_dates=['tc_date'])
+
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
+
 
 def asset_tc_timing_signal_load(timings, begin_date=None, end_date=None):
     db = connection('asset')
@@ -428,7 +479,7 @@ def base_ra_index_find(globalid):
 #
 # base.ra_index_nav
 #
-def base_ra_index_nav_load_series(id_, reindex=None, begin_date=None, end_date=None):
+def base_ra_index_nav_load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     db = connection('base')
     metadata = MetaData(bind=db)
     t1 = Table('ra_index_nav', metadata, autoload=True)
@@ -444,6 +495,8 @@ def base_ra_index_nav_load_series(id_, reindex=None, begin_date=None, end_date=N
         s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
         s = s.where(t1.c.ra_date <= end_date)
+    if mask is not None:
+        s = s.where(t1.c.ra_mask == mask)
         
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
