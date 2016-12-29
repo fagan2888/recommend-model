@@ -17,7 +17,7 @@ class GFTD(object):
         self.index_code = index_code
         self.data = load_index(index_code, stime, etime)
         # 择开始时间
-        self.s_date = datetime.datetime(2011, 1, 1)
+        self.s_date = datetime.datetime(2010, 1, 1)
         # 择结束日期
         self.e_date = datetime.datetime.strptime(etime, '%Y%m%d')# datetime.datetime(2016, 12, 14)
         self.n1 = 4
