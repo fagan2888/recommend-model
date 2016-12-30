@@ -114,7 +114,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
 #
 # tc_timing
 #
-def asset_tc_timing_load(timings):
+def asset_tc_timing_load(timings, xtypes=None):
     db = connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('tc_timing', metadata, autoload=True)
@@ -132,6 +132,8 @@ def asset_tc_timing_load(timings):
 
     if timings is not None:
         s = s.where(t1.c.globalid.in_(timings))
+    if xtypes is not None:
+        s = s.where(t1.c.tc_type.in_(xtypes))
     
     df = pd.read_sql(s, db)
 
@@ -496,7 +498,10 @@ def base_ra_index_nav_load_series(id_, reindex=None, begin_date=None, end_date=N
     if end_date is not None:
         s = s.where(t1.c.ra_date <= end_date)
     if mask is not None:
-        s = s.where(t1.c.ra_mask == mask)
+        if hasattr(mask, "__iter__") and not isinstance(mask, str):
+            s = s.where(t1.c.ra_mask.in_(mask))
+        else:
+            s = s.where(t1.c.ra_mask == mask)
         
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
@@ -504,6 +509,38 @@ def base_ra_index_nav_load_series(id_, reindex=None, begin_date=None, end_date=N
         df = df.reindex(reindex)
 
     return df['nav']
+
+def base_ra_index_nav_load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
+    db = connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_index_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date,
+        t1.c.ra_open,
+        t1.c.ra_high,
+        t1.c.ra_low,
+        t1.c.ra_nav.label('ra_close'),
+    ]
+
+    s = select(columns).where(t1.c.ra_index_id == id_)
+    
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+    if mask is not None:
+        if hasattr(mask, "__iter__") and not isinstance(mask, str):
+            s = s.where(t1.c.ra_mask.in_(mask))
+        else:
+            s = s.where(t1.c.ra_mask == mask)
+        
+    df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df
 #
 # asset.allocation_instance
 #
