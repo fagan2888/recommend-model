@@ -6,7 +6,7 @@ import datetime
 
 if __name__ == "__main__":
     assets = ['HSI001', '000300', 'W00003', 'CI0022', '000905']
-    assets = ['000001']
+    assets = ['000300']
     edate = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d')
     for ass in assets:
         print ass

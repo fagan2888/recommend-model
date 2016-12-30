@@ -50,7 +50,7 @@ def test(ctx, datadir, startdate, enddate):
         yesterday = (datetime.now() - timedelta(days=1)); 
         enddate = yesterday.strftime("%Y-%m-%d")        
 
-    df_nav = pd.read_csv(datapath('000001_gftd_result.csv'),  index_col=['date'], parse_dates=['date'], usecols=['date', 'open', 'high', 'low', 'close'])
+    df_nav = pd.read_csv(datapath('000300_gftd_result.csv'),  index_col=['date'], parse_dates=['date'], usecols=['date', 'open', 'high', 'low', 'close'])
     # print df_nav.head()
     df_nav.rename(columns={'open':'tc_open', 'high':'tc_high', 'low':'tc_low', 'close':'tc_close'}, inplace=True)
     df_nav.index.name='tc_date'
@@ -68,7 +68,7 @@ def test(ctx, datadir, startdate, enddate):
 
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD().timing(df_nav)
-    df_new['tc_timing_id'] = 41102
+    df_new['tc_timing_id'] = 41101
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
 
     # print df_new[df_new['tc_stop'].isnull()].head()
@@ -108,7 +108,7 @@ def test(ctx, datadir, startdate, enddate):
         t2.c.tc_signal,
         t2.c.tc_stop,
     ]
-    s = select(columns2, (t2.c.tc_timing_id == 41102))
+    s = select(columns2, (t2.c.tc_timing_id == 41101))
     df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
     if not df_old.empty:
         df_old = database.number_format(df_old, columns=formaters, precision=4)
@@ -162,14 +162,8 @@ def nav_update(timing):
         timing['tc_index_id'], begin_date=min_date, end_date=max_date, mask=0)
     df_inc = df_nav.pct_change().fillna(0.0).to_frame(timing_id)
 
-    print df_nav.head(35)
-    print df_inc.head(35)
-
-    
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
-    print df_nav_portfolio.head(35)
-
 
     df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'tc_nav'}).copy()
     df_result.index.name = 'tc_date'
@@ -178,7 +172,6 @@ def nav_update(timing):
     df_result = df_result.reset_index().set_index(['tc_timing_id', 'tc_date'])
     
     df_new = database.number_format(df_result, columns=['tc_nav', 'tc_inc'], precision=6)
-
 
     # 加载旧数据
     db = database.connection('asset')
