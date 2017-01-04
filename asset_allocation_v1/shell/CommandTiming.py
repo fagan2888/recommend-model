@@ -168,7 +168,7 @@ def signal_update(timing):
     # df_nav = pd.read_csv(datapath('000300_gftd_result.csv'),  index_col=['date'], parse_dates=['date'], usecols=['date', 'open', 'high', 'low', 'close'])
     df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
     df_nav.index.name='tc_date'
-
+   
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD().timing(df_nav)
     df_new['tc_timing_id'] = timing_id
@@ -217,11 +217,22 @@ def signal_update(timing):
         df_old = database.number_format(df_old, columns=formaters, precision=4)
 
     # 更新数据库
-    # print df_new.head()
-    # print df_old.head()
     database.batch(db, t2, df_new, df_old, timestamp=False)
     print "total signal: %d, %.2f/year" % (num_signal, num_signal * 250/len(df_new))
-    
+
+    # 更新tc_timing_signal
+    df_new = df_new[['tc_signal']]
+    t3 = Table('tc_timing_signal', MetaData(bind=db), autoload=True)
+    columns3 = [
+        t3.c.tc_timing_id,
+        t3.c.tc_date,
+        t3.c.tc_signal,
+    ]
+    s = select(columns3, (t3.c.tc_timing_id == timing_id))
+    df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
+
+    # 更新数据库
+    database.batch(db, t3, df_new, df_old, timestamp=False)
 
 @timing.command()
 @click.option('--id', 'optid', help=u'ids of fund pool to update')

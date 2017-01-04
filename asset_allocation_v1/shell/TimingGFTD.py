@@ -137,14 +137,17 @@ class TimingGFTD(object):
             #
             if status == -1:
                 # 空仓状态
-                if row['tc_high'] >= high:
+                if row['tc_close'] >= high:
                     # 沽空止损
                     print "empty stop:", key, row['tc_high'], high
+                    low = min(row['tc_low'], low_recording)
                     (status, action) = (1, 3)
             else:
                 # 持仓状态, status == 1
-                if row['tc_low'] <= low:
+                if row['tc_close'] <= low:
                     # 买入止损
+                    print "buy stop:", key, row['tc_low'], low
+                    high = max(row['tc_high'], high_recording)
                     (status, action) = (-1, -3)
             #
             # 记录空仓和止损线
