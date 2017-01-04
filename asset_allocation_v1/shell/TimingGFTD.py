@@ -156,10 +156,11 @@ class TimingGFTD(object):
                 high_recording = max(row['tc_high'], high_recording)
             if low_recording is not None:
                 low_recording = min(row['tc_low'], low_recording)
-                    
+
+            stop =  (high if status == -1 else low)
             dict_status[key] = status
             dict_action[key] = action
-            dict_stop[key] = (high if status == -1 else low)
+            dict_stop[key] = stop if stop is not None else 0
             # if key == pd.to_datetime('2015-01-22'):
             #     print key, status, high, low
             #     print stop
