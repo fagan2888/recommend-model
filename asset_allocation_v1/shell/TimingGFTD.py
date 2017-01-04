@@ -11,18 +11,18 @@ import database
 
 class TimingGFTD(object):
     
-    def __init__(self, n1=4, n2=4, n3=4):
+    def __init__(self, n1=4, n2=4, n3=4, n4=None):
         self.n1 = n1
         self.n2 = n2
         self.n3 = n3
+        self.n4 = n4 if n4 else n3
 
     def timing(self, df_nav):
-        n1, n2, n3 = (self.n1, self.n2, self.n3)
         #
         # step 1: 计算 ud
         #
         sr_ud = df_nav['tc_close']\
-            .rolling(window=n1, min_periods=n1)\
+            .rolling(window=self.n1+1, min_periods=self.n1+1)\
             .apply(lambda x: cmp(x[-1], x[0])).fillna(0)
         df_nav['tc_ud'] = sr_ud
         #
@@ -31,7 +31,7 @@ class TimingGFTD(object):
         sr_flip = sr_ud\
             .rolling(window=2, min_periods=1)\
             .apply(lambda x: 0 if x[0] == x[-1] else 1)
-        df_nav['tc_ud_flip'] = sr_flip
+        # df_nav['tc_ud_flip'] = sr_flip
         
         sr_flip_acc = sr_flip.cumsum()
         #df_nav['flip_acc'] = sr_flip_acc
@@ -54,44 +54,75 @@ class TimingGFTD(object):
             .apply(lambda x: 1 if x[-1] >= self.n2 and (x[0] <= 0 or len(x) == 1) else 0)
         sr_sell_start = sr_sell_start[::-1]
 
-        #
-        # step 4.1: 买入和卖出计数
-        #
-        sr_kstick_buy = ((df_nav['tc_close'] >= df_nav['tc_high'].shift(2))\
-            & (df_nav['tc_high'] >= df_nav['tc_high'].shift(1)) \
-            & (df_nav['tc_close'] >= df_nav['tc_close'].shift(1))).astype(int)
-        sr_kstick_sell = ((df_nav['tc_close'] <= df_nav['tc_low'].shift(2))\
-            & (df_nav['tc_low'] <= df_nav['tc_low'].shift(1)) \
-            & (df_nav['tc_close'] <= df_nav['tc_close'].shift(1))).astype(int)
-
-        #
-        # step 4.2: 对买入和卖出信号进行累加
-        #
-        sr_count_buy = sr_kstick_buy\
-            .groupby(sr_buy_start.cumsum(), group_keys=False)\
-            .apply(lambda x: np.add.accumulate(x) - x[0])
-        sr_count_buy[:sr_buy_start.index[sr_buy_start == 1].min()] = 0
-        sr_count_sell=sr_kstick_sell\
-            .groupby(sr_sell_start.cumsum(), group_keys=False)\
-            .apply(lambda x: np.add.accumulate(x) - x[0])
-        sr_count_sell[:sr_sell_start.index[sr_sell_start == 1].min()] = 0
-
-        #
-        # step 5: 发出买入和卖出信号
-        #
-        sr_signal_buy = sr_count_buy.rolling(2, 1)\
-            .apply(lambda x: 1 if x[0] != self.n3 and x[-1] == self.n3 else 0)
-        sr_signal_sell = sr_count_sell.rolling(2, 1)\
-            .apply(lambda x: 1 if x[0] != self.n3 and x[-1] == self.n3 else 0)
-
         df_nav['tc_buy_start'] = sr_buy_start
-        df_nav['tc_buy_kstick'] = sr_kstick_buy
-        df_nav['tc_buy_count'] = sr_count_buy
-        df_nav['tc_buy_signal'] = sr_signal_buy
+
+        #
+        # 买入计数, 累加, 发出买入信号
+        #
+        (row_1, row_2, row_last, count) = (None, None, None, None)
+        (sr_kstick_buy, sr_count_buy, sr_signal_buy) = ({}, {}, {})
+        for key, row in df_nav.iterrows():
+            if row['tc_buy_start'] == 1:
+                (kstick, count, signal, row_last) = (0, 0, 0, None)
+            else:
+                if count is None:
+                    (kstick, signal) = (0, 0)
+                else:
+                    cond1 = row['tc_close'] >= row_2['tc_high']
+                    cond2 = row['tc_high'] > row_1['tc_high']
+                    cond3 = row['tc_close'] > row_last['tc_close'] if row_last is not None else True
+
+                    kstick = 1 if cond1 and cond2 and cond3 else 0
+                    count += kstick
+                    signal = 1 if count == self.n3 and kstick == 1 else 0
+
+            sr_kstick_buy[key] = kstick
+            sr_count_buy[key] = count if count is not None and kstick == 1 else 0
+            sr_signal_buy[key] = signal
+            
+            row_2 = row_1
+            row_1 = row
+            if kstick:
+                row_last = row
+                
+        # df_nav['tc_buy_kstick'] = pd.Series(sr_kstick_buy)
+        df_nav['tc_buy_count'] = pd.Series(sr_count_buy)
+        df_nav['tc_buy_signal'] = pd.Series(sr_signal_buy)
+
+        #
+        # 卖出计数, 累加, 发出卖出信号
+        #
         df_nav['tc_sell_start'] = sr_sell_start
-        df_nav['tc_sell_kstick'] = sr_kstick_sell
-        df_nav['tc_sell_count'] = sr_count_sell
-        df_nav['tc_sell_signal'] = sr_signal_sell
+            
+        (row_1, row_2, row_last, count) = (None, None, None, None)
+        (sr_kstick_sell, sr_count_sell, sr_signal_sell) = ({}, {}, {})
+        for key, row in df_nav.iterrows():
+            if row['tc_sell_start'] == 1:
+                (kstick, count, signal, row_last) = (0, 0, 0, None)
+            else:
+                if count is None:
+                    (kstick, signal) = (0, 0)
+                else:
+                    cond1 = row['tc_close'] <= row_2['tc_low']
+                    cond2 = row['tc_low'] < row_1['tc_low']
+                    cond3 = row['tc_close'] < row_last['tc_close'] if row_last is not None else True
+
+                    kstick = 1 if cond1 and cond2 and cond3 else 0
+                    count += kstick
+                    signal = 1 if count == self.n4 and kstick == 1 else 0
+
+            sr_kstick_sell[key] = kstick
+            sr_count_sell[key] = count if count is not None and kstick == 1 else 0
+            sr_signal_sell[key] = signal
+            
+            row_2 = row_1
+            row_1 = row
+            if kstick:
+                row_last = row
+                
+        # df_nav['tc_sell_kstick'] = pd.Series(sr_kstick_sell)
+        df_nav['tc_sell_count'] = pd.Series(sr_count_sell)
+        df_nav['tc_sell_signal'] = pd.Series(sr_signal_sell)
 
         #
         # 生成交易信号和止损信号
@@ -102,7 +133,8 @@ class TimingGFTD(object):
 
         dict_status = {}
         dict_action = {}
-        dict_stop = {}
+        dict_stop_high = {}
+        dict_stop_low = {}
         dict_recording_high = {}
         dict_recording_low = {}
         for key, row in df_nav.iterrows():
@@ -157,10 +189,11 @@ class TimingGFTD(object):
             if low_recording is not None:
                 low_recording = min(row['tc_low'], low_recording)
 
-            stop =  (high if status == -1 else low)
+            #stop =  (high if status == -1 else low)
             dict_status[key] = status
             dict_action[key] = action
-            dict_stop[key] = stop if stop is not None else 0
+            dict_stop_high[key] = high if high is not None else 0
+            dict_stop_low[key] = low if low is not None else 0
             # if key == pd.to_datetime('2015-01-22'):
             #     print key, status, high, low
             #     print stop
@@ -171,12 +204,13 @@ class TimingGFTD(object):
         tmp = {
             'tc_signal': dict_status,
             'tc_action': dict_action,
-            'tc_stop': dict_stop,
+            'tc_stop_high': dict_stop_high,
+            'tc_stop_low': dict_stop_low,
             'tc_recording_high': dict_recording_high,
             'tc_recording_low': dict_recording_low,
         }    
         df_tmp = pd.DataFrame(tmp, index=df_nav.index)
-        df_tmp.loc[df_tmp['tc_stop'] == float('inf'), 'tc_stop'] = 0
+        df_tmp.loc[df_tmp['tc_stop_high'] == float('inf'), 'tc_stop_high'] = 0
         df_nav = pd.concat([df_nav, df_tmp], axis=1)
              
         # print df_nav.head(5000)
