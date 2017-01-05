@@ -42,16 +42,20 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
         df_inc.loc[start_date] = 0
         df_inc.sort_index(inplace=True)
 
-    df = df_inc[start_date:]
+    df = df_inc[start_date:].copy()
 
     df_position['cash'] = 1 - df_position.sum(axis=1)
-    df_inc['cash'] = 0.0
+    df['cash'] = 0.0
 
     assets_s = pd.Series(np.zeros(len(df.columns)), index=df.columns) # 当前资产
     assets_s[0] = 1
 
     #
     # 计算每天的各资产持仓情况
+    #
+    # 注意:
+    #    1. 第一天是没有收益率的
+    #    2. 对于调仓日, 先计算收益率, 然后再调仓
     #
     df_result = pd.DataFrame(index=df.index, columns=df.columns)
     for day,row in df.iterrows():
@@ -61,10 +65,14 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
 
         # 如果是调仓日, 则调仓
         if day in df_position.index: # 调仓日
-            assets_s = assets_s.sum() * df_position.loc[day]
+            if day == start_date:
+                assets_s = 1 * df_position.loc[day]
+            else:
+                assets_s = assets_s.sum() * df_position.loc[day]
 
         # 日末各个基金持仓情况
         df_result.loc[day] = assets_s
+
     #
     # 计算资产组合净值
     #

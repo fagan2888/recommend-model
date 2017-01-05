@@ -1,7 +1,14 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 
 import momen
 import gftd
+import datetime
 
 if __name__ == "__main__":
-    gftd_ins = gftd.GFTD('HSI001', '20100101', '20161122')
+    assets = ['HSI001', '000300', 'W00003', 'CI0022', '000905']
+    assets = ['000300']
+    edate = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d')
+    for ass in assets:
+        print ass
+        print edate
+        gftd_ins = gftd.GFTD(ass, '20100101', edate)
