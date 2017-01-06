@@ -193,11 +193,11 @@ def asset_tc_timing_signal_load(timings, begin_date=None, end_date=None):
     return df
     
 
-def asset_rm_risk_mgr_pos_load(
+def asset_rm_risk_mgr_signal_load(
         riskmgr_id, categories=None, begin_date = None, end_date=None):
     db = connection('asset')
 
-    t1 = Table('rm_risk_mgr_pos', MetaData(bind=db), autoload=True)
+    t1 = Table('rm_risk_mgr_signal', MetaData(bind=db), autoload=True)
 
     columns = [
         t1.c.rm_category,
@@ -277,11 +277,11 @@ def asset_tc_timing_signal_load(timings, begin_date=None, end_date=None):
     return df
     
 
-def asset_rm_risk_mgr_pos_load(
+def asset_rm_risk_mgr_signal_load(
         riskmgr_id, categories=None, begin_date = None, end_date=None):
     db = connection('asset')
 
-    t1 = Table('rm_risk_mgr_pos', MetaData(bind=db), autoload=True)
+    t1 = Table('rm_risk_mgr_signal', MetaData(bind=db), autoload=True)
 
     columns = [
         t1.c.rm_category,

@@ -383,7 +383,7 @@ def nav_update(timing):
 #         # 保存风控仓位到数据库
 #         #
 #         db = database.connection('asset')
-#         t2 = Table('rm_risk_mgr_pos', MetaData(bind=db), autoload=True)
+#         t2 = Table('rm_risk_mgr_signal', MetaData(bind=db), autoload=True)
 #         columns2 = [
 #             t2.c.rm_risk_mgr_id,
 #             t2.c.rm_category,
@@ -406,7 +406,7 @@ def nav_update(timing):
 #     #
 #     df_pos_markowitz = pd.read_csv(datapath('portfolio_position.csv'), index_col=['date'], parse_dates=['date'])
 
-#     df_pos_riskmgr = database.asset_rm_risk_mgr_pos_load(optinst)
+#     df_pos_riskmgr = database.asset_rm_risk_mgr_signal_load(optinst)
 
 #     for column in df_pos_riskmgr.columns:
 #         category = DFUtil.categories_name(column)
