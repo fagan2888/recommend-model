@@ -201,8 +201,9 @@ def merge_column_for_fund_id_type(df, code, usecols=['globalid', 'ra_type']):
 
     return df_result
 
-    
-
+def filter_same_with_last(df):
+    df2 = df.shift(1).fillna(0)
+    return df[(df != df2).any(axis=1)]
 
 def categories_types(as_int=False):
     if as_int:
