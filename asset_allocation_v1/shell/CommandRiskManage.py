@@ -246,7 +246,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
         #
         today = datetime.now()
         prefix = '60' + today.strftime("%m%d");
-        if opttype == 9:
+        if opttype == '9':
             between_min, between_max = ('%s90' % (prefix), '%s99' % (prefix))
         else:
             between_min, between_max = ('%s00' % (prefix), '%s89' % (prefix))
@@ -270,7 +270,6 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
     #
     if optname is None:
         optname = os.path.basename(csv);
-
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -323,7 +322,6 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
     
     df_tosave['updated_at'] = df_tosave['created_at'] = now
 
-    print df_tosave.head()
     df_tosave.to_sql(rm_risk_mgr_pos.name, db, index=True, if_exists='append', chunksize=500)
 
     if len(df_tosave.index) > 1:

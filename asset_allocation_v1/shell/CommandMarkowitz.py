@@ -71,7 +71,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
         #
         today = datetime.now()
         prefix = '50' + today.strftime("%m%d");
-        if opttype == 9:
+        if opttype == '9':
             between_min, between_max = ('%s90' % (prefix), '%s99' % (prefix))
         else:
             between_min, between_max = ('%s00' % (prefix), '%s89' % (prefix))
