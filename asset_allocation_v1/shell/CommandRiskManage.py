@@ -1,7 +1,7 @@
 #coding=utf8
 
 
-import getopt
+import logging
 import string
 import json
 import os
@@ -10,23 +10,15 @@ sys.path.append('shell')
 import click
 import pandas as pd
 import numpy as np
-import LabelAsset
-import EqualRiskAssetRatio
-import EqualRiskAsset
-import HighLowRiskAsset
 import os
+import util_numpy as npu
 import DBData
-import AllocationData
 import time
-import RiskHighLowRiskAsset
-import ModelHighLowRisk
-import GeneralizationPosition
 import Const
-import WeekFund2DayNav
-import FixRisk
 import RiskManagement
 import database
 import DFUtil
+import asset_rm_risk_mgr
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -35,14 +27,14 @@ from sqlalchemy import MetaData, Table, select, func
 
 import traceback, code
 
+logger = logging.getLogger(__name__)
+
 @click.group()  
 @click.pass_context
 def riskmgr(ctx):
     '''risk management group
     '''
     pass
-
-
 
 @riskmgr.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
@@ -220,3 +212,123 @@ def make_rm_risk_mgr_if_not_exist(id_):
     t2.insert(row).execute()
 
     return True
+
+@riskmgr.command(name='import')
+@click.option('--id', 'optid', type=int, help=u'specify markowitz id')
+@click.option('--name', 'optname', type=int, help=u'specify markowitz name')
+@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
+@click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
+@click.argument('csv', type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=False), required=True)
+@click.pass_context
+def import_command(ctx, csv, optid, optname, opttype, optreplace):
+    '''
+    import risk management position from csv file
+    '''
+
+    #
+    # 处理id参数
+    #
+    if optid is not None:
+        #
+        # 检查id是否存在
+        #
+        df_existed = asset_rm_risk_mgr.load([str(optid)])
+        if not df_existed.empty:
+            s = 'riskmgr instance [%d] existed' % optid
+            if optreplace:
+                click.echo(click.style("%s, will replace!" % s, fg="yellow"))
+            else:
+                click.echo(click.style("%s, import aborted!" % s, fg="red"))
+            return -1;
+    else:
+        #
+        # 自动生成id
+        #
+        today = datetime.now()
+        prefix = '60' + today.strftime("%m%d");
+        if opttype == 9:
+            between_min, between_max = ('%s90' % (prefix), '%s99' % (prefix))
+        else:
+            between_min, between_max = ('%s00' % (prefix), '%s89' % (prefix))
+
+        max_id = asset_rm_risk_mgr.max_id_between(between_min, between_max)
+        if max_id is None:
+            optid = between_min
+        else:
+            if max_id >= between_max:
+                s = "run out of instance id [%d]" % max_id
+                click.echo(click.style("%s, import aborted!" % s, fg="red"))
+                return -1
+
+            if optreplace:
+                optid = max_id
+            else:
+                optid = max_id + 1;
+
+    #
+    # 处理name参数
+    #
+    if optname is None:
+        optname = os.path.basename(csv);
+
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    rm_risk_mgr = Table('rm_risk_mgr', metadata, autoload=True)
+    rm_risk_mgr_pos = Table('rm_risk_mgr_pos', metadata, autoload=True)
+    # rm_risk_mgr_nav = Table('rm_risk_mgr_nav', metadata, autoload=True)
+
+    #
+    # 处理替换
+    #
+    if optreplace:
+        rm_risk_mgr.delete(rm_risk_mgr.c.globalid == optid).execute()
+        rm_risk_mgr_pos.delete(rm_risk_mgr_pos.c.rm_risk_mgr_id == optid).execute()
+        # rm_risk_mgr_nav.delete(rm_risk_mgr_nav.c.rm_risk_mgr_id == optid).execute()
+
+    now = datetime.now()
+    #
+    # 导入数据
+    #
+    row = {
+        'globalid': optid, 'rm_type':opttype, 'rm_name': optname,
+        'rm_pool': '', 'rm_reshape': '', 'rm_markowitz': '', 'created_at': func.now(), 'updated_at': func.now()
+    }
+    rm_risk_mgr.insert(row).execute()
+
+    df = pd.read_csv(csv, parse_dates=['date'])
+    df['risk'] = (df['risk'] * 10).astype(int)
+    renames = dict(
+        {'date':'rm_date', 'risk':'rm_alloc_id'}.items() + DFUtil.categories_types(as_int=True).items()
+    )
+    df = df.rename(columns=renames)
+    df['rm_risk_mgr_id'] = optid
+
+    df.set_index(['rm_risk_mgr_id', 'rm_alloc_id', 'rm_date'], inplace=True)
+
+    # 四舍五入到万分位
+    df = df.round(4)
+    # 过滤掉过小的份额
+    df[df.abs() < 0.0009999] = 0
+    # 补足缺失
+    df = df.apply(npu.np_pad_to, raw=True, axis=1)
+    # 过滤掉相同
+    df = df.groupby(level=(0,1), group_keys=False).apply(DFUtil.filter_same_with_last)
+
+    df.columns.name='rm_asset'
+    df_tosave = df.stack().to_frame('rm_ratio')
+    df_tosave = df_tosave.loc[df_tosave['rm_ratio'] > 0, ['rm_ratio']]
+    if not df_tosave.empty:
+        database.number_format(df_tosave, columns=['rm_ratio'], precision=4)
+    
+    df_tosave['updated_at'] = df_tosave['created_at'] = now
+
+    print df_tosave.head()
+    df_tosave.to_sql(rm_risk_mgr_pos.name, db, index=True, if_exists='append', chunksize=500)
+
+    if len(df_tosave.index) > 1:
+        logger.info("insert %s (%5d) : %s " % (rm_risk_mgr_pos.name, len(df_tosave.index), df_tosave.index[0]))
+
+    click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
+    
+    return 0
