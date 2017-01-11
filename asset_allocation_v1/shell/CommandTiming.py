@@ -27,12 +27,21 @@ from tabulate import tabulate
 
 import traceback, code
 
-@click.group()  
+@click.group(invoke_without_command=True)
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--id', 'optid', help=u'fund pool id to update')
+@click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
-def timing(ctx):
+def timing(ctx, datadir, optid, optonline):
     '''timing group
     '''
-    pass
+    if ctx.invoked_subcommand is None:
+        # click.echo('I was invoked without subcommand')
+        ctx.invoke(signal, datadir=datadir, optid=optid, optonline=optonline)
+        ctx.invoke(nav, optid=optid)
+    else:
+        # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
+        pass
 
 
 
