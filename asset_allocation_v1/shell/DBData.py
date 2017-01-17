@@ -38,6 +38,26 @@ def all_trade_dates():
 
     return dates
 
+def all_trade_dates_daily():
+
+    conn  = MySQLdb.connect(**config.db_base)
+    cur   = conn.cursor(MySQLdb.cursors.DictCursor)
+    conn.autocommit(True)
+
+    sql = "SELECT td_date FROM trade_dates WHERE td_date >= '2002-01-04' ORDER by td_date ASC";
+    
+    # sql = 'select iv_time from (select iv_time,DATE_FORMAT(`iv_time`,"%Y%u") week from (select * from index_value where iv_index_id =120000001  order by iv_time desc) as a group by iv_index_id,week order by week asc) as b'
+
+
+    dates = []
+    cur.execute(sql)
+    records = cur.fetchall()
+    for record in records:
+        dates.append(record.values()[0].strftime('%Y-%m-%d'))
+    conn.close()
+
+    return dates
+
 
 
 def trade_dates(start_date, end_date):

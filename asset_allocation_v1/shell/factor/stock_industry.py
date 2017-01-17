@@ -30,6 +30,7 @@ if __name__ == '__main__':
     sql = 'select SECODE, SYMBOL from TQ_SK_BASICINFO'
     cur.execute(sql)
 
+
     secode_symbol_dict = {}
     for record in cur.fetchall():
         secode = record[0]
@@ -45,4 +46,35 @@ if __name__ == '__main__':
     sql = 'select SYMBOL, SWLEVEL1CODE from tq_sk_basicinfo where SYMBOL in (' + imploded_symbols + ')'
 
     df = pd.read_sql(sql, conn, index_col = ['SYMBOL'])
+    stocksymbol_industrycode_df = df.loc[df['SWLEVEL1CODE'].notnull()]
+    #print df
+
+    industry_codes = []
+    for code in df.values:
+        if not code[0] is None:
+            industry_codes.append(code[0])
+
+    #print industrycode_stocksymbol_dict
+
+
+    imploded_industry = ','.join([repr(seid.encode('utf8')) for seid in industry_codes])
+    #print imploded_industry
+
+    sql = 'select SYMBOL, INDEXNAME, INDUSTRYCODE from tq_ix_industrymap where INDUSTRYCODE in (' + imploded_industry + ')'
+    df = pd.read_sql(sql, conn, index_col = ['SYMBOL'])
+    df = df.loc[df['INDUSTRYCODE'].notnull()]
+    indexcode_industrycode_df = df.drop_duplicates()
+    indexcode_industrycode_df.index.name = 'INDEXSYMBOL'
+
+    stocksymbol_industrycode_df.reset_index(inplace = True)
+    indexcode_industrycode_df.reset_index(inplace = True)
+    #print stocksymbol_industrycode_df
+    #print indexcode_industrycode_df
+    df = pd.merge(stocksymbol_industrycode_df, indexcode_industrycode_df, left_on = 'SWLEVEL1CODE', right_on = 'INDUSTRYCODE')
+    df = df.set_index('SYMBOL')
     print df
+    df.to_csv('./data/stock_industryindex.csv', encoding='utf8')
+    #print df
+    #print stocksymbol_industrycode_df
+    #print indexcode_industrycode_df
+

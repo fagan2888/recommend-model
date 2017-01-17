@@ -53,7 +53,8 @@ if __name__ == '__main__':
     cols = []
     for col in df.columns:
         symbol = secode_symbol[col]
-        cols.append(str(symbol) + '.index')
+        #cols.append(str(symbol) + '.index')
+        cols.append(symbol)
     df.columns = cols
     #print df
     print df
