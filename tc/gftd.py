@@ -16,6 +16,7 @@ class GFTD(object):
         #self.data = pd.read_csv(file_handle, index_col="Date", parse_dates=["Date"], low_memory=False)
         self.index_code = index_code
         self.data = load_index(index_code, stime, etime)
+        #os._exit(0)
         # 择开始时间
         self.s_date = datetime.datetime(2010, 1, 1)
         # 择结束日期
