@@ -67,9 +67,9 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
         'decline':  {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
         'growth':   {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
         'value':    {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'SP500.SPI':{'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
-        'GLNC':     {'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
-        'HSCI.HI':  {'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
+        'SP500.SPI':{'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        'GLNC':     {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        'HSCI.HI':  {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
     }
 
     bound = []

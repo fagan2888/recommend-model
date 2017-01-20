@@ -26,10 +26,16 @@ def efficient_frontier_spe(return_rate, bound, sumlimit=0.50):
 
     asset_mean = np.mean(return_rate, axis = 1)
     #print asset_mean
+    l = len(asset_mean)
 
     cov        =     np.cov(return_rate)
 
     S           =     matrix(cov)
+    l2 = matrix(S * np.eye(l))
+    l2 = l2 * 2
+    S = S + l2
+    #S = l2
+
     pbar       =     matrix(asset_mean)
 
     #
