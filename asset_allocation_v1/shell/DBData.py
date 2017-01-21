@@ -513,7 +513,7 @@ def db_index_value_daily(start_date, end_date, codes=None):
         code_sql = "SELECT globalid FROM ra_index WHERE ra_code IN (%s)" % (code_str);
         sql = "SELECT A.ra_date as date, A.ra_index_code as code, A.ra_nav FROM ra_index_nav A, (%s) D, (%s) E WHERE A.ra_index_id = D.globalid AND A.ra_date = E.td_date ORDER BY A.ra_date" % (code_sql, date_sql)
     else:
-        sql = "SELECT ra_date as date, ra_index_code, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date ORDER BY ra_date" % (date_sql)
+        sql = "SELECT ra_date as date, ra_index_code as code, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date ORDER BY ra_date" % (date_sql)
         
     logger.debug("db_index_value: " + sql)
     

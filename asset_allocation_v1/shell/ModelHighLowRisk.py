@@ -24,7 +24,8 @@ def get_columns(key, excluded):
         
     columns = {
         'low':[e for e in ['ratebond','creditbond'] if e not in excluded],
-        'high':[e for e in ['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value', 'SP500.SPI', 'GLNC', 'HSCI.HI'] if e not in excluded]
+        #'high':[e for e in ['largecap', 'smallcap', 'rise', 'decline', 'growth', 'value', 'SP500.SPI', 'GLNC', 'HSCI.HI'] if e not in excluded]
+        'high':[e for e in ['largecap', 'smallcap','SP500.SPI', 'GLNC', 'HSCI.HI'] if e not in excluded]
     }
 
     return columns.get(key)

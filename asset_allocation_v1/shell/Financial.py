@@ -119,7 +119,7 @@ def efficient_frontier(return_rate, bound):
         A                 =  matrix(1.0, (1, n_asset))
         b                 =  matrix(1.0)
 
-
+        #print S
         N = 200
         mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
         portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
