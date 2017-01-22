@@ -21,6 +21,7 @@ import CommandPool
 import CommandPortfolio
 import CommandCompositeAsset
 import CommandMarkowitz
+import CommandReshape
 import CommandRiskManage
 import CommandTiming
 
@@ -120,6 +121,7 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandFund.fund)
     roboadvisor.add_command(CommandPool.pool)
     roboadvisor.add_command(CommandCompositeAsset.composite)
+    roboadvisor.add_command(CommandReshape.reshape)
     roboadvisor.add_command(CommandMarkowitz.markowitz)
     roboadvisor.add_command(CommandRiskManage.riskmgr)
     roboadvisor.add_command(CommandTiming.timing)

@@ -13,9 +13,7 @@ import os
 import time
 import logging
 import Const
-import database
 import DFUtil
-import asset_mz_reshape
 import util_numpy as npu
 
 from datetime import datetime, timedelta
@@ -23,6 +21,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
+from db import database, asset_rs_reshape
 
 
 import traceback, code
@@ -39,62 +38,15 @@ def reshape(ctx):
 
 
 @reshape.command(name='import')
-@click.option('--id', 'optid', type=int, help=u'specify reshape id')
-@click.option('--name', 'optname', type=int, help=u'specify reshape name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.argument('csv', type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=False), required=True)
 @click.pass_context
-def import_command(ctx, csv, optid, optname, opttype, optreplace):
+def import_command(ctx, csv, opttype, optreplace):
     '''
     import fund pool from csv file
     '''
 
-    #
-    # 处理id参数
-    #
-    if optid is not None:
-        #
-        # 检查id是否存在
-        #
-        df_existed = asset_rs_reshape.load([str(optid)])
-        if not df_existed.empty:
-            s = 'reshape instance [%d] existed' % optid
-            if optreplace:
-                click.echo(click.style("%s, will replace!" % s, fg="yellow"))
-            else:
-                click.echo(click.style("%s, import aborted!" % s, fg="red"))
-            return -1;
-    else:
-        #
-        # 自动生成id
-        #
-        today = datetime.now()
-        prefix = '50' + today.strftime("%m%d");
-        if opttype == '9':
-            between_min, between_max = ('%s90' % (prefix), '%s99' % (prefix))
-        else:
-            between_min, between_max = ('%s00' % (prefix), '%s89' % (prefix))
-
-        max_id = asset_rs_reshape.max_id_between(between_min, between_max)
-        if max_id is None:
-            optid = between_min
-        else:
-            if max_id >= between_max:
-                s = "run out of instance id [%d]" % max_id
-                click.echo(click.style("%s, import aborted!" % s, fg="red"))
-                return -1
-
-            if optreplace:
-                optid = max_id
-            else:
-                optid = max_id + 1;
-
-    #
-    # 处理name参数
-    #
-    if optname is None:
-        optname = os.path.basename(csv);
 
 
     db = database.connection('asset')
@@ -103,59 +55,53 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
     rs_reshape_pos = Table('rs_reshape_pos', metadata, autoload=True)
     rs_reshape_nav = Table('rs_reshape_nav', metadata, autoload=True)
 
-    #
-    # 处理替换
-    #
-    if optreplace:
-        rs_reshape.delete(rs_reshape.c.globalid == optid).execute()
-        rs_reshape_pos.delete(rs_reshape_pos.c.rs_reshape_id == optid).execute()
-        rs_reshape_nav.delete(rs_reshape_nav.c.rs_reshape_id == optid).execute()
 
     now = datetime.now()
-    #
-    # 导入数据
-    #
-    row = {
-        'globalid': optid, 'rs_type':opttype, 'rs_name': optname,
-        'rs_pool': '', 'rs_reshape': '', 'created_at': func.now(), 'updated_at': func.now()
-    }
-    rs_reshape.insert(row).execute()
 
-    df = pd.read_csv(csv, parse_dates=['date'])
-    df['risk'] = (df['risk'] * 10).astype(int)
+    df_csv = pd.read_csv(csv, parse_dates=['date'])
     renames = dict(
-        {'date':'rs_date', 'risk':'rs_alloc_id'}.items() + DFUtil.categories_types(as_int=True).items()
+        {'date':'rs_date'}.items() + DFUtil.categories_types(as_int=True).items()
     )
-    df = df.rename(columns=renames)
-    df['rs_reshape_id'] = optid
+    df_csv = df_csv.rename(columns=renames)
+    df_csv.set_index(['rs_date'], inplace=True)
 
-    df.set_index(['rs_reshape_id', 'rs_alloc_id', 'rs_date'], inplace=True)
+    for column in df_csv.columns:
+        if column in [21, 22, 23, 31]:
+            continue
+        
+        optid = "4%s2%d01%d" % (opttype, int(column) // 10, column)
 
-    # 四舍五入到万分位
-    df = df.round(4)
-    # 过滤掉过小的份额
-    df[df.abs() < 0.0009999] = 0
-    # 补足缺失
-    df = df.apply(npu.np_pad_to, raw=True, axis=1)
-    # 过滤掉相同
-    df = df.groupby(level=(0,1), group_keys=False).apply(DFUtil.filter_same_with_last)
+        #
+        # 处理替换
+        #
+        if optreplace:
+            # rs_reshape.delete(rs_reshape.c.globalid == optid).execute()
+            rs_reshape_pos.delete(rs_reshape_pos.c.rs_reshape_id == optid).execute()
+            rs_reshape_nav.delete(rs_reshape_nav.c.rs_reshape_id == optid).execute()
+            df = df_csv[[column]].copy()
+        
+        df['rs_reshape_id'] = optid
+        df = df.reset_index().set_index(['rs_reshape_id', 'rs_date'])
 
-    df.columns.name='rs_asset'
-    df_tosave = df.stack().to_frame('rs_ratio')
-    df_tosave = df_tosave.loc[df_tosave['rs_ratio'] > 0, ['rs_ratio']]
-    if not df_tosave.empty:
-        database.number_format(df_tosave, columns=['rs_ratio'], precision=4)
-    
-    df_tosave['updated_at'] = df_tosave['created_at'] = now
+        # 四舍五入到万分位
+        df = df.round(4)
+        # 过滤掉过小的份额
+        df[df.abs() < 0.0009999] = 0
+        # 过滤掉相同
+        df = DFUtil.filter_same_with_last(df)
 
-    df_tosave.to_sql(rs_reshape_pos.name, db, index=True, if_exists='append', chunksize=500)
+        df = df.rename(columns={column: 'rs_ratio'})
+        if not df.empty:
+            database.number_format(df, columns=['rs_ratio'], precision=4)
 
-    if len(df_tosave.index) > 1:
-        logger.info("insert %s (%5d) : %s " % (rs_reshape_pos.name, len(df_tosave.index), df_tosave.index[0]))
+        df['updated_at'] = df['created_at'] = now
 
-    click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
-    
-    return 0
+        df.to_sql(rs_reshape_pos.name, db, index=True, if_exists='append', chunksize=500)
+
+        if len(df.index) > 1:
+            logger.info("insert %s (%5d) : %s " % (rs_reshape_pos.name, len(df.index), df.index[0]))
+
+        click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
 
 # @reshape.command()
 # @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
@@ -273,77 +219,77 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 #     # 更新数据库
 #     database.batch(db, t3, df_new, df_old, timestamp=False)
 
-# @timing.command()
-# @click.option('--id', 'optid', help=u'ids of fund pool to update')
-# @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
-# @click.pass_context
-# def nav(ctx, optid, optlist):
-#     ''' calc pool nav and inc
-#     '''
-#     if optid is not None:
-#         timings = [s.strip() for s in optid.split(',')]
-#     else:
-#         timings = None
+@reshape.command()
+@click.option('--id', 'optid', help=u'ids of fund pool to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.pass_context
+def nav(ctx, optid, optlist):
+    ''' calc reshape nav and inc
+    '''
+    if optid is not None:
+        timings = [s.strip() for s in optid.split(',')]
+    else:
+        timings = None
 
-#     df_timing = database.asset_tc_timing_load(timings)
+    df_timing = database.asset_tc_timing_load(timings)
 
-#     if optlist:
+    if optlist:
 
-#         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
-#         print tabulate(df_timing, headers='keys', tablefmt='psql')
-#         return 0
+        df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_timing, headers='keys', tablefmt='psql')
+        return 0
     
-#     with click.progressbar(length=len(df_timing), label='update nav') as bar:
-#         for _, timing in df_timing.iterrows():
-#             bar.update(1)
-#             nav_update(timing)
+    with click.progressbar(length=len(df_timing), label='update nav') as bar:
+        for _, timing in df_timing.iterrows():
+            bar.update(1)
+            nav_update(timing)
 
-# def nav_update(timing):
-#     timing_id = timing['globalid']
-#     # 加载择时信号
-#     df_position = database.asset_tc_timing_scratch_load_signal(timing_id)
-#     # 构建仓位
-#     df_position.loc[df_position[timing_id] < 1, timing_id] = 0
+def nav_update(timing):
+    timing_id = timing['globalid']
+    # 加载择时信号
+    df_position = database.asset_tc_timing_scratch_load_signal(timing_id)
+    # 构建仓位
+    df_position.loc[df_position[timing_id] < 1, timing_id] = 0
     
-#     # 加载基金收益率
-#     min_date = df_position.index.min()
-#     #max_date = df_position.index.max()
-#     max_date = (datetime.now() - timedelta(days=1)) # yesterday
+    # 加载基金收益率
+    min_date = df_position.index.min()
+    #max_date = df_position.index.max()
+    max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
 
-#     df_nav = database.base_ra_index_nav_load_series(
-#         timing['tc_index_id'], begin_date=min_date, end_date=max_date, mask=0)
-#     df_inc = df_nav.pct_change().fillna(0.0).to_frame(timing_id)
+    df_nav = database.base_ra_index_nav_load_series(
+        timing['tc_index_id'], begin_date=min_date, end_date=max_date, mask=0)
+    df_inc = df_nav.pct_change().fillna(0.0).to_frame(timing_id)
 
-#     # 计算复合资产净值
-#     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
+    # 计算复合资产净值
+    df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
 
-#     df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'tc_nav'}).copy()
-#     df_result.index.name = 'tc_date'
-#     df_result['tc_inc'] = df_result['tc_nav'].pct_change().fillna(0.0)
-#     df_result['tc_timing_id'] = timing['globalid']
-#     df_result = df_result.reset_index().set_index(['tc_timing_id', 'tc_date'])
+    df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'tc_nav'}).copy()
+    df_result.index.name = 'tc_date'
+    df_result['tc_inc'] = df_result['tc_nav'].pct_change().fillna(0.0)
+    df_result['tc_timing_id'] = timing['globalid']
+    df_result = df_result.reset_index().set_index(['tc_timing_id', 'tc_date'])
     
-#     df_new = database.number_format(df_result, columns=['tc_nav', 'tc_inc'], precision=6)
+    df_new = database.number_format(df_result, columns=['tc_nav', 'tc_inc'], precision=6)
 
-#     # 加载旧数据
-#     db = database.connection('asset')
-#     t2 = Table('tc_timing_nav', MetaData(bind=db), autoload=True)
-#     columns2 = [
-#         t2.c.tc_timing_id,
-#         t2.c.tc_date,
-#         t2.c.tc_nav,
-#         t2.c.tc_inc,
-#     ]
-#     stmt_select = select(columns2, (t2.c.tc_timing_id == timing['globalid']))
-#     df_old = pd.read_sql(stmt_select, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
-#     if not df_old.empty:
-#         df_old = database.number_format(df_old, columns=['tc_nav', 'tc_inc'], precision=6)
+    # 加载旧数据
+    db = database.connection('asset')
+    t2 = Table('tc_timing_nav', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.tc_timing_id,
+        t2.c.tc_date,
+        t2.c.tc_nav,
+        t2.c.tc_inc,
+    ]
+    stmt_select = select(columns2, (t2.c.tc_timing_id == timing['globalid']))
+    df_old = pd.read_sql(stmt_select, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
+    if not df_old.empty:
+        df_old = database.number_format(df_old, columns=['tc_nav', 'tc_inc'], precision=6)
 
-#     # 更新数据库
-#     database.batch(db, t2, df_new, df_old, timestamp=False)
+    # 更新数据库
+    database.batch(db, t2, df_new, df_old, timestamp=False)
     
-#     #print df_result.head()
+    #print df_result.head()
 
-#     # df_result.to_csv(datapath('riskmgr_result.csv'))
+    # df_result.to_csv(datapath('riskmgr_result.csv'))
 
