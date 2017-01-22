@@ -29,16 +29,18 @@ if __name__ == '__main__':
     funddf = funddf[fundcols]
     funddfr = funddf.pct_change().fillna(0.0)
 
-    index = DBData.db_index_value_daily('2010-01-01', '2017-01-13', None)
+    index = DBData.db_index_value_daily('2010-01-01', '2017-01-20', None)
     index = index.resample('W-FRI').last()
     index = index.fillna(method = 'pad').dropna()
     index = index / index.iloc[0]
+    #print index.columns
     #print index.columns
     cols = ['000300.SH', '000905.SH', 'GLNC', 'HSCI.HI', 'SP500.SPI']
     #cols = ['000300.SH', '000905.SH', 'GLNC', 'HSCI.HI', 'SP500.SPI', 'H11001.CSI']
     index = index[cols]
     index.to_csv('index.csv')
     df_inc = index.pct_change().fillna(0.0)
+
 
     '''
     df_inc = df_inc.iloc[-52:]
@@ -133,14 +135,20 @@ if __name__ == '__main__':
             print d, wss / loop_num
             weight = wss / loop_num
 
-        rindex = 0
-        rfund = 0
+        #rindex = 0
+        #rfund = 0
+        r = 0
         for n in range(0, len(weight)):
-            rindex = rindex + df_inc.iloc[i, n] * weight[n]
-            rfund = rfund + funddfr.loc[d, fundcols[n]] * weight[n]
-            #r = r + df_inc.iloc[i, n] * 1.0 / len(weight)
+            #if n < len(weight) - 1:
+            #    rindex = rindex + df_inc.iloc[i, n] * weight[n]
+            #    rfund = rfund + funddfr.loc[d, fundcols[n]] * weight[n]
+            #else:
+            #    rindex = rindex + df_inc.iloc[i, n] * weight[n]
+            #    rfund = rfund + df_inc.iloc[i, n] * weight[n]
+            r = r + df_inc.iloc[i, n] * 1.0 / len(weight)
         ds.append(d)
-        rs.append([rindex, rfund])
+        #rs.append([rindex, rfund])
+        rs.append(r)
 
     df = pd.DataFrame(rs, index = ds)
     df.index.name = 'date'
