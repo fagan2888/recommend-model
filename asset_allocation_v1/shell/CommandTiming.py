@@ -28,16 +28,15 @@ from tabulate import tabulate
 import traceback, code
 
 @click.group(invoke_without_command=True)
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--id', 'optid', help=u'fund pool id to update')
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
-def timing(ctx, datadir, optid, optonline):
+def timing(ctx, optid, optonline):
     '''timing group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        ctx.invoke(signal, datadir=datadir, optid=optid, optonline=optonline)
+        ctx.invoke(signal, optid=optid, optonline=optonline)
         ctx.invoke(nav, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
@@ -130,16 +129,13 @@ def test(ctx, datadir, startdate, enddate):
     print "total signal: %d, %.2f/year" % (num_signal, num_signal * 250/len(df_new))
 
 @timing.command()
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.option('--id', 'optid', help=u'fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
-def signal(ctx, datadir, optid, optlist, optonline):
+def signal(ctx, optid, optlist, optonline):
     '''calc timing signal  for timing instance
     '''
-    Const.datadir = datadir
-
     if optid is not None:
         timings = [s.strip() for s in optid.split(',')]
     else:
@@ -175,7 +171,6 @@ def signal_update(timing):
     df_nav = database.base_ra_index_nav_load_ohlc(
         timing['tc_index_id'], begin_date=timing['tc_begin_date'], end_date=enddate, mask=[0, 2])
         
-    # df_nav = pd.read_csv(datapath('000300_gftd_result.csv'),  index_col=['date'], parse_dates=['date'], usecols=['date', 'open', 'high', 'low', 'close'])
     df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
     df_nav.index.name='tc_date'
    
@@ -316,149 +311,3 @@ def nav_update(timing):
     database.batch(db, t2, df_new, df_old, timestamp=False)
     
     #print df_result.head()
-
-    # df_result.to_csv(datapath('riskmgr_result.csv'))
-
-# @timing.command()
-# @click.option('--inst', 'optinst', type=int, help=u'risk mgr id')
-# @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-# @click.option('--start-date', 'startdate', help=u'start date to calc')
-# @click.option('--end-date', 'enddate', help=u'end date to calc')
-# @click.pass_context
-# def simple(ctx, datadir, optinst, startdate, enddate):
-#     '''run risk management using simple strategy
-#     '''
-#     Const.datadir = datadir
-
-#     if not enddate:
-#         yesterday = (datetime.now() - timedelta(days=1)); 
-#         enddate = yesterday.strftime("%Y-%m-%d")
-        
-#     if optinst is None:
-#         optinst = 2016120600
-
-#     make_rm_risk_mgr_if_not_exist(optinst)
-
-#     df_nav = pd.read_csv(datapath('equalriskasset.csv'),  index_col=['date'], parse_dates=['date'])
-#     if not startdate:
-#         startdate = df_nav.index.min().strftime("%Y-%m-%d")
-
-#     timing_ids = ['49101', '49201', '49301', '49401']
-#     df_timing = database.asset_tc_timing_signal_load(
-#         timing_ids, begin_date=startdate, end_date=enddate)
-
-#     tasks = {
-#         'largecap'       : [49101, 11],
-#         'smallcap'       : [49101, 12],
-#         'rise'           : [49101, 13],
-#         'oscillation'    : [49101, 14],
-#         'decline'        : [49101, 15],
-#         'growth'         : [49101, 16],
-#         'value'          : [49101, 17],
-#         'SP500.SPI'      : [49201, 41],
-#         'GLNC'           : [49301, 42],
-#         'HSCI.HI'        : [49401, 43],
-#         'convertiblebond': None,
-#         'creditbond'     : None,
-#         'money'          : None,
-#         'ratebond'       : None,
-#     }
-
-#     data = {}
-#     risk_mgr = RiskManagement.RiskManagement()
-#     for asset in df_nav.columns:
-#         #
-#         # 计算风控仓位
-#         #
-#         if tasks[asset] is None:
-#             continue
-
-#         timing_id, category = tasks[asset]
-
-#         df = pd.DataFrame({
-#             'nav': df_nav[asset],
-#             'timing': df_timing[timing_id].reindex(df_nav.index, method='pad')
-#         })
-        
-#         df_new = risk_mgr.perform(asset, df)
-        
-#         df_new['rm_risk_mgr_id'] = optinst
-#         df_new['rm_category'] = category
-#         df_new = df_new.reset_index().set_index(['rm_risk_mgr_id', 'rm_category', 'rm_date'])
-#         if not df_new.empty:
-#             df_new = df_new.applymap("{:.0f}".format)
-        
-#         #
-#         # 保存风控仓位到数据库
-#         #
-#         db = database.connection('asset')
-#         t2 = Table('rm_risk_mgr_signal', MetaData(bind=db), autoload=True)
-#         columns2 = [
-#             t2.c.rm_risk_mgr_id,
-#             t2.c.rm_category,
-#             t2.c.rm_date,
-#             t2.c.rm_action,
-#             t2.c.rm_pos,
-#         ]
-#         s = select(columns2, (t2.c.rm_risk_mgr_id == optinst) & (t2.c.rm_category == category))
-#         df_old = pd.read_sql(s, db, index_col=['rm_risk_mgr_id', 'rm_category', 'rm_date'], parse_dates=['rm_date'])
-#         if not df_old.empty:
-#             df_old = df_old.applymap("{:.0f}".format)
-
-#         # 更新数据库
-#         # print df_new.head()
-#         # print df_old.head()
-#         database.batch(db, t2, df_new, df_old, timestamp=False)
-
-#     #
-#     # 合并 markowitz 仓位 与 风控 结果
-#     #
-#     df_pos_markowitz = pd.read_csv(datapath('portfolio_position.csv'), index_col=['date'], parse_dates=['date'])
-
-#     df_pos_riskmgr = database.asset_rm_risk_mgr_signal_load(optinst)
-
-#     for column in df_pos_riskmgr.columns:
-#         category = DFUtil.categories_name(column)
-#         # if column < 20:
-#         #     rmc = 11
-#         # else:
-#         #     rmc = column
-#         rmc = column
-#         # print "use column %d for category %s" % (rmc, category)
-                
-#         if category in df_pos_markowitz:
-#             df_pos_tmp = df_pos_riskmgr[rmc].reindex(df_pos_markowitz.index)
-#             df_pos_markowitz[category] = df_pos_markowitz[category] * df_pos_tmp
-
-#     df_result = df_pos_markowitz.reset_index().set_index(['risk', 'date'])
-
-#     #
-#     # 调整货币的比例, 总和达到1
-#     #
-#     df_result['money'] = (1 - (df_result.sum(axis=1) - df_result['money']))
-    
-#     df_result.to_csv(datapath('riskmgr_position.csv'))
-
-# def make_rm_risk_mgr_if_not_exist(id_):
-#     db = database.connection('asset')
-#     t2 = Table('rm_risk_mgr', MetaData(bind=db), autoload=True)
-#     columns2 = [
-#         t2.c.globalid,
-#         t2.c.rm_inst_id,
-#     ]
-#     s = select(columns2, (t2.c.globalid == id_))
-#     df = pd.read_sql(s, db, index_col=['globalid'])
-#     if not df.empty:
-#         return True
-#     #
-#     # 导入数据
-#     #
-#     row = {
-#         'globalid': id_, 'rm_inst_id': id_, 'created_at': func.now(), 'updated_at': func.now()
-#     }
-#     t2.insert(row).execute()
-
-#     return True
-
-import numpy as np
-import matplotlib.pyplot as plt
