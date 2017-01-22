@@ -25,11 +25,11 @@ import Const
 import WeekFund2DayNav
 import FixRisk
 import CommandRiskManage
-import database
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
+from db import database
 
 import traceback, code
 

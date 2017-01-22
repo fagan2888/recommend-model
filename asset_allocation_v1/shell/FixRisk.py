@@ -11,11 +11,11 @@ import datetime
 import AllocationData
 from Const import datapath
 import click
-import database
 import logging
 import json
 
 from sqlalchemy import *
+from db import database
 
 logger = logging.getLogger(__name__)
 

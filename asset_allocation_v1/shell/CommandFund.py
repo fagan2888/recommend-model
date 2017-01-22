@@ -27,13 +27,13 @@ import WeekFund2DayNav
 import FixRisk
 import DFUtil
 import LabelAsset
-import database
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
+from db import database
 
 import traceback, code
 

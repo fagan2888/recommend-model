@@ -16,14 +16,13 @@ import DBData
 import time
 import Const
 import RiskManagement
-import database
 import DFUtil
-import asset_rm_risk_mgr
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
+from db import database, asset_rm_risk_mgr
 
 import traceback, code
 

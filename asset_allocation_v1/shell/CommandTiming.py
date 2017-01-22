@@ -14,7 +14,6 @@ import LabelAsset
 import os
 import time
 import Const
-import database
 import DFUtil
 from TimingGFTD import TimingGFTD
 
@@ -23,7 +22,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-
+from db import database
 
 import traceback, code
 

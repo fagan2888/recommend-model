@@ -13,9 +13,7 @@ import os
 import time
 import logging
 import Const
-import database
 import DFUtil
-import asset_mz_markowitz
 import util_numpy as npu
 
 from datetime import datetime, timedelta
@@ -23,7 +21,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-
+from db import database, asset_mz_markowitz
 
 import traceback, code
 

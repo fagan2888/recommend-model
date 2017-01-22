@@ -7,7 +7,7 @@ import datetime
 import calendar
 from sqlalchemy import *
 
-import database
+from db import database
 
 class TimingGFTD(object):
     
