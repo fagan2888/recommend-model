@@ -34,8 +34,9 @@ if __name__ == '__main__':
     dates = df_inc.index
     look_back = 52
     interval = 13
-    loop_num = 1
+    loop_num = 100
     weight = None
+    weights = []
 
     for i in range(look_back, len(dates)):
         d = dates[i]
@@ -46,8 +47,8 @@ if __name__ == '__main__':
                 random_n = []
                 for j in range(0, interval * 2):
                     random_n.append(random.randint(0, len(train_df_inc) - 1))
-                #tmp_df_inc = train_df_inc.iloc[random_n]
-                tmp_df_inc = train_df_inc
+                tmp_df_inc = train_df_inc.iloc[random_n]
+                #tmp_df_inc = train_df_inc
                 risk, returns, ws, sharpe = PF.markowitz_r(tmp_df_inc, None)
                 for n in range(0, len(ws)):
                     w = ws[n]
@@ -60,8 +61,18 @@ if __name__ == '__main__':
             r = r + df_inc.iloc[i, n] * weight[n]
         ds.append(d)
         rs.append(r)
+        weights.append(weight)
 
-    df = pd.DataFrame(rs, index = ds, columns = ['nav'])
-    df.index.name = 'date'
-    df = (1 + df).cumprod()
-    df.to_csv('robustmarkowitznav.csv')
+    vdf = pd.DataFrame(rs, index = ds, columns = ['nav'])
+    vdf.index.name = 'date'
+    vdf = (1 + vdf).cumprod()
+    vdf.to_csv('robustmarkowitznav.csv')
+
+
+    pdf = pd.DataFrame(weights, index = ds, columns = index.columns)
+    pdf.index.name = 'date'
+    pdf.to_csv('robustmarkowitzposition.csv')
+    presult = pdf.rolling(window = 2, min_periods = 1).apply(lambda x : x[1] - x[0] if len(x) > 1 else x[0])
+    presult = presult.abs().sum(axis = 1).to_frame('turnover').sum()
+    print presult
+
