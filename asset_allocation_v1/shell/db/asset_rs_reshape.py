@@ -3,7 +3,7 @@
 from sqlalchemy import MetaData, Table, select, func
 # import string
 # from datetime import datetime, timedelta
-# import pandas as pd
+import pandas as pd
 # import os
 # import sys
 import logging
@@ -25,6 +25,7 @@ def load(gids, xtypes=None):
         t1.c.globalid,
         t1.c.rs_type,
         t1.c.rs_pool,
+        t1.c.rs_asset,
         t1.c.rs_name,
     ]
 
