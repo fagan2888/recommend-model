@@ -26,15 +26,18 @@ if __name__ == '__main__':
     index = index.fillna(method = 'pad').dropna()
     index = index.resample('W-FRI').last()
     index = index / index.iloc[0]
-    df_inc = index.pct_change().fillna(0.0)
     index.to_csv('index.csv')
+
+    #index = index[index.columns[2:]]
+    #print index.columns
+    df_inc = index.pct_change().fillna(0.0)
 
     ds = []
     rs = []
     dates = df_inc.index
     look_back = 52
     interval = 13
-    loop_num = 100
+    loop_num = 52
     weight = None
     weights = []
 
@@ -42,11 +45,24 @@ if __name__ == '__main__':
         d = dates[i]
         if i % interval == 0:
             train_df_inc = df_inc.iloc[i - look_back : i]
+
             wss = np.zeros(len(train_df_inc.columns))
+            freq_dict = {}
+            randoms = []
             for j in range(0, loop_num):
                 random_n = []
-                for j in range(0, interval * 2):
-                    random_n.append(random.randint(0, len(train_df_inc) - 1))
+                m = 0
+                while m < interval * 2 * loop_num / look_back:
+                    rint = random.randint(0, len(train_df_inc) - 1)
+                    rfreq = freq_dict.setdefault(rint, 0)
+                    if rfreq < interval * 2:
+                        random_n.append(rint)
+                        freq_dict[rint] = rfreq + 1
+                        m += 1
+                randoms.append(random_n)
+
+            for j in range(0, loop_num):
+                random_n = randoms[j]
                 tmp_df_inc = train_df_inc.iloc[random_n]
                 #tmp_df_inc = train_df_inc
                 risk, returns, ws, sharpe = PF.markowitz_r(tmp_df_inc, None)
@@ -55,6 +71,15 @@ if __name__ == '__main__':
                     wss[n] = wss[n] + w
             print d, wss / loop_num
             weight = wss / loop_num
+
+
+            '''
+            tmp_df_inc = train_df_inc
+            #tmp_df_inc = train_df_inc
+            risk, returns, ws, sharpe = PF.markowitz_r(tmp_df_inc, None)
+            weight = ws
+            print d, weight
+            '''
 
         r = 0
         for n in range(0, len(weight)):
