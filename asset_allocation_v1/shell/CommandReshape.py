@@ -35,8 +35,6 @@ def reshape(ctx):
     '''
     pass
 
-
-
 @reshape.command(name='import')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
@@ -131,7 +129,8 @@ def nav_update(reshape):
     reshape_id = reshape['globalid']
     # 加载择时信号
     df_position = asset_rs_reshape_pos.load([reshape_id])
-    print df_position
+    if df_position.empty:
+        return 
 
     # 加载基金收益率
     min_date = df_position.index.min()
@@ -143,8 +142,6 @@ def nav_update(reshape):
         reshape['rs_pool'], reshape['rs_asset'], reshape['rs_type'],
         begin_date=min_date, end_date=max_date)
     df_inc = df_nav.pct_change().fillna(0.0).to_frame(reshape_id)
-    print df_inc
-    sys.exit(1)
 
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
@@ -172,9 +169,4 @@ def nav_update(reshape):
         df_old = database.number_format(df_old, columns=['rs_nav', 'rs_inc'], precision=6)
 
     # 更新数据库
-    database.batch(db, t2, df_new, df_old, timestamp=False)
-    
-    #print df_result.head()
-
-    # df_result.to_csv(datapath('riskmgr_result.csv'))
-
+    database.batch(db, t2, df_new, df_old, timestamp=True)
