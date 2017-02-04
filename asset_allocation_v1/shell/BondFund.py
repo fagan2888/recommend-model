@@ -10,9 +10,9 @@ import utils
 class BondFundFilter(object):
     def __init__(self):
         # 回测开始时间
-        self.test_start = datetime.datetime(2016, 11, 25)
+        self.test_start = datetime.datetime(2017, 1, 4)
         # 回测结束时间
-        self.test_end = datetime.datetime(2016, 11, 25)
+        self.test_end = datetime.datetime(2017, 1, 4)
         # 沪深300指数数据
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= self.test_start]
@@ -31,21 +31,21 @@ class BondFundFilter(object):
 
         # 基金规模
         self.fund_volume = 200000000.0
-        self.fund_volume_new = 0.8
-        self.fund_volume_pre_quarter = 0.8
-        self.fund_volume_six_month_ago = 0.8
-        self.fund_volume_found = 0.8
+        self.fund_volume_new = 0.7
+        self.fund_volume_pre_quarter = 0.7
+        self.fund_volume_six_month_ago = 0.7
+        self.fund_volume_found = 0.7
 
         # 基金份额
-        self.share_ratio = 0.8
+        self.share_ratio = 0.5
         # 基金经理
-        self.manager_num = 5
+        self.manager_num = 1.5
         self.cur_manager_days = 360 * 1.5
         self.hold_manager_days = 360 * 2.0
 
         # 机构持有比例
         self.holding_ratio = 0.8
-        self.holding_ratio_found = 0.5
+        self.holding_ratio_found = 0.8
         # sharpe计算时期
         self.days_one = 365
         self.days_two = 365 * 2
@@ -53,10 +53,10 @@ class BondFundFilter(object):
         # 股票市值占比
         self.stock_ratio = 10
         # sharpe/std
-        self.sharpe_one = 0.5
-        self.sharpe_two = 0.3
+        self.sharpe_one = 0.4
+        self.sharpe_two = 0.4
         self.sharpe_five = 0.3
-        self.return_std = 0.95
+        self.return_std = 1.0
 
     def filter_bond(self):
         choose_date = self.test_start
@@ -74,7 +74,7 @@ class BondFundFilter(object):
                         self.filter_found_years(choose_date)
                         self.filter_share()
                         self.filter_volume()
-                        self.filter_manager()
+                        #self.filter_manager()
                         self.filter_ins_holding()
                         self.filter_stock_ratio()
                         self.filter_sharpe_std(choose_date)
@@ -487,8 +487,8 @@ class BondFundFilter(object):
         fund_nav_pct = pd.read_csv("../tmp/bondfunds_nav.csv", \
             index_col=['SECURITYID', 'NAVDATE'], parse_dates=['NAVDATE'])
         sids = fund_base_info.index
-        eval_start = datetime.datetime(2016, 1, 4)
-        eval_end = datetime.datetime(2016, 6, 30)
+        eval_start = datetime.datetime(2017, 1, 4)
+        eval_end = datetime.datetime(2017, 2, 25)
         self.filter_types(eval_start)
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= eval_start]
