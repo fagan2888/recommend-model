@@ -30,6 +30,8 @@ def last_friday():
 def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     '''calc nav for portfolio
     '''
+    if df_position.empty:
+        return pd.DataFrame(columns=(['portfolio'] + list(df_inc.columns)))
     #
     # 从第一次调仓开始算起.
     #
