@@ -14,15 +14,47 @@ import DBData
 import DFUtil
 import AllocationData
 import random
+import scipy
+import scipy.optimize
 
 from Const import datapath
 
 logger = logging.getLogger(__name__)
 
+rf = 0.025 / 52
+
+def markowitz(dfr):
+    cov = dfr.cov()
+    cov = cov.values
+    rs = dfr.mean().values
+    #print len(cov)
+    asset_num = len(cov)
+    w = 1.0 * np.ones(asset_num) / asset_num
+    bound = [ (0.0 , 1.0) for i in range(asset_num)]
+    constrain = ({'type':'eq', 'fun': lambda w: sum(w)-1.0 })
+    N = 200
+    ws = None
+    sharpe = -1000000
+    for tau in [10**(5.0*t/N-1.0) for t in range(N)]:
+        result = scipy.optimize.minimize(obj_func, w, (rs, cov, tau), method='SLSQP', constraints=constrain, bounds=bound)
+        tmp_ws = result.x
+        returns = np.dot(tmp_ws, rs)
+        risk    = np.dot( np.dot(tmp_ws, cov), tmp_ws)
+        if sharpe < (returns - rf)  / (risk ** 0.5):
+            sharpe = (returns - rf)  / (risk ** 0.5)
+            ws = tmp_ws
+    return ws
+
+
+def obj_func(w, rs, cov, tau):
+    val = tau * np.dot( np.dot(w, cov), w) - np.dot(w, rs)
+    return val
+
 
 if __name__ == '__main__':
 
     index = pd.read_csv('./data/index.csv', index_col = 'date', parse_dates = ['date'])
+    #index = pd.read_csv('./allvdf.csv', index_col = 'date', parse_dates = ['date'])
     index = index.iloc[:,0:-1]
     #print index.columns
     index = index.fillna(method = 'pad').dropna()
@@ -39,14 +71,14 @@ if __name__ == '__main__':
     dates = df_inc.index
     look_back = 52
     interval = 13
-    loop_num = 52 * 4
+    loop_num = 52 * 2
     weight = None
     weights = []
 
     for i in range(look_back, len(dates)):
         d = dates[i]
-        #if i % interval == 0:
-        if i % 1 == 0:
+        if i % interval == 0:
+        #if i % 1 == 0:
             train_df_inc = df_inc.iloc[i - look_back : i]
 
             wss = np.zeros(len(train_df_inc.columns))
@@ -66,6 +98,7 @@ if __name__ == '__main__':
                 tmp_df_inc = train_df_inc.iloc[random_n]
                 #tmp_df_inc = train_df_inc
                 risk, returns, ws, sharpe = PF.markowitz_r(tmp_df_inc, None)
+                #ws = markowitz(tmp_df_inc)
                 for n in range(0, len(ws)):
                     w = ws[n]
                     wss[n] = wss[n] + w

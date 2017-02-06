@@ -71,8 +71,8 @@ if __name__ == '__main__':
     long_period  = 250
 
 
-    df = pd.read_csv('./data/000905.csv', index_col='date', parse_dates=['date'])
-    timing_df = pd.read_csv('./data/000905_signals.csv', index_col = 'date', parse_dates=['date'])
+    #df = pd.read_csv('./data/000905.csv', index_col='date', parse_dates=['date'])
+    df = pd.read_csv('./data/index.csv', index_col='date', parse_dates=['date'])
     #df = pd.read_csv('./data/166002-160505-260110-000011.csv', index_col='date', parse_dates=['date'])
     #df = pd.read_csv('./data/index.csv', index_col='date', parse_dates=['date'])
     #df = pd.read_csv('./data/000905-000016-000300.csv', index_col='date', parse_dates=['date'])
@@ -122,7 +122,6 @@ if __name__ == '__main__':
 
         d = dates[i]
 
-        signal = timing_df.loc[d].values[0]
         #print d, signal
 
         risk    = periodstdmean_df.iloc[i, 0]
@@ -156,6 +155,8 @@ if __name__ == '__main__':
 
         if risk <= riskmean:
             position = 1.0
+        elif risk >= riskmean + 2 * riskstd:
+            position = 0.0
         else:
             position = riskmean / risk
 

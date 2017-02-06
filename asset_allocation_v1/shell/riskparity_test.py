@@ -40,14 +40,15 @@ def obj_func(w, cov):
     n = len(cov)
     risk_sum = 0
     for i in range(0, n):
-        for j in range(0, n):
+        for j in range(i, n):
             risk_sum = risk_sum + (np.dot(w, cov[i]) - np.dot(w , cov[j])) ** 2
     return risk_sum
+
 
 if __name__ == '__main__':
 
     index = pd.read_csv('./data/index.csv', index_col = 'date', parse_dates = ['date'])
-    index = index.iloc[:,0:-1]
+    #index = index.iloc[:,0:-1]
     index = index.fillna(method = 'pad').dropna()
     index = index.resample('W-FRI').last()
     index = index / index.iloc[0]
@@ -62,6 +63,7 @@ if __name__ == '__main__':
     dates = df_inc.index
     look_back = 52
     interval = 13
+    loop_num = 52 * 4
     weight = None
     weights = []
 
@@ -69,10 +71,31 @@ if __name__ == '__main__':
         d = dates[i]
         #if i % interval == 0:
         if i % 1 == 0:
-            train_df_inc = df_inc.iloc[i - look_back : i]
-            weight = []
-            weight = riskparity(train_df_inc)
-            print d, weight
+            train_df_inc = df_inc.iloc[i - look_back : i].copy()
+            wss = np.zeros(len(train_df_inc.columns))
+            randoms = []
+            rep_num = loop_num * (look_back / 2) / look_back
+            day_indexs = range(0, look_back) * rep_num
+            random.shuffle(day_indexs)
+            day_indexs = np.array(day_indexs)
+            #print day_indexs
+            day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
+            #print day_indexs
+            for m in range(0, len(day_indexs)):
+                randoms.append(list(day_indexs[m]))
+            #print randoms
+            for j in range(0, loop_num):
+                random_n = randoms[j]
+                tmp_df_inc = train_df_inc.iloc[random_n]
+                #tmp_df_inc = train_df_inc
+                ws = riskparity(tmp_df_inc)
+                for n in range(0, len(ws)):
+                    w = ws[n]
+                    wss[n] = wss[n] + w
+
+            print d, wss / loop_num
+            weight = wss / loop_num
+            #train_df_inc.iloc[:,-1] = train_df_inc.iloc[:,-1] * 16
 
 
             '''
@@ -93,12 +116,12 @@ if __name__ == '__main__':
     vdf = pd.DataFrame(rs, index = ds, columns = ['nav'])
     vdf.index.name = 'date'
     vdf = (1 + vdf).cumprod()
-    vdf.to_csv('robustmarkowitznav.csv')
+    vdf.to_csv('riskparitynav.csv')
 
 
     pdf = pd.DataFrame(weights, index = ds, columns = index.columns)
     pdf.index.name = 'date'
-    pdf.to_csv('robustmarkowitzposition.csv')
+    pdf.to_csv('riskparityposition.csv')
     presult = pdf.rolling(window = 2, min_periods = 1).apply(lambda x : x[1] - x[0] if len(x) > 1 else x[0])
     presult = presult.abs().sum(axis = 1).to_frame('turnover').sum()
     print presult
