@@ -11,4 +11,4 @@ if __name__ == "__main__":
     for ass in assets:
         print ass
         print edate
-        gftd_ins = gftd.GFTD(ass, '20100101', edate)
+        gftd_ins = gftd.GFTD(ass, '20090701', edate)
