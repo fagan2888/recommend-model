@@ -25,9 +25,9 @@ def intervalreturn(df, interval):
 
     rs = []
     ds = []
-    for i in range(interval, len(dates)):
+    for i in range(interval - 1, len(dates)):
         d = dates[i]
-        r = 1.0 * df.iloc[i, 0] / df.iloc[i - interval, 0] - 1
+        r = 1.0 * df.iloc[i, 0] / df.iloc[i - (interval - 1), 0] - 1
         rs.append(r)
         ds.append(d)
 
@@ -73,6 +73,7 @@ def fixrisk(interval=20, short_period=20, long_period=252):
     
     timing_id = 49101;
     alldf = pd.read_csv(datapath('labelasset.csv'), index_col='date', parse_dates=['date'])
+    alldf.fillna(method='pad', inplace=True)
     #timing_df = pd.read_csv(os.path.normpath(datapath( '../csvdata/000300_signals.csv')), index_col = 'date', parse_dates=['date'])
     timing_df = load_timing_signal(timing_id)
 
@@ -86,19 +87,22 @@ def fixrisk(interval=20, short_period=20, long_period=252):
         dfr = df.pct_change().fillna(0.0)
 
         interval_df = intervalreturn(df, interval)
+                
         periodstdmean_df = pd.DataFrame({
             'mean': interval_df['nav'].rolling(window=short_period).mean(),
             'std': interval_df['nav'].rolling(window=short_period).std(),
         }, columns=['std', 'mean'])
+        periodstdmean_df.dropna(inplace=True)
+        
 
         periodstdmean_df.to_csv('periodstdmean.csv')
 
         dates = periodstdmean_df.index
 
         ps    = [0]
-        pds   = [dates[long_period]]
+        pds   = [dates[long_period - 1]]
 
-        ii = range(long_period, len(dates) - 1)
+        ii = range((long_period - 1), len(dates) - 1)
         with click.progressbar(length=len(ii), label='reshaping %-15s' % (code)) as bar:
             for i in ii:
                 bar.update(1)
@@ -114,16 +118,16 @@ def fixrisk(interval=20, short_period=20, long_period=252):
                 risk    = periodstdmean_df.iloc[i, 0]
                 r       = periodstdmean_df.iloc[i, 1]
 
-                risks   = periodstdmean_df.iloc[i - long_period : i, 0]
-                rs      = periodstdmean_df.iloc[i - long_period : i, 1]
+                risks   = periodstdmean_df.iloc[i+1 - long_period : i+1, 0]
+                rs      = periodstdmean_df.iloc[i+1 - long_period : i+1, 1]
 
                 rerisks  = risks
                 rers     = rs
 
-                riskstd     = np.std(rerisks)
+                riskstd     = np.std(rerisks, ddof=1)
                 riskmean    = np.mean(rerisks)
 
-                rstd        = np.std(rers)
+                rstd        = np.std(rers, ddof=1)
                 rmean       = np.mean(rers)
 
                 #

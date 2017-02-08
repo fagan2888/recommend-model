@@ -26,6 +26,7 @@ def load(gids, xtypes=None):
         t1.c.rs_type,
         t1.c.rs_pool,
         t1.c.rs_asset,
+        t1.c.rs_timing_id,
         t1.c.rs_name,
     ]
 
