@@ -61,7 +61,7 @@ class Reshape(object):
         df.dropna(inplace=True)
 
         ps = {}
-        last = 0
+        last = 1
         for day, row in df.iterrows():
 
             signal = 0

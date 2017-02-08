@@ -202,7 +202,7 @@ def pos_update(reshape):
     
     # 加载择时信号
     sr_timing = asset_tc_timing_signal.load_series(reshape['rs_timing_id'])
-    print sr_timing.head()
+    # print sr_timing.head()
     
     # 加载资产收益率
     # min_date = df_position.index.min()
