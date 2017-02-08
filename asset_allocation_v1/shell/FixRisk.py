@@ -25,9 +25,9 @@ def intervalreturn(df, interval):
 
     rs = []
     ds = []
-    for i in range(interval, len(dates)):
+    for i in range(interval - 1, len(dates)):
         d = dates[i]
-        r = 1.0 * df.iloc[i, 0] / df.iloc[i - interval, 0] - 1
+        r = 1.0 * df.iloc[i, 0] / df.iloc[i - (interval - 1), 0] - 1
         rs.append(r)
         ds.append(d)
 
@@ -98,7 +98,7 @@ def fixrisk(interval=20, short_period=20, long_period=252):
         ps    = [0]
         pds   = [dates[long_period]]
 
-        ii = range(long_period, len(dates) - 1)
+        ii = range((long_period - 1), len(dates) - 1)
         with click.progressbar(length=len(ii), label='reshaping %-15s' % (code)) as bar:
             for i in ii:
                 bar.update(1)
@@ -114,16 +114,16 @@ def fixrisk(interval=20, short_period=20, long_period=252):
                 risk    = periodstdmean_df.iloc[i, 0]
                 r       = periodstdmean_df.iloc[i, 1]
 
-                risks   = periodstdmean_df.iloc[i - long_period : i, 0]
-                rs      = periodstdmean_df.iloc[i - long_period : i, 1]
+                risks   = periodstdmean_df.iloc[i+1 - long_period : i+1, 0]
+                rs      = periodstdmean_df.iloc[i+1 - long_period : i+1, 1]
 
                 rerisks  = risks
                 rers     = rs
 
-                riskstd     = np.std(rerisks)
+                riskstd     = np.std(rerisks, ddof=1)
                 riskmean    = np.mean(rerisks)
 
-                rstd        = np.std(rers)
+                rstd        = np.std(rers, ddof=1)
                 rmean       = np.mean(rers)
 
                 #
