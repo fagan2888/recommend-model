@@ -73,6 +73,7 @@ def fixrisk(interval=20, short_period=20, long_period=252):
     
     timing_id = 49101;
     alldf = pd.read_csv(datapath('labelasset.csv'), index_col='date', parse_dates=['date'])
+    alldf.fillna(method='pad', inplace=True)
     #timing_df = pd.read_csv(os.path.normpath(datapath( '../csvdata/000300_signals.csv')), index_col = 'date', parse_dates=['date'])
     timing_df = load_timing_signal(timing_id)
 
@@ -99,7 +100,7 @@ def fixrisk(interval=20, short_period=20, long_period=252):
         dates = periodstdmean_df.index
 
         ps    = [0]
-        pds   = [dates[long_period]]
+        pds   = [dates[long_period - 1]]
 
         ii = range((long_period - 1), len(dates) - 1)
         with click.progressbar(length=len(ii), label='reshaping %-15s' % (code)) as bar:
