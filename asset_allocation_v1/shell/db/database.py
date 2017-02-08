@@ -51,14 +51,14 @@ def format(df, columns=[], fmter=None, kwcolumns=[]):
                 df[k] = df[k].map(v)
     return df
 
-def number_format(df, columns=[], precision=2, kwcolumns=[]):
+def number_format(df, columns=[], precision=2, **kwcolumns):
     if columns:
         for column in columns:
             if column in df.columns and column not in kwcolumns:
                 df[column] = df[column].map(("{:.%df}" % (precision)).format)
 
     if kwcolumns:
-        for k, v in kwcolumns:
+        for k, v in kwcolumns.iteritems():
             if v and k in df.columns:
                 df[k] = df[k].map(("{:.%df}" % (v)).format)
     return df

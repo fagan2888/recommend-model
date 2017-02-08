@@ -214,34 +214,43 @@ def pos_update(reshape):
     # df_inc = df_nav.pct_change().fillna(0.0).to_frame(reshape_id)
     df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing})
 
-    df_new = Reshape().reshape(df)
-
-
-    # # 计算复合资产净值
-    # df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
-
-    # df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'rs_nav'}).copy()
-    # df_result.index.name = 'rs_date'
-    # df_result['rs_inc'] = df_result['rs_nav'].pct_change().fillna(0.0)
-    # df_result['rs_reshape_id'] = reshape['globalid']
-    # df_result = df_result.reset_index().set_index(['rs_reshape_id', 'rs_date'])
+    df_result = Reshape().reshape(df)
+    df_result.drop(['nav', 'timing'], axis=1, inplace=True)
     
-    # df_new = database.number_format(df_result, columns=['rs_nav', 'rs_inc'], precision=6)
+    # df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'rs_nav'}).copy()
+    df_result.index.name = 'rs_date'
+    df_result['rs_reshape_id'] = reshape_id
+    df_result['rs_action'] = 0
+    df_new = df_result.reset_index().set_index(['rs_reshape_id', 'rs_date'])
 
-    # # 加载旧数据
-    # db = database.connection('asset')
-    # t2 = Table('rs_reshape_nav', MetaData(bind=db), autoload=True)
-    # columns2 = [
-    #     t2.c.rs_reshape_id,
-    #     t2.c.rs_date,
-    #     t2.c.rs_nav,
-    #     t2.c.rs_inc,
-    # ]
-    # stmt_select = select(columns2, (t2.c.rs_reshape_id == reshape['globalid']))
-    # df_old = pd.read_sql(stmt_select, db, index_col=['rs_reshape_id', 'rs_date'], parse_dates=['rs_date'])
-    # if not df_old.empty:
-    #     df_old = database.number_format(df_old, columns=['rs_nav', 'rs_inc'], precision=6)
+    fmt_columns = ['rs_r20','rs_return', 'rs_return_mean', 'rs_return_std', 'rs_risk', 'rs_risk_mean', 'rs_risk_std']
+    df_new = database.number_format(df_new, fmt_columns, 6, rs_ratio=4)
 
-    # # 更新数据库
-    # database.batch(db, t2, df_new, df_old, timestamp=True)
+    #print df_new.head()
+    
+
+    # 加载旧数据
+    db = database.connection('asset')
+    t2 = Table('rs_reshape_pos', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.rs_reshape_id,
+        t2.c.rs_date,
+        t2.c.rs_r20,
+        t2.c.rs_return,
+        t2.c.rs_risk,
+        t2.c.rs_return_mean,
+        t2.c.rs_return_std,
+        t2.c.rs_risk,
+        t2.c.rs_risk_mean,
+        t2.c.rs_risk_std,
+        t2.c.rs_ratio,
+        t2.c.rs_action,
+    ]
+    stmt_select = select(columns2, (t2.c.rs_reshape_id == reshape_id))
+    df_old = pd.read_sql(stmt_select, db, index_col=['rs_reshape_id', 'rs_date'], parse_dates=['rs_date'])
+    if not df_old.empty:
+        df_old = database.number_format(df_old, fmt_columns, 6, rs_ratio=4)
+
+    # 更新数据库
+    database.batch(db, t2, df_new, df_old, timestamp=True)
     
