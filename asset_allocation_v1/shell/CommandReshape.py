@@ -175,8 +175,9 @@ def nav_update(reshape):
 @reshape.command()
 @click.option('--id', 'optid', help=u'ids of fund pool to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
-def pos(ctx, optid, optlist):
+def pos(ctx, optid, optlist, optonline):
     ''' calc reshape pos and inc
     '''
     if optid is not None:
@@ -184,7 +185,11 @@ def pos(ctx, optid, optlist):
     else:
         ids = None
 
-    df_reshape = asset_rs_reshape.load(ids)
+    xtypes = None
+    if optonline == False:
+        xtypes = [1]
+
+    df_reshape = asset_rs_reshape.load(ids, xtypes)
 
     if optlist:
 
