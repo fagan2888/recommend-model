@@ -86,10 +86,13 @@ def fixrisk(interval=20, short_period=20, long_period=252):
         dfr = df.pct_change().fillna(0.0)
 
         interval_df = intervalreturn(df, interval)
+                
         periodstdmean_df = pd.DataFrame({
             'mean': interval_df['nav'].rolling(window=short_period).mean(),
             'std': interval_df['nav'].rolling(window=short_period).std(),
         }, columns=['std', 'mean'])
+        periodstdmean_df.dropna(inplace=True)
+        
 
         periodstdmean_df.to_csv('periodstdmean.csv')
 
