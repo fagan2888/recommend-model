@@ -29,12 +29,20 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group()  
+@click.group(invoke_without_command=True)  
+@click.option('--id', 'optid', help=u'reshape id')
+@click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
-def reshape(ctx):
+def reshape(ctx, optid, optonline):
     '''reshape group
     '''
-    pass
+    if ctx.invoked_subcommand is None:
+        # click.echo('I was invoked without subcommand')
+        ctx.invoke(pos, optid=optid, optonline=optonline)
+        ctx.invoke(nav, optid=optid)
+    else:
+        # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
+        pass
 
 @reshape.command(name='import')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
