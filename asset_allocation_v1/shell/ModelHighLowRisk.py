@@ -14,6 +14,11 @@ import DBData
 import DFUtil
 import AllocationData
 import random
+import threading
+import Queue
+import thread
+import multiprocessing
+
 
 from Const import datapath
 
@@ -37,6 +42,14 @@ def get_columns(key, excluded):
 #     }
 
 #     return columns.get(key)
+
+
+def m_markowitz(queue, random_index, df_inc, bound):
+    for index in random_index:
+        tmp_df_inc = df_inc.iloc[index]
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(tmp_df_inc, bound)
+        queue.put(ws)
+
 
 def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
     '''perform asset allocation of high risk asset for single day
@@ -160,8 +173,8 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
     #
     # 计算高风险资产的资产净值
     #
-    df_inc = DFUtil.load_inc_csv(datapath('equalriskasset.csv'), get_columns('high', excluded), index)
-    #df_inc = DFUtil.load_inc_csv(datapath('labelasset.csv'), get_columns('high', excluded), index)
+    #df_inc = DFUtil.load_inc_csv(datapath('equalriskasset.csv'), get_columns('high', excluded), index)
+    df_inc = DFUtil.load_inc_csv(datapath('labelasset.csv'), get_columns('high', excluded), index)
     df_nav_high = DFUtil.portfolio_nav(df_inc, df_high[get_columns('high', excluded)])
     df_nav_high.to_csv(datapath('high_nav.csv'), index_label='date')
     
