@@ -42,7 +42,7 @@ def periodstdmean(df, period):
 
     return df
 
-
+'''
 def rerisk(risks):
 
     risk_std  = np.std(risks)
@@ -59,7 +59,7 @@ def rerisk(risks):
             rerisks.append(risk)
 
     return rerisks
-
+'''
 
 if __name__ == '__main__':
 

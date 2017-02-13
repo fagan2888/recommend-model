@@ -81,7 +81,8 @@ def portfolio_position():
     # 扩展风险修型矩阵, 与马克维茨矩阵配型
     df_tmp1 = pd.DataFrame(1.0, index=index, columns=columns_high.difference(df_ratio_equalrisk.columns))
     df_tmp2 = pd.DataFrame(1.0, index=index, columns=df_ratio_lowrisk.columns)
-    df_equalrisk = pd.concat([df_ratio_equalrisk, df_tmp1, df_tmp2], axis=1)
+    #df_equalrisk = pd.concat([df_ratio_equalrisk, df_tmp1, df_tmp2], axis=1)
+    df_equalrisk = pd.concat([df_tmp1, df_tmp2], axis=1)
 
     # 中类资产配置比例
     dt = dict()
@@ -95,7 +96,7 @@ def portfolio_position():
             pd.DataFrame(ratio_l, index=df_ratio_lowrisk.index, columns=df_ratio_lowrisk.columns),
         ], axis=1)
         # 单个风险配置结果
-        df_risk_result = df_high_low * df_markowitz * df_equalrisk
+        df_risk_result = df_high_low * df_markowitz #* df_equalrisk
         df_risk_result['money'] = 1 - df_risk_result.sum(axis=1)
         dt['%.1f' % (risk / 10.0)] = df_risk_result
         

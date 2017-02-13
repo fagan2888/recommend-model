@@ -6,12 +6,12 @@ import pandas as pd
 if __name__ == '__main__':
 
     index = pd.read_csv('./data/index.csv', index_col = 'date', parse_dates = ['date'])
-    index = index.iloc[:,0:-1]
+    #index = index.iloc[:,0:-1]
     index = index.fillna(method = 'pad').dropna()
     index = index / index.iloc[0]
     riskfixpdf = pd.read_csv('./allpdf.csv', index_col = 'date', parse_dates = ['date'])
-    riskfixpdf = riskfixpdf.iloc[:,0:-1]
-    print riskfixpdf
+    #riskfixpdf = riskfixpdf.iloc[:,0:-1]
+    #print riskfixpdf
     markowitzpdf = pd.read_csv('./robustmarkowitzposition.csv', index_col = 'date', parse_dates = ['date'])
 
     markowitzpdf = markowitzpdf.reindex(riskfixpdf.index)
