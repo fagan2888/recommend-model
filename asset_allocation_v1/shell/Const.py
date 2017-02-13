@@ -26,7 +26,6 @@ sp500_code                = 'SP500.SPI'   #标普500指数
 gold_code                 = 'GLNC'#黄金指数
 hs_code                   = 'HSCI.HI'     #恒生指数
 
-
 fund_num = 5
 
 # 定义全局变量

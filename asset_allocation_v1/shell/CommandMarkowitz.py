@@ -280,16 +280,24 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # print df.head()
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
-
+    # index
     df['mz_markowitz_id'] = optid
     df.index.name = 'mz_date'
     df = df.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
-    
+    # unstack
     df.columns.name='mz_asset_id'
     df_tosave = df.stack().to_frame('mz_ratio')
     df_tosave = df_tosave.loc[df_tosave['mz_ratio'] > 0, ['mz_ratio']]
-
+    # save
     asset_mz_markowitz_pos.save(optid, df_tosave)
+    # 导入数据: markowitz_sharpe
+    df_sharpe.index.name = 'mz_date'
+    df_sharpe['mz_markowitz_id'] = optid
+    df_sharpe.rename(inplace=True, columns={
+        'return': 'mz_return', 'risk':'mz_risk', 'sharpe':'mz_sharpe'})
+    # print df_sharpe
+    df_sharpe = df_sharpe.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
+    asset_mz_markowitz_sharpe.save(optid, df_sharpe)
     
     click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
 

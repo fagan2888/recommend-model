@@ -51,14 +51,8 @@ logger = logging.getLogger(__name__)
 
 #     return s.execute().scalar()
 def save(gid, df):
-    # df.index.name = 'mz_asset_id'
-    # df['mz_markowitz_id'] = gid
-    # df.rename(inplace=True, columns={
-    #     'uplimit':'mz_upper_limit', 'downlimit':'mz_lower_limit', 'sumlimit':'mz_sum1_limit'})
-    # df = df.reset_index().set_index(['mz_markowitz_id', 'mz_asset_id'])
-    fmt_columns = ['mz_upper_limit', 'mz_lower_limit']
-    fmt_precision = 4
-    df['sumlimit'] = df['sumlimit'].astype(int)
+    fmt_columns = ['mz_return', 'mz_risk', 'mz_sharpe']
+    fmt_precision = 6
     if not df.empty:
         df = database.number_format(df, fmt_columns, fmt_precision)
     #
@@ -68,12 +62,12 @@ def save(gid, df):
     t2 = Table('mz_markowitz_sharpe', MetaData(bind=db), autoload=True)
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
     s = select(columns, (t2.c.mz_markowitz_id == gid))
-    df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_asset_id'])
+    df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_date'], parse_dates=['mz_date'])
     if not df_old.empty:
         df_old = database.number_format(df_old, fmt_columns, fmt_precision)
 
     # 更新数据库
     # print df_new.head()
     # print df_old.head()
-    database.batch(db, t2, df_new, df_old, timestamp=True)
+    database.batch(db, t2, df, df_old, timestamp=False)
 
