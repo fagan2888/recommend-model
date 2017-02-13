@@ -71,7 +71,7 @@ def efficient_frontier_spe(return_rate, bound, sumlimit=0.50):
         #
         # 某类资产之和的上限
         #
-        if bound[i]['sumlimit']:
+        if bound[i]['sumlimit'] == True or bound[i]['sumlimit'] == 1:
             G[3 * n_asset, i] = 1
             
     A          =  matrix(1.0, (1, n_asset))

@@ -2,7 +2,6 @@
 
 
 import string
-import json
 import os
 import sys
 sys.path.append('shell')
@@ -14,14 +13,16 @@ import time
 import logging
 import Const
 import DFUtil
+import DBData
 import util_numpy as npu
+import Portfolio as PF
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_mz_markowitz
+from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_rs_reshape_nav, base_ra_index_nav, base_ra_fund_nav
 
 import traceback, code
 
@@ -38,7 +39,7 @@ def markowitz(ctx):
 
 @markowitz.command(name='import')
 @click.option('--id', 'optid', type=int, help=u'specify markowitz id')
-@click.option('--name', 'optname', type=int, help=u'specify markowitz name')
+@click.option('--name', 'optname', help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.argument('csv', type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=False), required=True)
@@ -155,193 +156,265 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
     
     return 0
 
-# @markowitz.command()
-# @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-# @click.option('--id', 'optid', help=u'fund pool id to update')
-# @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
-# @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
-# @click.pass_context
-# def signal(ctx, datadir, optid, optlist, optonline):
-#     '''calc timing signal  for timing instance
-#     '''
-#     Const.datadir = datadir
+@markowitz.command()
+@click.option('--id', 'optid', type=int, help=u'specify markowitz id')
+@click.option('--name', 'optname', default=u'马克维茨', help=u'specify markowitz name')
+@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
+@click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
+@click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
+@click.option('--end-date', 'enddate', help=u'end date to calc')
+@click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
+@click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
+@click.argument('assets', nargs=-1)
+@click.pass_context
+def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, assets):
+    '''calc high low model markowitz
+    '''
 
-#     if optid is not None:
-#         timings = [s.strip() for s in optid.split(',')]
-#     else:
-#         timings = None
+    if not enddate:
+        yesterday = (datetime.now() - timedelta(days=1)); 
+        enddate = yesterday.strftime("%Y-%m-%d")
 
-#     xtypes = None
-#     if optonline == False:
-#         xtypes = [1]
+    #
+    # 处理id参数
+    #
+    if optid is not None:
+        #
+        # 检查id是否存在
+        #
+        df_existed = asset_mz_markowitz.load([str(optid)])
+        if not df_existed.empty:
+            s = 'markowitz instance [%d] existed' % optid
+            if optreplace:
+                click.echo(click.style("%s, will replace!" % s, fg="yellow"))
+            else:
+                click.echo(click.style("%s, import aborted!" % s, fg="red"))
+            return -1;
+    else:
+        #
+        # 自动生成id
+        #
+        today = datetime.now()
+        prefix = '50' + today.strftime("%m%d");
+        if opttype == '9':
+            between_min, between_max = ('%s90' % (prefix), '%s99' % (prefix))
+        else:
+            between_min, between_max = ('%s00' % (prefix), '%s89' % (prefix))
 
-#     df_timing = database.asset_tc_timing_load(timings, xtypes)
+        max_id = asset_mz_markowitz.max_id_between(between_min, between_max)
+        if max_id is None:
+            optid = between_min
+        else:
+            if max_id >= between_max:
+                s = "run out of instance id [%d]" % max_id
+                click.echo(click.style("%s, import aborted!" % s, fg="red"))
+                return -1
 
-#     if optlist:
+            if optreplace:
+                optid = max_id
+            else:
+                optid = max_id + 1;
+    #
+    # 处理assets参数
+    #
+    if assets:
+        assets = {k: v for k,v in [parse_asset(a) for a in assets]}
+    else:
+        assets = {
+            41210111:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+            41210112:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+            41210113:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+            41210115:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+            41210116:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+            41210117:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+            120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+            120000014: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+            120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+        }
 
-#         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
-#         print tabulate(df_timing, headers='keys', tablefmt='psql')
-#         return 0
+    df = markowitz_days(startdate, enddate, assets,
+        label=optname, lookback=lookback, adjust_period=adjust_period)
+
+    df_sharpe = df[['return', 'risk', 'sharpe']].copy()
+    df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
     
-#     with click.progressbar(length=len(df_timing), label='update signal') as bar:
-#         for _, timing in df_timing.iterrows():
-#             bar.update(1)
-#             signal_update(timing)
-
-# def signal_update(timing):
-#     '''calc timing signal for singe timing instance
-#     '''
-#     #
-#     # 加载OHLC数据
-#     #
-#     timing_id = timing['globalid']
-#     yesterday = (datetime.now() - timedelta(days=1)); 
-#     enddate = yesterday.strftime("%Y-%m-%d")        
-        
-#     df_nav = database.base_ra_index_nav_load_ohlc(
-#         timing['tc_index_id'], begin_date=timing['tc_begin_date'], end_date=enddate, mask=[0, 2])
-        
-#     # df_nav = pd.read_csv(datapath('000300_gftd_result.csv'),  index_col=['date'], parse_dates=['date'], usecols=['date', 'open', 'high', 'low', 'close'])
-#     df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
-#     df_nav.index.name='tc_date'
-   
-#     # risk_mgr = RiskManagement.RiskManagement()
-#     df_new = TimingGFTD().timing(df_nav)
-#     df_new['tc_timing_id'] = timing_id
-#     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
-
-#     # print df_new[df_new['tc_stop'].isnull()].head()
-#     num_signal = df_new['tc_signal'].rolling(2, 1).apply(lambda x: 1 if x[-1] != x[0] else 0).sum()
+    # print df.head()
+    # print df_sharpe.head()
     
-#     formaters = ['tc_close', 'tc_open', 'tc_high', 'tc_low', 'tc_recording_high', 'tc_recording_low', 'tc_stop_high', 'tc_stop_low']
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    mz_markowitz        = Table('mz_markowitz', metadata, autoload=True)
+    mz_markowitz_asset  = Table('mz_markowitz_asset', metadata, autoload=True)
+    mz_markowitz_pos    = Table('mz_markowitz_pos', metadata, autoload=True)
+    mz_markowitz_nav    = Table('mz_markowitz_nav', metadata, autoload=True)
+    mz_markowitz_sharpe = Table('mz_markowitz_sharpe', metadata, autoload=True)
 
-#     if not df_new.empty:
-#         df_new = database.number_format(df_new, columns=formaters, precision=4)
+    #
+    # 处理替换
+    #
+    if optreplace:
+        mz_markowitz.delete(mz_markowitz.c.globalid == optid).execute()
+        mz_markowitz_asset.delete(mz_markowitz_asset.c.mz_markowitz_id == optid).execute()
+        mz_markowitz_pos.delete(mz_markowitz_pos.c.mz_markowitz_id == optid).execute()
+        mz_markowitz_nav.delete(mz_markowitz_nav.c.mz_markowitz_id == optid).execute()
+        mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == optid).execute()
 
-#     #
-#     # 保存择时结果到数据库
-#     #
-#     db = database.connection('asset')
-#     t2 = Table('tc_timing_scratch', MetaData(bind=db), autoload=True)
-#     columns2 = [
-#         t2.c.tc_timing_id,
-#         t2.c.tc_date,
-#         t2.c.tc_open,
-#         t2.c.tc_high,
-#         t2.c.tc_low,
-#         t2.c.tc_close,
-#         t2.c.tc_ud,
-#         # t2.c.tc_ud_flip,
-#         t2.c.tc_ud_acc,
-#         t2.c.tc_buy_start,
-#         # t2.c.tc_buy_kstick,
-#         t2.c.tc_buy_count,
-#         t2.c.tc_buy_signal,
-#         t2.c.tc_sell_start,
-#         # t2.c.tc_sell_kstick,
-#         t2.c.tc_sell_count,
-#         t2.c.tc_sell_signal,
-#         t2.c.tc_action,
-#         t2.c.tc_recording_high,
-#         t2.c.tc_recording_low,
-#         t2.c.tc_signal,
-#         t2.c.tc_stop_high,
-#         t2.c.tc_stop_low,
-#     ]
-#     s = select(columns2, (t2.c.tc_timing_id == timing_id))
-#     df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
-#     if not df_old.empty:
-#         df_old = database.number_format(df_old, columns=formaters, precision=4)
+    now = datetime.now()
+    # 导入数据: markowitz
+    row = {
+        'globalid': optid, 'mz_type':opttype, 'mz_name': optname,
+        'created_at': func.now(), 'updated_at': func.now()
+    }
+    mz_markowitz.insert(row).execute()
+    # 导入数据: markowitz_asset
+    df_asset = pd.DataFrame(assets).T
+    df_asset.index.name = 'mz_asset_id'
+    df_asset['mz_markowitz_id'] = optid
+    df_asset.rename(inplace=True, columns={
+        'uplimit':'mz_upper_limit', 'downlimit':'mz_lower_limit', 'sumlimit':'mz_sum1_limit'})
+    df_asset = df_asset.reset_index().set_index(['mz_markowitz_id', 'mz_asset_id'])
+    asset_mz_markowitz_asset.save(optid, df_asset)
+    # 导入数据: markowitz_pos
+    df = df.round(4)             # 四舍五入到万分位
+    df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
+    # print df.head()
+    df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+    df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
 
-#     # 更新数据库
-#     database.batch(db, t2, df_new, df_old, timestamp=False)
-#     print "total signal: %d, %.2f/year" % (num_signal, num_signal * 250/len(df_new))
-
-#     # 更新tc_timing_signal
-#     df_new = df_new[['tc_signal']]
-#     t3 = Table('tc_timing_signal', MetaData(bind=db), autoload=True)
-#     columns3 = [
-#         t3.c.tc_timing_id,
-#         t3.c.tc_date,
-#         t3.c.tc_signal,
-#     ]
-#     s = select(columns3, (t3.c.tc_timing_id == timing_id))
-#     df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
-
-#     # 更新数据库
-#     database.batch(db, t3, df_new, df_old, timestamp=False)
-
-# @timing.command()
-# @click.option('--id', 'optid', help=u'ids of fund pool to update')
-# @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
-# @click.pass_context
-# def nav(ctx, optid, optlist):
-#     ''' calc pool nav and inc
-#     '''
-#     if optid is not None:
-#         timings = [s.strip() for s in optid.split(',')]
-#     else:
-#         timings = None
-
-#     df_timing = database.asset_tc_timing_load(timings)
-
-#     if optlist:
-
-#         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
-#         print tabulate(df_timing, headers='keys', tablefmt='psql')
-#         return 0
+    df['mz_markowitz_id'] = optid
+    df.index.name = 'mz_date'
+    df = df.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
     
-#     with click.progressbar(length=len(df_timing), label='update nav') as bar:
-#         for _, timing in df_timing.iterrows():
-#             bar.update(1)
-#             nav_update(timing)
+    df.columns.name='mz_asset_id'
+    df_tosave = df.stack().to_frame('mz_ratio')
+    df_tosave = df_tosave.loc[df_tosave['mz_ratio'] > 0, ['mz_ratio']]
 
-# def nav_update(timing):
-#     timing_id = timing['globalid']
-#     # 加载择时信号
-#     df_position = database.asset_tc_timing_scratch_load_signal(timing_id)
-#     # 构建仓位
-#     df_position.loc[df_position[timing_id] < 1, timing_id] = 0
+    asset_mz_markowitz_pos.save(optid, df_tosave)
     
-#     # 加载基金收益率
-#     min_date = df_position.index.min()
-#     #max_date = df_position.index.max()
-#     max_date = (datetime.now() - timedelta(days=1)) # yesterday
+    click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
 
+def parse_asset(asset):
+    segments = [s.strip() for s in asset.strip().split(':')]
 
-#     df_nav = database.base_ra_index_nav_load_series(
-#         timing['tc_index_id'], begin_date=min_date, end_date=max_date, mask=0)
-#     df_inc = df_nav.pct_change().fillna(0.0).to_frame(timing_id)
+    if len(segments) == 1:
+        result = (int(segments[0]), {
+            'uplimit': 1.0, 'downlimit': 0.0, 'sumlimit': 0})
+    elif len(segments) == 2:
+        result = (int(segments[0]), {
+            'uplimit': float(segments[1]), 'downlimit': 0.0, 'sumlimit': 0})
+    elif len(segments) == 3:
+        result = (int(segments[0]), {
+            'uplimit': float(segments[1]), 'downlimit': float(segments[2]), 'sumlimit': 0})
+    else:
+        if len(segments) >= 4:
+            sumlimit = 1 if segments[3] == '1' else 0
+            result = (int(segments[0]), {
+                'uplimit': float(segments[1]), 'downlimit': float(segments[2]), 'sumlimit': sumlimit})
+        else:
+            result = (None, {'uplimit': 1.0, 'downlimit': 0.0, 'sumlimit': 0})
 
-#     # 计算复合资产净值
-#     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
+    return result
+            
 
-#     df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'tc_nav'}).copy()
-#     df_result.index.name = 'tc_date'
-#     df_result['tc_inc'] = df_result['tc_nav'].pct_change().fillna(0.0)
-#     df_result['tc_timing_id'] = timing['globalid']
-#     df_result = df_result.reset_index().set_index(['tc_timing_id', 'tc_date'])
+def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period):
+    '''perform markowitz asset for days
+    '''
+    # 加载时间轴数据
+    index = DBData.trade_date_index(start_date, end_date=end_date)
+
+    # 根据调整间隔抽取调仓点
+    if adjust_period:
+        adjust_index = index[::adjust_period]
+        if index.max() not in adjust_index:
+            adjust_index = adjust_index.insert(len(adjust_index), index.max())
+    else:
+        adjust_index = index
+
+    #
+    # 马科维兹资产配置
+    #
+    s = 'perform %s' % label
+    data = {}
+    with click.progressbar(length=len(adjust_index), label=s) as bar:
+        for day in adjust_index:
+            bar.update(1)
+            logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+            # 高风险资产配置
+            data[day] = markowitz_day(day, lookback, assets)
+
+    return pd.DataFrame(data).T
+
+def markowitz_day(day, lookback, assets):
+    '''perform markowitz for single day
+    '''
     
-#     df_new = database.number_format(df_result, columns=['tc_nav', 'tc_inc'], precision=6)
+    # 加载时间轴数据
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+    begin_date = index.min().strftime("%Y-%m-%d")
+    end_date = index.max().strftime("%Y-%m-%d")
 
-#     # 加载旧数据
-#     db = database.connection('asset')
-#     t2 = Table('tc_timing_nav', MetaData(bind=db), autoload=True)
-#     columns2 = [
-#         t2.c.tc_timing_id,
-#         t2.c.tc_date,
-#         t2.c.tc_nav,
-#         t2.c.tc_inc,
-#     ]
-#     stmt_select = select(columns2, (t2.c.tc_timing_id == timing['globalid']))
-#     df_old = pd.read_sql(stmt_select, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
-#     if not df_old.empty:
-#         df_old = database.number_format(df_old, columns=['tc_nav', 'tc_inc'], precision=6)
+    #
+    # 加载数据
+    #
+    data = {}
+    for asset in assets:
+        data[asset] = load_nav_series(asset, begin_date, end_date)
+    df_nav = pd.DataFrame(data).fillna(method='pad')
+    df_inc  = df_nav.pct_change().fillna(0.0)
+    #
+    # 根据时间轴进行重采样
+    #
+    df_inc = df_inc.reindex(index, fill_value=0.0)
 
-#     # 更新数据库
-#     database.batch(db, t2, df_new, df_old, timestamp=False)
+    return markowitz_r(df_inc, assets)
+
+def markowitz_r(df_inc, limits):
+    '''perform markowitz
+    '''
+    bound = []
+    for asset in df_inc.columns:
+        bound.append(limits[asset])
     
-#     #print df_result.head()
+    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
 
-#     # df_result.to_csv(datapath('riskmgr_result.csv'))
+    sr_result = pd.concat([
+        pd.Series(ws, index=df_inc.columns),
+        pd.Series((sharpe, risk, returns), index=['sharpe','risk', 'return'])
+    ])
 
+    return sr_result
+
+def load_nav_series(asset_id, begin_date, end_date):
+    xtype = asset_id / 10000000
+
+    if xtype == 1:
+        #
+        # 基金池资产
+        #
+        asset_id %= 10000000
+        (pool_id, category) = (asset_id / 100, asset_id % 100)
+        ttype = pool_id / 10000
+        sr = asset_ra_pool_nav.load_series(
+            pool_id, category, ttype, begin_date=begin_date, end_date=end_date)
+    elif xtype == 3:
+        #
+        # 基金池资产
+        #
+        sr = base_ra_fund_nav.load_series(
+            asset_id, begin_date=begin_date, end_date=end_date)
+    elif xtype == 4:
+        #
+        # 修型资产
+        #
+        sr = asset_rs_reshape_nav.load_series(asset_id, begin_date, end_date)
+    elif xtype == 12:
+        #
+        # 指数资产
+        #
+        sr = base_ra_index_nav.load_series(
+            asset_id, begin_date=begin_date, end_date=end_date)
+    else:
+        sr = pd.Series()
+
+    return sr
+    

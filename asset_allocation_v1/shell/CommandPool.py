@@ -40,12 +40,21 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group()  
+@click.group(invoke_without_command=True)  
+@click.option('--id', 'optid', default='12101,12201', help=u'reshape id')
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 @click.pass_context
-def pool(ctx):
+def pool(ctx, optid, datadir):
     '''fund pool group
     '''
-    pass
+    if ctx.invoked_subcommand is None:
+        # click.echo('I was invoked without subcommand')
+        ctx.invoke(fund, optid=optid, datadir=datadir)
+        ctx.invoke(nav, optid=optid)
+    else:
+        # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
+        pass
+
 
 @pool.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
