@@ -13,32 +13,37 @@ from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
 
-#
-# mz_markowitz
-#
-# def load(gids, xtypes=None):
-#     db = database.connection('asset')
-#     metadata = MetaData(bind=db)
-#     t1 = Table('mz_markowitz', metadata, autoload=True)
+def load(gid, included_markowitz_id=False):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('mz_markowitz_pos', metadata, autoload=True)
 
-#     columns = [
-#         t1.c.globalid,
-#         t1.c.mz_type,
-#         t1.c.mz_pool,
-#         t1.c.mz_reshape,
-#         t1.c.mz_name,
-#     ]
-
-#     s = select(columns)
-
-#     if gids is not None:
-#         s = s.where(t1.c.globalid.in_(gids))
-#     if xtypes is not None:
-#         s = s.where(t1.c.mz_type.in_(xtypes))
+    columns = [
+        t1.c.mz_date,
+        t1.c.mz_asset_id,
+        t1.c.mz_ratio,
+    ]
+    index_col = ['mz_date', 'mz_asset_id']
     
-#     df = pd.read_sql(s, db)
+    if included_markowitz_id:
+        columns.insert(0, t1.c.mz_markowitz_id)
+        index_col.insert(0, 'mz_markowitz_id')
 
-#     return df
+    s = select(columns)
+
+    if gid is not None:
+        s = s.where(t1.c.mz_markowitz_id == gid)
+    else:
+        return None
+    # if xtypes is not None:
+    #     s = s.where(t1.c.mz_type.in_(xtypes))
+    
+    df = pd.read_sql(s, db, index_col=index_col, parse_dates=['mz_date'])
+
+    df = df.unstack().fillna(0.0)
+    df.columns = df.columns.droplevel(0)
+
+    return df
 
 # def max_id_between(min_id, max_id):
 #     db = database.connection('asset')

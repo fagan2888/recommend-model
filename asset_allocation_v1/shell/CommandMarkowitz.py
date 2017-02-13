@@ -425,4 +425,57 @@ def load_nav_series(asset_id, begin_date, end_date):
         sr = pd.Series()
 
     return sr
+
+@markowitz.command()
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.pass_context
+def nav(ctx, optid, optlist):
+    ''' calc pool nav and inc
+    '''
+    if optid is not None:
+        markowitzs = [s.strip() for s in optid.split(',')]
+    else:
+        markowitzs = None
+
+    df_markowitz = asset_mz_markowitz.load(markowitzs)
+
+    if optlist:
+
+        df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_markowitz, headers='keys', tablefmt='psql')
+        return 0
     
+    with click.progressbar(length=len(df_markowitz), label='update nav') as bar:
+        for _, markowitz in df_markowitz.iterrows():
+            bar.update(1)
+            nav_update(markowitz)
+
+def nav_update(markowitz):
+    markowitz_id = markowitz['globalid']
+    # 加载仓位信息
+    df_pos = asset_mz_markowitz_pos.load(markowitz_id)
+    
+    # 加载资产收益率
+    min_date = df_pos.index.min()
+    #max_date = df_pos.index.max()
+    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
+
+    data = {}
+    for asset_id in df_pos.columns:
+        data[asset_id] = load_nav_series(asset_id, min_date, max_date)
+    df_nav = pd.DataFrame(data).fillna(method='pad')
+    df_inc  = df_nav.pct_change().fillna(0.0)
+
+    # 计算复合资产净值
+    df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
+
+    df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'mz_nav'}).copy()
+    df_result.index.name = 'mz_date'
+    df_result['mz_inc'] = df_result['mz_nav'].pct_change().fillna(0.0)
+    df_result['mz_markowitz_id'] = markowitz['globalid']
+    df_result = df_result.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
+
+    asset_mz_markowitz_nav.save(markowitz_id, df_result)
+
