@@ -119,16 +119,16 @@ if __name__ == '__main__':
     ds = []
     rs = []
     dates = df_inc.index
-    look_back = 26
+    look_back = 52
     interval = 13
-    loop_num = 26 * 4
+    loop_num = 52 * 4
     weight = None
     weights = []
 
     for i in range(look_back, len(dates)):
         d = dates[i]
-        if i % interval == 0:
-        #if i % 1 == 0:
+        #if i % interval == 0:
+        if i % 1 == 0:
             train_df_inc = df_inc.iloc[i - look_back : i]
 
             wss = np.zeros(len(train_df_inc.columns))
@@ -168,8 +168,6 @@ if __name__ == '__main__':
 
             '''
             tmp_df_inc = train_df_inc
-            #tmp_df_inc = train_df_inc
-            #risk, returns, ws, sharpe = PF.markowitz_r(tmp_df_inc, None)
             ws = []
             for p in range(0, len(tmp_df_inc.columns)):
                 ws.append(1.0 / len(tmp_df_inc.columns))
