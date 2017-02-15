@@ -277,7 +277,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_asset.rename(inplace=True, columns={
         'uplimit':'mz_upper_limit', 'downlimit':'mz_lower_limit', 'sumlimit':'mz_sum1_limit'})
     df_asset = df_asset.reset_index().set_index(['mz_markowitz_id', 'mz_asset_id'])
-    print df_asset
     asset_mz_markowitz_asset.save(optid, df_asset)
     # 导入数据: markowitz_pos
     df = df.round(4)             # 四舍五入到万分位
