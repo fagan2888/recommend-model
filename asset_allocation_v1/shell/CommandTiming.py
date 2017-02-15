@@ -22,7 +22,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database
+from db import database, base_ra_index_nav
 
 import traceback, code
 
@@ -167,7 +167,7 @@ def signal_update(timing):
     yesterday = (datetime.now() - timedelta(days=1)); 
     enddate = yesterday.strftime("%Y-%m-%d")        
         
-    df_nav = database.base_ra_index_nav_load_ohlc(
+    df_nav = base_ra_index_nav.load_ohlc(
         timing['tc_index_id'], begin_date=timing['tc_begin_date'], end_date=enddate, mask=[0, 2])
         
     df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
@@ -277,7 +277,7 @@ def nav_update(timing):
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
 
-    df_nav = database.base_ra_index_nav_load_series(
+    df_nav = base_ra_index_nav.load_series(
         timing['tc_index_id'], begin_date=min_date, end_date=max_date, mask=0)
     df_inc = df_nav.pct_change().fillna(0.0).to_frame(timing_id)
 

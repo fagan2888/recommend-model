@@ -175,3 +175,4 @@ def risk(ctx, optinst, opttype, datadir, startdate, enddate, label_asset, reshap
             datapath('portfolio_position.csv'), datapath('position-v.csv'))
         print "output stockavg position without risk management done"
 
+

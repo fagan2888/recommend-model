@@ -33,7 +33,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database
+from db import database, base_ra_fund_nav
 
 import traceback, code
 
@@ -143,10 +143,10 @@ def corr_update_fund(corr, fund, df_inc_index):
     #
     if corr['ra_date_type'] == 1:
         # df_nav_fund = DBData.db_fund_value_daily('2015-10-08', enddate, codes=[fund['ra_code']])
-        df_nav_fund = database.base_ra_fund_nav_load_daily('2015-10-08', enddate, codes=[fund['ra_code']])
+        df_nav_fund = base_ra_fund_nav.load_daily('2015-10-08', enddate, codes=[fund['ra_code']])
     else:
         # df_nav_fund = DBData.db_fund_value('2015-10-08', enddate, codes=[fund['ra_code']])
-        df_nav_fund = database.base_ra_fund_nav_load_weekly('2015-10-08', enddate, codes=[fund['ra_code']])
+        df_nav_fund = base_ra_fund_nav.load_weekly('2015-10-08', enddate, codes=[fund['ra_code']])
     if df_nav_fund.empty:
         logger.warn("missing nav for fund [id: %d, code:%s]", fund['globalid'], fund['ra_code'])
         return None

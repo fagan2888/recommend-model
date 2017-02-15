@@ -2,5 +2,14 @@
 
 import database
 import asset_mz_markowitz
+import asset_mz_markowitz_asset
+import asset_mz_markowitz_nav
+import asset_mz_markowitz_pos
+import asset_mz_markowitz_sharpe
+import asset_ra_pool_nav
 import asset_rm_risk_mgr
+import asset_rs_reshape
+import asset_rs_reshape_nav
+import asset_rs_reshape_pos
 import asset_tc_timing_signal
+import base_ra_index_nav

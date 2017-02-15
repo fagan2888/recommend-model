@@ -34,7 +34,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database
+from db import database, base_ra_index_nav, base_ra_fund_nav
 
 import traceback, code
 
@@ -85,7 +85,7 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, op
     if optindex is not None:
         indexs = [s.strip() for s in optindex.split(',')]
         for e in indexs:
-            data[e] = database.base_ra_index_nav_load_series(
+            data[e] = base_ra_index_nav.load_series(
                 e, reindex=dates, begin_date=optstartdate, end_date=optenddate)
 
     if optcomposite is not None:
@@ -97,7 +97,7 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, op
     if optfund is not None:
         funds = [s.strip() for s in optfund.split(',')]
         for e in funds:
-            data[e] = database.base_ra_fund_nav_load_series(
+            data[e] = base_ra_fund_nav.load_series(
                 e, reindex=dates, begin_date=optstartdate, end_date=optenddate)
         
     if optpool is not None:

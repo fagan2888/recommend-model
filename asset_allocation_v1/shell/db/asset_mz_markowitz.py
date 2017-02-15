@@ -3,7 +3,7 @@
 from sqlalchemy import MetaData, Table, select, func
 # import string
 # from datetime import datetime, timedelta
-# import pandas as pd
+import pandas as pd
 # import os
 # import sys
 import logging
@@ -24,8 +24,6 @@ def load(gids, xtypes=None):
     columns = [
         t1.c.globalid,
         t1.c.mz_type,
-        t1.c.mz_pool,
-        t1.c.mz_reshape,
         t1.c.mz_name,
     ]
 
