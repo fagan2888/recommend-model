@@ -22,7 +22,8 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_rs_reshape_nav, base_ra_index_nav, base_ra_fund_nav
+from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
+from db import asset_ra_pool_nav, asset_rs_reshape_nav, base_ra_index_nav, base_ra_fund_nav
 
 import traceback, code
 
