@@ -33,7 +33,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database, base_ra_fund_nav
+from db import database, base_ra_fund_nav, base_ra_index, base_ra_fund, base_ra_index_nav
 
 import traceback, code
 
@@ -75,7 +75,7 @@ def corr(ctx, optid, optfund, optlist):
         corr_update(corr, codes)
 
 def corr_update(corr, codes):
-    ra_index = database.base_ra_index_find(corr['ra_index_id'])
+    ra_index = base_ra_index.find(corr['ra_index_id'])
     if ra_index is None:
         click.echo(click.style(
             "unknown index [%s]for calc corr!" % (corr['ra_index_id']), fg="yellow"))
@@ -97,7 +97,7 @@ def corr_update(corr, codes):
     #
     # 加载基金列表
     #
-    df_fund = database.base_ra_fund_load(codes=codes)
+    df_fund = base_ra_fund.load(codes=codes)
     
     data = []
     with click.progressbar(length=len(df_fund.index), label='update corr for corr %d' % (corr['globalid'])) as bar:

@@ -13,6 +13,23 @@ from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
 
+def find(globalid):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('rs_reshape', metadata, autoload=True)
+
+    columns = [
+        t.c.globalid,
+        t.c.rs_type,
+        t.c.rs_pool,
+        t.c.rs_asset,
+        t.c.rs_timing_id,
+        t.c.rs_name,
+    ]
+
+    s = select(columns).where(t.c.globalid == globalid)
+
+    return s.execute().first()
 #
 # mz_reshape
 #

@@ -23,7 +23,9 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
-from db import asset_ra_pool_nav, asset_rs_reshape_nav, base_ra_index_nav, base_ra_fund_nav
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav
+from util import xdict
 
 import traceback, code
 
@@ -268,12 +270,14 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     }
     mz_markowitz.insert(row).execute()
     # 导入数据: markowitz_asset
+    assets = {k: merge_asset_name_and_type(k, v) for (k, v) in assets.iteritems()}
     df_asset = pd.DataFrame(assets).T
     df_asset.index.name = 'mz_asset_id'
     df_asset['mz_markowitz_id'] = optid
     df_asset.rename(inplace=True, columns={
         'uplimit':'mz_upper_limit', 'downlimit':'mz_lower_limit', 'sumlimit':'mz_sum1_limit'})
     df_asset = df_asset.reset_index().set_index(['mz_markowitz_id', 'mz_asset_id'])
+    print df_asset
     asset_mz_markowitz_asset.save(optid, df_asset)
     # 导入数据: markowitz_pos
     df = df.round(4)             # 四舍五入到万分位
@@ -323,6 +327,12 @@ def parse_asset(asset):
             result = (None, {'uplimit': 1.0, 'downlimit': 0.0, 'sumlimit': 0})
 
     return result
+
+def merge_asset_name_and_type(asset_id, asset_data):
+    (name, category) = load_asset_name_and_type(asset_id)
+    return xdict.merge(asset_data, {
+        'mz_asset_name': name, 'mz_asset_type': category})
+
             
 
 def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period):
@@ -426,6 +436,50 @@ def load_nav_series(asset_id, begin_date, end_date):
         sr = pd.Series()
 
     return sr
+
+def load_asset_name_and_type(asset_id):
+    (name, category) = ('', 0)
+    xtype = asset_id / 10000000
+
+    if xtype == 1:
+        #
+        # 基金池资产
+        #
+        asset_id %= 10000000
+        (pool_id, category) = (asset_id / 100, asset_id % 100)
+        ttype = pool_id / 10000
+        name = asset_ra_pool.load_asset_name(pool_id, category, ttype)
+    elif xtype == 3:
+        #
+        # 基金池资产
+        #
+        category = 1
+        fund = base_ra_fund.find(asset_id)
+        name = "%s(%s)" % (fund['ra_name'], fund['ra_code'])
+        
+    elif xtype == 4:
+        #
+        # 修型资产
+        #
+        asset = asset_rs_reshape.find(asset_id)
+        (name, category) = (asset['rs_name'], asset['rs_asset'])
+    elif xtype == 12:
+        #
+        # 指数资产
+        #
+        asset = base_ra_index.find(asset_id)
+        name = asset['ra_name']
+        if '标普' in name:
+            category = 41
+        elif '黄金' in name:
+            category = 42
+        elif '恒生' in name:
+            category = 43
+    else:
+         (name, category) = ('', 0)
+
+    return (name, category)
+
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
