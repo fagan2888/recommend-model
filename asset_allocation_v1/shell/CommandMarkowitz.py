@@ -62,7 +62,6 @@ def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, endd
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
 
-
 @markowitz.command(name='import')
 @click.option('--id', 'optid', type=int, help=u'specify markowitz id')
 @click.option('--name', 'optname', help=u'specify markowitz name')
@@ -443,8 +442,9 @@ def markowitz_r(df_inc, limits):
     bound = []
     for asset in df_inc.columns:
         bound.append(limits[asset])
-    
-    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+
+    #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+    risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -561,18 +561,29 @@ def nav_update(markowitz):
     markowitz_id = markowitz['globalid']
     # 加载仓位信息
     df_pos = asset_mz_markowitz_pos.load(markowitz_id)
-    
+    #print df_pos
+    #risk_mgr_pos_df = risk_mgr_pos_df.loc[df_pos.index]
+    #df_pos = df_pos * risk_mgr_pos_df
+    #print df_pos
     # 加载资产收益率
     min_date = df_pos.index.min()
     #max_date = df_pos.index.max()
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
-
 
     data = {}
     for asset_id in df_pos.columns:
         data[asset_id] = load_nav_series(asset_id, min_date, max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
+
+    risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
+    risk_mgr_pos_df.columns = df_pos.columns
+    df_pos = df_pos.reindex(df_inc.index)
+    df_pos = df_pos.fillna(method = 'pad')
+    risk_mgr_pos_df = risk_mgr_pos_df.reindex(df_inc.index)
+    risk_mgr_pos_df = risk_mgr_pos_df.fillna(method = 'pad')
+    df_pos = risk_mgr_pos_df * df_pos
+    #print df_inc
 
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
