@@ -22,7 +22,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
+from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav
 from util import xdict
@@ -294,16 +294,19 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_tosave = df_tosave.loc[df_tosave['mz_ratio'] > 0, ['mz_ratio']]
     # save
     asset_mz_markowitz_pos.save(optid, df_tosave)
-    # 导入数据: markowitz_sharpe
+
+    # 导入数据: markowitz_criteria
+    criterias = {'return': '0001', 'risk':'0002', 'sharpe':'0003'}
     df_sharpe.index.name = 'mz_date'
-    df_sharpe['mz_markowitz_id'] = optid
-    df_sharpe.rename(inplace=True, columns={
-        'return': 'mz_return', 'risk':'mz_risk', 'sharpe':'mz_sharpe'})
-    # print df_sharpe
-    df_sharpe = df_sharpe.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
-    asset_mz_markowitz_sharpe.save(optid, df_sharpe)
+    for column in df_sharpe.columns:
+        criteria_id = criterias[column]
+        df_criteria = df_sharpe[column].to_frame('mz_value')
+        df_criteria['mz_markowitz_id'] = optid
+        df_criteria['mz_criteria_id'] = criteria_id
+        df_criteria = df_criteria.reset_index().set_index(['mz_markowitz_id', 'mz_criteria_id', 'mz_date'])
+        asset_mz_markowitz_criteria.save(optid, criteria_id,  df_criteria)
     
-    click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
+    click.echo(click.style("markowitz allocation complement! instance id [%s]" % (optid), fg='green'))
 
 def parse_asset(asset):
     segments = [s.strip() for s in asset.strip().split(':')]
@@ -331,8 +334,6 @@ def merge_asset_name_and_type(asset_id, asset_data):
     (name, category) = load_asset_name_and_type(asset_id)
     return xdict.merge(asset_data, {
         'mz_asset_name': name, 'mz_asset_type': category})
-
-            
 
 def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period):
     '''perform markowitz asset for days
