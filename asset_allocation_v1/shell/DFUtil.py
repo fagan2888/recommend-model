@@ -277,7 +277,10 @@ def categories_name(category, default='unknown'):
         return tls[category]
     else:
         return default
-    
+
+def calc_turnover(df):
+    return (df - df.shift(1).fillna(0)).abs().sum(axis=1);
+
 
 
 if __name__ == '__main__':

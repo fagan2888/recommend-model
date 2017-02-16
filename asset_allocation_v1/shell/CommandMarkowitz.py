@@ -534,3 +534,57 @@ def nav_update(markowitz):
 
     asset_mz_markowitz_nav.save(markowitz_id, df_result)
 
+@markowitz.command()
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.pass_context
+def turnover(ctx, optid, optlist):
+    ''' calc pool turnover and inc
+    '''
+    if optid is not None:
+        markowitzs = [s.strip() for s in optid.split(',')]
+    else:
+        markowitzs = None
+
+    df_markowitz = asset_mz_markowitz.load(markowitzs)
+
+    if optlist:
+
+        df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_markowitz, headers='keys', tablefmt='psql')
+        return 0
+    
+    data = []
+    with click.progressbar(length=len(df_markowitz), label='update turnover') as bar:
+        for _, markowitz in df_markowitz.iterrows():
+            bar.update(1)
+            turnover = turnover_update(markowitz)
+            data.append((markowitz['globalid'], "%6.2f" % (turnover * 100)))
+
+    headers = ['markowitz', 'turnover(%)']
+    print(tabulate(data, headers=headers, tablefmt="psql"))                 
+    # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))                 
+    # print(tabulate(data, headers=headers, tablefmt="grid"))                 
+            
+def turnover_update(markowitz):
+    markowitz_id = markowitz['globalid']
+    # 加载仓位信息
+    df = asset_mz_markowitz_pos.load(markowitz_id)
+
+    # 计算宽口换手率
+    sr_turnover = DFUtil.calc_turnover(df)
+
+    criteria_id = 6
+    df_result = sr_turnover.to_frame('mz_value')
+    df_result['mz_markowitz_id'] = markowitz_id
+    df_result['mz_criteria_id'] = criteria_id
+    df_result = df_result.reset_index().set_index(['mz_markowitz_id', 'mz_criteria_id', 'mz_date'])
+    asset_mz_markowitz_criteria.save(markowitz_id, criteria_id,  df_result)
+
+    total_turnover = sr_turnover.sum()
+
+    return total_turnover
+
+    # df_result.reset_index(inplace=True)
+    # df_result['turnover'] = df_result['turnover'].map(lambda x: "%6.2f%%" % (x * 100))
+    # print tabulate(df_result, headers='keys', tablefmt='psql', stralign=u'right')
