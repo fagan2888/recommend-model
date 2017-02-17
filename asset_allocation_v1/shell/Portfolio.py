@@ -285,9 +285,9 @@ def m_markowitz(queue, random_index, df_inc, bound):
 
 def markowitz_bootstrape(df_inc, bound):
 
-    process_num = 4
+    process_num = 8
     look_back = len(df_inc)
-    loop_num = look_back * process_num
+    loop_num = look_back * 4
     #loop_num = 20
     randoms = []
     rep_num = loop_num * (look_back / 2) / look_back

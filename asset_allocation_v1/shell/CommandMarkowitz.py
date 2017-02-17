@@ -331,15 +331,33 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     #print df
 
 
+    min_date = df.index[0]
+    max_date = df.index[-1]
+
+
+    '''
     reshape_pos_df = pd.read_csv('./reshape_pos_df.csv', index_col = ['date'], parse_dates = ['date'])
-    date_min = df.index[0]
     df = df.reindex(reshape_pos_df.index)
     df = df.fillna(method = 'pad')
     df = df.loc[reshape_pos_df.index]
     df = df * reshape_pos_df
     #print df.index
     #print reshape_pos_df.index
+    '''
 
+    risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
+    risk_mgr_pos_df.columns = df.columns
+    df = df.reindex(risk_mgr_pos_df.index)
+    df = df.fillna(method = 'pad')
+    df = df.loc[risk_mgr_pos_df.index]
+    df = df * risk_mgr_pos_df
+
+
+    df = df[df.index <= max_date]
+    df = df[df.index >= min_date]
+
+    #df_pos = risk_mgr_pos_df * df_pos
+    #print df_inc
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     # print df.head()
@@ -458,6 +476,10 @@ def markowitz_r(df_inc, limits):
 
     #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+
+    #ws = []
+    #for i in range(0, len(df_inc.columns)):
+    #    ws.append(1.0 / len(df_inc.columns))
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -591,14 +613,17 @@ def nav_update(markowitz):
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
+
+    '''
     risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
     risk_mgr_pos_df.columns = df_pos.columns
     df_pos = df_pos.reindex(df_inc.index)
     df_pos = df_pos.fillna(method = 'pad')
     risk_mgr_pos_df = risk_mgr_pos_df.reindex(df_inc.index)
     risk_mgr_pos_df = risk_mgr_pos_df.fillna(method = 'pad')
-    #df_pos = risk_mgr_pos_df * df_pos
-    #print df_inc
+    df_pos = risk_mgr_pos_df * df_pos
+    print df_inc
+    '''
 
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
@@ -642,6 +667,7 @@ def turnover(ctx, optid, optlist):
     print(tabulate(data, headers=headers, tablefmt="psql"))                 
     # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))                 
     # print(tabulate(data, headers=headers, tablefmt="grid"))                 
+
             
 def turnover_update(markowitz):
     markowitz_id = markowitz['globalid']
