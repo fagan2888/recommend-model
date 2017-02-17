@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
-@click.argument('assets', nargs=-1)
+@click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
 def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, assets):
 
