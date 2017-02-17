@@ -32,19 +32,32 @@ import traceback, code
 logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)  
+@click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
 @click.option('--id', 'optid', help=u'reshape id')
-# @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
+@click.option('--name', 'optname', default=u'马克维茨', help=u'specify markowitz name')
+@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
+@click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
+@click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
+@click.option('--end-date', 'enddate', help=u'end date to calc')
+@click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
+@click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
+@click.argument('assets', nargs=-1)
 @click.pass_context
-def markowitz(ctx, optid):
+def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, assets):
+
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        rc = ctx.invoke(allocate, optid=optid, startdate='2017-01-01')
-        if optid is None:
-            optid = str(rc)
-        ctx.invoke(nav, optid=optid)
-        ctx.invoke(turnover, optid=optid)
+        if optfull is False:
+            rc = ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, assets=assets)
+            if optid is None:
+                optid = str(rc)
+            ctx.invoke(nav, optid=optid)
+            ctx.invoke(turnover, optid=optid)
+        else:
+            ctx.invoke(nav, optid=optid)
+            ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
