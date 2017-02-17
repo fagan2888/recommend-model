@@ -21,7 +21,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_rs_reshape, asset_rs_reshape_pos, asset_ra_pool_nav, asset_tc_timing_signal
+from db import database, asset_rs_reshape, asset_rs_reshape_pos, asset_ra_pool_nav, asset_tc_timing_signal, base_ra_index_nav
 from Reshape import Reshape
 
 
@@ -229,6 +229,7 @@ def pos_update(reshape):
 
     sr_nav = database.load_nav_series(reshape['rs_asset_id'], reindex=tdates, begin_date=sdate)
     
+
     # df_inc = df_nav.pct_change().fillna(0.0).to_frame(reshape_id)
     df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing})
 
@@ -271,4 +272,54 @@ def pos_update(reshape):
 
     # 更新数据库
     database.batch(db, t2, df_new, df_old, timestamp=True)
-    
+
+
+@reshape.command()
+@click.option('--id', 'optid', help=u'ids of fund pool to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
+@click.pass_context
+def jyposnav(ctx, optid, optlist, optonline):
+
+    timing_ids = [49101, 49102, 49201, 49301, 49401]
+    df_timing = database.asset_tc_timing_signal_load(
+        timing_ids, begin_date=None, end_date=None)
+
+    data = {}
+    index_ids = [120000001, 120000002, 120000013, 120000014, 120000015]
+    for iid in index_ids:
+        nav = base_ra_index_nav.load_series(iid, reindex=None, begin_date=None, end_date=None, mask=None)
+        data[iid] = nav
+    df_nav = pd.DataFrame(data)
+
+    reshape_result = {}
+    for i in range(0, 5):
+        asset = index_ids[i]
+        timing_id = timing_ids[i]
+
+        df = pd.DataFrame({'nav': df_nav[asset], 'timing': df_timing[timing_id]})
+
+        df_result = Reshape().reshape(df)
+        df_result.drop(['nav', 'timing'], axis=1, inplace=True)
+        #print df_result
+        reshape_result[asset] = df_result['rs_ratio']
+
+    reshape_df = pd.DataFrame(reshape_result)
+    reshape_df.index.name = 'date'
+    #print risk_mgr_df
+    reshape_df.to_csv('reshape_pos_df.csv')
+
+    df_inc = df_nav.pct_change().fillna(0.0)
+    df_inc = df_inc.loc[reshape_df.index]
+    df_reshape_inc = df_inc * reshape_df
+    df_reshape_nav = (1 + df_reshape_inc).cumprod()
+    print df_reshape_nav
+    df_reshape_nav.to_csv('reshape_nav_df.csv')
+
+    #print reshape_df.index
+    #print df_nav.index
+    #print reshape_df
+
+    #print df_timing
+    #print df_nav
+    #print 'hehe'

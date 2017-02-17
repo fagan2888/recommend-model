@@ -23,7 +23,8 @@ from dateutil.parser import parse
 from Const import datapath
 from tabulate import tabulate
 from sqlalchemy import MetaData, Table, select, func
-from db import database, asset_rm_risk_mgr, asset_rm_riskmgr, asset_tc_timing_signal, asset_rm_riskmgr_signal, asset_rm_riskmgr_nav
+from db import database, asset_rm_risk_mgr, asset_rm_riskmgr, asset_tc_timing_signal, asset_rm_riskmgr_signal, asset_rm_riskmgr_nav, base_ra_index_nav
+from db import database, asset_rm_risk_mgr, base_ra_index_nav
 
 import traceback, code
 
@@ -462,3 +463,41 @@ def nav_update(riskmgr):
     df_result = df_result.reset_index().set_index(['rm_riskmgr_id', 'rm_date'])
     
     asset_rm_riskmgr_nav.save(riskmgr_id, df_result)
+
+@riskmgr.command()
+@click.option('--inst', 'optinst', type=int, help=u'risk mgr id')
+@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--start-date', 'startdate', help=u'start date to calc')
+@click.option('--end-date', 'enddate', help=u'end date to calc')
+@click.pass_context
+def jysimple(ctx, datadir, optinst, startdate, enddate):
+
+    risk_mgr = RiskManagement.RiskManagement()
+    timing_ids = [49101, 49102, 49201, 49301, 49401]
+    df_timing = database.asset_tc_timing_signal_load(
+        timing_ids, begin_date=startdate, end_date=enddate)
+    #print df_timing.columns
+
+    data = {}
+    index_ids = [120000001, 120000002, 120000013, 120000014, 120000015]
+    for iid in index_ids:
+        nav = base_ra_index_nav.load_series(iid, reindex=None, begin_date=startdate, end_date=enddate, mask=None)
+        data[iid] = nav
+
+    df_nav = pd.DataFrame(data)
+    #df_nav = df_nav.fillna(method = 'pad')
+
+    risk_mgr_result = {}
+    for i in range(0, 5):
+        asset = index_ids[i]
+        timing_id = timing_ids[i]
+        df = pd.DataFrame({
+            'nav': df_nav[asset],
+            'timing': df_timing[timing_id].reindex(df_nav.index, method='pad')
+        })
+        df_new = risk_mgr.perform(asset, df)
+        risk_mgr_result[asset] = df_new['rm_pos']
+
+    risk_mgr_df = pd.DataFrame(risk_mgr_result)
+    print risk_mgr_df
+    risk_mgr_df.to_csv('risk_mgr_df.csv')

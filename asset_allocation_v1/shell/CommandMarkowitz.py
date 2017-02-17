@@ -328,6 +328,19 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     asset_mz_markowitz_asset.save(optid, df_asset)
     # 导入数据: markowitz_pos
     df = df.round(4)             # 四舍五入到万分位
+    #print df
+
+
+    reshape_pos_df = pd.read_csv('./reshape_pos_df.csv', index_col = ['date'], parse_dates = ['date'])
+    date_min = df.index[0]
+    df = df.reindex(reshape_pos_df.index)
+    df = df.fillna(method = 'pad')
+    df = df.loc[reshape_pos_df.index]
+    df = df * reshape_pos_df
+    #print df.index
+    #print reshape_pos_df.index
+
+
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     # print df.head()
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
@@ -486,6 +499,8 @@ def load_nav_series(asset_id, reindex, begin_date, end_date):
     else:
         sr = pd.Series()
 
+    #df = pd.read_csv('./reshape_nav_df.csv', index_col = ['date'], parse_dates = ['date'])
+    #sr = df[str(asset_id)]
     return sr
 
 def load_asset_name_and_type(asset_id):
@@ -582,7 +597,7 @@ def nav_update(markowitz):
     df_pos = df_pos.fillna(method = 'pad')
     risk_mgr_pos_df = risk_mgr_pos_df.reindex(df_inc.index)
     risk_mgr_pos_df = risk_mgr_pos_df.fillna(method = 'pad')
-    df_pos = risk_mgr_pos_df * df_pos
+    #df_pos = risk_mgr_pos_df * df_pos
     #print df_inc
 
     # 计算复合资产净值

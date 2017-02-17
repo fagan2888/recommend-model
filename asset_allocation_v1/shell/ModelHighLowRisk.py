@@ -93,7 +93,6 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
 
     risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
-
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
         pd.Series((sharpe, risk, returns), index=['sharpe','risk', 'return'])
@@ -173,8 +172,8 @@ def asset_alloc_high_low(start_date, end_date=None, lookback=26, adjust_period=N
     #
     # 计算高风险资产的资产净值
     #
-    #df_inc = DFUtil.load_inc_csv(datapath('equalriskasset.csv'), get_columns('high', excluded), index)
-    df_inc = DFUtil.load_inc_csv(datapath('labelasset.csv'), get_columns('high', excluded), index)
+    df_inc = DFUtil.load_inc_csv(datapath('equalriskasset.csv'), get_columns('high', excluded), index)
+    #df_inc = DFUtil.load_inc_csv(datapath('labelasset.csv'), get_columns('high', excluded), index)
     df_nav_high = DFUtil.portfolio_nav(df_inc, df_high[get_columns('high', excluded)])
     df_nav_high.to_csv(datapath('high_nav.csv'), index_label='date')
     
