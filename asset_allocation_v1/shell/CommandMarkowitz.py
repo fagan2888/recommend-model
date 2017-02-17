@@ -31,13 +31,23 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group()  
+@click.group(invoke_without_command=True)  
+@click.option('--id', 'optid', help=u'reshape id')
+# @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
-def markowitz(ctx):
+def markowitz(ctx, optid):
     '''markowitz group
     '''
-    pass
-
+    if ctx.invoked_subcommand is None:
+        # click.echo('I was invoked without subcommand')
+        rc = ctx.invoke(allocate, optid=optid, startdate='2017-01-01')
+        if optid is None:
+            optid = str(rc)
+        ctx.invoke(nav, optid=optid)
+        ctx.invoke(turnover, optid=optid)
+    else:
+        # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
+        pass
 
 
 @markowitz.command(name='import')
@@ -307,6 +317,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         asset_mz_markowitz_criteria.save(optid, criteria_id,  df_criteria)
     
     click.echo(click.style("markowitz allocation complement! instance id [%s]" % (optid), fg='green'))
+
+    return optid
 
 def parse_asset(asset):
     segments = [s.strip() for s in asset.strip().split(':')]
