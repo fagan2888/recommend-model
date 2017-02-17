@@ -33,8 +33,8 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)  
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
-@click.option('--id', 'optid', help=u'reshape id')
-@click.option('--name', 'optname', default=u'马克维茨', help=u'specify markowitz name')
+@click.option('--id', 'optid', help=u'specify markowitz id')
+@click.option('--name', 'optname', default=u'markowitz', help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
@@ -84,7 +84,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
         #
         df_existed = asset_mz_markowitz.load([str(optid)])
         if not df_existed.empty:
-            s = 'markowitz instance [%d] existed' % optid
+            s = 'markowitz instance [%s] existed' % str(optid)
             if optreplace:
                 click.echo(click.style("%s, will replace!" % s, fg="yellow"))
             else:
@@ -210,12 +210,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         #
         df_existed = asset_mz_markowitz.load([str(optid)])
         if not df_existed.empty:
-            s = 'markowitz instance [%d] existed' % optid
+            s = 'markowitz instance [%s] existed' % str(optid)
             if optreplace:
                 click.echo(click.style("%s, will replace!" % s, fg="yellow"))
             else:
                 click.echo(click.style("%s, import aborted!" % s, fg="red"))
-            return -1;
+                return -1;
     else:
         #
         # 自动生成id
