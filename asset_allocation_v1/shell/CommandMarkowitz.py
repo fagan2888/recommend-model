@@ -334,24 +334,23 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     min_date = df.index[0]
     max_date = df.index[-1]
 
-
-    '''
     reshape_pos_df = pd.read_csv('./reshape_pos_df.csv', index_col = ['date'], parse_dates = ['date'])
+    reshape_pos_df.columns = df.columns
     df = df.reindex(reshape_pos_df.index)
     df = df.fillna(method = 'pad')
     df = df.loc[reshape_pos_df.index]
     df = df * reshape_pos_df
     #print df.index
     #print reshape_pos_df.index
-    '''
 
+    '''
     risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
     risk_mgr_pos_df.columns = df.columns
     df = df.reindex(risk_mgr_pos_df.index)
     df = df.fillna(method = 'pad')
     df = df.loc[risk_mgr_pos_df.index]
     df = df * risk_mgr_pos_df
-
+    '''
 
     df = df[df.index <= max_date]
     df = df[df.index >= min_date]
@@ -361,7 +360,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     # print df.head()
-    df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+    #df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     if turnover >= 0.01:
         df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律

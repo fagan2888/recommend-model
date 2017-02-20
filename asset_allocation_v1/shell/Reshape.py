@@ -99,6 +99,14 @@ class Reshape(object):
             else:
                 position = riskmean / risk
 
+            '''
+            if risk <= riskmean:
+                position = 1.0
+            elif risk >= riskmean + 2 * riskstd:
+                position = 0.0
+            else:
+                position = riskmean / risk
+            '''
             #
             # 择时调整规则
             #
@@ -110,13 +118,21 @@ class Reshape(object):
             #    
             # 3. 否则, 维持原仓位不变
             #
-
             if (position <= last * 0.5 or position <= last - 0.2) and signal == -1:
                 pass
             elif (position >= last * 2 or position >= last + 0.2 or position == 1.0) and signal == 1:
                 pass
             else:
                 position = last
+
+            '''
+            if position == 0 or position == 1.0:
+                pass
+            elif position <= last * 0.5 or (position >= last * 2 and last > 0) or abs(position - last) >= 0.3:
+                pass
+            else:
+                position = last
+            '''
 
             #if position < 0.1:
             #    position = 0.0
@@ -127,8 +143,4 @@ class Reshape(object):
         df['rs_ratio'] = sr_pos
 
         return df
-
-                
-
-
 
