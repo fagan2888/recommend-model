@@ -11,6 +11,8 @@ import Const
 import Data
 from numpy import *
 from datetime import datetime
+import multiprocessing
+import random
 
 from Const import datapath
 
@@ -218,6 +220,60 @@ def markowitz_r_spe(funddfr, bounds):
 
     return final_risk, final_return, final_ws, final_sharp
 
+def m_markowitz(queue, random_index, df_inc, bound):
+    for index in random_index:
+        tmp_df_inc = df_inc.iloc[index]
+        risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound)
+        queue.put((risk, returns, ws, sharpe))
+
+
+def markowitz_bootstrape(df_inc, bound):
+
+    process_num = 8
+    look_back = len(df_inc)
+    loop_num = look_back * 4
+    #loop_num = 20
+    randoms = []
+    rep_num = loop_num * (look_back / 2) / look_back
+    day_indexs = range(0, look_back) * rep_num
+    random.shuffle(day_indexs)
+    day_indexs = np.array(day_indexs)
+    #print day_indexs
+    day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
+    #print day_indexs
+    for m in range(0, len(day_indexs)):
+        randoms.append(list(day_indexs[m]))
+    #print randoms
+
+    q = multiprocessing.Queue()
+    processes = []
+    process_index_num = len(randoms) / process_num
+    for m in range(0, process_num):
+        indexs = randoms[m * process_index_num : (m + 1) * process_index_num]
+        p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound,))
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
+
+    wss = np.zeros(len(df_inc.columns))
+    risks = []
+    returns = []
+    sharpes = []
+    for m in range(0, q.qsize()):
+        record = q.get(m)
+        ws = record[2]
+        for n in range(0, len(ws)):
+            w = ws[n]
+            wss[n] = wss[n] + w
+        risks.append(record[0])
+        returns.append(record[1])
+        sharpes.append(record[3])
+
+
+    ws = wss / loop_num
+    return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
 
 #利用blacklitterman做战略资产配置
 def strategicallocation(delta,    weq, V, tau, P, Q):
