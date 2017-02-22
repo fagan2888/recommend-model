@@ -283,6 +283,17 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             if optname == 'markowitz':
                 optname = 'markowitz high'
 
+    '''
+    assets = {
+        120000001:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+        120000002:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+        120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+        120000014: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+        120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+    }
+    '''
+    #print assets
+
     df = markowitz_days(startdate, enddate, assets,
         label=optname, lookback=lookback, adjust_period=adjust_period)
 
@@ -330,7 +341,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df = df.round(4)             # 四舍五入到万分位
     #print df
 
-
+    '''
     min_date = df.index[0]
     max_date = df.index[-1]
 
@@ -343,19 +354,17 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     #print df.index
     #print reshape_pos_df.index
 
-    '''
     risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
     risk_mgr_pos_df.columns = df.columns
     df = df.reindex(risk_mgr_pos_df.index)
     df = df.fillna(method = 'pad')
     df = df.loc[risk_mgr_pos_df.index]
     df = df * risk_mgr_pos_df
-    '''
 
     df = df[df.index <= max_date]
     df = df[df.index >= min_date]
+    '''
 
-    #df_pos = risk_mgr_pos_df * df_pos
     #print df_inc
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
