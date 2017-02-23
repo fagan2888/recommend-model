@@ -240,7 +240,7 @@ class HmmNesc(object):
         # X = sigmoid(normalize(X, axis=0))
         # print X
         # X = boxcox(X)
-        model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=10000, params="st", init_params="st")
+        model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000)#, params="st", init_params="st")
         # X = np.nan_to_num(0.0)
         # print X.shape
         # os._exit(0)
@@ -307,9 +307,9 @@ class HmmNesc(object):
         # print list(test_dates)
         p_s_date = self.test_start
         p_in_date = datetime.datetime(2012, 1, 6)
-        p_e_date = datetime.datetime(2016, 10, 14)
+        p_e_date = datetime.datetime(2013, 1, 4)
         tmp_date = p_in_date
-        tmp_e_date = datetime.datetime(2016, 10, 14)
+        tmp_e_date = datetime.datetime(2013, 1, 4)
         is_holding = []
         while p_in_date <= p_e_date:
             print p_in_date
@@ -352,19 +352,19 @@ class HmmNesc(object):
         print [nav_list[-1], min(max_drawdonw_list), abs(nav_list[-1] - 1.0) / abs(min(max_drawdonw_list)), win_ratio]
         union_data_tmp.to_csv("market_states_000300_week_20120108_20161014_03_0_3_2.csv")
 
-        print model.covars_[0]
-        print np.shape(model.covars_[0])
-        print len(model.covars_[0])
-        print model.covars_weight
-        t_states = self.predict(self.ori_data[self.test_start:self.test_end], model, list(feature_selected))
-        v_states = self.predict(self.ori_data[self.v_start:self.v_end], model, list(feature_selected))
-        print "test:"
-        HmmNesc.rating(self.ori_data[self.t_start:self.t_end], self.state_num, states, self.filter_ratio)
-        print "vali:"
-        HmmNesc.rating(self.ori_data[self.v_start:self.v_end], self.state_num, v_states, self.filter_ratio)
-        # self.plot(self.ori_data[self.t_start:self.t_end], model, states)
-        print "test:"
-        HmmNesc.rating(self.ori_data[self.test_start:self.test_end], self.state_num, t_states, self.filter_ratio)
+        # print model.covars_[0]
+        # print np.shape(model.covars_[0])
+        # print len(model.covars_[0])
+        # print model.covars_weight
+        # t_states = self.predict(self.ori_data[self.test_start:self.test_end], model, list(feature_selected))
+        # v_states = self.predict(self.ori_data[self.v_start:self.v_end], model, list(feature_selected))
+        # print "test:"
+        # HmmNesc.rating(self.ori_data[self.t_start:self.t_end], self.state_num, states, self.filter_ratio)
+        # print "vali:"
+        # HmmNesc.rating(self.ori_data[self.v_start:self.v_end], self.state_num, v_states, self.filter_ratio)
+        # # self.plot(self.ori_data[self.t_start:self.t_end], model, states)
+        # print "test:"
+        # HmmNesc.rating(self.ori_data[self.test_start:self.test_end], self.state_num, t_states, self.filter_ratio)
         return None
 
     def plot(self, data, model, states):
@@ -589,3 +589,7 @@ class HmmNesc(object):
                 break
 
         return date
+if __name__ == "__main__":
+    sh_000300_all = open("../tmp/hmm_000300.csv")
+    nesc_hmm = HmmNesc(sh_000300_all)
+    nesc_hmm.tmp_method_test()
