@@ -130,6 +130,23 @@ def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True)
 
     return df.index.sort_values()
 
+def next_trade_date(end_date=None, lookback=26, include_end_date=True):
+    if include_end_date:
+        condition = "(td_type & 0x02 OR td_date = '%s')" % (end_date)
+    else:
+        condition = "(td_type & 0x02)"
+        
+    sql = "SELECT td_date as date, td_type FROM trade_dates WHERE td_date <= '%s' AND %s ORDER By td_date DESC LIMIT %d" % (end_date, condition, lookback)
+
+    # print sql
+
+    conn  = MySQLdb.connect(**config.db_base)
+    df = pd.read_sql(sql, conn, index_col = 'date', parse_dates=['date'])
+    conn.close()
+
+    return df.index.sort_values()
+
+
 def build_sql_trade_date_weekly(start_date, end_date, include_end_date=True):
     if type(start_date) != str:
         start_date = start_date.strftime("%Y-%m-%d")

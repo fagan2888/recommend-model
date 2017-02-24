@@ -475,9 +475,12 @@ def markowitz_day(day, lookback, assets):
 
     return markowitz_r(df_inc, assets)
 
+
 def markowitz_r(df_inc, limits):
     '''perform markowitz
     '''
+    end_date = df_inc.index[-1]
+
     bound = []
     for asset in df_inc.columns:
         bound.append(limits[asset])
@@ -485,9 +488,20 @@ def markowitz_r(df_inc, limits):
     #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
 
-    #ws = []
-    #for i in range(0, len(df_inc.columns)):
-    #    ws.append(1.0 / len(df_inc.columns))
+
+    '''
+    weq = []
+    for i in range(0, len(df_inc.columns)):
+        weq.append(ws[i])
+
+    P = np.eye(len(df_inc.columns))
+    Q = []
+    for asset in df_inc.columns:
+        next_week_r = base_ra_index_nav.load_onemore_week(asset, end_date)
+        Q.append([next_week_r])
+
+    risk, returns, ws, sharpe = PF.black_litterman(weq, df_inc, P, Q)
+    '''
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -497,6 +511,7 @@ def markowitz_r(df_inc, limits):
     return sr_result
 
 def load_nav_series(asset_id, reindex, begin_date, end_date):
+
     xtype = asset_id / 10000000
 
     if xtype == 1:
@@ -606,6 +621,7 @@ def nav_update(markowitz):
     markowitz_id = markowitz['globalid']
     # 加载仓位信息
     df_pos = asset_mz_markowitz_pos.load(markowitz_id)
+    #print df_pos
     #print df_pos
     #risk_mgr_pos_df = risk_mgr_pos_df.loc[df_pos.index]
     #df_pos = df_pos * risk_mgr_pos_df
