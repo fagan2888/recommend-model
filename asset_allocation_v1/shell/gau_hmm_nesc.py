@@ -68,11 +68,12 @@ class HmmNesc(object):
         # 计算每个特征的每个评价指标值
         for feature in features:
             print feature
+            # print datetime.datetime.now()
             [model, states] = HmmNesc.training(t_data, [feature], state_num)
             evaluations = HmmNesc.rating(t_data, state_num, states, thres)
+            print evaluations
             # print feature, evaluations
             result[feature] = evaluations
-
         # 最终选择的特征
         feature_selected = set()
         for indx in eva_indic:
@@ -80,7 +81,7 @@ class HmmNesc(object):
             for ite in range(rank_num):
                 feature_selected.add(sorted_result[ite][0])
         print feature_selected
-        # os._exit(0)
+        os._exit(0)
         return feature_selected
 
     @staticmethod
@@ -217,7 +218,6 @@ class HmmNesc(object):
             max_drawdown = 0.0
         else:
             max_drawdown = abs(nav_list[-1] - 1.0) / abs(min(max_drawdonw_list))
-        print [nav_list[-1], min(max_drawdonw_list), max_drawdown, win_ratio]
         return [nav_list[-1], min(max_drawdonw_list), max_drawdown, win_ratio]
 
     @staticmethod
@@ -299,17 +299,17 @@ class HmmNesc(object):
         #print self.ori_data[self.test_start:self.test_end]
         #os._exit(0)
         # feature_selected = HmmNesc.feature_select(self.ori_data[self.t_start:self.t_end], self.features, self.state_num,
-        #                                           self.filter_ratio, [self.eva_indic, self.rank_num])
+        #                                          self.filter_ratio, [self.eva_indic, self.rank_num])
         # print feature_selected
-        feature_selected = set(['high', 'SOBV', 'pct_chg', 'PRICEOSC'])
+        feature_selected = set(['WVAD', 'pct_chg', 'PVT'])
         print "*********************"
         test_dates = self.ori_data[self.test_start:self.test_end].index
         # print list(test_dates)
         p_s_date = self.test_start
         p_in_date = datetime.datetime(2012, 1, 6)
-        p_e_date = datetime.datetime(2013, 1, 4)
+        p_e_date = datetime.datetime(2012, 10, 26)
         tmp_date = p_in_date
-        tmp_e_date = datetime.datetime(2013, 1, 4)
+        tmp_e_date = datetime.datetime(2012, 10, 26)
         is_holding = []
         while p_in_date <= p_e_date:
             print p_in_date
@@ -590,6 +590,6 @@ class HmmNesc(object):
 
         return date
 if __name__ == "__main__":
-    sh_000300_all = open("../tmp/hmm_000300.csv")
+    sh_000300_all = open("../tmp/hmm_000300_week.csv")
     nesc_hmm = HmmNesc(sh_000300_all)
     nesc_hmm.tmp_method_test()
