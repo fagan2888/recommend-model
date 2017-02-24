@@ -489,7 +489,6 @@ def markowitz_r(df_inc, limits):
     risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
 
 
-    '''
     weq = []
     for i in range(0, len(df_inc.columns)):
         weq.append(ws[i])
@@ -501,7 +500,6 @@ def markowitz_r(df_inc, limits):
         Q.append([next_week_r])
 
     risk, returns, ws, sharpe = PF.black_litterman(weq, df_inc, P, Q)
-    '''
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),

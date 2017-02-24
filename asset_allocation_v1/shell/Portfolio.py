@@ -615,36 +615,29 @@ def black_litterman(weq, df_inc, P, Q):
     # just because it is less to type, and we've already computed w*.
     lmbda = np.dot(linalg.pinv(P).T,(w.T * (1 + tau) - weq).T)
 
-    #print sigma
-    #print
-    #print posteriorSigma
-    #print weq
-    #print P
-    #print Q
-    #print 
-    #print np.mean(return_rate, axis = 1)
-    #print 
-    #print er
-    #print 
-    #print w
-    #print 
-    #print np.dot(w.T, er)
-    #print 
-    #print sqrt(np.dot(w.T, posteriorSigma).dot(w))
-    #print er.shape
-    #print w.shape
-    #print posteriorSigma.shape
-
     solvers.options['show_progress'] = False
     n_asset = len(df_inc.columns)
     S          =     matrix(posteriorSigma)
     pbar       =     matrix(er)
 
-    G          =     matrix(0.0, (n_asset, n_asset))
-    G[::n_asset + 1]  =  -1.0
-    h                 =  matrix(0.0, (n_asset, 1))
+    G          =     matrix(0.0, ( 3 * n_asset, n_asset))
+    #G[::n_asset + 1]  =  -1.0
+    h                 =  matrix(0.0, (3 * n_asset, 1))
     A                 =  matrix(1.0, (1, n_asset))
     b                 =  matrix(1.0)
+
+
+    #print weq
+    for i in range(0, n_asset):
+        G[i, i] = -1
+
+        G[n_asset + i, i] = -1
+        h[n_asset + i, 0] = -1.0 * max(weq[i] - 0.05, 0)
+
+        G[2 * n_asset + i, i] = 1
+        h[2 * n_asset + i, 0] =  min(weq[i] + 0.05, 1.0)
+
+    #print h
 
     #print S
     N = 200
@@ -674,7 +667,8 @@ def black_litterman(weq, df_inc, P, Q):
     #print Q
     #print
     #print final_ws
-    #print 
+    #print
+    #print final_ws
     return final_risk, final_return, final_ws, final_sharp
 
     #print risks
