@@ -14,6 +14,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 # from pykalman import KalmanFilter
 from scipy.stats import boxcox
+from scipy import stats
 import os
 from utils import sigmoid
 from sklearn.preprocessing import normalize
@@ -22,16 +23,19 @@ class HmmNesc(object):
 
     def __init__(self, file_handle):
         self.ori_data = pd.read_csv(file_handle, index_col='date', parse_dates=["date"], low_memory=False)
+        self.ori_data.fillna(0, inplace=True)
+        for col in self.ori_data.columns:
+            print col
+            self.ori_data[col].replace(to_replace=0, method='ffill', inplace=True)
         # print self.ori_data
         # 隐形状态数目
         self.state_num = 13
         # 特征集"SI", "SRMI",
-        self.features = ["pct_chg", "high", "PVT", "WVAD", "PRICEOSC", "slowKD", "ROC", "MTM", "DPO", "ATR", "CCI",
-                         "RSI", "BIAS", "vol_ratio", "VMA", "TAPI", "VSTD", "SOBV", "VMACD"]
+        self.features = ["pct_chg", "high", "PRICEOSC", "slowKD", "ROC", "MTM", "DPO", "ATR", "CCI", "RSI", "BIAS"]
         # 训练开始时间
         self.t_start = datetime.datetime(2005, 8, 1)
         # 训练结束时间
-        self.t_end = datetime.datetime(2008, 8, 1)
+        self.t_end = datetime.datetime(2010, 8, 1)
 
         # 验证开始时间
         self.v_start = datetime.datetime(2003, 1, 1)
@@ -39,9 +43,9 @@ class HmmNesc(object):
         self.v_end = datetime.datetime(2003, 12, 31)
 
         # 测试开始时间
-        self.test_start = datetime.datetime(2009, 1, 9)
+        self.test_start = datetime.datetime(2008, 1, 4)
         # 测试结束时间
-        self.test_end = datetime.datetime(2016, 10, 21)
+        self.test_end = datetime.datetime(2016, 12, 31)
         # 单边交易费用
         self.fee_ratio = 0.0
         # 多头收益率阈值，用于选取多头状态
@@ -111,7 +115,7 @@ class HmmNesc(object):
             #result[i] = {}
             state = (states == i)
             # 发出信号为t日，从t+2日开始算收益(与原始算法不同，原始算法为以t+1日开盘价买入）,这里更偏向操作基金
-            idx = np.append([0.0, 0.0], state[:-2])
+            idx = np.append([0.0], state[:-1])
             ratios = np.where(idx == 1, data["pct_chg"], 0)
             nav_list, max_drawdonw_list = HmmNesc.cal_nav_maxdrawdown(ratios)
             #union_data_tmp["signal"] = idx
@@ -128,6 +132,34 @@ class HmmNesc(object):
                 choose_final += state
 
         return choose_final[-1]
+    @staticmethod
+    def state_statistic(data, state_num, states, model):
+        cur_state = states[-1]
+        # state = (states == cur_state)
+        # idx = np.append([], state)
+        # ratios = np.where(idx == 1, data["pct_chg"], -1)
+        # ratios = ratios[ratios != -1]
+        # means = ratios.mean()
+        # stds = ratios.std(ddof=1)
+        means_arr = []
+        stds_arr = []
+        for ite in range(state_num):
+            state = (states == ite)
+            idx = np.append([], state)
+            ratios = np.where(idx == 1, data["pct_chg"], -100)
+            ratios = ratios[ratios != -100]
+            ratios = ratios / 100.0
+            means_arr.append(ratios.mean())
+            stds_arr.append(ratios.std(ddof=1))
+        trans_mat = model.transmat_[cur_state]
+        used_trans = np.where( trans_mat > 0.05, trans_mat, 0.0)
+        # print "herererer"
+        # print model.transmat_
+        # print cur_state
+        # print means_arr
+        # print used_trans
+        means = np.dot(used_trans, means_arr)
+        return means
     @staticmethod
     def market_states(data, state_num, states, thres):
         """
@@ -240,7 +272,7 @@ class HmmNesc(object):
         # X = sigmoid(normalize(X, axis=0))
         # print X
         # X = boxcox(X)
-        model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000)#, params="st", init_params="st")
+        model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000) #, params="st", init_params="st")
         # X = np.nan_to_num(0.0)
         # print X.shape
         # os._exit(0)
@@ -253,7 +285,17 @@ class HmmNesc(object):
         # # print model.covars_
         #     os._exit(0)
         states = model.predict(X)
+        # print "Transition matrix"
+        # print np.mat(model.transmat_)
+        # print np.shape(model.transmat_)
+        # print ""
 
+        # print "means and vars of each hidden state"
+        # for i in xrange(model.n_components):
+        #     print "%dth hidden state" % i
+        #     print "mean = ", model.means_[i]
+        #     print "var = ", np.diag(model.covars_[i])
+        #     print ""
         return [model, states]
 
     def predict(self, p_data, model, features):
@@ -290,7 +332,15 @@ class HmmNesc(object):
         states = model.predict(X)
 
         return states
-
+    @staticmethod
+    def statistic_win_ratio(ratios, means_arr, stds_arr):
+        ratio_num = len(ratios)
+        win_num = 0.0
+        for ite in range(ratio_num):
+            interval_95 = stats.norm.interval(0.95, loc=means_arr[ite], scale=stds_arr[ite])
+            if ratios[ite] >= min(interval_95) and ratios[ite] <= max(interval_95):
+                win_num += 1.0
+        print "win ratio:", win_num / ratio_num
     def tmp_method_test(self):
         """
         :usage: 测试单个方法运行是否通过
@@ -301,16 +351,23 @@ class HmmNesc(object):
         # feature_selected = HmmNesc.feature_select(self.ori_data[self.t_start:self.t_end], self.features, self.state_num,
         #                                          self.filter_ratio, [self.eva_indic, self.rank_num])
         # print feature_selected
-        feature_selected = set(['WVAD', 'pct_chg', 'PVT'])
+        # os._exit(0)
+        # feature_selected = set(['high', 'SOBV', 'VSTD']) # 00905
+        # feature_selected = set(['VSTD', 'SOBV', 'PVT', 'VMA']) # sp
+        # feature_selected = set(['WVAD', 'pct_chg', 'ROC', 'VSTD']) #au
+        feature_selected = set(['PRICEOSC', 'pct_chg', 'ATR']) #hs
         print "*********************"
         test_dates = self.ori_data[self.test_start:self.test_end].index
         # print list(test_dates)
         p_s_date = self.test_start
-        p_in_date = datetime.datetime(2012, 1, 6)
-        p_e_date = datetime.datetime(2012, 10, 26)
+        p_in_date = datetime.datetime(2015, 7, 10)
+        p_e_date = datetime.datetime(2015, 12, 31)
         tmp_date = p_in_date
-        tmp_e_date = datetime.datetime(2012, 10, 26)
+        tmp_e_date = datetime.datetime(2015, 12, 31)
         is_holding = []
+        means_arr = []
+        stds_arr = []
+        state = []
         while p_in_date <= p_e_date:
             print p_in_date
             p_data = self.ori_data[p_s_date:p_in_date]
@@ -319,38 +376,55 @@ class HmmNesc(object):
             # print np.diag(model.covars_[2])
             # os._exit(0)
             # print model.transmat_
-            is_holding.append(HmmNesc.proceed_choose(p_data, self.state_num, states, self.filter_ratio))
+            #is_holding.append(HmmNesc.proceed_choose(p_data, self.state_num, states, self.filter_ratio))
             #is_holding.append(HmmNesc.market_states(p_data, self.state_num, states, self.sharpe_ratio))
+            means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            print means
+            means_arr.append(means)
+            # stds_arr.append(stds)
             p_s_date = HmmNesc.get_move_day(test_dates, p_s_date, 1, previous=False)
             p_in_date = HmmNesc.get_move_day(test_dates, p_in_date, 1, previous=False)
         print "herererere"
-        market_states = np.array(is_holding)
-        is_holding = (market_states > 0)
+        ####### state statistic
         test_data = self.ori_data[tmp_date:tmp_e_date]
-        ratios = np.where(is_holding == 1, test_data["pct_chg"], 0)
-        # 计算真实的净值（延后两天）
-        used_holding = np.append([0.0], is_holding[:-1])
-        used_ratio = np.where(used_holding == 1, test_data["pct_chg"], 0) 
-        nav_list, max_drawdonw_list = HmmNesc.cal_nav_maxdrawdown(used_ratio)
         union_data_tmp = {}
-        union_data_tmp["market"] = market_states
-        union_data_tmp["close"] = test_data["close"]
         union_data_tmp["ratio"] = test_data["pct_chg"]
-        union_data_tmp["self_ratio"] = used_ratio
-        union_data_tmp["signal"] = used_holding
-        union_data_tmp["self_ori_ratio"] = ratios
-        union_data_tmp["self_ori_signal"] = is_holding
-        union_data_tmp["nav"] = nav_list
-        union_data_tmp["maxdrawdown"] = max_drawdonw_list
-        large_captial_ratio = test_data["pct_chg"]
-        lc_nav, lc_max_drawdown = HmmNesc.cal_nav_maxdrawdown(large_captial_ratio)
-        union_data_tmp["lc_nav"] = lc_nav
-        union_data_tmp["lc_max_drawdown"] = lc_max_drawdown
+        union_data_tmp["means"] = means_arr
+        # union_data_tmp["stds"] = stds_arr
         union_data_tmp = pd.DataFrame(union_data_tmp, index=test_data.index)
-        [td_win, td_total, win_ratio, holding_days] = HmmNesc.win_ratio(union_data_tmp)
-        print td_win, td_total, win_ratio, holding_days
-        print [nav_list[-1], min(max_drawdonw_list), abs(nav_list[-1] - 1.0) / abs(min(max_drawdonw_list)), win_ratio]
-        union_data_tmp.to_csv("market_states_000300_week_20120108_20161014_03_0_3_2.csv")
+        union_data_tmp.to_csv("hmm_state_statistics_hs_2015_tmp.csv")
+        # cur_ratio = test_data["pct_chg"][1:]
+        # cur_mean = means_arr[:-1]
+        # cur_std = stds_arr[:-1]
+        # HmmNesc.statistic_win_ratio(cur_ratio, cur_mean, cur_std)
+        ######
+        # market_states = np.array(is_holding)
+        # is_holding = (market_states > 0)
+        # test_data = self.ori_data[tmp_date:tmp_e_date]
+        # ratios = np.where(is_holding == 1, test_data["pct_chg"], 0)
+        # # 计算真实的净值（延后两天）
+        # used_holding = np.append([0.0], is_holding[:-1])
+        # used_ratio = np.where(used_holding == 1, test_data["pct_chg"], 0)
+        # nav_list, max_drawdonw_list = HmmNesc.cal_nav_maxdrawdown(used_ratio)
+        # union_data_tmp = {}
+        # union_data_tmp["market"] = market_states
+        # union_data_tmp["close"] = test_data["close"]
+        # union_data_tmp["ratio"] = test_data["pct_chg"]
+        # union_data_tmp["self_ratio"] = used_ratio
+        # union_data_tmp["signal"] = used_holding
+        # union_data_tmp["self_ori_ratio"] = ratios
+        # union_data_tmp["self_ori_signal"] = is_holding
+        # union_data_tmp["nav"] = nav_list
+        # union_data_tmp["maxdrawdown"] = max_drawdonw_list
+        # large_captial_ratio = test_data["pct_chg"]
+        # lc_nav, lc_max_drawdown = HmmNesc.cal_nav_maxdrawdown(large_captial_ratio)
+        # union_data_tmp["lc_nav"] = lc_nav
+        # union_data_tmp["lc_max_drawdown"] = lc_max_drawdown
+        # union_data_tmp = pd.DataFrame(union_data_tmp, index=test_data.index)
+        # [td_win, td_total, win_ratio, holding_days] = HmmNesc.win_ratio(union_data_tmp)
+        # print td_win, td_total, win_ratio, holding_days
+        # print [nav_list[-1], min(max_drawdonw_list), abs(nav_list[-1] - 1.0) / abs(min(max_drawdonw_list)), win_ratio]
+        # union_data_tmp.to_csv("market_states_000300_week_20120108_20161014_03_0_3_2.csv")
 
         # print model.covars_[0]
         # print np.shape(model.covars_[0])
@@ -590,6 +664,6 @@ class HmmNesc(object):
 
         return date
 if __name__ == "__main__":
-    sh_000300_all = open("../tmp/hmm_000300_week.csv")
+    sh_000300_all = open("../tmp/hmm_hs_week.csv")
     nesc_hmm = HmmNesc(sh_000300_all)
     nesc_hmm.tmp_method_test()
