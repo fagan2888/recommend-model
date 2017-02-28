@@ -13,3 +13,4 @@ config.py
 *.log
 .DS_Store
 logging.json
+*.logs
