@@ -191,7 +191,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
-@click.option('--turnover', type=float, default=0.2, help=u'fitler by turnover')
+@click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
 @click.argument('assets', nargs=-1)
 @click.pass_context
 def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover, assets):
@@ -308,7 +308,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # print df.head()
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
-    df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
+    if turnover >= 0.01:
+        df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
     # index
     df['mz_markowitz_id'] = optid
     df.index.name = 'mz_date'
