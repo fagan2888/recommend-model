@@ -281,9 +281,11 @@ def pos_update(reshape):
 @click.pass_context
 def jyposnav(ctx, optid, optlist, optonline):
 
-    timing_ids = [49101, 49102, 49201, 49301, 49401]
+    timing_ids = [41101, 41102, 41201, 41301, 41401]
     df_timing = database.asset_tc_timing_signal_load(
         timing_ids, begin_date=None, end_date=None)
+
+    #print df_timing
 
     data = {}
     index_ids = [120000001, 120000002, 120000013, 120000014, 120000015]
@@ -291,6 +293,7 @@ def jyposnav(ctx, optid, optlist, optonline):
         nav = base_ra_index_nav.load_series(iid, reindex=None, begin_date=None, end_date=None, mask=None)
         data[iid] = nav
     df_nav = pd.DataFrame(data)
+    #print df_nav
 
     reshape_result = {}
     for i in range(0, 5):
@@ -298,7 +301,6 @@ def jyposnav(ctx, optid, optlist, optonline):
         timing_id = timing_ids[i]
 
         df = pd.DataFrame({'nav': df_nav[asset], 'timing': df_timing[timing_id]})
-
         df_result = Reshape().reshape(df)
         df_result.drop(['nav', 'timing'], axis=1, inplace=True)
         #print df_result

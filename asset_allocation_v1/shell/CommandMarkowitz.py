@@ -341,7 +341,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df = df.round(4)             # 四舍五入到万分位
     #print df
 
-    '''
     min_date = df.index[0]
     max_date = df.index[-1]
 
@@ -354,12 +353,14 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     #print df.index
     #print reshape_pos_df.index
 
+    '''
     risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
     risk_mgr_pos_df.columns = df.columns
     df = df.reindex(risk_mgr_pos_df.index)
     df = df.fillna(method = 'pad')
     df = df.loc[risk_mgr_pos_df.index]
     df = df * risk_mgr_pos_df
+    '''
 
     df = df[df.index <= max_date]
     df = df[df.index >= min_date]
@@ -458,9 +459,9 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period)
 def markowitz_day(day, lookback, assets):
     '''perform markowitz for single day
     '''
-    
+
     # 加载时间轴数据
-    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=(lookback + 1))
     begin_date = index.min().strftime("%Y-%m-%d")
     end_date = index.max().strftime("%Y-%m-%d")
 
@@ -472,7 +473,7 @@ def markowitz_day(day, lookback, assets):
         data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
-
+    df_inc = df_inc.iloc[1:,]
     return markowitz_r(df_inc, assets)
 
 
@@ -485,19 +486,53 @@ def markowitz_r(df_inc, limits):
     for asset in df_inc.columns:
         bound.append(limits[asset])
 
+    '''
+    half_life = 13
+    #print df_inc
+    for i in range(0, len(df_inc)):
+        n = len(df_inc) - 1 - i
+        df_inc.iloc[n] = df_inc.iloc[n] * (0.5) ** (1.0 * i / half_life)
+    '''
+    #print df_inc
     #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+
     risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+
+
+    hmmdf = pd.read_csv('./data/hmm.csv', index_col = ['date'] ,parse_dates = ['date'])
+    hmmdf = hmmdf / 100
+
+    index = -1
+    try:
+        index = hmmdf.index.tolist().index(end_date)
+    except:
+        pass
+
+    if index < len(hmmdf.index):
+        pass
+    else:
+        index = -1
 
 
     weq = []
     for i in range(0, len(df_inc.columns)):
         weq.append(ws[i])
 
+
     P = np.eye(len(df_inc.columns))
     Q = []
-    for asset in df_inc.columns:
-        next_week_r = base_ra_index_nav.load_onemore_week(asset, end_date)
-        Q.append([next_week_r])
+    #for asset in df_inc.columns:
+    #    next_week_r = base_ra_index_nav.load_onemore_week(asset, end_date)
+    #    Q.append([next_week_r])
+
+
+    if index == -1:
+        for asset in df_inc.columns:
+            Q.append([df_inc.loc[end_date, asset]])
+    else:
+        for i in range(0, len(df_inc.columns)):
+            Q.append([hmmdf.iloc[index, i]])
+
 
     risk, returns, ws, sharpe = PF.black_litterman(weq, df_inc, P, Q)
 
@@ -544,6 +579,7 @@ def load_nav_series(asset_id, reindex, begin_date, end_date):
 
     #df = pd.read_csv('./reshape_nav_df.csv', index_col = ['date'], parse_dates = ['date'])
     #sr = df[str(asset_id)]
+
     return sr
 
 def load_asset_name_and_type(asset_id):

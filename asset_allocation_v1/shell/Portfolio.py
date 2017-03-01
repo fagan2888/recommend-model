@@ -296,6 +296,7 @@ def markowitz_bootstrape(df_inc, bound):
     rep_num = loop_num * (look_back / 2) / look_back
     day_indexs = range(0, look_back) * rep_num
     random.shuffle(day_indexs)
+    #print day_indexs
     day_indexs = np.array(day_indexs)
     #print day_indexs
     day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
@@ -632,10 +633,25 @@ def black_litterman(weq, df_inc, P, Q):
         G[i, i] = -1
 
         G[n_asset + i, i] = -1
-        h[n_asset + i, 0] = -1.0 * max(weq[i] - 0.05, 0)
+        h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.05)
+
+        '''
+        if i == 4:
+            h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.20)
+        else:
+            h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.10)
+        '''
+        #h[n_asset + i, 0] = 0
 
         G[2 * n_asset + i, i] = 1
-        h[2 * n_asset + i, 0] =  min(weq[i] + 0.05, 1.0)
+        '''
+        if i == 4:
+            h[2 * n_asset + i, 0] =  weq[i] + 0.20
+        else:
+            h[2 * n_asset + i, 0] =  weq[i] + 0.10
+        '''
+        h[2 * n_asset + i, 0] = weq[i] + 0.05
+        #h[2 * n_asset + i, 0] =  1.0
 
     #print h
 

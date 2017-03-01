@@ -473,7 +473,7 @@ def nav_update(riskmgr):
 def jysimple(ctx, datadir, optinst, startdate, enddate):
 
     risk_mgr = RiskManagement.RiskManagement()
-    timing_ids = [49101, 49102, 49201, 49301, 49401]
+    timing_ids = [41101, 41102, 41201, 41301, 41401]
     df_timing = database.asset_tc_timing_signal_load(
         timing_ids, begin_date=startdate, end_date=enddate)
     #print df_timing.columns
@@ -499,5 +499,5 @@ def jysimple(ctx, datadir, optinst, startdate, enddate):
         risk_mgr_result[asset] = df_new['rm_pos']
 
     risk_mgr_df = pd.DataFrame(risk_mgr_result)
-    print risk_mgr_df
+    #print risk_mgr_df
     risk_mgr_df.to_csv('risk_mgr_df.csv')

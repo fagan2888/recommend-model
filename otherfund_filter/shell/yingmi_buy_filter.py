@@ -4,7 +4,7 @@
 import pandas as pd
 import MySQLdb
 
-
+'''
 db_base = {
     "host": "127.0.0.1",
     "port": 3306,
@@ -13,6 +13,16 @@ db_base = {
     "db":"mofang",
     "charset": "utf8"
 }
+'''
+
+db_base = {
+            "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
+            "port": 3306,
+            "user": "koudai",
+            "passwd": "Mofang123",
+            "db":"mofang_api",
+            "charset": "utf8"
+        }
 
 
 if __name__ == '__main__':

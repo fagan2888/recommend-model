@@ -34,9 +34,9 @@ class HmmNesc(object):
         self.t_end = datetime.datetime(2008, 8, 1)
 
         # 验证开始时间
-        self.v_start = datetime.datetime(2003, 1, 1)
+        #self.v_start = datetime.datetime(2003, 1, 1)
         # 验证结束时间
-        self.v_end = datetime.datetime(2003, 12, 31)
+        #self.v_end = datetime.datetime(2003, 12, 31)
 
         # 测试开始时间
         self.test_start = datetime.datetime(2009, 1, 9)
@@ -240,7 +240,7 @@ class HmmNesc(object):
         # X = sigmoid(normalize(X, axis=0))
         # print X
         # X = boxcox(X)
-        model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000)#, params="st", init_params="st")
+        model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000, params="st", init_params="st")
         # X = np.nan_to_num(0.0)
         # print X.shape
         # os._exit(0)
@@ -589,7 +589,8 @@ class HmmNesc(object):
                 break
 
         return date
+
 if __name__ == "__main__":
-    sh_000300_all = open("../tmp/hmm_000300_week.csv")
+    sh_000300_all = open("./tmp/hmm_000300_week.csv")
     nesc_hmm = HmmNesc(sh_000300_all)
     nesc_hmm.tmp_method_test()

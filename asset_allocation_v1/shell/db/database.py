@@ -198,7 +198,7 @@ def asset_rm_risk_mgr_signal_load(
         s = s.where(t1.c.rm_date <= end_date)
         
     df = pd.read_sql(s, db, index_col = ['rm_date', 'rm_category'], parse_dates=['rm_date'])
-
+    
     df = df.unstack().fillna(method='pad')
     df.columns = df.columns.droplevel(0)
 
@@ -248,10 +248,10 @@ def asset_tc_timing_signal_load(timings, begin_date=None, end_date=None):
         s = s.where(t1.c.tc_date <= end_date)
         
     df = pd.read_sql(s, db, index_col = ['tc_date', 'tc_timing_id'], parse_dates=['tc_date'])
-
+    #print s
     df = df.unstack().fillna(method='pad')
     df.columns = df.columns.droplevel(0)
-
+    #print df
     return df
     
 
