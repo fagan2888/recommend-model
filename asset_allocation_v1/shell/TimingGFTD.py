@@ -1,6 +1,6 @@
 #coding=utf8
 
-
+import logging
 import pandas as pd
 import numpy as np
 import datetime
@@ -8,6 +8,8 @@ import calendar
 from sqlalchemy import *
 
 from db import database
+
+logger = logging.getLogger(__name__)
 
 class TimingGFTD(object):
     
@@ -140,8 +142,8 @@ class TimingGFTD(object):
         for key, row in df_nav.iterrows():
             if  row['tc_buy_start'] + row['tc_buy_signal'] +\
                 row['tc_sell_start'] + row['tc_sell_signal'] >= 2:
-                print "warning: multiple event occur: %s {'buy_start':%d, 'buy_signal':%d, 'sell_start':%d, 'sell_signal':%d}"\
-                    % (key.strftime("%Y-%m-%d"), row['tc_buy_start'], row['tc_buy_signal'], row['tc_sell_start'], row['tc_sell_signal'])
+                logger.warn("multiple event occur: %s {'buy_start':%d, 'buy_signal':%d, 'sell_start':%d, 'sell_signal':%d}"\
+                    % (key.strftime("%Y-%m-%d"), row['tc_buy_start'], row['tc_buy_signal'], row['tc_sell_start'], row['tc_sell_signal']))
             #
             # 处理事件
             #
@@ -171,14 +173,14 @@ class TimingGFTD(object):
                 # 空仓状态
                 if row['tc_close'] >= high:
                     # 沽空止损
-                    print "empty stop:", key, row['tc_high'], high
+                    logger.info("empty stop: day:%s, OHLC-H:%f, HSTOP:%f", key, row['tc_high'], high)
                     low = min(row['tc_low'], low_recording)
                     (status, action) = (1, 3)
             else:
                 # 持仓状态, status == 1
                 if row['tc_close'] <= low:
                     # 买入止损
-                    print "buy stop:", key, row['tc_low'], low
+                    logger.info("buy stop: day:%s, OHLC-L: %f, LSTOP: %f", key, row['tc_low'], low)
                     high = max(row['tc_high'], high_recording)
                     (status, action) = (-1, -3)
             #

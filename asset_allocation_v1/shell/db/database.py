@@ -134,6 +134,8 @@ def asset_tc_timing_load(timings, xtypes=None):
         s = s.where(t1.c.globalid.in_(timings))
     if xtypes is not None:
         s = s.where(t1.c.tc_type.in_(xtypes))
+
+    s = s.where(t1.c.tc_method == 1)
     
     df = pd.read_sql(s, db)
 
