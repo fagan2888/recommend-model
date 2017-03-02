@@ -147,10 +147,9 @@ def nav_update(reshape):
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
 
-    df_nav = asset_ra_pool_nav.load_series(
-        reshape['rs_pool'], reshape['rs_asset'], reshape['rs_type'],
-        begin_date=min_date, end_date=max_date)
-    df_inc = df_nav.pct_change().fillna(0.0).to_frame(reshape_id)
+    sr_nav = database.load_nav_series(
+        reshape['rs_asset_id'], begin_date=min_date, end_date=max_date);
+    df_inc = sr_nav.pct_change().fillna(0.0).to_frame(reshape_id)
 
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
