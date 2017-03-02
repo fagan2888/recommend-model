@@ -169,6 +169,21 @@ def filter_by_turnover(df, turnover):
                 pass
     return pd.DataFrame(result).T
 
+def filter_by_turnover(df, turnover):
+    result = {}
+    sr_last=None
+    for k, v in df.iterrows():
+        if sr_last is None:
+            result[k] = sr_last = v
+        else:
+            xsum = (v - sr_last).abs().sum()
+            if xsum >= turnover:
+                result[k] = sr_last = v
+            else:
+                #print "filter by turnover:", v.to_frame('ratio')
+                pass
+    return pd.DataFrame(result).T
+
 def portfolio_import(df):
     pass;
 

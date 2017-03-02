@@ -340,7 +340,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # 导入数据: markowitz_pos
     df = df.round(4)             # 四舍五入到万分位
     #print df
-
     min_date = df.index[0]
     max_date = df.index[-1]
 
@@ -353,18 +352,15 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     #print df.index
     #print reshape_pos_df.index
 
-    '''
     risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
     risk_mgr_pos_df.columns = df.columns
     df = df.reindex(risk_mgr_pos_df.index)
     df = df.fillna(method = 'pad')
     df = df.loc[risk_mgr_pos_df.index]
     df = df * risk_mgr_pos_df
-    '''
 
     df = df[df.index <= max_date]
     df = df[df.index >= min_date]
-    '''
 
     #print df_inc
 
@@ -494,11 +490,16 @@ def markowitz_r(df_inc, limits):
         df_inc.iloc[n] = df_inc.iloc[n] * (0.5) ** (1.0 * i / half_life)
     '''
     #print df_inc
-    #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
 
-    risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+    #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+    df_pos = asset_mz_markowitz_pos.load(50030104)
+    if end_date in df_pos.index:
+        ws = df_pos.loc[end_date].values
+    else:
+        ws = df_pos.iloc[-1].values
 
-
+    #print ws
     hmmdf = pd.read_csv('./data/hmm.csv', index_col = ['date'] ,parse_dates = ['date'])
     hmmdf = hmmdf / 100
 
@@ -577,8 +578,8 @@ def load_nav_series(asset_id, reindex, begin_date, end_date):
     else:
         sr = pd.Series()
 
-    #df = pd.read_csv('./reshape_nav_df.csv', index_col = ['date'], parse_dates = ['date'])
-    #sr = df[str(asset_id)]
+    df = pd.read_csv('./reshape_nav_df.csv', index_col = ['date'], parse_dates = ['date'])
+    sr = df[str(asset_id)]
 
     return sr
 

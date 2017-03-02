@@ -480,8 +480,12 @@ def jysimple(ctx, datadir, optinst, startdate, enddate):
 
     data = {}
     index_ids = [120000001, 120000002, 120000013, 120000014, 120000015]
+    reshape_df = pd.read_csv('./reshape_nav_df.csv', index_col = ['date'], parse_dates = ['date'])
+    #sr = df[str(asset_id)]
     for iid in index_ids:
         nav = base_ra_index_nav.load_series(iid, reindex=None, begin_date=startdate, end_date=enddate, mask=None)
+        nav = reshape_df[str(iid)]
+        print nav
         data[iid] = nav
 
     df_nav = pd.DataFrame(data)
