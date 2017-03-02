@@ -184,7 +184,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 
 @markowitz.command()
 @click.option('--id', 'optid', type=int, help=u'specify markowitz id')
-@click.option('--name', 'optname', default=u'马克维茨', help=u'specify markowitz name')
+@click.option('--name', 'optname', default=u'markowitz', help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
@@ -192,9 +192,10 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
 @click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
+@click.option('--short-cut', type=click.Choice(['online', 'high', 'low']))
 @click.argument('assets', nargs=-1)
 @click.pass_context
-def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover, assets):
+def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover, short_cut, assets):
     '''calc high low model markowitz
     '''
 
@@ -247,17 +248,37 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     if assets:
         assets = {k: v for k,v in [parse_asset(a) for a in assets]}
     else:
-        assets = {
-            41210111:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-            41210112:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-            41210113:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-            41210115:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-            41210116:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-            41210117:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-            120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-            120000014: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-            120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-        }
+        if short_cut == 'online':
+            assets = {
+                41210111:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41210112:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41210113:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41210115:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41210116:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41210117:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                120000014: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+            }
+            if optname == 'markowitz':
+                optname = 'markowitz online'
+        elif short_cut == 'low':
+            assets = {
+                11220121:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                11220122:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+            }
+            if optname == 'markowitz':
+                optname = 'markowitz low'
+        else: # short_cut == 'high'
+            assets = {
+                41210111:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41210112:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                120000014: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+            }
+            if optname == 'markowitz':
+                optname = 'markowitz high'
 
     df = markowitz_days(startdate, enddate, assets,
         label=optname, lookback=lookback, adjust_period=adjust_period)
@@ -408,12 +429,12 @@ def markowitz_day(day, lookback, assets):
     for asset in assets:
         data[asset] = load_nav_series(asset, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
+
     df_inc  = df_nav.pct_change().fillna(0.0)
     #
     # 根据时间轴进行重采样
     #
     df_inc = df_inc.reindex(index, fill_value=0.0)
-
     return markowitz_r(df_inc, assets)
 
 def markowitz_r(df_inc, limits):
@@ -617,3 +638,57 @@ def turnover_update(markowitz):
     # df_result.reset_index(inplace=True)
     # df_result['turnover'] = df_result['turnover'].map(lambda x: "%6.2f%%" % (x * 100))
     # print tabulate(df_result, headers='keys', tablefmt='psql', stralign=u'right')
+@markowitz.command()
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--exec/--no-exec', 'optexec', default=False, help=u'list instance to update')
+@click.pass_context
+def delete(ctx, optid, optlist, optexec):
+    ''' delete markowitz instance
+    '''
+    if optid is not None:
+        markowitzs = [s.strip() for s in optid.split(',')]
+    else:
+        markowitzs = None
+
+    df_markowitz = asset_mz_markowitz.load(markowitzs)
+
+    if optlist:
+
+        df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_markowitz, headers='keys', tablefmt='psql')
+        return 0
+
+    if optid is None or not optexec:
+         click.echo(click.style("\nboth --id and --exec is required to perform delete\n", fg='red'))
+         return 0
+    
+    data = []
+    with click.progressbar(length=len(df_markowitz), label='markowitz delete') as bar:
+        for _, markowitz in df_markowitz.iterrows():
+            bar.update(1)
+            perform_delete(markowitz)
+            
+def perform_delete(markowitz):
+    markowitz_id = markowitz['globalid']
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    mz_markowitz        = Table('mz_markowitz', metadata, autoload=True)
+    mz_markowitz_asset  = Table('mz_markowitz_asset', metadata, autoload=True)
+    mz_markowitz_pos    = Table('mz_markowitz_pos', metadata, autoload=True)
+    mz_markowitz_nav    = Table('mz_markowitz_nav', metadata, autoload=True)
+    mz_markowitz_sharpe = Table('mz_markowitz_sharpe', metadata, autoload=True)
+
+    #
+    # 处理删除
+    #
+
+    mz_markowitz.delete(mz_markowitz.c.globalid == markowitz_id).execute()
+    mz_markowitz_asset.delete(mz_markowitz_asset.c.mz_markowitz_id == markowitz_id).execute()
+    mz_markowitz_pos.delete(mz_markowitz_pos.c.mz_markowitz_id == markowitz_id).execute()
+    mz_markowitz_nav.delete(mz_markowitz_nav.c.mz_markowitz_id == markowitz_id).execute()
+    mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == markowitz_id).execute()
+    mz_markowitz.delete(mz_markowitz.c.globalid == markowitz_id).execute()
+
+    
