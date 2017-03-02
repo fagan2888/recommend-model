@@ -17,6 +17,11 @@ from sqlalchemy import *
 
 from dateutil.parser import parse
 
+import asset_ra_pool_nav
+import asset_rs_reshape_nav
+import base_ra_fund_nav
+import base_ra_index_nav
+
 logger = logging.getLogger(__name__)
 
 uris = {
@@ -545,3 +550,37 @@ def asset_risk_asset_allocation_nav_load_series(
         df = df.reindex(reindex)
 
     return df['nav']
+
+def load_nav_series(asset_id, begin_date=None, end_date=None):
+    xtype = asset_id / 10000000
+
+    if xtype == 1:
+        #
+        # 基金池资产
+        #
+        asset_id %= 10000000
+        (pool_id, category) = (asset_id / 100, asset_id % 100)
+        ttype = pool_id / 10000
+        sr = asset_ra_pool_nav.load_series(
+            pool_id, category, ttype, begin_date=begin_date, end_date=end_date)
+    elif xtype == 3:
+        #
+        # 基金池资产
+        #
+        sr = base_ra_fund_nav.load_series(
+            asset_id, begin_date=begin_date, end_date=end_date)
+    elif xtype == 4:
+        #
+        # 修型资产
+        #
+        sr = asset_rs_reshape_nav.load_series(asset_id, begin_date, end_date)
+    elif xtype == 12:
+        #
+        # 指数资产
+        #
+        sr = base_ra_index_nav.load_series(
+            asset_id, begin_date=begin_date, end_date=end_date)
+    else:
+        sr = pd.Series()
+
+    return sr
