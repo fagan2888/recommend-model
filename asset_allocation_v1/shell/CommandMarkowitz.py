@@ -340,6 +340,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # 导入数据: markowitz_pos
     df = df.round(4)             # 四舍五入到万分位
     #print df
+
+    df = df.rolling(window = 4, min_periods = 1).mean()
+
+    '''
     min_date = df.index[0]
     max_date = df.index[-1]
 
@@ -361,8 +365,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     df = df[df.index <= max_date]
     df = df[df.index >= min_date]
+    '''
 
     #print df_inc
+    #print df
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     # print df.head()
@@ -490,15 +496,21 @@ def markowitz_r(df_inc, limits):
         df_inc.iloc[n] = df_inc.iloc[n] * (0.5) ** (1.0 * i / half_life)
     '''
     #print df_inc
-    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+    #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
 
-    #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+
+    risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+
+
+    '''
     df_pos = asset_mz_markowitz_pos.load(50030104)
     if end_date in df_pos.index:
         ws = df_pos.loc[end_date].values
     else:
         ws = df_pos.iloc[-1].values
+    '''
 
+    '''
     #print ws
     hmmdf = pd.read_csv('./data/hmm.csv', index_col = ['date'] ,parse_dates = ['date'])
     hmmdf = hmmdf / 100
@@ -536,6 +548,9 @@ def markowitz_r(df_inc, limits):
 
 
     risk, returns, ws, sharpe = PF.black_litterman(weq, df_inc, P, Q)
+
+    '''
+
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -578,8 +593,8 @@ def load_nav_series(asset_id, reindex, begin_date, end_date):
     else:
         sr = pd.Series()
 
-    df = pd.read_csv('./reshape_nav_df.csv', index_col = ['date'], parse_dates = ['date'])
-    sr = df[str(asset_id)]
+    #df = pd.read_csv('./reshape_nav_df.csv', index_col = ['date'], parse_dates = ['date'])
+    #sr = df[str(asset_id)]
 
     return sr
 
@@ -672,17 +687,6 @@ def nav_update(markowitz):
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
-
-    '''
-    risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
-    risk_mgr_pos_df.columns = df_pos.columns
-    df_pos = df_pos.reindex(df_inc.index)
-    df_pos = df_pos.fillna(method = 'pad')
-    risk_mgr_pos_df = risk_mgr_pos_df.reindex(df_inc.index)
-    risk_mgr_pos_df = risk_mgr_pos_df.fillna(method = 'pad')
-    df_pos = risk_mgr_pos_df * df_pos
-    print df_inc
-    '''
 
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')

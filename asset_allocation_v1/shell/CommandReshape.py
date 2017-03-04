@@ -315,7 +315,7 @@ def jyposnav(ctx, optid, optlist, optonline):
     df_inc = df_inc.loc[reshape_df.index]
     df_reshape_inc = df_inc * reshape_df
     df_reshape_nav = (1 + df_reshape_inc).cumprod()
-    print df_reshape_nav
+    #print df_reshape_nav
     df_reshape_nav.to_csv('reshape_nav_df.csv')
 
     #print reshape_df.index

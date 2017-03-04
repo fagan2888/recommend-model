@@ -31,6 +31,7 @@ if __name__ == '__main__':
     #index['diff2'] = index['diff'].diff()
     #print index
     #index.to_csv('index_diff.csv')
-    am = arch.arch_model(indexr['000300.SH'])
-    res = am.fit()
-    print res.params
+    am = arch.arch_model(indexr['000300.SH'], p =1 ,q = 1)
+    res = am.fit(update_freq = 10)
+    print res.summary()
+    #print res.params
