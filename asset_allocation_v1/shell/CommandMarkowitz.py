@@ -341,7 +341,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df = df.round(4)             # 四舍五入到万分位
     #print df
 
-    df = df.rolling(window = 4, min_periods = 1).mean()
+    #df = df.rolling(window = 4, min_periods = 1).mean()
 
     '''
     min_date = df.index[0]
@@ -498,6 +498,10 @@ def markowitz_r(df_inc, limits):
     #print df_inc
     #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
 
+    #tmp_df = df_inc.copy()
+    #l = len(tmp_df)
+    #for n in range(0, l):
+    #    tmp_df.iloc[l - 1 - n] = tmp_df.iloc[l - 1 - n] * (0.5 ** ( 1.0 * n / l))
 
     risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
 
