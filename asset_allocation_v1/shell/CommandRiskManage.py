@@ -21,19 +21,28 @@ import DFUtil
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
+from tabulate import tabulate
 from sqlalchemy import MetaData, Table, select, func
-from db import database, asset_rm_risk_mgr
+from db import database, asset_rm_risk_mgr, asset_rm_riskmgr, asset_tc_timing_signal, asset_rm_riskmgr_signal, asset_rm_riskmgr_nav
 
 import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group()  
+@click.group(invoke_without_command=True)  
+@click.option('--id', 'optid', help=u'reshape id')
+@click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
-def riskmgr(ctx):
+def riskmgr(ctx, optid, optonline):
     '''risk management group
     '''
-    pass
+    if ctx.invoked_subcommand is None:
+        # click.echo('I was invoked without subcommand')
+        ctx.invoke(signal, optid=optid, optonline=optonline)
+        ctx.invoke(nav, optid=optid)
+    else:
+        # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
+        pass
 
 @riskmgr.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
@@ -329,3 +338,126 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
     click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
     
     return 0
+
+@riskmgr.command()
+@click.option('--id', 'optid', help=u'risk mgr id')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
+@click.pass_context
+def signal(ctx, optid, optlist, optonline):
+    '''run risk management using simple strategy
+    '''
+
+    if optid is not None:
+        ids = [s.strip() for s in optid.split(',')]
+    else:
+        ids = None
+
+    xtypes = None
+    if optonline == False:
+        xtypes = [1]
+
+    df_riskmgr = asset_rm_riskmgr.load(ids, xtypes)
+
+    if optlist:
+
+        df_riskmgr['rm_name'] = df_riskmgr['rm_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_riskmgr, headers='keys', tablefmt='psql')
+        return 0
+    
+    # with click.progressbar(length=len(df_riskmgr), label='update riskmgr signal') as bar:
+    #     for _, riskmgr in df_riskmgr.iterrows():
+    #         bar.update(1)
+    #         signal_update(riskmgr)
+    for _, riskmgr in df_riskmgr.iterrows():
+        signal_update(riskmgr)
+
+def signal_update(riskmgr):
+    riskmgr_id = riskmgr['globalid']
+    
+    # 加载择时信号
+    sr_timing = asset_tc_timing_signal.load_series(riskmgr['rm_timing_id'])
+    # print sr_timing.head()
+    if sr_timing.empty:
+        click.echo(click.style("\nempty timing signal (%d, %d)\n" % (riskmgr_id, riskmgr['rm_timing_id']), fg="red"))
+    
+    # 加载资产收益率
+    # min_date = df_position.index.min()
+    # max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
+    # sr_nav = asset_ra_pool_nav.load_series(
+    #     riskmgr['rm_pool'], riskmgr['rm_asset'], riskmgr['rm_type'])
+    if riskmgr['rm_start_date'] != '0000-00-00':
+        sdate = riskmgr['rm_start_date']
+    else:
+        sdate = None
+    sr_nav = database.load_nav_series(riskmgr['rm_asset_id'], sdate)
+    
+    # df_inc = df_nav.pct_change().fillna(0.0).to_frame(riskmgr_id)
+    df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing})
+
+    risk_mgr = RiskManagement.RiskManagement()
+    df_result = risk_mgr.perform(riskmgr_id, df)
+    # df_result.drop(['nav', 'timing'], axis=1, inplace=True)
+    df_result = DFUtil.filter_same_with_last(df_result)
+
+    # df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'rm_nav'}).copy()
+    df_result.index.name = 'rm_date'
+    df_result['rm_riskmgr_id'] = riskmgr_id
+    df_tosave = df_result.reset_index().set_index(['rm_riskmgr_id', 'rm_date'])
+
+    asset_rm_riskmgr_signal.save(riskmgr_id, df_tosave)
+
+@riskmgr.command()
+@click.option('--id', 'optid', help=u'ids of fund pool to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.pass_context
+def nav(ctx, optid, optlist):
+    ''' calc riskmgr nav and inc
+    '''
+    if optid is not None:
+        ids = [s.strip() for s in optid.split(',')]
+    else:
+        ids = None
+
+    df_riskmgr = asset_rm_riskmgr.load(ids)
+
+    if optlist:
+
+        df_riskmgr['rm_name'] = df_riskmgr['rm_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_riskmgr, headers='keys', tablefmt='psql')
+        return 0
+    
+    with click.progressbar(length=len(df_riskmgr), label='update nav') as bar:
+        for _, riskmgr in df_riskmgr.iterrows():
+            bar.update(1)
+            nav_update(riskmgr)
+
+def nav_update(riskmgr):
+    riskmgr_id = riskmgr['globalid']
+    # 加载择时信号
+    sr_position = asset_rm_riskmgr_signal.load_series(riskmgr_id)
+    if sr_position.empty:
+        return
+    df_position = sr_position.to_frame(riskmgr_id)
+
+    # 加载基金收益率
+    min_date = df_position.index.min()
+    #max_date = df_position.index.max()
+    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
+
+    sr_nav = database.load_nav_series(
+        riskmgr['rm_asset_id'], begin_date=min_date, end_date=max_date);
+    df_inc = sr_nav.pct_change().fillna(0.0).to_frame(riskmgr_id)
+
+    # 计算复合资产净值
+    df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
+
+    df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'rm_nav'}).copy()
+    df_result.index.name = 'rm_date'
+    df_result['rm_inc'] = df_result['rm_nav'].pct_change().fillna(0.0)
+    df_result['rm_riskmgr_id'] = riskmgr_id
+    df_result = df_result.reset_index().set_index(['rm_riskmgr_id', 'rm_date'])
+    
+    asset_rm_riskmgr_nav.save(riskmgr_id, df_result)
