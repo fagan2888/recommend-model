@@ -250,15 +250,15 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     else:
         if short_cut == 'online':
             assets = {
-                41210111:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41210112:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41210113:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41210115:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41210116:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41210117:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41110100:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41110200:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41110205:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41110207:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41110208:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41110105:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
                 120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-                120000014: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-                120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                41400100:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                41120502:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
             }
             if optname == 'markowitz':
                 optname = 'markowitz online'
@@ -271,11 +271,15 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 optname = 'markowitz low'
         else: # short_cut == 'high'
             assets = {
-                41210111:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41210112:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41110100:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                41110200:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110205:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110207:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110208:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110105:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
                 120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-                120000014: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-                120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                41400100:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                41120502:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
             }
             if optname == 'markowitz':
                 optname = 'markowitz high'
