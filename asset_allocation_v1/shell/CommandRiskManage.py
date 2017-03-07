@@ -474,25 +474,29 @@ def jysimple(ctx, datadir, optinst, startdate, enddate):
 
     risk_mgr = RiskManagement.RiskManagement()
     timing_ids = [41101, 41102, 41201, 41301, 41401]
+    #timing_ids = [41101, 41102, 41201, 41301]
     df_timing = database.asset_tc_timing_signal_load(
         timing_ids, begin_date=startdate, end_date=enddate)
+    df_timing.iloc[:,:] = 1.0
+    #print df_timing
     #print df_timing.columns
 
     data = {}
     index_ids = [120000001, 120000002, 120000013, 120000014, 120000015]
-    reshape_df = pd.read_csv('./reshape_nav_df.csv', index_col = ['date'], parse_dates = ['date'])
+    #index_ids = [120000010, 120000033, 120000011, 120000032]
+    #reshape_df = pd.read_csv('./reshape_nav_df.csv', index_col = ['date'], parse_dates = ['date'])
     #sr = df[str(asset_id)]
     for iid in index_ids:
         nav = base_ra_index_nav.load_series(iid, reindex=None, begin_date=startdate, end_date=enddate, mask=None)
-        nav = reshape_df[str(iid)]
-        print nav
+        #nav = reshape_df[str(iid)]
+        #print nav
         data[iid] = nav
 
     df_nav = pd.DataFrame(data)
     #df_nav = df_nav.fillna(method = 'pad')
 
     risk_mgr_result = {}
-    for i in range(0, 5):
+    for i in range(0, 4):
         asset = index_ids[i]
         timing_id = timing_ids[i]
         df = pd.DataFrame({

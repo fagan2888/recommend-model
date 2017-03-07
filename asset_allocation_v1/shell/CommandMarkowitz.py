@@ -242,8 +242,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             else:
                 optid = max_id + 1;
     #
+
     # 处理assets参数
     #
+    #assets = False
+
     if assets:
         assets = {k: v for k,v in [parse_asset(a) for a in assets]}
     else:
@@ -282,6 +285,17 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             }
             if optname == 'markowitz':
                 optname = 'markowitz high'
+        assets = {
+            120000003:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+            120000004:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+            120000013:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+            120000015:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+            120000025:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+            120000014:  {'sumlimit': 0, 'uplimit': 0.3, 'downlimit': 0.0},
+            120000028: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+            120000029: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+        }
+
 
     '''
     assets = {
@@ -292,7 +306,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
     }
     '''
-    #print assets
 
     df = markowitz_days(startdate, enddate, assets,
         label=optname, lookback=lookback, adjust_period=adjust_period)
@@ -343,10 +356,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     #df = df.rolling(window = 4, min_periods = 1).mean()
 
-    '''
     min_date = df.index[0]
     max_date = df.index[-1]
 
+    '''
     reshape_pos_df = pd.read_csv('./reshape_pos_df.csv', index_col = ['date'], parse_dates = ['date'])
     reshape_pos_df.columns = df.columns
     df = df.reindex(reshape_pos_df.index)
@@ -355,6 +368,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df = df * reshape_pos_df
     #print df.index
     #print reshape_pos_df.index
+    '''
 
     risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
     risk_mgr_pos_df.columns = df.columns
@@ -365,7 +379,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     df = df[df.index <= max_date]
     df = df[df.index >= min_date]
-    '''
 
     #print df_inc
     #print df
@@ -495,9 +508,10 @@ def markowitz_r(df_inc, limits):
         n = len(df_inc) - 1 - i
         df_inc.iloc[n] = df_inc.iloc[n] * (0.5) ** (1.0 * i / half_life)
     '''
+
     #print df_inc
     #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
-
+    #print ws
     #tmp_df = df_inc.copy()
     #l = len(tmp_df)
     #for n in range(0, l):
@@ -505,6 +519,12 @@ def markowitz_r(df_inc, limits):
 
     risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
 
+
+    #l = len(df_inc.columns)
+    #ws = []
+    #for i in range(0, len(df_inc.columns)):
+    #    ws.append(1.0 / l)
+    #print ws
 
     '''
     df_pos = asset_mz_markowitz_pos.load(50030104)

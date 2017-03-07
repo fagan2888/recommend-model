@@ -53,7 +53,7 @@ class RiskManagement(object):
         sr_nav = pd.Series(np.log(df['nav']), index=df.index)
         sr_inc5d = sr_nav.rolling(window=6).apply(lambda x: x[-1] - x[0])
 
-        sr_c97 = sr_inc5d.rolling(window=256, min_periods=256).apply(confidence_interval, args=(0.97,))
+        sr_c97 = sr_inc5d.rolling(window=256, min_periods=256).apply(confidence_interval, args=(0.95,))
         sr_c75 = sr_inc5d.rolling(window=256, min_periods=256).apply(confidence_interval, args=(0.75,))
         sr_c97 = sr_c97.shift(5)
         sr_c75 = sr_c75.shift(5)
