@@ -18,7 +18,7 @@ class TDSP(object):
         self.data = load_index(index_code, stime, etime)
         #os._exit(0)
         # 择开始时间
-        self.s_date = datetime.datetime(2004, 1, 1)
+        self.s_date = datetime.datetime(2009, 7, 1)
         # 择结束日期
         self.e_date = datetime.datetime.strptime(etime, '%Y%m%d')# datetime.datetime(2016, 12, 14)
         self.n1 = 9

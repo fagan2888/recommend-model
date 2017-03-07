@@ -3,6 +3,7 @@
 import momen
 import tdsp
 import datetime
+import gftd
 
 if __name__ == "__main__":
     assets = ['HSI001', '000300', 'W00003', 'CI0022']
@@ -11,4 +12,5 @@ if __name__ == "__main__":
     for ass in assets:
         print ass
         print edate
-        gftd_ins = tdsp.TDSP(ass, '20040101', edate)
+        # gftd_ins = tdsp.TDSP(ass, '20040101', edate)
+        gftd_ins = gftd.GFTD(ass, '20090701', edate)
