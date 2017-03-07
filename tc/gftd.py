@@ -190,12 +190,12 @@ class GFTD(object):
             cur_low = cur_row["buy_low"].values[0]
             cur_high = cur_row["sell_high"].values[0]
 
-            if buy_counts == self.n3:
+            if buy_counts == self.n2:
                 if not is_holding:
                     trade_type = 1
                     is_holding = True
                     buy_low = cur_row["buy_low"].values[0]
-            if is_holding and sell_counts == self.n4:
+            if is_holding and sell_counts == self.n3:
                 is_holding = False
                 trade_type = -1
 
