@@ -102,6 +102,7 @@ def signal_update(timing):
     
     df_new['tc_timing_id'] = timing_id
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
+    #print df_new.columns
 
     # print df_new[df_new['tc_stop'].isnull()].head()
     num_signal = df_new['tc_signal'].rolling(2, 1).apply(lambda x: 1 if x[-1] != x[0] else 0).sum()

@@ -128,7 +128,7 @@ def nav(ctx, optid, optlist):
         df_reshape['rs_name'] = df_reshape['rs_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_reshape, headers='keys', tablefmt='psql')
         return 0
-    
+    #print df_reshape
     with click.progressbar(length=len(df_reshape), label='update nav') as bar:
         for _, reshape in df_reshape.iterrows():
             bar.update(1)
@@ -138,6 +138,7 @@ def nav_update(reshape):
     reshape_id = reshape['globalid']
     # 加载择时信号
     df_position = asset_rs_reshape_pos.load([reshape_id])
+    #print df_position
     if df_position.empty:
         return 
 
@@ -177,6 +178,7 @@ def nav_update(reshape):
         df_old = database.number_format(df_old, columns=['rs_nav', 'rs_inc'], precision=6)
 
     # 更新数据库
+    #print df_new.head()
     database.batch(db, t2, df_new, df_old, timestamp=True)
 
 @reshape.command()
@@ -281,14 +283,14 @@ def pos_update(reshape):
 @click.pass_context
 def jyposnav(ctx, optid, optlist, optonline):
 
-    timing_ids = [41101, 41102, 41201, 41301, 41401]
+    timing_ids = [21110101, 21110201, 21120500, 21400100]
     df_timing = database.asset_tc_timing_signal_load(
         timing_ids, begin_date=None, end_date=None)
 
     #print df_timing
 
     data = {}
-    index_ids = [120000001, 120000002, 120000013, 120000014, 120000015]
+    index_ids = [120000003, 120000004, 120000015, 120000014]
     for iid in index_ids:
         nav = base_ra_index_nav.load_series(iid, reindex=None, begin_date=None, end_date=None, mask=None)
         data[iid] = nav
@@ -296,7 +298,7 @@ def jyposnav(ctx, optid, optlist, optonline):
     #print df_nav
 
     reshape_result = {}
-    for i in range(0, 5):
+    for i in range(0, 4):
         asset = index_ids[i]
         timing_id = timing_ids[i]
 

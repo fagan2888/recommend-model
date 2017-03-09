@@ -18,7 +18,7 @@ import pylab
 import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(return_rate, bound, sumlimit=0.50):
+def efficient_frontier_spe(return_rate, bound, oversealimit = 0.6, alternativelimit = 0.4):
 
     solvers.options['show_progress'] = False
 
@@ -54,10 +54,11 @@ def efficient_frontier_spe(return_rate, bound, sumlimit=0.50):
     #    4: 某类资产之和的上限, 由G的3*n_asset 行控制
     #
 
-    G = matrix(0.0, (3 * n_asset + 1,  n_asset))
-    h = matrix(0.0, (3 * n_asset + 1, 1) )
+    G = matrix(0.0, (3 * n_asset + 2,  n_asset))
+    h = matrix(0.0, (3 * n_asset + 2, 1) )
  
-    h[3* n_asset, 0] = sumlimit   
+    h[3* n_asset, 0] = oversealimit
+    h[3* n_asset + 1, 0] = alternativelimit
     for i in range(0, n_asset):
         #
         # Wi >= 0
@@ -77,9 +78,12 @@ def efficient_frontier_spe(return_rate, bound, sumlimit=0.50):
         #
         # 某类资产之和的上限
         #
-        if bound[i]['sumlimit'] == True or bound[i]['sumlimit'] == 1:
+        if bound[i]['oversealimit'] == True or bound[i]['oversealimit'] == 1:
             G[3 * n_asset, i] = 1
-            
+
+        if bound[i]['alternativelimit'] == True or bound[i]['alternativelimit'] == 1:
+            G[3 * n_asset + 1, i] = 1
+
     A          =  matrix(1.0, (1, n_asset))
     b          =  matrix(1.0)
 
