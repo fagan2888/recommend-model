@@ -41,6 +41,35 @@ def load_series(gid, included_riskmgr_id=False):
 
     return df['rm_pos']
 
+def load(gids, included_riskmgr_id=False):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('rm_riskmgr_signal', metadata, autoload=True)
+
+    columns = [
+        t1.c.rm_date,
+        t1.c.rm_pos,
+        t1.c.rm_riskmgr_id,
+    ]
+    index_col = ['rm_date', 'rm_riskmgr_id']
+    
+    if included_riskmgr_id:
+        columns.insert(0, t1.c.rm_riskmgr_id)
+        index_col.insert(0, 'rm_riskmgr_id')
+
+    s = select(columns)
+
+    if gids is not None:
+        s = s.where(t1.c.rm_riskmgr_id.in_(gids))
+    else:
+        return None
+    # if xtypes is not None:
+    #     s = s.where(t1.c.rm_type.in_(xtypes))
+    df = pd.read_sql(s, db, index_col=index_col, parse_dates=['rm_date'])
+    df = df.unstack()
+    df.columns = df.columns.droplevel(0)
+    return df
+
 def save(gid, df):
     fmt_columns = ['rm_pos']
     fmt_precision = 4

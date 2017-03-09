@@ -23,7 +23,7 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_rm_riskmgr, asset_rm_riskmgr_signal
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav
 from util import xdict
 
@@ -272,6 +272,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             if optname == 'markowitz':
                 optname = 'markowitz low'
         else: # short_cut == 'high'
+
             assets = {
                 41110103:  {'alternativelimit': 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0}, #沪深300指数修型
                 41110203:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#中证500指数修型
@@ -285,6 +286,22 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 120000028:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#标普高盛原油商品指数收益率
                 120000029:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#南华商品指数
             }
+
+            '''
+            assets = {
+                120000001:  {'alternativelimit': 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0}, #沪深300指数修型
+                120000002:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#中证500指数修型
+                # 41110205:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110207:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110208:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110105:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                120000013: {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#标普500指数
+                120000015:  {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#恒生指数修型
+                120000014:  {'alternativelimit' : 1, 'oversealimit': 0, 'uplimit': 0.3, 'downlimit': 0.0},#黄金指数修型
+                120000028:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#标普高盛原油商品指数收益率
+                120000029:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#南华商品指数
+            }
+            '''
             if optname == 'markowitz':
                 optname = 'markowitz high'
 
@@ -373,43 +390,43 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     reshape_df = asset_rs_reshape_pos.load(reshape_asset_ids)
     min_date = df.index[0]
     reshape_df = reshape_df[reshape_df.index >= min_date]
-    df = df.reindex(reshape_df.index)
+    dates = df.index | reshape_df.index
+    df = df.reindex(dates)
     df = df.fillna(method = 'pad')
     for reshape_asset_id in reshape_asset_ids:
         df[reshape_asset_id] = df[reshape_asset_id] * reshape_df[reshape_asset_id]
-    #print df
 
+
+    asset_id_risk_mgr_id = {}
+    for asset_id in df.columns[0:-2]:
+        if asset_id / 1000000 == 41:
+            reshape_asset_df = asset_rs_reshape.load([asset_id])
+            asset_rm_riskmgr_df = asset_rm_riskmgr.load_asset_id(reshape_asset_df['rs_asset_id'].values)
+            #print asset_rm_riskmgr_df
+            asset_id_risk_mgr_id.setdefault(asset_id, asset_rm_riskmgr_df['globalid'].values[0])
+        else:
+            asset_rm_riskmgr_df = asset_rm_riskmgr.load_asset_id([asset_id])
+            asset_id_risk_mgr_id.setdefault(asset_id, asset_rm_riskmgr_df['globalid'].values[0])
+
+
+    risk_mgr_ids = list(asset_id_risk_mgr_id.values())
+    risk_mgr_signal_df = asset_rm_riskmgr_signal.load(risk_mgr_ids)
+    dates = df.index | risk_mgr_signal_df.index
+    risk_mgr_signal_df = risk_mgr_signal_df.reindex(dates)
+    risk_mgr_signal_df = risk_mgr_signal_df[risk_mgr_signal_df.index >= df.index[0]]
+    #for i in range(0, len(df.index)):
+    #    print df.index[i], risk_mgr_signal_df.index[i]
+    #print risk_mgr_signal_df.index
+    #print df.index
+    #print asset_rm_riskmgr_df
+    #print asset_ids
+
+
+    #print df
 
         #print df.columns
 
-    #print df
 
-    '''
-    min_date = df.index[0]
-    max_date = df.index[-1]
-
-    reshape_pos_df = pd.read_csv('./reshape_pos_df.csv', index_col = ['date'], parse_dates = ['date'])
-    reshape_pos_df.columns = df.columns
-    df = df.reindex(reshape_pos_df.index)
-    df = df.fillna(method = 'pad')
-    df = df.loc[reshape_pos_df.index]
-    df = df * reshape_pos_df
-    #print df.index
-    #print reshape_pos_df.index
-
-    risk_mgr_pos_df = pd.read_csv('./risk_mgr_df.csv', index_col = ['rm_date'], parse_dates = ['rm_date'])
-    risk_mgr_pos_df.columns = df.columns
-    df = df.reindex(risk_mgr_pos_df.index)
-    df = df.fillna(method = 'pad')
-    df = df.loc[risk_mgr_pos_df.index]
-    df = df * risk_mgr_pos_df
-
-    df = df[df.index <= max_date]
-    df = df[df.index >= min_date]
-
-    '''
-    #print df_inc
-    #print df
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     # print df.head()

@@ -60,6 +60,33 @@ def load(gids, xtypes=None):
 
     return df
 
+def load_asset_id(asset_ids, xtypes=None):
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('rm_riskmgr', metadata, autoload=True)
+
+    columns = [
+        t.c.globalid,
+        t.c.rm_type,
+        t.c.rm_algo,
+        t.c.rm_asset_id,
+        t.c.rm_timing_id,
+        t.c.rm_start_date,
+        t.c.rm_name,
+    ]
+
+    s = select(columns)
+
+    if asset_ids is not None:
+        s = s.where(t.c.rm_asset_id.in_(asset_ids))
+    if xtypes is not None:
+        s = s.where(t.c.rm_type.in_(xtypes))
+
+    df = pd.read_sql(s, db)
+
+    return df
+
 # def max_id_between(min_id, max_id):
 #     db = database.connection('asset')
 #     metadata = MetaData(bind=db)
