@@ -22,7 +22,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, base_ra_index_nav
+from db import database, base_ra_index_nav, asset_tc_timing
 
 import traceback, code
 
@@ -58,7 +58,7 @@ def signal(ctx, optid, optlist, optonline):
     if optonline == False:
         xtypes = [1]
 
-    df_timing = database.asset_tc_timing_load(timings, xtypes)
+    df_timing = asset_tc_timing.load(timings, xtypes)
 
     if optlist:
 
@@ -79,7 +79,13 @@ def signal_update(timing):
     #
     timing_id = timing['globalid']
     yesterday = (datetime.now() - timedelta(days=1)); 
-    enddate = yesterday.strftime("%Y-%m-%d")        
+    enddate = yesterday.strftime("%Y-%m-%d")
+
+    #
+    # 解析模型参数
+    #
+    argv = {k: int(v) for (k,v) in [x.split('=') for x in timing['tc_argv'].split(',')]}
+    n1, n2, n3, n4 = argv['n1'], argv['n2'], argv['n3'], argv['n4']
         
     df_nav = base_ra_index_nav.load_ohlc(
         timing['tc_index_id'], begin_date=timing['tc_begin_date'], end_date=enddate, mask=[0, 2])
@@ -88,7 +94,8 @@ def signal_update(timing):
     df_nav.index.name='tc_date'
    
     # risk_mgr = RiskManagement.RiskManagement()
-    df_new = TimingGFTD().timing(df_nav)
+    df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
+    
     df_new['tc_timing_id'] = timing_id
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
 
@@ -165,7 +172,7 @@ def nav(ctx, optid, optlist):
     else:
         timings = None
 
-    df_timing = database.asset_tc_timing_load(timings)
+    df_timing = asset_tc_timing.load(timings)
 
     if optlist:
 

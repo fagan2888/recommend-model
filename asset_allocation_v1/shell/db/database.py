@@ -116,35 +116,6 @@ def batch(db, table, df_new, df_old, timestamp=True):
 
             logger.info("update %s : {key: %s, dirties: %s " % (table.name, str(pkeys), str(dirty)))
             stmt.execute()
-#
-# tc_timing
-#
-def asset_tc_timing_load(timings, xtypes=None):
-    db = connection('asset')
-    metadata = MetaData(bind=db)
-    t1 = Table('tc_timing', metadata, autoload=True)
-
-    columns = [
-        t1.c.globalid,
-        t1.c.tc_type,
-        t1.c.tc_method,
-        t1.c.tc_index_id,
-        t1.c.tc_begin_date,
-        t1.c.tc_name,
-    ]
-
-    s = select(columns)
-
-    if timings is not None:
-        s = s.where(t1.c.globalid.in_(timings))
-    if xtypes is not None:
-        s = s.where(t1.c.tc_type.in_(xtypes))
-
-    s = s.where(t1.c.tc_method == 1)
-    
-    df = pd.read_sql(s, db)
-
-    return df
 
 def asset_tc_timing_scratch_load_signal(timings):
     db = connection('asset')
