@@ -78,9 +78,13 @@ def signal_update(timing):
     # 加载OHLC数据
     #
     timing_id = timing['globalid']
-    yesterday = (datetime.now() - timedelta(days=1)); 
-    enddate = yesterday.strftime("%Y-%m-%d")
+    yesterday = (datetime.now() - timedelta(days=1));
 
+    sdate = timing['tc_begin_date'].strftime("%Y-%m-%d")
+    edate = yesterday.strftime("%Y-%m-%d")
+
+    tdates = database.base_trade_dates_load_index(sdate, edate)
+    
     #
     # 解析模型参数
     #
@@ -88,7 +92,7 @@ def signal_update(timing):
     n1, n2, n3, n4 = argv['n1'], argv['n2'], argv['n3'], argv['n4']
         
     df_nav = base_ra_index_nav.load_ohlc(
-        timing['tc_index_id'], begin_date=timing['tc_begin_date'], end_date=enddate, mask=[0, 2])
+        timing['tc_index_id'], reindex=tdates, begin_date=sdate, end_date=edate, mask=[0, 2])
         
     df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
     df_nav.index.name='tc_date'
