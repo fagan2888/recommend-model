@@ -311,36 +311,6 @@ def load_portfolio_category_by_id(db, inst, alloc):
 
     return df
 
-@portfolio.command()
-@click.option('--inst', 'optInst', help=u'portfolio id to calc turnover')
-@click.option('--type', 'opttype', default=9, help=u'type of nav')
-@click.option('--alloc', 'optAlloc', help=u'risk of portfolio to calc turnover')
-@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
-@click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
-@click.option('--end-date', 'enddate', help=u'end date to calc')
-@click.pass_context
-def export_nav(ctx, optInst, opttype, optAlloc, startdate, enddate, optlist):
-    '''run constant risk model
-    '''    
-    if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")
-
-    if optAlloc is not None:
-        allocs = optAlloc.split(',')
-    else:
-        allocs = None
-
-    if optInst == 'online':
-        df = database.asset_allocation_instance_nav_load(optInst, allocs=allocs, begin=startdate, end=enddate)
-    else:
-        df = database.asset_allocation_instance_nav_load(optInst, opttype, allocs=allocs, begin=startdate, end=enddate)
-        
-
-    path = datapath('exported-nav-%s.csv' % (optInst))
-    df.to_csv(path)
-
-    print "export allocation instance [%s] to file %s" % (optInst, path)
 
 @portfolio.command()
 @click.option('--from', 'optfrom', help=u'portfolio id to convert from')

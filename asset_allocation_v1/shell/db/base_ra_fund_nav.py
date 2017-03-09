@@ -98,7 +98,7 @@ def load_series(code, reindex=None, begin_date=None, end_date=None):
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
-        df = df.reindex(reindex)
+        df = df.reindex(reindex, method='pad')
 
     return df['nav']
 

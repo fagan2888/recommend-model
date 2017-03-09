@@ -148,7 +148,7 @@ def signal_update(timing):
 
     # 更新数据库
     database.batch(db, t2, df_new, df_old, timestamp=False)
-    print "total signal: %d, %.2f/year" % (num_signal, num_signal * 250/len(df_new))
+    # print "total signal: %d, %.2f/year" % (num_signal, num_signal * 250/len(df_new))
 
     # 更新tc_timing_signal
     df_new = df_new[['tc_signal']]

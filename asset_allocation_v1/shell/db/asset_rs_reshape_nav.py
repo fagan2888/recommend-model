@@ -59,7 +59,7 @@ def load(gids):
 
 #     return df
 
-def load_series(gid, start_date=None, end_date=None):
+def load_series(gid, reindex=None, begin_date=None, end_date=None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('rs_reshape_nav', metadata, autoload=True)
@@ -73,12 +73,15 @@ def load_series(gid, start_date=None, end_date=None):
 
     if gid is not None:
         s = s.where(t1.c.rs_reshape_id == gid)
-    if start_date is not None:
-        s = s.where(t1.c.rs_date >= start_date)
+    if begin_date is not None:
+        s = s.where(t1.c.rs_date >= begin_date)
     if end_date is not None:
         s = s.where(t1.c.rs_date <= end_date)
     
     df = pd.read_sql(s, db, index_col = ['rs_date'], parse_dates=['rs_date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
 
     return df['rs_nav']
 

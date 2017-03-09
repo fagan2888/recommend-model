@@ -431,14 +431,10 @@ def markowitz_day(day, lookback, assets):
     #
     data = {}
     for asset in assets:
-        data[asset] = load_nav_series(asset, begin_date, end_date)
+        data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
-
     df_inc  = df_nav.pct_change().fillna(0.0)
-    #
-    # 根据时间轴进行重采样
-    #
-    df_inc = df_inc.reindex(index, fill_value=0.0)
+
     return markowitz_r(df_inc, assets)
 
 def markowitz_r(df_inc, limits):
@@ -457,7 +453,7 @@ def markowitz_r(df_inc, limits):
 
     return sr_result
 
-def load_nav_series(asset_id, begin_date, end_date):
+def load_nav_series(asset_id, reindex, begin_date, end_date):
     xtype = asset_id / 10000000
 
     if xtype == 1:
@@ -468,24 +464,25 @@ def load_nav_series(asset_id, begin_date, end_date):
         (pool_id, category) = (asset_id / 100, asset_id % 100)
         ttype = pool_id / 10000
         sr = asset_ra_pool_nav.load_series(
-            pool_id, category, ttype, begin_date=begin_date, end_date=end_date)
+            pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
     elif xtype == 3:
         #
         # 基金池资产
         #
         sr = base_ra_fund_nav.load_series(
-            asset_id, begin_date=begin_date, end_date=end_date)
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     elif xtype == 4:
         #
         # 修型资产
         #
-        sr = asset_rs_reshape_nav.load_series(asset_id, begin_date, end_date)
+        sr = asset_rs_reshape_nav.load_series(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     elif xtype == 12:
         #
         # 指数资产
         #
         sr = base_ra_index_nav.load_series(
-            asset_id, begin_date=begin_date, end_date=end_date)
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     else:
         sr = pd.Series()
 

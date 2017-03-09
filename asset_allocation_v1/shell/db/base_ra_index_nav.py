@@ -41,7 +41,7 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
-        df = df.reindex(reindex)
+        df = df.reindex(reindex, method='pad')
 
     return df['nav']
 
@@ -73,7 +73,7 @@ def load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
 
     if reindex is not None:
-        df = df.reindex(reindex)
+        df = df.reindex(reindex, method='pad')
 
     return df
 

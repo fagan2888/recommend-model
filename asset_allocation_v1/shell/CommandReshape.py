@@ -220,13 +220,14 @@ def pos_update(reshape):
     # min_date = df_position.index.min()
     # max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
-    # sr_nav = asset_ra_pool_nav.load_series(
-    #     reshape['rs_pool'], reshape['rs_asset'], reshape['rs_type'])
     if reshape['rs_start_date'] != '0000-00-00':
         sdate = reshape['rs_start_date']
     else:
         sdate = None
-    sr_nav = database.load_nav_series(reshape['rs_asset_id'], sdate)
+
+    tdates = database.base_trade_dates_load_index(sdate)
+
+    sr_nav = database.load_nav_series(reshape['rs_asset_id'], reindex=tdates, begin_date=sdate)
     
     # df_inc = df_nav.pct_change().fillna(0.0).to_frame(reshape_id)
     df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing})

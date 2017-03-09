@@ -385,13 +385,14 @@ def signal_update(riskmgr):
     # min_date = df_position.index.min()
     # max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
-    # sr_nav = asset_ra_pool_nav.load_series(
-    #     riskmgr['rm_pool'], riskmgr['rm_asset'], riskmgr['rm_type'])
     if riskmgr['rm_start_date'] != '0000-00-00':
         sdate = riskmgr['rm_start_date']
     else:
         sdate = None
-    sr_nav = database.load_nav_series(riskmgr['rm_asset_id'], sdate)
+
+    tdates = database.base_trade_dates_load_index(sdate)
+        
+    sr_nav = database.load_nav_series(riskmgr['rm_asset_id'], reindex=tdates, begin_date=sdate)
     
     # df_inc = df_nav.pct_change().fillna(0.0).to_frame(riskmgr_id)
     df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing})

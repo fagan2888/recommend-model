@@ -390,7 +390,7 @@ def asset_allocation_instance_nav_load_series(
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
-        df = df.reindex(reindex)
+        df = df.reindex(reindex, method='pad')
 
     return df['nav']
 
@@ -439,7 +439,7 @@ def asset_ra_composite_asset_load_series(id_, reindex=None, begin_date=None, end
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
-        df = df.reindex(reindex)
+        df = df.reindex(reindex, method='pad')
 
     return df['nav']
 
@@ -488,7 +488,7 @@ def asset_ra_pool_nav_load_series(id_, category, xtype, reindex=None, begin_date
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
-        df = df.reindex(reindex)
+        df = df.reindex(reindex, method='pad')
 
     return df['nav']
 
@@ -518,11 +518,11 @@ def asset_risk_asset_allocation_nav_load_series(
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
-        df = df.reindex(reindex)
+        df = df.reindex(reindex, method='pad')
 
     return df['nav']
 
-def load_nav_series(asset_id, begin_date=None, end_date=None):
+def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
     xtype = asset_id / 10000000
 
     if xtype == 1:
@@ -533,24 +533,25 @@ def load_nav_series(asset_id, begin_date=None, end_date=None):
         (pool_id, category) = (asset_id / 100, asset_id % 100)
         ttype = pool_id / 10000
         sr = asset_ra_pool_nav.load_series(
-            pool_id, category, ttype, begin_date=begin_date, end_date=end_date)
+            pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
     elif xtype == 3:
         #
         # 基金池资产
         #
         sr = base_ra_fund_nav.load_series(
-            asset_id, begin_date=begin_date, end_date=end_date)
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     elif xtype == 4:
         #
         # 修型资产
         #
-        sr = asset_rs_reshape_nav.load_series(asset_id, begin_date, end_date)
+        sr = asset_rs_reshape_nav.load_series(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     elif xtype == 12:
         #
         # 指数资产
         #
         sr = base_ra_index_nav.load_series(
-            asset_id, begin_date=begin_date, end_date=end_date)
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     else:
         sr = pd.Series()
 
