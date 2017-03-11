@@ -13,7 +13,7 @@ from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
 
-def load(gid, included_markowitz_id=False):
+def load(gid, use_raw_ratio=False, included_markowitz_id=False):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('mz_markowitz_pos', metadata, autoload=True)
@@ -21,9 +21,14 @@ def load(gid, included_markowitz_id=False):
     columns = [
         t1.c.mz_date,
         t1.c.mz_asset_id,
-        t1.c.mz_ratio,
     ]
     index_col = ['mz_date', 'mz_asset_id']
+
+    if use_raw_ratio:
+        columns.append(t1.c.mz_raw_ratio.label('mz_ratio'))
+    else:
+        columns.append(t1.c.mz_ratio)
+
     
     if included_markowitz_id:
         columns.insert(0, t1.c.mz_markowitz_id)
@@ -46,7 +51,7 @@ def load(gid, included_markowitz_id=False):
     return df
 
 def save(gid, df):
-    fmt_columns = ['mz_ratio']
+    fmt_columns = ['mz_ratio', 'mz_raw_ratio']
     fmt_precision = 4
     if not df.empty:
         df = database.number_format(df, fmt_columns, fmt_precision)

@@ -21,6 +21,7 @@ def find(globalid):
     columns = [
         t.c.globalid,
         t.c.rs_type,
+        t.c.rs_asset_id,
         t.c.rs_pool,
         t.c.rs_asset,
         t.c.rs_timing_id,

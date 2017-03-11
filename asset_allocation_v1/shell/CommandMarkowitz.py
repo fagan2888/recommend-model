@@ -23,7 +23,7 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav
 from util import xdict
 
@@ -331,22 +331,52 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_asset = df_asset.reset_index().set_index(['mz_markowitz_id', 'mz_asset_id'])
     asset_mz_markowitz_asset.save(optid, df_asset)
 
+    #
     # 导入数据: markowitz_pos
+    #
     df = df.round(4)             # 四舍五入到万分位
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     # print df.head()
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     if turnover >= 0.01:
-        df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
-    # index
-    df['mz_markowitz_id'] = optid
+        df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
+
     df.index.name = 'mz_date'
-    df = df.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
-    # unstack
     df.columns.name='mz_asset_id'
-    df_tosave = df.stack().to_frame('mz_ratio')
-    df_tosave = df_tosave.loc[df_tosave['mz_ratio'] > 0, ['mz_ratio']]
+
+    # 计算原始资产仓位
+    raw_ratios = {}
+    raw_assets = {}
+    for asset_id in df.columns:
+        if asset_id / 10000000 != 4:
+            raw_assets[asset_id] = asset_id
+            raw_ratios[asset_id] = df[asset_id]
+        else:
+            #
+            # 修型资产
+            #
+            rs_reshape = asset_rs_reshape.find(asset_id)
+            if rs_reshape is None:
+                raw_assets[asset_id] = asset_id
+                raw_ratios[asset_id] = df[asset_id]
+            else:
+                raw_assets[asset_id] = rs_reshape['rs_asset_id']
+                sr_reshape_pos = asset_rs_reshape_pos.load_series(asset_id, reindex=df.index)
+                raw_ratios[asset_id] = df[asset_id] * sr_reshape_pos
+    df_raw_ratio = pd.DataFrame(raw_ratios, columns=df.columns)
+    df_raw_asset = pd.DataFrame(raw_assets, index=df.index, columns=df.columns)
+
+    df_tosave = pd.concat({'mz_ratio': df, 'mz_raw_asset':df_raw_asset, 'mz_raw_ratio': df_raw_ratio}, axis=1)
+
+    # index
+    df_tosave['mz_markowitz_id'] = optid
+    df_tosave = df_tosave.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
+
+    # unstack
+    df_tosave = df_tosave.stack()
+    df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0) | (df_tosave['mz_raw_ratio'] > 0)]
+    
     # save
     # print df_tosave
     asset_mz_markowitz_pos.save(optid, df_tosave)
@@ -389,9 +419,25 @@ def parse_asset(asset):
     return result
 
 def merge_asset_name_and_type(asset_id, asset_data):
-    (name, category) = load_asset_name_and_type(asset_id)
+    xtype = asset_id / 10000000
+
+    if xtype == 4:
+        #
+        # 修型资产
+        #
+        asset = asset_rs_reshape.find(asset_id)
+        (name, category, raw_asset) = (asset['rs_name'], asset['rs_asset'], asset['rs_asset_id'])
+        (raw_name, ph) = database.load_asset_name_and_type(raw_asset)
+    else:
+        (name, category) = database.load_asset_name_and_type(asset_id)
+        (raw_asset, raw_name) = (asset_id, name)
+        
     return xdict.merge(asset_data, {
-        'mz_asset_name': name, 'mz_asset_type': category})
+        'mz_asset_name': name,
+        'mz_asset_type': category,
+        'mz_raw_asset': raw_asset,
+        'mz_raw_name': raw_name,
+    })
 
 def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period):
     '''perform markowitz asset for days
@@ -457,7 +503,7 @@ def markowitz_r(df_inc, limits):
 
     return sr_result
 
-def load_nav_series(asset_id, reindex, begin_date, end_date):
+def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
     xtype = asset_id / 10000000
 
     if xtype == 1:
@@ -491,50 +537,6 @@ def load_nav_series(asset_id, reindex, begin_date, end_date):
         sr = pd.Series()
 
     return sr
-
-def load_asset_name_and_type(asset_id):
-    (name, category) = ('', 0)
-    xtype = asset_id / 10000000
-
-    if xtype == 1:
-        #
-        # 基金池资产
-        #
-        asset_id %= 10000000
-        (pool_id, category) = (asset_id / 100, asset_id % 100)
-        ttype = pool_id / 10000
-        name = asset_ra_pool.load_asset_name(pool_id, category, ttype)
-    elif xtype == 3:
-        #
-        # 基金池资产
-        #
-        category = 1
-        fund = base_ra_fund.find(asset_id)
-        name = "%s(%s)" % (fund['ra_name'], fund['ra_code'])
-        
-    elif xtype == 4:
-        #
-        # 修型资产
-        #
-        asset = asset_rs_reshape.find(asset_id)
-        (name, category) = (asset['rs_name'], asset['rs_asset'])
-    elif xtype == 12:
-        #
-        # 指数资产
-        #
-        asset = base_ra_index.find(asset_id)
-        name = asset['ra_name']
-        if '标普' in name:
-            category = 41
-        elif '黄金' in name:
-            category = 42
-        elif '恒生' in name:
-            category = 43
-    else:
-         (name, category) = ('', 0)
-
-    return (name, category)
-
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
@@ -574,7 +576,7 @@ def nav_update(markowitz):
 
     data = {}
     for asset_id in df_pos.columns:
-        data[asset_id] = load_nav_series(asset_id, min_date, max_date)
+        data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
@@ -624,7 +626,7 @@ def turnover(ctx, optid, optlist):
 def turnover_update(markowitz):
     markowitz_id = markowitz['globalid']
     # 加载仓位信息
-    df = asset_mz_markowitz_pos.load(markowitz_id)
+    df = asset_mz_markowitz_pos.load(markowitz_id, use_raw_ratio=True)
 
     # 计算宽口换手率
     sr_turnover = DFUtil.calc_turnover(df)

@@ -59,7 +59,7 @@ def load(gids):
 
 #     return df
 
-def load_series(gid):
+def load_series(gid, reindex=None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('rs_reshape_pos', metadata, autoload=True)
@@ -72,9 +72,12 @@ def load_series(gid):
     s = select(columns)
 
     if gid is not None:
-        s = s.where(t1.c.globalid == gid)
+        s = s.where(t1.c.rs_reshape_id == gid)
     
     df = pd.read_sql(s, db, index_col = ['rs_date'], parse_dates=['rs_date'])
 
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+    
     return df['rs_ratio']
 

@@ -17,9 +17,13 @@ from sqlalchemy import *
 
 from dateutil.parser import parse
 
+import asset_ra_pool
 import asset_ra_pool_nav
+import asset_rs_reshape
 import asset_rs_reshape_nav
+import base_ra_fund
 import base_ra_fund_nav
+import base_ra_index
 import base_ra_index_nav
 
 logger = logging.getLogger(__name__)
@@ -556,3 +560,46 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         sr = pd.Series()
 
     return sr
+
+def load_asset_name_and_type(asset_id):
+    (name, category) = ('', 0)
+    xtype = asset_id / 10000000
+
+    if xtype == 1:
+        #
+        # 基金池资产
+        #
+        asset_id %= 10000000
+        (pool_id, category) = (asset_id / 100, asset_id % 100)
+        ttype = pool_id / 10000
+        name = asset_ra_pool.load_asset_name(pool_id, category, ttype)
+    elif xtype == 3:
+        #
+        # 基金池资产
+        #
+        category = 1
+        fund = base_ra_fund.find(asset_id)
+        name = "%s(%s)" % (fund['ra_name'], fund['ra_code'])
+        
+    elif xtype == 4:
+        #
+        # 修型资产
+        #
+        asset = asset_rs_reshape.find(asset_id)
+        (name, category) = (asset['rs_name'], asset['rs_asset'])
+    elif xtype == 12:
+        #
+        # 指数资产
+        #
+        asset = base_ra_index.find(asset_id)
+        name = asset['ra_name']
+        if '标普' in name:
+            category = 41
+        elif '黄金' in name:
+            category = 42
+        elif '恒生' in name:
+            category = 43
+    else:
+         (name, category) = ('', 0)
+
+    return (name, category)
