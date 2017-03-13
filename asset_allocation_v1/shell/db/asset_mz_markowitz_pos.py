@@ -50,6 +50,39 @@ def load(gid, use_raw_ratio=False, included_markowitz_id=False):
 
     return df
 
+def load_raw(gid, included_markowitz_id=False):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('mz_markowitz_pos', metadata, autoload=True)
+
+    columns = [
+        t1.c.mz_date,
+        t1.c.mz_raw_asset,
+        t1.c.mz_raw_ratio,
+    ]
+    index_col = ['mz_date', 'mz_raw_asset']
+
+    if included_markowitz_id:
+        columns.insert(0, t1.c.mz_markowitz_id)
+        index_col.insert(0, 'mz_markowitz_id')
+
+    s = select(columns)
+
+    if gid is not None:
+        s = s.where(t1.c.mz_markowitz_id == gid)
+    else:
+        return None
+    # if xtypes is not None:
+    #     s = s.where(t1.c.mz_type.in_(xtypes))
+    
+    df = pd.read_sql(s, db, index_col=index_col, parse_dates=['mz_date'])
+
+    df = df.unstack().fillna(0.0)
+    df.columns = df.columns.droplevel(0)
+
+    return df
+
+
 def save(gid, df):
     fmt_columns = ['mz_ratio', 'mz_raw_ratio']
     fmt_precision = 4

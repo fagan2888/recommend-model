@@ -16,29 +16,28 @@ logger = logging.getLogger(__name__)
 #
 # mz_markowitz
 #
-# def load(gids, xtypes=None):
-#     db = database.connection('asset')
-#     metadata = MetaData(bind=db)
-#     t1 = Table('mz_markowitz', metadata, autoload=True)
+def load(gids):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('mz_markowitz_asset', metadata, autoload=True)
 
-#     columns = [
-#         t1.c.globalid,
-#         t1.c.mz_type,
-#         t1.c.mz_pool,
-#         t1.c.mz_reshape,
-#         t1.c.mz_name,
-#     ]
+    columns = [
+        t1.c.mz_markowitz_id,
+        t1.c.mz_asset_id,
+        t1.c.mz_asset_name,
+        t1.c.mz_raw_asset,
+        t1.c.mz_raw_name,
+        t1.c.mz_asset_type,
+    ]
 
-#     s = select(columns)
+    s = select(columns)
 
-#     if gids is not None:
-#         s = s.where(t1.c.globalid.in_(gids))
-#     if xtypes is not None:
-#         s = s.where(t1.c.mz_type.in_(xtypes))
+    if gids is not None:
+        s = s.where(t1.c.mz_markowitz_id.in_(gids))
     
-#     df = pd.read_sql(s, db)
+    df = pd.read_sql(s, db)
 
-#     return df
+    return df
 
 # def max_id_between(min_id, max_id):
 #     db = database.connection('asset')
