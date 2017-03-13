@@ -342,15 +342,21 @@ def nav(ctx, optid, optlist):
         print tabulate(df_highlow, headers='keys', tablefmt='psql')
         return 0
     
-    with click.progressbar(length=len(df_highlow), label='update nav') as bar:
-        for _, highlow in df_highlow.iterrows():
-            bar.update(1)
-            nav_update(highlow)
+    for _, highlow in df_highlow.iterrows():
+        nav_update_alloc(highlow)
 
-def nav_update(highlow):
-    highlow_id = highlow['globalid']
+def nav_update_alloc(highlow):
+    df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
+    
+    with click.progressbar(length=len(df_alloc), label='update nav %d' % (highlow['globalid'])) as bar:
+        for _, alloc in df_alloc.iterrows():
+            bar.update(1)
+            nav_update(alloc)
+    
+def nav_update(alloc):
+    alloc_id = alloc['globalid']
     # 加载仓位信息
-    df_pos = asset_mz_highlow_pos.load(highlow_id)
+    df_pos = asset_mz_highlow_pos.load(alloc_id)
     
     # 加载资产收益率
     min_date = df_pos.index.min()
@@ -370,10 +376,10 @@ def nav_update(highlow):
     df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'mz_nav'}).copy()
     df_result.index.name = 'mz_date'
     df_result['mz_inc'] = df_result['mz_nav'].pct_change().fillna(0.0)
-    df_result['mz_highlow_id'] = highlow['globalid']
+    df_result['mz_highlow_id'] = alloc['globalid']
     df_result = df_result.reset_index().set_index(['mz_highlow_id', 'mz_date'])
 
-    asset_mz_highlow_nav.save(highlow_id, df_result)
+    asset_mz_highlow_nav.save(alloc_id, df_result)
 
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')

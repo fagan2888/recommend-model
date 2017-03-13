@@ -19,15 +19,13 @@ logger = logging.getLogger(__name__)
 def load(gids, xtypes=None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
-    t1 = Table('mz_highlow', metadata, autoload=True)
+    t1 = Table('mz_highlow_alloc', metadata, autoload=True)
 
     columns = [
         t1.c.globalid,
         t1.c.mz_type,
-        t1.c.mz_algo,
-        t1.c.mz_high_id,
-        t1.c.mz_low_id,
-        t1.c.mz_persistent,
+        t1.c.mz_risk,
+        t1.c.mz_highlow_id,
         t1.c.mz_name,
     ]
 
@@ -35,6 +33,30 @@ def load(gids, xtypes=None):
 
     if gids is not None:
         s = s.where(t1.c.globalid.in_(gids))
+    if xtypes is not None:
+        s = s.where(t1.c.mz_type.in_(xtypes))
+    
+    df = pd.read_sql(s, db)
+
+    return df
+
+def where_highlow_id(highlow_id, xtypes=None):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('mz_highlow_alloc', metadata, autoload=True)
+
+    columns = [
+        t1.c.globalid,
+        t1.c.mz_type,
+        t1.c.mz_risk,
+        t1.c.mz_highlow_id,
+        t1.c.mz_name,
+    ]
+
+    s = select(columns)
+
+    if highlow_id is not None:
+        s = s.where(t1.c.mz_highlow_id == highlow_id)
     if xtypes is not None:
         s = s.where(t1.c.mz_type.in_(xtypes))
     

@@ -2,6 +2,7 @@
 
 import database
 import asset_mz_highlow
+import asset_mz_highlow_alloc
 import asset_mz_highlow_asset
 import asset_mz_highlow_nav
 import asset_mz_highlow_pos
