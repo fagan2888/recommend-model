@@ -435,7 +435,7 @@ def merge_asset_name_and_type(asset_id, asset_data):
     return xdict.merge(asset_data, {
         'mz_asset_id': raw_asset,
         'mz_asset_name': raw_name,
-        'mz_markowitz_name': name,
+        'mz_markowitz_asset_name': name,
         'mz_asset_type': category,
     })
 
