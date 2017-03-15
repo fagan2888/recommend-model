@@ -118,8 +118,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     # 加载用到的资产
     #
     df_asset = asset_mz_markowitz_asset.load([opthigh, optlow])
-    df_asset = df_asset[['mz_markowitz_id', 'mz_raw_asset', 'mz_raw_name', 'mz_asset_type']]
-    df_asset = df_asset.rename(columns={'mz_raw_asset': 'mz_asset_id', 'mz_raw_name': 'mz_asset_name', 'mz_markowitz_id': 'mz_origin_id'})
+    df_asset = df_asset[['mz_markowitz_id', 'mz_asset_id', 'mz_asset_name', 'mz_asset_type']]
+    df_asset = df_asset.rename(columns={'mz_markowitz_id': 'mz_origin_id'})
     df_asset = df_asset.set_index(['mz_asset_id'])
     #
     # 加载用到的风控
@@ -416,7 +416,7 @@ def turnover(ctx, optid, optlist):
 def turnover_update(highlow):
     highlow_id = highlow['globalid']
     # 加载仓位信息
-    df = asset_mz_highlow_pos.load(highlow_id, use_raw_ratio=True)
+    df = asset_mz_highlow_pos.load(highlow_id)
 
     # 计算宽口换手率
     sr_turnover = DFUtil.calc_turnover(df)

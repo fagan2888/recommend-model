@@ -13,7 +13,7 @@ from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
 
-def load(gid, use_raw_ratio=False, included_markowitz_id=False):
+def load(gid, use_markowitz_ratio=False, included_markowitz_id=False):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('mz_markowitz_pos', metadata, autoload=True)
@@ -24,8 +24,8 @@ def load(gid, use_raw_ratio=False, included_markowitz_id=False):
     ]
     index_col = ['mz_date', 'mz_asset_id']
 
-    if use_raw_ratio:
-        columns.append(t1.c.mz_raw_ratio.label('mz_ratio'))
+    if use_markowitz_ratio:
+        columns.append(t1.c.mz_markowitz_ratio.label('mz_ratio'))
     else:
         columns.append(t1.c.mz_ratio)
 
@@ -57,10 +57,10 @@ def load_raw(gid, included_markowitz_id=False):
 
     columns = [
         t1.c.mz_date,
-        t1.c.mz_raw_asset,
-        t1.c.mz_raw_ratio,
+        t1.c.mz_asset_id,
+        t1.c.mz_ratio,
     ]
-    index_col = ['mz_date', 'mz_raw_asset']
+    index_col = ['mz_date', 'mz_asset_id']
 
     if included_markowitz_id:
         columns.insert(0, t1.c.mz_markowitz_id)
@@ -84,7 +84,7 @@ def load_raw(gid, included_markowitz_id=False):
 
 
 def save(gid, df):
-    fmt_columns = ['mz_ratio', 'mz_raw_ratio']
+    fmt_columns = ['mz_ratio', 'mz_markowitz_ratio']
     fmt_precision = 4
     if not df.empty:
         df = database.number_format(df, fmt_columns, fmt_precision)
@@ -95,7 +95,7 @@ def save(gid, df):
     t2 = Table('mz_markowitz_pos', MetaData(bind=db), autoload=True)
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
     s = select(columns, (t2.c.mz_markowitz_id == gid))
-    df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_date', 'mz_asset_id'], parse_dates=['mz_date'])
+    df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_date', 'mz_markowitz_asset'], parse_dates=['mz_date'])
     if not df_old.empty:
         df_old = database.number_format(df_old, fmt_columns, fmt_precision)
 
