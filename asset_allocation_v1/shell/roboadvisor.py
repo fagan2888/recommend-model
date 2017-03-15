@@ -24,6 +24,7 @@ import CommandMarkowitz
 import CommandReshape
 import CommandRiskManage
 import CommandTiming
+import CommandHighlow
 
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,7 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandMarkowitz.markowitz)
     roboadvisor.add_command(CommandRiskManage.riskmgr)
     roboadvisor.add_command(CommandTiming.timing)
+    roboadvisor.add_command(CommandHighlow.highlow)
 
     roboadvisor(obj={})  
     

@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import database
+import asset_mz_highlow
+import asset_mz_highlow_alloc
+import asset_mz_highlow_asset
+import asset_mz_highlow_nav
+import asset_mz_highlow_pos
 import asset_mz_markowitz
 import asset_mz_markowitz_asset
 import asset_mz_markowitz_nav

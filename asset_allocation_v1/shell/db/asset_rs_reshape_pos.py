@@ -80,4 +80,4 @@ def load_series(gid, reindex=None):
         df = df.reindex(reindex, method='pad')
     
     return df['rs_ratio']
-
+    

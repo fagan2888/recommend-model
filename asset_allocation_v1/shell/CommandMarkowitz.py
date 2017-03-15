@@ -324,11 +324,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     #
     assets = {k: merge_asset_name_and_type(k, v) for (k, v) in assets.iteritems()}
     df_asset = pd.DataFrame(assets).T
-    df_asset.index.name = 'mz_asset_id'
+    df_asset.index.name = 'mz_markowitz_asset_id'
     df_asset['mz_markowitz_id'] = optid
     df_asset.rename(inplace=True, columns={
         'uplimit':'mz_upper_limit', 'downlimit':'mz_lower_limit', 'sumlimit':'mz_sum1_limit'})
-    df_asset = df_asset.reset_index().set_index(['mz_markowitz_id', 'mz_asset_id'])
+    df_asset = df_asset.reset_index().set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
     asset_mz_markowitz_asset.save(optid, df_asset)
 
     #
@@ -343,7 +343,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
 
     df.index.name = 'mz_date'
-    df.columns.name='mz_asset_id'
+    df.columns.name='mz_markowitz_asset'
 
     # 计算原始资产仓位
     raw_ratios = {}
@@ -367,7 +367,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_raw_ratio = pd.DataFrame(raw_ratios, columns=df.columns)
     df_raw_asset = pd.DataFrame(raw_assets, index=df.index, columns=df.columns)
 
-    df_tosave = pd.concat({'mz_ratio': df, 'mz_raw_asset':df_raw_asset, 'mz_raw_ratio': df_raw_ratio}, axis=1)
+    df_tosave = pd.concat({'mz_markowitz_ratio': df, 'mz_asset_id':df_raw_asset, 'mz_ratio': df_raw_ratio}, axis=1)
 
     # index
     df_tosave['mz_markowitz_id'] = optid
@@ -375,7 +375,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     # unstack
     df_tosave = df_tosave.stack()
-    df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0) | (df_tosave['mz_raw_ratio'] > 0)]
+    df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0) | (df_tosave['mz_markowitz_ratio'] > 0)]
     
     # save
     # print df_tosave
@@ -433,10 +433,10 @@ def merge_asset_name_and_type(asset_id, asset_data):
         (raw_asset, raw_name) = (asset_id, name)
         
     return xdict.merge(asset_data, {
-        'mz_asset_name': name,
+        'mz_asset_id': raw_asset,
+        'mz_asset_name': raw_name,
+        'mz_markowitz_asset_name': name,
         'mz_asset_type': category,
-        'mz_raw_asset': raw_asset,
-        'mz_raw_name': raw_name,
     })
 
 def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period):
@@ -626,7 +626,7 @@ def turnover(ctx, optid, optlist):
 def turnover_update(markowitz):
     markowitz_id = markowitz['globalid']
     # 加载仓位信息
-    df = asset_mz_markowitz_pos.load(markowitz_id, use_raw_ratio=True)
+    df = asset_mz_markowitz_pos.load(markowitz_id, use_markowitz_ratio=False)
 
     # 计算宽口换手率
     sr_turnover = DFUtil.calc_turnover(df)
@@ -698,4 +698,47 @@ def perform_delete(markowitz):
     mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == markowitz_id).execute()
     mz_markowitz.delete(mz_markowitz.c.globalid == markowitz_id).execute()
 
+@markowitz.command()
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.pass_context
+def maxdd(ctx, optid, optlist):
+    ''' delete markowitz instance
+    '''
+    if optid is not None:
+        markowitzs = [s.strip() for s in optid.split(',')]
+    else:
+        markowitzs = None
+
+    df_markowitz = asset_mz_markowitz.load(markowitzs)
+
+    if optlist:
+
+        df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_markowitz, headers='keys', tablefmt='psql')
+        return 0
+
+    data = []
+    for _, markowitz in df_markowitz.iterrows():
+        perform_maxdd(markowitz)
+            
+def perform_maxdd(markowitz):
+    markowitz_id = markowitz['globalid']
+    sdate = '2012-07-27'
+    tdates = database.base_trade_dates_load_index(sdate);
+    # sr_nav = database.load_nav_series(markowitz_id, reindex=tdates, begin_date=sdate)
+    sr_nav = asset_mz_markowitz_nav.load_series(markowitz_id, reindex=tdates, begin_date=sdate)
+
+    positive, total = (0, 0)
+    for w in [60, 120, 250]:
+        tmp = sr_nav.rolling(window=250, min_periods=250).apply(maxdd);
+        tmp = tmp.dropna()
+        print "win", w,  tmp.sum()/len(tmp)
+
+def maxdd(x):
+    y = x[-1]/x[0] - 1
+    max_drawdown = (x/np.maximum.accumulate(x) - 1).min()
+    if (y / abs(max_drawdown)) > 2:
+        return 1
+    return 0
     

@@ -16,29 +16,28 @@ logger = logging.getLogger(__name__)
 #
 # mz_markowitz
 #
-# def load(gids, xtypes=None):
-#     db = database.connection('asset')
-#     metadata = MetaData(bind=db)
-#     t1 = Table('mz_markowitz', metadata, autoload=True)
+def load(gids):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('mz_markowitz_asset', metadata, autoload=True)
 
-#     columns = [
-#         t1.c.globalid,
-#         t1.c.mz_type,
-#         t1.c.mz_pool,
-#         t1.c.mz_reshape,
-#         t1.c.mz_name,
-#     ]
+    columns = [
+        t1.c.mz_markowitz_id,
+        t1.c.mz_asset_id,
+        t1.c.mz_asset_name,
+        t1.c.mz_markowitz_asset_id,
+        t1.c.mz_markowitz_asset_name,
+        t1.c.mz_asset_type,
+    ]
 
-#     s = select(columns)
+    s = select(columns)
 
-#     if gids is not None:
-#         s = s.where(t1.c.globalid.in_(gids))
-#     if xtypes is not None:
-#         s = s.where(t1.c.mz_type.in_(xtypes))
+    if gids is not None:
+        s = s.where(t1.c.mz_markowitz_id.in_(gids))
     
-#     df = pd.read_sql(s, db)
+    df = pd.read_sql(s, db)
 
-#     return df
+    return df
 
 # def max_id_between(min_id, max_id):
 #     db = database.connection('asset')
@@ -63,7 +62,7 @@ def save(gid, df):
     t2 = Table('mz_markowitz_asset', MetaData(bind=db), autoload=True)
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
     s = select(columns, (t2.c.mz_markowitz_id == gid))
-    df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_asset_id'])
+    df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_markowitz_asset_id'])
     if not df_old.empty:
         df_old = database.number_format(df_old, fmt_columns, fmt_precision)
 
