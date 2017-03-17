@@ -273,9 +273,13 @@ def pos_update(reshape):
         df_old = database.number_format(df_old, fmt_columns, 6, rs_ratio=4)
 
     # 更新数据库
+    #print df_new.head()
+    #print df_old.head()
     database.batch(db, t2, df_new, df_old, timestamp=True)
 
 
+
+'''
 @reshape.command()
 @click.option('--id', 'optid', help=u'ids of fund pool to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
@@ -327,3 +331,4 @@ def jyposnav(ctx, optid, optlist, optonline):
     #print df_timing
     #print df_nav
     #print 'hehe'
+'''

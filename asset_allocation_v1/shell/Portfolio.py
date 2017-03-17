@@ -633,7 +633,7 @@ def black_litterman(weq, df_inc, P, Q):
         G[i, i] = -1
 
         G[n_asset + i, i] = -1
-        h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.05)
+        h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.03)
 
         '''
         if i == 4:
@@ -644,7 +644,7 @@ def black_litterman(weq, df_inc, P, Q):
         #h[n_asset + i, 0] = 0
 
         G[2 * n_asset + i, i] = 1
-        h[2 * n_asset + i, 0] = weq[i] + 0.05
+        h[2 * n_asset + i, 0] = weq[i] + 0.03
 
 
         '''

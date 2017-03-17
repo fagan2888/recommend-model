@@ -24,6 +24,10 @@ from Const import datapath
 
 logger = logging.getLogger(__name__)
 
+#暂时用全局变量
+markowitz_asset = None
+
+
 def get_columns(key, excluded):
     if excluded is None:
         excluded = []
@@ -57,6 +61,8 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
     if columns and 'date' not in columns:
         columns.insert(0, 'date')
 
+    global markowitz_asset
+
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
@@ -76,23 +82,77 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
     # uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3, 0.3]
     # downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     bound_set = {
-        'largecap': {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'smallcap': {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'rise':     {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'decline':  {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'growth':   {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'value':    {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'SP500.SPI':{'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'GLNC':     {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'HSCI.HI':  {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
+        'largecap': {'downlimit': 0.0, 'uplimit': 1.0, 'oversealimit': 0, 'alternativelimit' : 0},
+        'smallcap': {'downlimit': 0.0, 'uplimit': 1.0, 'oversealimit': 0, 'alternativelimit' : 0},
+        'rise':     {'downlimit': 0.0, 'uplimit': 1.0, 'oversealimit': 0, 'alternativelimit' : 0},
+        'decline':  {'downlimit': 0.0, 'uplimit': 1.0, 'oversealimit': 0, 'alternativelimit' : 0},
+        'growth':   {'downlimit': 0.0, 'uplimit': 1.0, 'oversealimit': 0, 'alternativelimit' : 0},
+        'value':    {'downlimit': 0.0, 'uplimit': 1.0, 'oversealimit': 0, 'alternativelimit' : 0},
+        'SP500.SPI':{'downlimit': 0.0, 'uplimit': 1.0, 'oversealimit': 0, 'alternativelimit' : 0},
+        'GLNC':     {'downlimit': 0.0, 'uplimit': 1.0, 'oversealimit': 0, 'alternativelimit' : 0},
+        'HSCI.HI':  {'downlimit': 0.0, 'uplimit': 1.0, 'oversealimit': 0, 'alternativelimit' : 0},
     }
 
     bound = []
     for asset in df_inc.columns:
         bound.append(bound_set[asset])
 
-    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
-    #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+    #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+    risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+    #print ws[0 : 6]
+    #print ws[6 : 9]
+    #print markowitz_enable
+
+
+    if np.sum(ws[0 : 6]) >= 0.5:
+        markowitz_asset = 'A'
+    elif ws[6] >= 0.5:
+        markowitz_asset = 'sp'
+    elif ws[7] >= 0.5:
+        markowitz_asset = 'gl'
+    elif ws[8] >= 0.5:
+        markowitz_asset = 'hs'
+
+
+    #print np.sum(ws[0 : 6]), ws[6], ws[7], ws[8], markowitz_asset
+    if markowitz_asset == 'A':
+       if np.sum(ws[0 : 6]) <= 0.4:
+            markowitz_asset = None
+    elif markowitz_asset == 'sp':
+        if ws[6] <= 0.4:
+            markowitz_asset = None
+    elif markowitz_asset == 'gl':
+        if ws[7] <= 0.4:
+            markowitz_asset = None
+    elif markowitz_asset == 'hs':
+        if ws[8] <= 0.4:
+            markowitz_asset = None
+
+    print day, markowitz_asset ,np.sum(ws[0 : 6]), ws[6], ws[7], ws[8],
+    if markowitz_asset is None:
+
+        w = [np.sum(ws[0 : 6]), ws[6], ws[7], ws[8]]
+
+        if min(w) <= 0.05:
+            index = w.index(min(w))
+            for i in range(0, len(w)):
+                if index == i:
+                    w[i] = 0
+                else:
+                    w[i] = 1.0 / (len(w) - 1)
+        else:
+            for i in range(0, len(w)):
+                w[i] = 1.0 / len(w)
+
+        for i in range(0, 6):
+            ws[i] = w[0] / 6
+
+        ws[6] = w[1]
+        ws[7] = w[2]
+        ws[8] = w[3]
+
+    print ws
+
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
         pd.Series((sharpe, risk, returns), index=['sharpe','risk', 'return'])

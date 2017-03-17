@@ -18,7 +18,7 @@ import pylab
 import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(return_rate, bound, oversealimit = 0.6, alternativelimit = 0.4):
+def efficient_frontier_spe(return_rate, bound, oversealimit = 0.65, alternativelimit = 0.45):
 
     solvers.options['show_progress'] = False
 

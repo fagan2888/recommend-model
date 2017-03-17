@@ -272,7 +272,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             if optname == 'markowitz':
                 optname = 'markowitz low'
         else: # short_cut == 'high'
-
+            '''
             assets = {
                 41110103:  {'alternativelimit': 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0}, #沪深300指数修型
                 41110203:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#中证500指数修型
@@ -280,14 +280,24 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 # 41110207:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
                 # 41110208:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
                 # 41110105:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                120000013: {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#标普500指数
-                41120502:  {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#恒生指数修型
-                41400102:  {'alternativelimit' : 1, 'oversealimit': 0, 'uplimit': 0.3, 'downlimit': 0.0},#黄金指数修型
-                120000028:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#标普高盛原油商品指数收益率
-                120000029:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#南华商品指数
+                120000013: {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#标普500指数
+                120000014:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#黄金指数修型
+                120000015:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#恒生指数修型
+                120000028:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#标普高盛原油商品指数收益率
+                120000029:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#南华商品指数
+                120000019:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#MSCI全球
+                120000020:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#纳斯达克100
+                120000021:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#MSCI亚洲
+                120000022:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#MSCI中华
+                120000023:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#MSCI中华
+                120000024:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#MSCI中华
+                120000025:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#MSCI中华
+                120000030:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#MSCI中华
+                120000031:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#MSCI中华
             }
 
             '''
+
             assets = {
                 120000001:  {'alternativelimit': 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0}, #沪深300指数修型
                 120000002:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#中证500指数修型
@@ -295,13 +305,30 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 # 41110207:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
                 # 41110208:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
                 # 41110105:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                120000013: {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#标普500指数
-                120000015:  {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#恒生指数修型
-                120000014:  {'alternativelimit' : 1, 'oversealimit': 0, 'uplimit': 0.3, 'downlimit': 0.0},#黄金指数修型
-                120000028:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#标普高盛原油商品指数收益率
-                120000029:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},#南华商品指数
+                120000013:  {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.35, 'downlimit': 0.0},#标普500指数
+                120000015:  {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.35, 'downlimit': 0.0},#恒生指数修型
+                120000014:  {'alternativelimit' : 1, 'oversealimit': 0, 'uplimit': 0.35, 'downlimit': 0.0},#黄金指数修型
+                120000029:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.20, 'downlimit': 0.0},#南华商品指数
+                120000028:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.20, 'downlimit': 0.0},#标普高盛原油商品指数收益率
+            }
+
+
+            '''
+            assets = {
+                41110103:  {'alternativelimit': 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0}, #沪深300指数修型
+                41110203:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#中证500指数修型
+                # 41110205:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110207:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110208:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                # 41110105:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                120000013: {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.35, 'downlimit': 0.0},#标普500指数
+                41120502:  {'alternativelimit' : 0, 'oversealimit': 1, 'uplimit': 0.35, 'downlimit': 0.0},#恒生指数修型
+                41400102:  {'alternativelimit' : 1, 'oversealimit': 0, 'uplimit': 0.35, 'downlimit': 0.0},#黄金指数修型
+                120000029:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.35, 'downlimit': 0.0},#南华商品指数
+                120000028:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.35, 'downlimit': 0.0},#标普高盛原油商品指数收益率
             }
             '''
+
             if optname == 'markowitz':
                 optname = 'markowitz high'
 
@@ -328,6 +355,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
     }
     '''
+
+    index_nav_df = base_ra_index_nav.load_series(120000001, begin_date = startdate, end_date = enddate)
+    dates = index_nav_df.index
+
 
     df = markowitz_days(startdate, enddate, assets,
         label=optname, lookback=lookback, adjust_period=adjust_period)
@@ -381,24 +412,30 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     #每四周做平滑
     df = df.rolling(window = 4, min_periods = 1).mean()
+    if turnover >= 0.01:
+        df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行过滤
+    df = df.reindex(dates)
+    df = df.fillna(method = 'pad')
 
+    '''
     #载入修型资产的仓位信息
     reshape_asset_ids = []
     for asset_id in df.columns:
         if asset_id / 1000000 == 41:
             reshape_asset_ids.append(asset_id)
     reshape_df = asset_rs_reshape_pos.load(reshape_asset_ids)
+    reshape_df = reshape_df.reindex(dates)
+    reshape_df = reshape_df.fillna(method = 'pad')
     min_date = df.index[0]
     reshape_df = reshape_df[reshape_df.index >= min_date]
-    dates = df.index | reshape_df.index
-    df = df.reindex(dates)
-    df = df.fillna(method = 'pad')
+    reshape_df = reshape_df.fillna(1.0)
     for reshape_asset_id in reshape_asset_ids:
         df[reshape_asset_id] = df[reshape_asset_id] * reshape_df[reshape_asset_id]
+    '''
 
-
+    #载入风控资产的仓位信息
     asset_id_risk_mgr_id = {}
-    for asset_id in df.columns[0:-2]:
+    for asset_id in df.columns:
         if asset_id / 1000000 == 41:
             reshape_asset_df = asset_rs_reshape.load([asset_id])
             asset_rm_riskmgr_df = asset_rm_riskmgr.load_asset_id(reshape_asset_df['rs_asset_id'].values)
@@ -406,34 +443,26 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             asset_id_risk_mgr_id.setdefault(asset_id, asset_rm_riskmgr_df['globalid'].values[0])
         else:
             asset_rm_riskmgr_df = asset_rm_riskmgr.load_asset_id([asset_id])
-            asset_id_risk_mgr_id.setdefault(asset_id, asset_rm_riskmgr_df['globalid'].values[0])
+            if not asset_rm_riskmgr_df.empty:
+                asset_id_risk_mgr_id.setdefault(asset_id, asset_rm_riskmgr_df['globalid'].values[0])
 
 
     risk_mgr_ids = list(asset_id_risk_mgr_id.values())
     risk_mgr_signal_df = asset_rm_riskmgr_signal.load(risk_mgr_ids)
-    dates = df.index | risk_mgr_signal_df.index
-    risk_mgr_signal_df = risk_mgr_signal_df.reindex(dates)
+    #dates = df.index | risk_mgr_signal_df.index
+    risk_mgr_signal_df = risk_mgr_signal_df.reindex(df.index)
+    risk_mgr_signal_df = risk_mgr_signal_df.fillna(method = 'pad')
     risk_mgr_signal_df = risk_mgr_signal_df[risk_mgr_signal_df.index >= df.index[0]]
-    #for i in range(0, len(df.index)):
-    #    print df.index[i], risk_mgr_signal_df.index[i]
-    #print risk_mgr_signal_df.index
-    #print df.index
-    #print asset_rm_riskmgr_df
-    #print asset_ids
-
-
-    #print df
-
-        #print df.columns
-
+    risk_mgr_signal_df = risk_mgr_signal_df.fillna(1.0)
+    for k, v in asset_id_risk_mgr_id.items():
+        df[k] = df[k] * risk_mgr_signal_df[v]
 
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     # print df.head()
     #df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
-    if turnover >= 0.01:
-        df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
+
     # index
     df['mz_markowitz_id'] = optid
     df.index.name = 'mz_date'
@@ -532,6 +561,7 @@ def markowitz_day(day, lookback, assets):
     for asset in assets:
         data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
+    #print df_nav
     df_inc  = df_nav.pct_change().fillna(0.0)
     df_inc = df_inc.iloc[1:,]
     return markowitz_r(df_inc, assets)
@@ -579,7 +609,6 @@ def markowitz_r(df_inc, limits):
     else:
         ws = df_pos.iloc[-1].values
     '''
-
     '''
     #print ws
     hmmdf = pd.read_csv('./data/hmm.csv', index_col = ['date'] ,parse_dates = ['date'])
@@ -608,19 +637,22 @@ def markowitz_r(df_inc, limits):
     #    next_week_r = base_ra_index_nav.load_onemore_week(asset, end_date)
     #    Q.append([next_week_r])
 
+    #print df_inc.columns
+    #print hmmdf.columns
 
     if index == -1:
         for asset in df_inc.columns:
             Q.append([df_inc.loc[end_date, asset]])
     else:
-        for i in range(0, len(df_inc.columns)):
-            Q.append([hmmdf.iloc[index, i]])
+        for asset in df_inc.columns:
+            if asset / 1000000 == 41:
+                reshape_asset_df = asset_rs_reshape.load([asset])
+                asset = reshape_asset_df['rs_asset_id'].values[0]
+            Q.append([hmmdf.loc[end_date, str(asset)]])
 
 
     risk, returns, ws, sharpe = PF.black_litterman(weq, df_inc, P, Q)
-
     '''
-
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -761,7 +793,7 @@ def nav_update(markowitz):
 
     data = {}
     for asset_id in df_pos.columns:
-        data[asset_id] = load_nav_series(asset_id, min_date, max_date)
+        data[asset_id] = load_nav_series(asset_id, None, min_date, max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
