@@ -47,56 +47,6 @@ def portfolio(ctx):
     '''
     pass;
     
-@portfolio.command()
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
-# @click.option('-m', '--msg')  
-# @click.option('--dry-run', is_flag=True, help=u'pretend to run')
-# @click.option('--name', prompt='Your name', help='The person to greet.')
-@click.pass_context
-def simple(ctx, datadir, output):
-    '''generate final portfolio using simple average strategy (no cost)
-    '''
-    out = output
-    Const.datadir = datadir
-    #
-    # 生成配置数据
-    #
-    all_code_position = GeneralizationPosition.risk_position()
-    
-    GeneralizationPosition.output_final_portfolio(all_code_position, out)
-    
-@portfolio.command()  
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
-@click.pass_context
-def optimize(ctx, datadir, output):
-    '''generate final portfolio with optimized strategy (cost consider in).  
-    '''
-    out = output
-    Const.datadir = datadir
-    #
-    # 生成配置数据
-    #
-    all_code_position = GeneralizationPosition.risk_position()
-    
-    GeneralizationPosition.output_portfolio(all_code_position, out)
-
-@portfolio.command()  
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
-@click.pass_context
-def category(ctx, datadir, output):
-    '''generate intemediate portfolio for different asset categories 
-    '''
-    out = output
-    Const.datadir = datadir
-    #
-    # 生成配置数据
-    #
-    all_code_position = GeneralizationPosition.risk_position()
-    
-    GeneralizationPosition.output_category_portfolio(all_code_position, out)
 
 @portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
@@ -262,37 +212,6 @@ def load_portfolio_by_id(db, inst, alloc):
     df = pd.read_sql(s, db, parse_dates=['ai_transfer_date'])
 
     return df
-
-@portfolio.command()
-@click.option('--inst', 'optInst', help=u'portfolio id to calc turnover')
-@click.option('--alloc', 'optAlloc', help=u'risk of portfolio to calc turnover')
-@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
-@click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
-@click.option('--end-date', 'enddate', help=u'end date to calc')
-@click.pass_context
-def export(ctx, optInst, optAlloc, startdate, enddate, optlist):
-    '''run constant risk model
-    '''    
-    if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
-    
-    db_asset = create_engine(config.db_asset_uri)
-    # db_asset.echo = True
-    # db_base = create_engine(config.db_base_uri)
-    db = {'asset':db_asset}
-
-    df = load_portfolio_category_by_id(db['asset'], optInst, optAlloc)
-    df = df.set_index(['ai_alloc_id', 'ai_transfer_date',  'ai_category'])
-
-    df_result = df.unstack().fillna(0.0)
-    df_result.columns = df_result.columns.droplevel(0)
-
-    path = datapath('%s-%s-category.csv' % (optInst, optAlloc))
-    df_result.to_csv(path)
-
-    print "export allocation instance [%s(risk:%s)] to file %s" % (optInst, optAlloc, path)
-
 
 def load_portfolio_category_by_id(db, inst, alloc):
     metadata = MetaData(bind=db)
