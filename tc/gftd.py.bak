@@ -12,16 +12,15 @@ from load_data import load_index
 
 class GFTD(object):
 
-    def __init__(self, index_code, stime, etime, file_handle=None):
-        #self.data = pd.read_csv(file_handle, index_col=["date"], parse_dates=["date"], low_memory=False)
+    def __init__(self, index_code, stime, etime):
+        #self.data = pd.read_csv(file_handle, index_col="Date", parse_dates=["Date"], low_memory=False)
         self.index_code = index_code
         self.data = load_index(index_code, stime, etime)
-        print "load data finish"
         os._exit(0)
         # 择开始时间
-        self.s_date = datetime.datetime.strptime(stime, '%Y%m%d') # datetime.datetime(2010, 1, 8)
+        self.s_date = datetime.datetime(2010, 1, 8)
         # 择结束日期
-        self.e_date = datetime.datetime.strptime(etime, '%Y%m%d')# datetime.datetime(2016, 12, 14)
+        self.e_date = datetime.datetime(2016, 12, 31) #datetime.datetime.strptime(etime, '%Y%m%d')# datetime.datetime(2016, 12, 14)
         self.n1 = 4
         self.n2 = 4
         self.n3 = 4
@@ -178,43 +177,32 @@ class GFTD(object):
         is_holding = False
         # return ratio list
         returns = []
+        buy_low = 0.0
+
         # 交易记录
         trade_type = 0
         trade_list = []
-        signal_list = []
-        # 判断是否执行过TD信号
-        is_buy_td_affect = False
-        is_sell_td_affect = False
         for date in dates:
             cur_row = union_data[date:date]
             buy_counts = cur_row["buy_counts"].values[0]
             sell_counts = cur_row["sell_counts"].values[0]
             ratio = cur_row["ratio"].values[0]
-            buy_low = cur_row["buy_low"].values[0]
-            sell_high = cur_row["sell_high"].values[0]
-            cur_low = cur_row["low"].values[0]
-            cur_high = cur_row["high"].values[0]
-            cur_close = cur_row["close"].values[0]
+            cur_low = cur_row["buy_low"].values[0]
+            cur_high = cur_row["sell_high"].values[0]
 
-            if buy_counts == self.n3:
-                is_buy_td_affect = True
+            if buy_counts == self.n2:
                 if not is_holding:
                     trade_type = 1
                     is_holding = True
-            if sell_counts == self.n3:
-                is_sell_td_affect = True
-                is_td_affect = True
-                if is_holding:
-                    is_holding = False
-                    trade_type = -1
+                    buy_low = cur_row["buy_low"].values[0]
+            if is_holding and sell_counts == self.n3:
+                is_holding = False
+                trade_type = -1
 
-            if is_holding and cur_close < buy_low and is_sell_td_affect:
+            if is_holding and cur_low < buy_low:
                 is_holding = False
                 trade_type = -2
-            if not is_holding and cur_close > sell_high and is_buy_td_affect:
-                is_holding = True
-                trade_type = 2
-            signal_list.append(trade_type)
+            # trade_list.append(trade_type)
             trade_type = 0
             if is_holding:
                 returns.append(ratio)
@@ -224,8 +212,7 @@ class GFTD(object):
                 trade_list.append(-1)
 
         index_date = union_data.index
-        pd_ret = pd.DataFrame({"self_ratio": returns, "trade_types":trade_list \
-                                ,"signal_types":signal_list}, index=index_date)
+        pd_ret = pd.DataFrame({"self_ratio": returns, "trade_types":trade_list}, index=index_date)
         union_data = union_data.join(pd_ret)
 
         return union_data
@@ -282,21 +269,15 @@ class GFTD(object):
 
         # 止损最高价、最低价
         ## 卖出计数过程中的最高价
-        stop_loss_high = float("-inf")
+        stop_loss_high = 0.0
         stop_loss_high_list = []
         ## 买入计数过程中的最低价
-        stop_loss_low = float("inf")
+        stop_loss_low = 0.0
         stop_loss_low_list = []
 
         for date in dates:
 
             cur_close_for_stop = union_data[date:date]["close"].values[0]
-            # 当前交易日收盘价
-            cur_close = union_data[date:date]["close"].values[0]
-            # 当前交易日最高价
-            cur_high = union_data[date:date]["high"].values[0]
-            # 当前交易日最低价
-            cur_low = union_data[date:date]["high"].values[0]
             # 买入启动后的买入计数
             # 是否计数
             is_buy_count = False
@@ -306,12 +287,10 @@ class GFTD(object):
                 cond_two = False
                 cond_three = False
 
-                # # 当前交易日收盘价
-                # cur_close = union_data[date:date]["close"].values[0]
-                # # 当前交易日最高价
-                # cur_high = union_data[date:date]["high"].values[0]
-                # # 当前交易日最低价
-                # cur_low = union_data[date:date]["high"].values[0]
+                # 当前交易日收盘价
+                cur_close = union_data[date:date]["close"].values[0]
+                # 当前交易日最高价
+                cur_high = union_data[date:date]["high"].values[0]
 
                 # 当前日期之前第2个交易日
                 pre_2_date = self.get_move_day(dates, date, 2)
@@ -418,13 +397,12 @@ class GFTD(object):
                 sell_counts.append(0)
 
             if buy_count_signal:
-                if stop_loss_low > cur_low:
-                    stop_loss_low = cur_low
+                if stop_loss_low == 0.0 or stop_loss_low > cur_close_for_stop:
+                    stop_loss_low = cur_close_for_stop
 
             if sell_count_signal:
-                # 涉及到用close还是high
-                if stop_loss_high < cur_high:
-                    stop_loss_high = cur_high
+                if stop_loss_high == 0.0 or stop_loss_high < cur_close_for_stop:
+                    stop_loss_high = cur_close_for_stop
             stop_loss_high_list.append(stop_loss_high)
             stop_loss_low_list.append(stop_loss_low)
             # 当计数达到n3,重新计数
@@ -444,13 +422,13 @@ class GFTD(object):
                 # 取消上一次卖出计数
                 sell_count = 0
                 sell_count_previous_date = None
-                stop_loss_high = float("-inf")
+                stop_loss_high = 0.0
             elif cur_uds_sum == -self.n2:
                 buy_count_signal = True
                 # 取消上一次买入计数
                 buy_count = 0
                 buy_count_previous_date = None
-                stop_loss_low = float("inf")
+                stop_loss_low = 0.0
 
         # print union_data
         # print buy_counts
@@ -493,6 +471,14 @@ class GFTD(object):
 
         return union_data
 
+    def union_data_dataframe(self, ori_data, columns, datas):
+        """
+
+        :param ori_data:
+        :param columns:
+        :param datas:
+        :return:
+        """
     def union_data_sell_buy_counts(self, ori_data, sell_counts, buy_counts):
         """
         :usage: 把买入和卖出计数加到原始数据中
@@ -536,9 +522,8 @@ class GFTD(object):
         sums = 0
         for ite in range(1, uds_num):
             if uds[ite] == uds[ite - 1]:
-                if sums == -self.n2 or sums == self.n2:
-                    # sums = uds[ite]
-                    pass
+                if sums == -4 or sums == 4:
+                    sums = uds[ite]
                 else:
                     sums += uds[ite]
             else:

@@ -24,6 +24,6 @@ def load_index(symbol, stime, etime):
     index_df.to_csv(symbol + "_data.csv")
     return index_df
 if __name__ == "__main__":
-    #df = load_index('000300', '20150101', '20150107')
+    #df = load_index('W00003', 1,2)
     #print df
     print "main"
