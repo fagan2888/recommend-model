@@ -158,12 +158,15 @@ def filter_by_turnover(df, turnover):
     result = {}
     sr_last=None
     for k, v in df.iterrows():
+        vv = v.fillna(0)
         if sr_last is None:
-            result[k] = sr_last = v
+            result[k] = v
+            sr_last = vv
         else:
-            xsum = (v - sr_last).abs().sum()
+            xsum = (vv - sr_last).abs().sum()
             if xsum >= turnover:
-                result[k] = sr_last = v
+                result[k] = v
+                sr_last = vv
             else:
                 #print "filter by turnover:", v.to_frame('ratio')
                 pass
@@ -218,9 +221,10 @@ def merge_column_for_fund_id_type(df, code, usecols=['globalid', 'ra_type']):
 
     return df_result
 
-def filter_same_with_last(df):
-    df2 = df.shift(1).fillna(0)
-    return df[(df != df2).any(axis=1)]
+def filter_same_with_last(df, fill_value=0):
+    df1 = df.fillna(fill_value)
+    df2 = df.shift(1).fillna(fill_value)
+    return df[(df1 != df2).any(axis=1)]
 
 def categories_types(as_int=False):
     if as_int:

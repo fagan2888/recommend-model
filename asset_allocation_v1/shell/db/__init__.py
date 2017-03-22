@@ -11,7 +11,14 @@ import asset_mz_markowitz_asset
 import asset_mz_markowitz_nav
 import asset_mz_markowitz_pos
 import asset_mz_markowitz_sharpe
+import asset_ra_pool
+import asset_ra_pool_fund
 import asset_ra_pool_nav
+import asset_ra_portfolio
+import asset_ra_portfolio_alloc
+import asset_ra_portfolio_asset
+import asset_ra_portfolio_nav
+import asset_ra_portfolio_pos
 import asset_rm_riskmgr
 import asset_rm_riskmgr_signal
 import asset_rm_riskmgr_nav
