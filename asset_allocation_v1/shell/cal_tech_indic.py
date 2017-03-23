@@ -7,49 +7,56 @@ import talib
 class CalTechIndic(object):
     def __init__(self, file_handle):
         self.data = pd.read_csv(file_handle, index_col=['date'], parse_dates=['date'])
-        close = np.array(self.data['close'])
-        close_df = self.data['close']
-        high = np.array(self.data['high'])
-        low = np.array(self.data['low'])
-        volume = np.array(self.data['volume'])
-        popen = np.array(self.data['open'])
-        # 计算macd
-        self.macd = CalTechIndic.get_macd_hist(close)
-        # 计算ATR
-        self.atr = CalTechIndic.get_atr(high, low, close)
-        # # 计算CCI
-        self.cci = CalTechIndic.get_cci(high, low, close)
-        # # 计算rsi
-        self.rsi = CalTechIndic.get_rsi(close)
-        # # 计算obv
-        self.sobv = CalTechIndic.get_obv(close, volume)
-        # # 计算MTM
-        self.mtm = CalTechIndic.get_mtm(close)
-        # 计算apo
-        self.dpo = CalTechIndic.get_apo(close)
-        # 计算roc
-        self.roc = CalTechIndic.get_roc(close)
-        # 计算slowKD
-        self.slowkd = CalTechIndic.get_slowkd(high, low, close)
-        # 计算pct_chg
-        self.pct_chg = CalTechIndic.get_pct_chg(close_df)
-        # 计算pvt
-        self.pvt = CalTechIndic.get_pvt(close_df, volume)
-        # 计算wvad
-        self.wvad = CalTechIndic.get_wvad(high, low, close, popen, volume)
-        # 计算priceosc
-        self.priceosc = CalTechIndic.get_priceosc(close)
-        # 计算bias
-        self.bias = CalTechIndic.get_bias(close_df)
-        # 计算vma(与wind不一样)
-        self.vma = CalTechIndic.get_vma(high, low, close, popen)
-        # 计算vstd
-        self.vstd = CalTechIndic.get_vstd(volume)
-        self.merge_data()
-    def merge_data(self):
-        tec_indic = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', 'slowkd', \
+        self.close = np.array(self.data['close'])
+        self.close_df = self.data['close']
+        self.high = np.array(self.data['high'])
+        self.low = np.array(self.data['low'])
+        self.volume = np.array(self.data['volume'])
+        self.popen = np.array(self.data['open'])
+        self.tec_indic = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', 'slowkd', \
                 'pct_chg', 'pvt', 'wvad', 'priceosc', 'bias', 'vma', 'vstd', 'dpo']
-        for tec_name in tec_indic:
+    def get_indic(self):
+        # 计算macd
+        self.macd = CalTechIndic.get_macd_hist(self.close)
+        # 计算ATR
+        self.atr = CalTechIndic.get_atr(self.high, self.low, self.close)
+        # # 计算CCI
+        self.cci = CalTechIndic.get_cci(self.high, self.low, self.close)
+        # # 计算rsi
+        self.rsi = CalTechIndic.get_rsi(self.close)
+        # # 计算obv
+        self.sobv = CalTechIndic.get_obv(self.close, self.volume)
+        # # 计算MTM
+        self.mtm = CalTechIndic.get_mtm(self.close)
+        # 计算apo
+        self.dpo = CalTechIndic.get_apo(self.close)
+        # 计算roc
+        self.roc = CalTechIndic.get_roc(self.close)
+        # 计算slowKD
+        self.slowkd = CalTechIndic.get_slowkd(self.high, self.low, self.close)
+        # 计算pct_chg
+        self.pct_chg = CalTechIndic.get_pct_chg(self.close_df)
+        # 计算pvt
+        self.pvt = CalTechIndic.get_pvt(self.close_df, self.volume)
+        # 计算wvad
+        self.wvad = CalTechIndic.get_wvad(self.high, self.low, self.close, \
+                                        self.popen, self.volume)
+        # 计算priceosc
+        self.priceosc = CalTechIndic.get_priceosc(self.close)
+        # 计算bias
+        self.bias = CalTechIndic.get_bias(self.close_df)
+        # 计算vma(与wind不一样)
+        self.vma = CalTechIndic.get_vma(self.high, self.low, self.close, \
+                                        self.popen)
+        # 计算vstd
+        self.vstd = CalTechIndic.get_vstd(self.volume)
+        self.merge_data()
+        return self.data
+    def merge_data(self):
+        """
+        usage: 把技术指标数据加入原始数据
+        """
+        for tec_name in self.tec_indic:
             self.data[tec_name] = eval('self.' + tec_name)
     @staticmethod
     def get_macd_hist(close, fastperiod=12, slowperiod=26, signalperiod=9):
@@ -134,3 +141,5 @@ class CalTechIndic(object):
 if __name__ == "__main__":
     file_handle = "../tmp/000300_data.csv"
     obj = CalTechIndic(file_handle)
+    result = obj.get_indic()
+    print result.head(20)
