@@ -142,4 +142,6 @@ if __name__ == "__main__":
     file_handle = "../tmp/000300_data.csv"
     obj = CalTechIndic(file_handle)
     result = obj.get_indic()
+    # result.dropna(inplace=True)
+    result.to_csv("000300_data_indic.csv",  encoding='utf-8')
     print result.head(20)
