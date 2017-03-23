@@ -110,7 +110,7 @@ class CalTechIndic(object):
         pct_chg = CalTechIndic.get_pct_chg(close)
         pct_chg[0] = 0.0
         x = pct_chg * volume
-        pvt = np.add.accumulate(x) 
+        pvt = np.add.accumulate(x)
         return pvt
     @staticmethod
     def get_wvad(high, low, close, popen, volume):
@@ -137,7 +137,7 @@ class CalTechIndic(object):
     def get_vstd(volume, timeperiod=12, nbdev=1):
         vstd = talib.STDDEV(volume, timeperiod, nbdev)
         return vstd
-    
+
 if __name__ == "__main__":
     file_handle = "../tmp/000300_data.csv"
     obj = CalTechIndic(file_handle)
