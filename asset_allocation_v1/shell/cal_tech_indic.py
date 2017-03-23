@@ -7,6 +7,8 @@ import talib
 class CalTechIndic(object):
     def __init__(self, file_handle):
         self.data = pd.read_csv(file_handle, index_col=['date'], parse_dates=['date'])
+        print self.data.head(5)
+        os._exit(0)
         self.close = np.array(self.data['close'])
         self.close_df = self.data['close']
         self.high = np.array(self.data['high'])

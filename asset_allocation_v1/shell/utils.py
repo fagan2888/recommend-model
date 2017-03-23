@@ -77,7 +77,24 @@ def cal_nav_maxdrawdown(return_lsit):
 
     return [nav_list, max_drawdown_list]
 
-
+def day_2_week(data_df):
+    """
+    :usage: 把日数据转化成周数据（包括周最高价最低价等）
+    :param data_df: 输入数据
+        type: Dataframe
+        format:
+                        close_pre   close    open    high     low     volume  \
+            date
+            2005-01-04    1000.00  982.79  994.77  994.77  980.66  7412869.0
+            2005-01-05     982.79  992.56  981.58  997.32  979.88  7119109.0
+            2005-01-06     992.56  983.17  993.33  993.79  980.33  6288029.0
+            2005-01-07     983.17  983.96  983.05  995.71  979.81  7298694.0
+            2005-01-10     983.96  993.88  983.76  993.96  979.79  5791698.0
+    :return week_df: 返回数据
+        type: Dataframe
+        format: same to input data
+    """
+    return week_df
 def rolling_window(a, window, axis=-1):
   '''Return a windowed array.
 
