@@ -50,6 +50,7 @@ def where_portfolio_id(portfolio_id, xtypes=None):
         t1.c.ra_type,
         t1.c.ra_risk,
         t1.c.ra_portfolio_id,
+        t1.c.ra_ratio_id,
         t1.c.ra_name,
     ]
 

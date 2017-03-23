@@ -4,8 +4,8 @@ from sqlalchemy import MetaData, Table, select, func, literal_column
 # import string
 # from datetime import datetime, timedelta
 import pandas as pd
-# import os
-# import sys
+import os
+import sys
 import logging
 import database
 
@@ -44,6 +44,45 @@ def load(gid, included_portfolio_id=False):
     df.columns = df.columns.droplevel(0)
 
     return df
+
+def load_fund_pos(gid):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_portfolio_pos', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date,
+        t1.c.ra_pool_id,
+        t1.c.ra_fund_id,
+        t1.c.ra_fund_ratio,
+    ]
+    index_col = ['ra_date', 'ra_pool_id', 'ra_fund_id']
+    
+    # if included_portfolio_id:
+    #     columns.insert(0, t1.c.ra_portfolio_id)
+    #     index_col.insert(0, 'ra_portfolio_id')
+
+    s = select(columns)
+
+    if gid is not None:
+        s = s.where(t1.c.ra_portfolio_id == gid)
+    else:
+        return None
+    # if xtypes is not None:
+    #     s = s.where(t1.c.ra_type.in_(xtypes))
+    
+    df = pd.read_sql(s, db, index_col=index_col, parse_dates=['ra_date'])
+
+    #
+    # 合并来自不同基金池的基金份额
+    #
+    df_result = df.groupby(level=['ra_date', 'ra_fund_id']).sum()
+
+    # df_result = df_result.unstack().fillna(0.0)
+    # df_result.columns = df_result.columns.droplevel(0)
+
+    return df_result
+
 
 def save(gid, df):
     fmt_columns = ['ra_fund_ratio']

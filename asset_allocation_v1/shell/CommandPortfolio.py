@@ -283,6 +283,53 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 
     return [(day, pool_id, fund_id, x['ra_fund_code'], x['ra_fund_type'], fund_ratio) for fund_id, x in df_fund.iterrows()]
 
+@portfolio.command()
+@click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.pass_context
+def nav(ctx, optid, optlist):
+    ''' calc pool nav and inc
+    '''
+    if optid is not None:
+        portfolios = [s.strip() for s in optid.split(',')]
+    else:
+        portfolios = None
+
+    df_portfolio = asset_ra_portfolio.load(portfolios)
+
+    if optlist:
+        df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_portfolio, headers='keys', tablefmt='psql')
+        return 0
+    
+    for _, portfolio in df_portfolio.iterrows():
+        nav_update_alloc(portfolio)
+
+def nav_update_alloc(portfolio):
+    df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
+    
+    with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
+        for _, alloc in df_alloc.iterrows():
+            bar.update(1)
+            nav_update(alloc)
+    
+def nav_update(alloc):
+    alloc_id = alloc['globalid']
+    # 加载仓位信息
+    df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
+    
+    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
+    # 计算复合资产净值
+    sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
+
+    df_result = sr_nav_portfolio.to_frame('ra_nav')
+    df_result.index.name = 'ra_date'
+    df_result['ra_inc'] = df_result['ra_nav'].pct_change().fillna(0.0)
+    df_result['ra_portfolio_id'] = alloc['globalid']
+    df_result = df_result.reset_index().set_index(['ra_portfolio_id', 'ra_date'])
+
+    asset_ra_portfolio_nav.save(alloc_id, df_result)
 
 @portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
