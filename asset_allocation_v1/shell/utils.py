@@ -2,7 +2,8 @@
 import datetime
 import math
 import numpy as np
-
+import pandas as pd
+import os
 
 def get_file_name(path_name):
     """
@@ -77,7 +78,7 @@ def cal_nav_maxdrawdown(return_lsit):
 
     return [nav_list, max_drawdown_list]
 
-def day_2_week(data_df):
+def day_2_week(data_df, trade_dates):
     """
     :usage: 把日数据转化成周数据（包括周最高价最低价等）
     :param data_df: 输入数据
@@ -90,11 +91,55 @@ def day_2_week(data_df):
             2005-01-06     992.56  983.17  993.33  993.79  980.33  6288029.0
             2005-01-07     983.17  983.96  983.05  995.71  979.81  7298694.0
             2005-01-10     983.96  993.88  983.76  993.96  979.79  5791698.0
+    :param trade_dates: 输入数据
+        type: Dataframe
+        format:
+            date,trade_type
+            1997-07-15,0
+            1997-07-16,0
+            1997-07-17,0
     :return week_df: 返回数据
         type: Dataframe
         format: same to input data
     """
+    high = []
+    low = []
+    close = []
+    volume = []
+    popen = []
+
+    data_index = data_df.index
+    start_date = data_index[0]
+    end_date = data_index[-1]
+
+    used_trade_dates = trade_dates[trade_dates.index.get_level_values(0) <= end_date]
+    used_trade_dates = used_trade_dates[used_trade_dates.index.get_level_values(0) >= start_date]
+    used_trade_dates = used_trade_dates.sort_index()
+
+    week_dates = used_trade_dates[(used_trade_dates['trade_type'] & 2) > 0].index
+    low_date = used_trade_dates.index[0] - datetime.timedelta(days=1)
+    high_date = week_dates[0]
+    data_df.fillna(method='ffill', inplace=True)
+    for date in week_dates:
+        high_date = date
+        tmp_df = data_df[data_df.index.get_level_values(0) > low_date]
+        tmp_df = tmp_df[tmp_df.index.get_level_values(0) <= high_date]
+        high.append(tmp_df['high'].max())
+        low.append(tmp_df['low'].min())
+        volume.append(tmp_df['volume'].sum())
+        if not tmp_df.empty:
+            close.append(tmp_df['close'][-1])
+            popen.append(tmp_df['open'][0])
+        else:
+            close.append(np.nan)
+            popen.append(np.nan)
+        low_date = high_date
+    week_df = pd.DataFrame({"high":high, "low":low, "close":close, \
+                "volume":volume, "open":popen}, index=week_dates)
+    week_df.fillna(method='ffil', inplace=True)
+    week_df.to_csv("W00003_data_week.csv", encoding='utf8')
     return week_df
+    # week_df.to_csv("000300_data_week.csv", encoding='utf8')
 def rolling_window(a, window, axis=-1):
   '''Return a windowed array.
 
@@ -119,3 +164,9 @@ def rolling_window(a, window, axis=-1):
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
   else:
     raise ValueError('rolling_window: axis out of bounds')
+if __name__ == "__main__":
+    data_day = pd.read_csv("../tmp/W00003_data.csv", index_col=['date'], \
+                            parse_dates=['date'])
+    trade_dates = pd.read_csv("../tmp/trade_dates.csv", index_col=['date'], \
+                            parse_dates=['date'])
+    day_2_week(data_day, trade_dates)
