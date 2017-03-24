@@ -82,7 +82,7 @@ def day_2_week(data_df, trade_dates):
     """
     :usage: 把日数据转化成周数据（包括周最高价最低价等）
     :param data_df: 输入数据
-        type: Dataframe
+        type: DataFrame
         format:
                         close_pre   close    open    high     low     volume  \
             date
@@ -92,14 +92,14 @@ def day_2_week(data_df, trade_dates):
             2005-01-07     983.17  983.96  983.05  995.71  979.81  7298694.0
             2005-01-10     983.96  993.88  983.76  993.96  979.79  5791698.0
     :param trade_dates: 输入数据
-        type: Dataframe
+        type: DataFrame
         format:
             date,trade_type
             1997-07-15,0
             1997-07-16,0
             1997-07-17,0
     :return week_df: 返回数据
-        type: Dataframe
+        type: DataFrame
         format: same to input data
     """
     high = []
@@ -136,8 +136,8 @@ def day_2_week(data_df, trade_dates):
         low_date = high_date
     week_df = pd.DataFrame({"high":high, "low":low, "close":close, \
                 "volume":volume, "open":popen}, index=week_dates)
-    week_df.fillna(method='ffil', inplace=True)
-    week_df.to_csv("W00003_data_week.csv", encoding='utf8')
+    # week_df.fillna(method='ffil', inplace=True)
+    # week_df.to_csv("W00003_data_week.csv", encoding='utf8')
     return week_df
     # week_df.to_csv("000300_data_week.csv", encoding='utf8')
 def rolling_window(a, window, axis=-1):
