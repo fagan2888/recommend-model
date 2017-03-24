@@ -70,7 +70,7 @@ def portfolio(ctx, optfull, optid, optname, opttype, optreplace):
 
 @portfolio.command()
 @click.option('--id', 'optid', type=int, help=u'specify portfolio id')
-@click.option('--name', 'optname', default=u'高低风险', help=u'specify markowitz name')
+@click.option('--name', 'optname', default=u'智能组合', help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace portfolio if exists')
 @click.option('--ratio', 'optratio', type=int, default=None, help=u'specified which ratio_id to use')
