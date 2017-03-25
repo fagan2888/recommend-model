@@ -7,7 +7,7 @@ import datetime
 import calendar
 
 def np_pad_to(x, to=1):
-    x[x.argmax()] += (to - x.sum())
+    x[np.nanargmax(x)] += (to - np.nansum(x))
     return x
      
 if __name__ == '__main__':

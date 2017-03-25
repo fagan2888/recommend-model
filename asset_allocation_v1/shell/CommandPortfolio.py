@@ -28,75 +28,308 @@ import WeekFund2DayNav
 import FixRisk
 import DFUtil
 import LabelAsset
+import util_numpy as npu
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database
+from db import *
 
 import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group()  
+@click.group(invoke_without_command=True)  
+@click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
+@click.option('--id', 'optid', help=u'specify markowitz id')
+@click.option('--name', 'optname', default=u'markowitz', help=u'specify markowitz name')
+@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
+@click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.pass_context
-def portfolio(ctx):
-    ''' generate portfolios
-    '''
-    pass;
-    
-@portfolio.command()
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
-# @click.option('-m', '--msg')  
-# @click.option('--dry-run', is_flag=True, help=u'pretend to run')
-# @click.option('--name', prompt='Your name', help='The person to greet.')
-@click.pass_context
-def simple(ctx, datadir, output):
-    '''generate final portfolio using simple average strategy (no cost)
-    '''
-    out = output
-    Const.datadir = datadir
-    #
-    # 生成配置数据
-    #
-    all_code_position = GeneralizationPosition.risk_position()
-    
-    GeneralizationPosition.output_final_portfolio(all_code_position, out)
-    
-@portfolio.command()  
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
-@click.pass_context
-def optimize(ctx, datadir, output):
-    '''generate final portfolio with optimized strategy (cost consider in).  
-    '''
-    out = output
-    Const.datadir = datadir
-    #
-    # 生成配置数据
-    #
-    all_code_position = GeneralizationPosition.risk_position()
-    
-    GeneralizationPosition.output_portfolio(all_code_position, out)
+def portfolio(ctx, optfull, optid, optname, opttype, optreplace):
 
-@portfolio.command()  
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
-@click.option('--output', '-o', type=click.File(mode='w'), default='-', help=u'file used to store final result')
-@click.pass_context
-def category(ctx, datadir, output):
-    '''generate intemediate portfolio for different asset categories 
+    '''generate final portolio
     '''
-    out = output
-    Const.datadir = datadir
+    # if ctx.invoked_subcommand is None:
+    #     # click.echo('I was invoked without subcommand')
+    #     if optfull is False:
+    #         rc = ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, assets=assets)
+    #         if optid is None:
+    #             optid = str(rc)
+    #         ctx.invoke(nav, optid=optid)
+    #         ctx.invoke(turnover, optid=optid)
+    #     else:
+    #         ctx.invoke(nav, optid=optid)
+    #         ctx.invoke(turnover, optid=optid)
+    # else:
+    #     # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
+    #     pass
+    pass
+
+@portfolio.command()
+@click.option('--id', 'optid', type=int, help=u'specify portfolio id')
+@click.option('--name', 'optname', default=u'智能组合', help=u'specify markowitz name')
+@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
+@click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace portfolio if exists')
+@click.option('--ratio', 'optratio', type=int, default=None, help=u'specified which ratio_id to use')
+@click.option('--pool', 'optpool', default=0, help=u'which pool to use for each asset (eg. 120000001:19210111,120000002:19210112')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
+@click.pass_context
+def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optrisk, turnover):
+    '''generate final portfolio
+    '''
+
+    if optratio == 0:
+        click.echo(click.style("--ratio is required, aborted!", fg="red"))
+        return 0
     #
-    # 生成配置数据
+    # 处理id参数
     #
-    all_code_position = GeneralizationPosition.risk_position()
+    if optid is not None:
+        #
+        # 检查id是否存在
+        #
+        df_existed = asset_ra_portfolio.load([str(optid * 10 + x) for x in range(0, 10)])
+        if not df_existed.empty:
+            s = 'portfolio instance [%s] existed' % str(optid)
+            if optreplace:
+                click.echo(click.style("%s, will replace!" % s, fg="yellow"))
+            else:
+                click.echo(click.style("%s, import aborted!" % s, fg="red"))
+                return -1;
+    else:
+        #
+        # 自动生成id
+        #
+        today = datetime.now()
+        prefix = '80' + today.strftime("%m%d");
+        between_min, between_max = ('%s00' % (prefix), '%s99' % (prefix))
+
+        max_id = asset_ra_portfolio.max_id_between(between_min, between_max)
+        if max_id is None:
+            optid = int(between_min)
+        else:
+            if max_id >= int(between_max):
+                if optreplace:
+                    s = "run out of instance id [%d]" % max_id
+                    click.echo(click.style("%s, will replace!" % s, fg="yellow"))
+                else:
+                    s = "run out of instance id [%d]" % max_id
+                    click.echo(click.style("%s, aborted!" % s, fg="red"))
+                    return -1
+
+            if optreplace:
+                optid = int(max_id)
+            else:
+                optid = int(max_id) + 10
+
+    #
+    # 加载用到的资产
+    #
+    df_asset = database.load_asset_and_pool(optratio)
     
-    GeneralizationPosition.output_category_portfolio(all_code_position, out)
+    df_asset = df_asset.rename(columns={
+        'asset_id': 'ra_asset_id',
+        'asset_name':'ra_asset_name',
+        'asset_type':'ra_asset_type',
+        'pool_id': 'ra_pool_id',
+    })
+    
+    
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    ra_portfolio        = Table('ra_portfolio', metadata, autoload=True)
+    ra_portfolio_alloc  = Table('ra_portfolio_alloc', metadata, autoload=True)
+    ra_portfolio_asset  = Table('ra_portfolio_asset', metadata, autoload=True)
+    ra_portfolio_pos    = Table('ra_portfolio_pos', metadata, autoload=True)
+    ra_portfolio_nav    = Table('ra_portfolio_nav', metadata, autoload=True)
+
+    #
+    # 处理替换
+    #
+    if optreplace:
+        ra_portfolio_nav.delete(ra_portfolio_nav.c.ra_portfolio_id.between(optid, optid + 9)).execute()
+        ra_portfolio_pos.delete(ra_portfolio_pos.c.ra_portfolio_id.between(optid, optid + 9)).execute()
+        ra_portfolio_asset.delete(ra_portfolio_asset.c.ra_portfolio_id == optid).execute()
+        ra_portfolio_alloc.delete(ra_portfolio_alloc.c.ra_portfolio_id == optid).execute()
+        ra_portfolio.delete(ra_portfolio.c.globalid == optid).execute()
+
+    now = datetime.now()
+    # 导入数据: portfolio
+    row = {
+        'globalid': optid, 'ra_type':opttype, 'ra_name': optname,
+        'ra_algo': 1, 'ra_ratio_id': optratio,
+        'ra_persistent': 0, 'created_at': func.now(), 'updated_at': func.now()
+    }
+    ra_portfolio.insert(row).execute()
+
+    #
+    # 导入数据: portfolio_asset
+    #
+    df_asset_tosave = df_asset.copy()
+    df_asset_tosave['ra_portfolio_id'] = optid
+    df_asset_tosave = df_asset_tosave.set_index(['ra_portfolio_id', 'ra_asset_id'])
+    asset_ra_portfolio_asset.save(optid, df_asset_tosave)
+
+    #
+    # 计算每个风险的配置
+    #
+    for (risk, ratio_id) in database.load_alloc_and_risk(optratio):
+        gid = optid + (int(risk * 10) % 10)
+        name = optname + u"-等级%d" % int(risk * 10)
+
+        # 加载资产配置比例
+        df_ratio = database.load_pos_frame(ratio_id)
+        # print df_ratio.sum(axis=1)
+        df_ratio[19230131] = 1 - df_ratio.sum(axis=1)
+        # print df_ratio.head()
+
+        start = df_ratio.index.min()
+        index = df_ratio.index.copy()
+        #
+        # 加载基金池
+        #
+        pools = {}
+        for _, row in df_asset.iterrows():
+            fund = asset_ra_pool_fund.load(row['ra_pool_id'])
+            index = index.union(fund.index.get_level_values(0)).unique()
+            pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
+            pools[row['ra_asset_id']] = pool
+        else:
+            fund = asset_ra_pool_fund.load(19230131)
+            index = index.union(fund.index.get_level_values(0)).unique()
+            pool = (19230131, fund[['ra_fund_code', 'ra_fund_type']])
+            pools[19230131] = pool
+
+        #
+        # 根据基金池和配置比例的索引并集reindex数据
+        #
+        index = index[index >= start]
+        df_ratio = df_ratio.reindex(index, method='pad')
+        tmp = {}
+        for k, v in pools.iteritems():
+            (pool, df_fund) = v
+            tmp[k] = (pool, df_fund.unstack().reindex(index, method='pad').stack())
+        pools = tmp
+                      
+        #
+        # 计算基金配置比例
+        #
+        data = []
+        for day, row in df_ratio.iterrows():
+            for asset_id, ratio in row.iteritems():
+                if (ratio <= 0):
+                    continue
+                # 选择基金
+                (pool_id, df_fund) = pools[asset_id]
+                segments = choose_fund_avg(day, pool_id, ratio, df_fund.loc[day])
+                data.extend(segments)
+
+        df_raw = pd.DataFrame(data, columns=['ra_date', 'ra_pool_id', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_ratio'])
+        df_raw.set_index(['ra_date', 'ra_pool_id', 'ra_fund_id'], inplace=True)
+        
+        #
+        # 导入数据: portfolio_alloc
+        #
+        row = {
+            'globalid': gid, 'ra_type':opttype, 'ra_name': name,
+            'ra_portfolio_id': optid, 'ra_ratio_id': ratio_id, 'ra_risk': risk,
+            'created_at': func.now(), 'updated_at': func.now()
+        }
+        ra_portfolio_alloc.insert(row).execute()
+
+        #
+        # 导入数据: portfolio_pos
+        #
+        #print df_raw.head()
+        df_raw.loc[df_raw['ra_fund_ratio'] < 0.00009999, 'ra_fund_ratio'] = 0 # 过滤掉过小的份额
+        df_raw['ra_fund_ratio'] = df_raw['ra_fund_ratio'].round(4)            # 四舍五入到万分位
+
+        df_tmp = df_raw[['ra_fund_ratio']]
+        # print df_tmp.head(20)
+        
+        df_tmp = df_tmp.unstack([1, 2])
+        df_tmp = df_tmp.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+        df_tmp = DFUtil.filter_same_with_last(df_tmp)          # 过滤掉相同
+        if turnover >= 0.01:
+            df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
+        df_tmp = df_tmp.stack([1, 2])
+
+        df = df_tmp.merge(df_raw[['ra_fund_code', 'ra_fund_type']], how='left', left_index=True, right_index=True)
+        # print df_tmp.head(20)
+        # print df_raw.head()
+        # print df.head()
+
+        # index
+        df['ra_portfolio_id'] = gid
+        df = df.reset_index().set_index(['ra_portfolio_id', 'ra_date', 'ra_pool_id', 'ra_fund_id'])
+        df_tosave = df.loc[(df['ra_fund_ratio'] > 0)].copy()
+
+        # save
+        # print df_tosave
+        asset_ra_portfolio_pos.save(gid, df_tosave)
+
+        click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
+
+def choose_fund_avg(day, pool_id, ratio, df_fund):
+    # 比例均分
+    if not df_fund.empty:
+        fund_ratio = ratio / len(df_fund)
+    else:
+        fund_ratio = 0
+
+    return [(day, pool_id, fund_id, x['ra_fund_code'], x['ra_fund_type'], fund_ratio) for fund_id, x in df_fund.iterrows()]
+
+@portfolio.command()
+@click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.pass_context
+def nav(ctx, optid, optlist):
+    ''' calc pool nav and inc
+    '''
+    if optid is not None:
+        portfolios = [s.strip() for s in optid.split(',')]
+    else:
+        portfolios = None
+
+    df_portfolio = asset_ra_portfolio.load(portfolios)
+
+    if optlist:
+        df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_portfolio, headers='keys', tablefmt='psql')
+        return 0
+    
+    for _, portfolio in df_portfolio.iterrows():
+        nav_update_alloc(portfolio)
+
+def nav_update_alloc(portfolio):
+    df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
+    
+    with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
+        for _, alloc in df_alloc.iterrows():
+            bar.update(1)
+            nav_update(alloc)
+    
+def nav_update(alloc):
+    alloc_id = alloc['globalid']
+    # 加载仓位信息
+    df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
+    
+    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
+    # 计算复合资产净值
+    sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
+
+    df_result = sr_nav_portfolio.to_frame('ra_nav')
+    df_result.index.name = 'ra_date'
+    df_result['ra_inc'] = df_result['ra_nav'].pct_change().fillna(0.0)
+    df_result['ra_portfolio_id'] = alloc['globalid']
+    df_result = df_result.reset_index().set_index(['ra_portfolio_id', 'ra_date'])
+
+    asset_ra_portfolio_nav.save(alloc_id, df_result)
 
 @portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
@@ -262,37 +495,6 @@ def load_portfolio_by_id(db, inst, alloc):
     df = pd.read_sql(s, db, parse_dates=['ai_transfer_date'])
 
     return df
-
-@portfolio.command()
-@click.option('--inst', 'optInst', help=u'portfolio id to calc turnover')
-@click.option('--alloc', 'optAlloc', help=u'risk of portfolio to calc turnover')
-@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
-@click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
-@click.option('--end-date', 'enddate', help=u'end date to calc')
-@click.pass_context
-def export(ctx, optInst, optAlloc, startdate, enddate, optlist):
-    '''run constant risk model
-    '''    
-    if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
-    
-    db_asset = create_engine(config.db_asset_uri)
-    # db_asset.echo = True
-    # db_base = create_engine(config.db_base_uri)
-    db = {'asset':db_asset}
-
-    df = load_portfolio_category_by_id(db['asset'], optInst, optAlloc)
-    df = df.set_index(['ai_alloc_id', 'ai_transfer_date',  'ai_category'])
-
-    df_result = df.unstack().fillna(0.0)
-    df_result.columns = df_result.columns.droplevel(0)
-
-    path = datapath('%s-%s-category.csv' % (optInst, optAlloc))
-    df_result.to_csv(path)
-
-    print "export allocation instance [%s(risk:%s)] to file %s" % (optInst, optAlloc, path)
-
 
 def load_portfolio_category_by_id(db, inst, alloc):
     metadata = MetaData(bind=db)

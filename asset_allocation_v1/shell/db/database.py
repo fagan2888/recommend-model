@@ -17,6 +17,11 @@ from sqlalchemy import *
 
 from dateutil.parser import parse
 
+import asset_mz_highlow_alloc
+import asset_mz_highlow_asset
+import asset_mz_highlow_pos
+import asset_mz_markowitz_asset
+import asset_mz_markowitz_pos
 import asset_ra_pool
 import asset_ra_pool_nav
 import asset_rs_reshape
@@ -603,3 +608,115 @@ def load_asset_name_and_type(asset_id):
          (name, category) = ('', 0)
 
     return (name, category)
+
+def load_pool_via_asset(asset_id):
+    xtype = asset_id / 10000000
+
+    if xtype == 12:
+        #
+        # 指数资产
+        #
+        asset = base_ra_index.find(asset_id)
+        name = asset['ra_name']
+        if '标普' in name:
+            pool = 19240141
+        elif '黄金' in name:
+            pool = 19240142
+        elif '恒生' in name:
+            pool = 19240143
+            
+    else:
+        pool = 0
+
+    return pool
+
+
+def load_asset_and_pool(gid):
+    xtype = gid / 10000000
+
+    if xtype == 5:
+        #
+        # 马克维茨
+        #
+        df_asset = asset_mz_markowitz_asset.load([gid])
+        df_asset = df_asset[['mz_asset_id', 'mz_asset_name', 'mz_asset_type']]
+        df_asset.rename(columns={
+            'mz_asset_id':'asset_id',
+            'mz_asset_name':'asset_name',
+            'mz_asset_type':'asset_type',
+        }, inplace=True)
+        df_asset['pool_id'] = df_asset['mz_asset_type']
+        # df_asset = df_asset.set_index(['asset_id'])
+
+    elif xtype == 7:
+        #
+        # 高低风险
+        #
+        df_asset = asset_mz_highlow_asset.load([gid])
+        df_asset = df_asset[['mz_asset_id', 'mz_asset_name', 'mz_asset_type', 'mz_pool_id']]
+        df_asset.rename(columns={
+            'mz_asset_id':'asset_id',
+            'mz_asset_name':'asset_name',
+            'mz_asset_type':'asset_type',
+            'mz_pool_id':'pool_id',
+        }, inplace=True)
+        # df_asset = df_asset.set_index(['asset_id'])
+        
+    # elif xtype == 12:
+    #     #
+    #     # 指数资产
+    #     #
+    #     asset = base_ra_index.find(asset_id)
+    #     name = asset['ra_name']
+    #     if '标普' in name:
+    #         category = 41
+    #     elif '黄金' in name:
+    #         category = 42
+    #     elif '恒生' in name:
+    #         category = 43
+    else:
+        df_asset = pd.DataFrame(columns=['asset_id', 'asset_name', 'asset_type'])
+
+    return df_asset;
+
+def load_alloc_and_risk(gid):
+    xtype = gid / 10000000
+
+    result = []
+    if xtype == 5:
+        #
+        # 马克维茨
+        #
+        result.append((1.0, gid))
+
+    elif xtype == 7:
+        #
+        # 基金池资产
+        #
+        df_asset = asset_mz_highlow_alloc.where_highlow_id(gid)
+        for _,v in df_asset.iterrows():
+            result.append((v['mz_risk'], v['globalid']))
+    else:
+        pass;
+
+    return result
+
+def load_pos_frame(gid):
+    xtype = gid / 10000000
+
+    if xtype == 5:
+        #
+        # 马克维茨
+        #
+        df = asset_mz_markowitz_pos.load(gid)
+
+    elif xtype == 7:
+        #
+        # 高低风险
+        #
+        df = asset_mz_highlow_pos.load(gid)
+    else:
+        df = pd.DataFrame(columns=['mz_date', 'mz_asset_id', 'mz_ratio'])
+
+    return df
+

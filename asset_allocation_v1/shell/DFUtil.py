@@ -1,13 +1,13 @@
 #coding=utf8
 
-
+import sys
 import pandas as pd
 import numpy as np
-import datetime
+from datetime import datetime, timedelta
 import calendar
 from sqlalchemy import *
 
-from db import database
+from db import database, Nav
 
 
 def get_date_df(df, start_date, end_date):
@@ -61,6 +61,7 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     #
     df_result = pd.DataFrame(index=df.index, columns=df.columns)
     for day,row in df.iterrows():
+        print day
         # 如果不是第一天, 首先计算当前资产收益
         if day != start_date:
             assets_s = assets_s * (row + 1)
@@ -81,6 +82,64 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     df_result.insert(0, result_col, df_result.sum(axis=1))               
 
     return df_result
+
+def portfolio_nav2(df_pos, end_date=None) :
+    '''calc nav for portfolio
+    '''
+    if df_pos.empty:
+        return pd.DataFrame(columns=(['portfolio'] + list(df_inc.columns)))
+    #
+    # 从第一次调仓开始算起.
+    #
+    # [XXX] 调仓日的处理是先计算收益,然后再调仓, 因为在实际中, 调仓的
+    # 动作也是在收盘确认之后发生的
+    #
+    if end_date is not None:
+        max_date = end_date
+    else:
+        max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
+    dates = df_pos.index.get_level_values(0).unique()
+    pairs = zip(dates[0:-1], dates[1:])
+    if max_date not in dates:
+        pairs.append((dates[-1], max_date))
+
+    sr_nav_portfolio = pd.Series([1], index=[dates[0]]);
+    for sdate, edate in pairs:
+        #
+        # 加载新仓位
+        #
+        df_ratio = df_pos.loc[sdate].T
+
+        #
+        # 加载收益率
+        #
+        days = pd.date_range(sdate, edate)
+        df_nav = Nav.Nav().load(df_ratio.columns, sdate=sdate, edate=edate)
+        df_inc = df_nav.pct_change().fillna(0.0)
+
+        #
+        # 不足仓位补充现金
+        #
+        df_ratio['cash'] = 1 - df_ratio.sum(axis=1)
+        df_inc['cash'] = 0.0
+
+        #
+        # 计算相对昨日的增长因子
+        #
+        df_inc += 1
+        # 第一天是调仓日, 没有收益, 直接设置各资产比例
+        df_inc.iloc[0] = sr_nav_portfolio[-1] * df_ratio.iloc[0]
+        #
+        # 后面所有日期累积乘即为每天净值
+        #
+        df_nav_new = df_inc.cumprod()
+        #
+        # 结果净值
+        #
+        sr_nav_portfolio = sr_nav_portfolio.append(df_nav_new.sum(axis=1)[1:])
+
+    return sr_nav_portfolio
 
 def load_nav_csv(csv, columns=None, reindex=None):
     if columns and 'date' not in columns:
@@ -158,12 +217,15 @@ def filter_by_turnover(df, turnover):
     result = {}
     sr_last=None
     for k, v in df.iterrows():
+        vv = v.fillna(0)
         if sr_last is None:
-            result[k] = sr_last = v
+            result[k] = v
+            sr_last = vv
         else:
-            xsum = (v - sr_last).abs().sum()
+            xsum = (vv - sr_last).abs().sum()
             if xsum >= turnover:
-                result[k] = sr_last = v
+                result[k] = v
+                sr_last = vv
             else:
                 #print "filter by turnover:", v.to_frame('ratio')
                 pass
@@ -218,9 +280,10 @@ def merge_column_for_fund_id_type(df, code, usecols=['globalid', 'ra_type']):
 
     return df_result
 
-def filter_same_with_last(df):
-    df2 = df.shift(1).fillna(0)
-    return df[(df != df2).any(axis=1)]
+def filter_same_with_last(df, fill_value=0):
+    df1 = df.fillna(fill_value)
+    df2 = df.shift(1).fillna(fill_value)
+    return df[(df1 != df2).any(axis=1)]
 
 def categories_types(as_int=False):
     if as_int:
