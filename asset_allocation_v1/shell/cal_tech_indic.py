@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 import talib
-import utils.day_2_week as d2w
+from utils import day_2_week as d2w
 
 class CalTechIndic(object):
     def __init__(self, data_df, trade_dates, data_type=1):

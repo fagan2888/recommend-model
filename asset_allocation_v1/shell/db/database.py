@@ -1,6 +1,8 @@
 #coding=utf8
 
 
+import sys
+sys.path.append('./shell')
 import string
 import MySQLdb
 import config
@@ -8,9 +10,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import os
-import sys
 import logging
-sys.path.append('shell')
 import Const
 
 from sqlalchemy import *
@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 uris = {
     'asset': config.db_asset_uri,
     'base': config.db_base_uri,
+    'caihui': config.db_caihui_uri,
 }
 
 connections = {}
