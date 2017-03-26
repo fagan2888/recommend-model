@@ -21,6 +21,8 @@ from utils import sigmoid
 from sklearn.preprocessing import normalize
 from db import caihui_tq_qt_index as load_index
 from db import asset_trade_dates as load_td
+from db import asset_vw_view as ass_view
+from db import asset_vw_view_inc as ass_view_inc
 from cal_tech_indic import CalTechIndic as CalTec
 
 class HmmNesc(object):
@@ -38,7 +40,15 @@ class HmmNesc(object):
         if assets.has_key(globalid):
             secode = assets[globalid]
         else:
-            return "globalid is not in dict"
+            return (1, "globalid is not in dict")
+        # 根据asset id 得到view id
+        ass_vw_df = ass_view.get_viewid_by_indexid(globalid)
+        if ass_vw_df.empty:
+            return (1, 'has no view for asset:'+globalid)
+        vw_id = ass_vw_df['viewid'][0]
+        view_date = ass_view_inc.get_asset_newest_view(vw_id)
+        print view_date
+        os._exit(0)
         # 从数据库加载指数数据(close, high, low, volume, open)
         self.ori_data = load_index.load_index_daily_data(secode, start_date, end_date)
         # 从数据得到trade_dates表里数据
@@ -695,4 +705,4 @@ class HmmNesc(object):
 
         return date
 if __name__ == "__main__":
-    nesc_hmm = HmmNesc('120000001', '20050101')
+    (nesc_hmm, mess) = HmmNesc('120000001', '20050101')

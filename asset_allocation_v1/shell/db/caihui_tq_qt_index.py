@@ -9,7 +9,6 @@ import sys
 logger = logging.getLogger(__name__)
 def load_index_daily_data(secode, start_date=None, end_date=None):
     db = database.connection('caihui')
-    print db
     metadata = MetaData(bind=db)
     t = Table('tq_qt_index', metadata, autoload=True)
 
