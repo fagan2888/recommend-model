@@ -16,6 +16,7 @@ import DBData
 import time
 import Const
 import RiskManagement
+import RiskMgrSimple
 import DFUtil
 
 from datetime import datetime, timedelta
@@ -397,7 +398,14 @@ def signal_update(riskmgr):
     # df_inc = df_nav.pct_change().fillna(0.0).to_frame(riskmgr_id)
     df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing})
 
-    risk_mgr = RiskManagement.RiskManagement()
+    if riskmgr['rm_algo'] == 1:
+        risk_mgr = RiskManagement.RiskManagement()
+    elif riskmgr['rm_algo'] == 2:
+        risk_mgr = RiskMgrSimple.RiskMgrSimple()
+    else:
+        click.echo(click.style("\nunsupported riskmgr algo (%d, %d)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
+        return false
+    
     df_result = risk_mgr.perform(riskmgr_id, df)
     # df_result.drop(['nav', 'timing'], axis=1, inplace=True)
     df_result = DFUtil.filter_same_with_last(df_result)
