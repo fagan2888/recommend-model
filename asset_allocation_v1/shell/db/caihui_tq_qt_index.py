@@ -27,7 +27,6 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
         s = s.where(t.c.TRADEDATE <= end_date)
     s = s.where(t.c.ISVALID == 1).order_by(t.c.TRADEDATE.asc())
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
-    # print df
     return df
 
 if __name__ == "__main__":

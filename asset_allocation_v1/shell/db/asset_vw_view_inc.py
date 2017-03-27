@@ -35,7 +35,15 @@ def insert_predict_pct(view_df):
         ids = view_df['ids']
         dates = view_df['dates']
         inc = view_df['means']
-        d = {'vw_view_id':ids, 'vw_date':dates, 'vw_inc':inc}
+        create_at = view_df['create_time']
+        update_at = view_df['update_time']
+        d = {
+                'vw_view_id':ids,
+                'vw_date':dates,
+                'vw_inc':inc,
+                'created_at':create_at,
+                'updated_at':update_at,
+        }
         test_df = pd.DataFrame(data=d)
         result = (0, "Insert into vw_veiw_inc success")
         df = test_df.to_sql("vw_view_inc", db, if_exists='append', index=False)
@@ -44,4 +52,25 @@ def insert_predict_pct(view_df):
     return result
 
 if __name__ == "__main__":
-    print insert_predict_pct(None)
+    assets = {
+                '42110102':'means_000300.csv',
+                '42110202':'means_000905.csv',
+                '42120201':'means_sp.csv',
+                '42120502':'means_hs.csv',
+                '42400102':'hmm_au9999.csv',
+                '42400400':'hmm_nh0100nhf.csv',
+                '42400300':'hmm_spgscltrspi.csv',
+            }
+    for (viewid, ass) in assets.iteritems():
+        print viewid, ass
+        data_df = pd.read_csv(ass)
+        create_dates = np.repeat(datetime.datetime.now(),len(data_df))
+        update_dates = np.repeat(datetime.datetime.now(),len(data_df))
+        union_tmp = {}
+        union_tmp['ids'] = np.repeat(viewid, len(data_df))
+        union_tmp['dates'] = data_df['date']
+        union_tmp['create_time'] = create_dates
+        union_tmp['update_time'] = update_dates
+        union_tmp['means'] = data_df['means'] / 100.0
+        union_tmp = pd.DataFrame(union_tmp)
+        print insert_predict_pct(union_tmp)
