@@ -55,12 +55,12 @@ class HmmNesc(object):
         ass_vw_df = ass_view.get_viewid_by_indexid(globalid)
         if ass_vw_df.empty:
             return (2, 'has no view id for asset:' + globalid)
-        vw_id = ass_vw_df['viewid'][0]
-        ass_vw_inc_df = ass_view_inc.get_asset_newest_view(vw_id)
+        self.viewid = ass_vw_df['viewid'][0]
+        ass_vw_inc_df = ass_view_inc.get_asset_newest_view(self.viewid)
         # 判断是否已经有历史view
         self.view_newest_date = None
         if not ass_vw_inc_df.empty:
-            self.view_newest_date = ass_vw_inc_df['newest_date'][0]
+            self.view_newest_date = pd.Timestamp(ass_vw_inc_df['newest_date'][0])
         # 从数据库加载指数数据(close, high, low, volume, open)
         self.ori_data = load_index.load_index_daily_data(secode, start_date, end_date)
         if self.ori_data.empty:
@@ -197,15 +197,12 @@ class HmmNesc(object):
             ratios = np.where(idx == 1, data["pct_chg"], -100)
             ratios = ratios[ratios != -100]
             ratios = ratios / 100.0
+            if len(ratios) == 0:
+                ratios = np.array([0])
             means_arr.append(ratios.mean())
-            stds_arr.append(ratios.std(ddof=1))
+            # stds_arr.append(ratios.std(ddof=1))
         trans_mat = model.transmat_[cur_state]
-        used_trans = np.where( trans_mat > 0.05, trans_mat, 0.0)
-        # print "herererer"
-        # print model.transmat_
-        # print cur_state
-        # print means_arr
-        # print used_trans
+        used_trans = np.where( trans_mat > 0.0, trans_mat, 0.0)
         means = np.dot(used_trans, means_arr)
         return means
     @staticmethod
@@ -416,31 +413,39 @@ class HmmNesc(object):
             p_in_num = self.train_num
         else:
             newest_date_pos = np.argwhere(all_dates == self.view_newest_date)[0,0]
+            if newest_date_pos == len(all_dates) - 1:
+                return (0, "newest view in database, no need to update")
             p_s_date = all_dates[newest_date_pos - self.train_num]
-            p_in_date = all_dates[newest_date_pos]
+            p_in_date = all_dates[newest_date_pos+1]
             p_e_date = all_dates[-1]
             p_s_num = newest_date_pos - self.train_num
-            p_in_num = newest_date_pos
+            p_in_num = newest_date_pos + 1
         means_arr = []
-        all_data = self.ori_data[p_in_date:] 
+        all_data = self.ori_data[p_in_date:]
         while p_in_date <= p_e_date:
+            print p_in_date
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
-            [model, states] = self.training(p_data, list(feature_selected), self.state_num)
-             means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            [model, states] = self.training(p_data, list(feature_predict), self.state_num)
+            means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             means_arr.append(means)
-            p_s_date = all_dates[p_s_num]
-            p_in_date = all_dates[p_in_num]
+            if p_in_date != p_e_date:
+                p_s_date = all_dates[p_s_num]
+                p_in_date = all_dates[p_in_num]
+            else:
+                p_in_date += datetime.timedelta(days=1)
         ####### state statistic
         union_data_tmp = {}
         union_data_tmp["means"] = means_arr
         union_data_tmp["dates"] = all_data.index
         union_data_tmp["ids"] = np.repeat(self.viewid, len(means_arr))
+        union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
+        union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
         result = ass_view_inc.insert_predict_pct(union_data_tmp)
         return result
-        
+
     @staticmethod
     def cal_nav_maxdrawdown(return_lsit):
         """
@@ -567,4 +572,9 @@ class HmmNesc(object):
 
         return date
 if __name__ == "__main__":
-    (nesc_hmm, mess) = HmmNesc('120000001', '20050101')
+    view_ass = ['120000001', '120000002', '120000013', '120000014', \
+                '120000015', '120000029']
+    for v_ass in view_ass:
+        print v_ass
+        nesc_hmm = HmmNesc(v_ass, '20050101')
+        print nesc_hmm.handle()
