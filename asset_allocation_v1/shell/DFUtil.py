@@ -61,7 +61,6 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     #
     df_result = pd.DataFrame(index=df.index, columns=df.columns)
     for day,row in df.iterrows():
-        print day
         # 如果不是第一天, 首先计算当前资产收益
         if day != start_date:
             assets_s = assets_s * (row + 1)
