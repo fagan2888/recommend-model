@@ -16,6 +16,8 @@ import random
 from cvxopt import matrix, solvers
 import cvxopt
 import math
+import scipy
+import scipy.optimize
 
 from Const import datapath
 
@@ -543,6 +545,7 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
         smallcap_fund_w[code] = 1.0 / len(smallcap_fund) * indexws[1]
     '''
 
+
     fundws = {}
     for code in largecap_fund:
         w = fundws.setdefault(code, 0)
@@ -687,8 +690,36 @@ def black_litterman(weq, df_inc, P, Q):
     #print final_ws
     #print
     #print final_ws
+
     return final_risk, final_return, final_ws, final_sharp
 
     #print risks
     #print np.dot(er, w)
     #return [er, w, lmbda]
+
+
+def risk_parity(dfr):
+    cov = dfr.cov()
+    cov = cov.values
+    cov = cov * 10000
+    #print len(cov)
+    asset_num = len(cov)
+    w = 1.0 * np.ones(asset_num) / asset_num
+    bound = [ (0.0 , 1.0) for i in range(asset_num)]
+    constrain = ({'type':'eq', 'fun': lambda w: sum(w)-1.0 })
+    result = scipy.optimize.minimize(riskparity_obj_func, w, (cov), method='SLSQP', constraints=constrain, bounds=bound)
+    ws = result.x
+    return ws
+
+
+def riskparity_obj_func(w, cov):
+    n = len(cov)
+    risk_sum = 0
+    for i in range(0, n):
+        for j in range(i + 1, n):
+            risk_sum = risk_sum + ( 5 * np.dot(w, cov[i]) - np.dot(w , cov[j])) ** 2
+    return risk_sum
+
+
+def fix_risk(dfr):
+    return 0

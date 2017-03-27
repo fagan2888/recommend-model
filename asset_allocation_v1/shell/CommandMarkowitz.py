@@ -312,6 +312,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 120000028:  {'alternativelimit' : 1, 'oversealimit': 1, 'uplimit': 0.20, 'downlimit': 0.0},#标普高盛原油商品指数收益率
             }
 
+            assets = {
+                50030702:  {'alternativelimit': 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0}, #低风险
+                50031706:  {'alternativelimit' : 0, 'oversealimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},#高风险
+            }
 
             '''
             assets = {
@@ -332,29 +336,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             if optname == 'markowitz':
                 optname = 'markowitz high'
 
-        '''
-        assets = {
-            120000003:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-            120000004:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-            120000013:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-            120000015:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-            120000025:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-            120000014:  {'sumlimit': 0, 'uplimit': 0.3, 'downlimit': 0.0},
-            120000028: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-            120000029: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-        }
-        '''
-
-
-    '''
-    assets = {
-        120000001:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-        120000002:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-        120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-        120000014: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-        120000015: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-    }
-    '''
 
     index_nav_df = base_ra_index_nav.load_series(120000001, begin_date = startdate, end_date = enddate)
     dates = index_nav_df.index
@@ -433,6 +414,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         df[reshape_asset_id] = df[reshape_asset_id] * reshape_df[reshape_asset_id]
     '''
 
+    '''
     #载入风控资产的仓位信息
     asset_id_risk_mgr_id = {}
     for asset_id in df.columns:
@@ -456,7 +438,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     risk_mgr_signal_df = risk_mgr_signal_df.fillna(1.0)
     for k, v in asset_id_risk_mgr_id.items():
         df[k] = df[k] * risk_mgr_signal_df[v]
-
+    '''
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     # print df.head()
@@ -472,7 +454,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_tosave = df.stack().to_frame('mz_ratio')
     df_tosave = df_tosave.loc[df_tosave['mz_ratio'] > 0, ['mz_ratio']]
     # save
-    # print df_tosave
+    #print df_tosave
     asset_mz_markowitz_pos.save(optid, df_tosave)
 
     # 导入数据: markowitz_criteria
@@ -592,7 +574,23 @@ def markowitz_r(df_inc, limits):
     #for n in range(0, l):
     #    tmp_df.iloc[l - 1 - n] = tmp_df.iloc[l - 1 - n] * (0.5 ** ( 1.0 * n / l))
 
-    risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+    #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+    ws = PF.risk_parity(df_inc)
+
+    print end_date, df_inc.std()
+
+    high = 0.005334
+    low  = 0.000441
+
+    risk_level = 10
+    low_w = 1.0 / 9 * (10 - risk_level)
+    high_w = 1.0 - low_w
+    ws = [low_w, high_w]
+
+    risk = 0.0
+    returns = 0.0
+    sharpe = 0.0
+
 
     '''
     l = len(df_inc.columns)
@@ -685,6 +683,12 @@ def load_nav_series(asset_id, reindex, begin_date, end_date):
         # 修型资产
         #
         sr = asset_rs_reshape_nav.load_series(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+    elif xtype == 5:
+        #
+        # 修型资产
+        #
+        sr = asset_mz_markowitz_nav.load_series(
             asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     elif xtype == 12:
         #
@@ -916,5 +920,3 @@ def perform_delete(markowitz):
     mz_markowitz_nav.delete(mz_markowitz_nav.c.mz_markowitz_id == markowitz_id).execute()
     mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == markowitz_id).execute()
     mz_markowitz.delete(mz_markowitz.c.globalid == markowitz_id).execute()
-
-    
