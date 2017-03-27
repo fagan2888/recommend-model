@@ -28,14 +28,24 @@ from cal_tech_indic import CalTechIndic as CalTec
 class HmmNesc(object):
 
     def __init__(self, globalid, start_date=None, end_date=None):
+        self.ass_id = globalid
         assets = {
-            '120000001':'2070000060',
-            '120000002':'2070000187',
-            '120000013':'2070006545',
-            '120000014':'2070000626',
-            '120000015':'2070000076',
-            '120000028':'2070006521',
-            '120000029':'2070006789',
+            '120000001':'2070000060', #沪深300
+            '120000002':'2070000187', #中证500
+            '120000013':'2070006545', #标普500指数
+            '120000014':'2070000626', #黄金指数
+            '120000015':'2070000076', #恒生指数
+            '120000028':'2070006521', #南华商品指数
+            '120000029':'2070006789', #标普高盛原油商品指数收益率
+        }
+        self.feature_selected = {
+            '120000001':set(['high', 'pct_chg', 'atr', 'macd']),
+            '120000002':set(['high', 'sobv', 'vstd']),
+            '120000013':set(['vstd', 'sobv', 'macd', 'vma']),
+            '120000014':set(['wvad', 'pct_chg', 'roc', 'vstd']),
+            '120000015':set(['priceosc', 'pct_chg', 'atr']),
+            '120000028':set(['macd', 'pct_chg', 'atr']),
+            '120000029':set(['pct_chg', 'priceosc', 'rsi']),
         }
         if assets.has_key(globalid):
             secode = assets[globalid]
@@ -44,13 +54,17 @@ class HmmNesc(object):
         # 根据asset id 得到view id
         ass_vw_df = ass_view.get_viewid_by_indexid(globalid)
         if ass_vw_df.empty:
-            return (1, 'has no view for asset:'+globalid)
+            return (2, 'has no view id for asset:' + globalid)
         vw_id = ass_vw_df['viewid'][0]
-        view_date = ass_view_inc.get_asset_newest_view(vw_id)
-        print view_date
-        os._exit(0)
+        ass_vw_inc_df = ass_view_inc.get_asset_newest_view(vw_id)
+        # 判断是否已经有历史view
+        self.view_newest_date = None
+        if not ass_vw_inc_df.empty:
+            self.view_newest_date = ass_vw_inc_df['newest_date'][0]
         # 从数据库加载指数数据(close, high, low, volume, open)
         self.ori_data = load_index.load_index_daily_data(secode, start_date, end_date)
+        if self.ori_data.empty:
+            return (3, 'has no data for secode:' + secode)
         # 从数据得到trade_dates表里数据
         self.trade_dates = load_td.load_trade_dates()
         for col in self.ori_data.columns:
@@ -385,200 +399,36 @@ class HmmNesc(object):
             if ratios[ite] >= min(interval_95) and ratios[ite] <= max(interval_95):
                 win_num += 1.0
         print "win ratio:", win_num / ratio_num
-    def tmp_method_test(self):
+    def handle(self):
         """
-        :usage: 测试单个方法运行是否通过
+        :usage: 执行程序
         :return: None
         """
-        # feature_selected = HmmNesc.feature_select(self.ori_data[self.t_start:self.t_end], self.features, self.state_num, self.filter_ratio, [self.eva_indic, self.rank_num])
-        # print feature_selected
-        # os._exit(0)a
-        feature_selected = set(['SOBV', 'pct_chg', 'PRICEOSC']) # 000300
-        # feature_selected = set(['high', 'SOBV', 'VSTD']) # 00905
-        # feature_selected = set(['VSTD', 'SOBV', 'PVT', 'VMA']) # sp
-        # feature_selected = set(['WVAD', 'pct_chg', 'ROC', 'VSTD']) #au
-        # feature_selected = set(['PRICEOSC', 'pct_chg', 'ATR']) #hs
-        print "*********************"
-        test_dates = self.ori_data[self.test_start:self.test_end].index
-        # print list(test_dates)
-        p_s_date = self.test_start
-        p_in_date = datetime.datetime(2012, 1, 4)
-        p_e_date = datetime.datetime(2016, 12, 31)
-        tmp_date = p_in_date
-        tmp_e_date = datetime.datetime(2016, 12, 31)
-        is_holding = []
+        feature_predict = self.feature_selected[self.ass_id]
+        if self.view_newest_date == None:
+            all_dates = self.ori_data[self.test_start:self.test_end].index
+            # print list(test_dates)
+            p_s_date = all_dates[0]
+            p_in_date = all_dates[149]
+            p_e_date = all_dates[-1]
+            p_s_num = 0
+            p_in_num = 149
         means_arr = []
-        stds_arr = []
-        state = []
+        all_data = self.ori_data[p_in_date:] 
         while p_in_date <= p_e_date:
-            print p_in_date
+            p_s_num += 1
+            p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
             [model, states] = self.training(p_data, list(feature_selected), self.state_num)
-            # print model.means_[2]
-            # print np.diag(model.covars_[2])
-            # os._exit(0)
-            # print model.transmat_
-            # is_holding.append(HmmNesc.proceed_choose(p_data, self.state_num, states, self.filter_ratio))
-            is_holding.append(HmmNesc.market_states(p_data, self.state_num, states, self.filter_ratio))
-            # means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
-            # print means
-            # means_arr.append(means)
-            # stds_arr.append(stds)
-            p_s_date = HmmNesc.get_move_day(test_dates, p_s_date, 1, previous=False)
-            p_in_date = HmmNesc.get_move_day(test_dates, p_in_date, 1, previous=False)
-        print "herererere"
+             means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            means_arr.append(means)
+            p_s_date = all_dates[p_s_num]
+            p_in_date = all_dates[p_in_num]
         ####### state statistic
-        # test_data = self.ori_data[tmp_date:tmp_e_date]
-        # union_data_tmp = {}
-        # union_data_tmp["ratio"] = test_data["pct_chg"]
-        # union_data_tmp["means"] = means_arr
-        # union_data_tmp = pd.DataFrame(union_data_tmp, index=test_data.index)
-        # union_data_tmp.to_csv("hmm_state_statistics_hs_2015_tmp.csv")
-        # cur_ratio = test_data["pct_chg"][1:]
-        # cur_mean = means_arr[:-1]
-        # cur_std = stds_arr[:-1]
-        # HmmNesc.statistic_win_ratio(cur_ratio, cur_mean, cur_std)
-        ######
-        market_states = np.array(is_holding)
-        is_holding = (market_states >= 0)
-        test_data = self.ori_data[tmp_date:tmp_e_date]
-        ratios = np.where(is_holding == 1, test_data["pct_chg"], 0)
-        # 计算真实的净值（延后两天）
-        used_holding = np.append([0.0], is_holding[:-1])
-        used_ratio = np.where(used_holding == 1, test_data["pct_chg"], 0)
-        nav_list, max_drawdonw_list = HmmNesc.cal_nav_maxdrawdown(used_ratio)
         union_data_tmp = {}
-        union_data_tmp["market"] = market_states
-        union_data_tmp["close"] = test_data["close"]
-        union_data_tmp["ratio"] = test_data["pct_chg"]
-        union_data_tmp["self_ratio"] = used_ratio
-        union_data_tmp["signal"] = used_holding
-        union_data_tmp["self_ori_ratio"] = ratios
-        union_data_tmp["self_ori_signal"] = is_holding
-        union_data_tmp["nav"] = nav_list
-        union_data_tmp["maxdrawdown"] = max_drawdonw_list
-        large_captial_ratio = test_data["pct_chg"]
-        lc_nav, lc_max_drawdown = HmmNesc.cal_nav_maxdrawdown(large_captial_ratio)
-        union_data_tmp["lc_nav"] = lc_nav
-        union_data_tmp["lc_max_drawdown"] = lc_max_drawdown
-        union_data_tmp = pd.DataFrame(union_data_tmp, index=test_data.index)
-        [td_win, td_total, win_ratio, holding_days] = HmmNesc.win_ratio(union_data_tmp)
-        print td_win, td_total, win_ratio, holding_days
-        print [nav_list[-1], min(max_drawdonw_list), abs(nav_list[-1] - 1.0) / abs(min(max_drawdonw_list)), win_ratio]
-        union_data_tmp.to_csv("market_states_000300.csv")
-        ############# test
-        # print model.covars_[0]
-        # print np.shape(model.covars_[0])
-        # print len(model.covars_[0])
-        # print model.covars_weight
-        # t_states = self.predict(self.ori_data[self.test_start:self.test_end], model, list(feature_selected))
-        # v_states = self.predict(self.ori_data[self.v_start:self.v_end], model, list(feature_selected))
-        # print "test:"
-        # HmmNesc.rating(self.ori_data[self.t_start:self.t_end], self.state_num, states, self.filter_ratio)
-        # print "vali:"
-        # HmmNesc.rating(self.ori_data[self.v_start:self.v_end], self.state_num, v_states, self.filter_ratio)
-        # # self.plot(self.ori_data[self.t_start:self.t_end], model, states)
-        # print "test:"
-        # HmmNesc.rating(self.ori_data[self.test_start:self.test_end], self.state_num, t_states, self.filter_ratio)
-        return None
-
-    def plot(self, data, model, states):
-        """
-        :usage: 画出状态散点图和状态收益曲线
-        :param data:原始数据
-        :param model: HMM训练出来的模型
-        :param states: 隐形状态
-        :return: None
-        """
-        # print trained parameters and plot
-        print "Transition matrix"
-        print model.transmat_
-        print np.shape(model.transmat_)
-        print ""
-
-        print "means and vars of each hidden state"
-        for i in xrange(model.n_components):
-            print "%dth hidden state" % i
-            print "mean = ", model.means_[i]
-            print "var = ", np.diag(model.covars_[i])
-            print ""
-
-        dates = pd.to_datetime(data.index)
-        # print dates
-        years = YearLocator()  # every year
-        months = MonthLocator()  # every month
-        yearsFmt = DateFormatter('%Y')
-        close = np.array(data["close"])
-        returns = np.array(data["pct_chg"])
-
-        fig = plt.figure(1, figsize=(15, 12))
-        ax = fig.add_subplot(211)
-        # print len(states)
-        # os._exit(0)
-        # plt.figure(1)
-        # plt.subplot(211)
-        for i in xrange(self.state_num):
-            # use fancy indexing to plot data in each state
-            idx = (states == i)
-            # print idx
-            # print type(states)
-            ax.plot(dates[idx], close[idx], '.')
-            ax.legend()
-            ax.grid(True)
-
-        # format the ticks
-        ax.xaxis.set_major_locator(years)
-        ax.xaxis.set_major_formatter(yearsFmt)
-        ax.xaxis.set_minor_locator(months)
-        ax.autoscale_view()
-        #
-        # # format the coords message box
-        ax.fmt_xdata = DateFormatter('%Y-%m-%d')
-        ax.fmt_ydata = lambda x: '$%1.2f' % x
-
-        # plot state
-        date_list = dates  # self.date_ordinal_2_dateformat(self.dates)
-        log_return = returns
-        latest_seq = states
-        # print states
-        # os._exit(0)
-        data = pd.DataFrame({'datelist': date_list, 'logreturn': log_return, 'state': latest_seq}).set_index('datelist')
-        # axs = fig.add_subplot(211)
-        # pls = plt.figure(figsize=(15, 8))
-        axs = fig.add_subplot(212)
-        for i in range(self.state_num):
-            state = (latest_seq == i)
-            idx = np.append(0, state[:-1])
-            # print len(idx)
-            # print idx
-            ratios = np.where(idx == 1, data["logreturn"], 0)
-            nav_list = HmmNesc.cal_nav(ratios)
-            # print nav_list
-            # os._exit(0)
-            data['state %d_return' % i] = data.logreturn.multiply(idx, axis=0)
-            axs.plot(dates[idx], nav_list, "-", label="%dth hidden state" % i)
-            axs.legend()
-            axs.grid(True)
-
-        # format the ticks
-        axs.xaxis.set_major_locator(years)
-        axs.xaxis.set_major_formatter(yearsFmt)
-        axs.xaxis.set_minor_locator(months)
-        axs.autoscale_view()
-
-        # format the coords message box
-        axs.fmt_xdata = DateFormatter('%Y-%m-%d')
-        axs.fmt_ydata = lambda x: '$%1.2f' % x
-
-
-        # show
-
-        # fig.autofmt_xdate()
-        # pl.show()
-
-        # fig.autofmt_xdate()
-        plt.show()
-
+        union_data_tmp["predict_chg"] = means_arr
+        union_data_tmp = pd.DataFrame(union_data_tmp, index=all_data.index)
+        
     @staticmethod
     def cal_nav_maxdrawdown(return_lsit):
         """
