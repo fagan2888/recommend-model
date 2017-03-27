@@ -78,6 +78,8 @@ class HmmNesc(object):
         self.features = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', \
                         'slowkd', 'pct_chg', 'pvt', 'wvad', 'priceosc', \
                         'bias', 'vma', 'vstd', 'dpo']
+        # 模型训练用到的样本数, 149加1即为这个样本数
+        self.train_num = 149
         # 训练开始时间
         self.t_start = datetime.datetime(2005, 8, 1)
         # 训练结束时间
@@ -405,14 +407,20 @@ class HmmNesc(object):
         :return: None
         """
         feature_predict = self.feature_selected[self.ass_id]
+        all_dates = self.ori_data.index
         if self.view_newest_date == None:
-            all_dates = self.ori_data[self.test_start:self.test_end].index
-            # print list(test_dates)
             p_s_date = all_dates[0]
-            p_in_date = all_dates[149]
+            p_in_date = all_dates[self.train_num]
             p_e_date = all_dates[-1]
             p_s_num = 0
-            p_in_num = 149
+            p_in_num = self.train_num
+        else:
+            newest_date_pos = np.argwhere(all_dates == self.view_newest_date)[0,0]
+            p_s_date = all_dates[newest_date_pos - self.train_num]
+            p_in_date = all_dates[newest_date_pos]
+            p_e_date = all_dates[-1]
+            p_s_num = newest_date_pos - self.train_num
+            p_in_num = newest_date_pos
         means_arr = []
         all_data = self.ori_data[p_in_date:] 
         while p_in_date <= p_e_date:
@@ -426,8 +434,12 @@ class HmmNesc(object):
             p_in_date = all_dates[p_in_num]
         ####### state statistic
         union_data_tmp = {}
-        union_data_tmp["predict_chg"] = means_arr
-        union_data_tmp = pd.DataFrame(union_data_tmp, index=all_data.index)
+        union_data_tmp["means"] = means_arr
+        union_data_tmp["dates"] = all_data.index
+        union_data_tmp["ids"] = np.repeat(self.viewid, len(means_arr))
+        union_data_tmp = pd.DataFrame(union_data_tmp)
+        result = ass_view_inc.insert_predict_pct(union_data_tmp)
+        return result
         
     @staticmethod
     def cal_nav_maxdrawdown(return_lsit):
