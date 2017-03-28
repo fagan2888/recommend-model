@@ -83,8 +83,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     '''generate final portfolio
     '''
 
-    if optratio == 0:
-        if ctx.obj['highlow'] is None:
+    if optratio is None:
+        if 'highlow' not in ctx.obj:
             click.echo(click.style("--ratio is required, aborted!", fg="red"))
             return 0
         
@@ -280,7 +280,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     #
     # 在context中保存optid
     #
-    ctx.obj['portfolio'] = optid
+    gctx.obj['portfolio'] = optid
     
     click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
 

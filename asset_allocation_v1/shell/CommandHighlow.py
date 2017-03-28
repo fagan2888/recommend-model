@@ -47,6 +47,7 @@ def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, 
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optfull is False:
+            # ctx.obj['highlow'] = 70032880
             ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
@@ -71,9 +72,9 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     '''calc high low allocate
     '''
 
-    if opthigh == 0 and ctx.obj['markowitz.high'] is not None:
+    if opthigh == 0 and 'markowitz.high' in ctx.obj:
         opthigh = ctx.obj['markowitz.high']
-    if optlow == 0 and ctx.obj['markowitz.low'] is not None:
+    if optlow == 0 and 'markowitz.low' in ctx.obj:
         optlow = ctx.obj['markowitz.low']
 
     if opthigh == 0 and optlow == 0:
@@ -341,7 +342,7 @@ def nav(ctx, optid, optlist):
     if optid is not None:
         highlows = [s.strip() for s in optid.split(',')]
     else:
-        if ctx.obj['highlow'] is not None:
+        if 'highlow' in ctx.obj:
             highlows = [str(ctx.obj['highlow'])]
         else:
             highlows = None
@@ -402,7 +403,7 @@ def turnover(ctx, optid, optlist):
     if optid is not None:
         highlows = [s.strip() for s in optid.split(',')]
     else:
-        if ctx.obj['highlow'] is not None:
+        if 'highlow' in ctx.obj:
             highlows = [str(ctx.obj['highlow'])]
         else:
             highlows = None

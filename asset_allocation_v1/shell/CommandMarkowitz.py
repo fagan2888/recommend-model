@@ -556,7 +556,7 @@ def nav(ctx, optid, optlist):
     if optid is not None:
         markowitzs = [s.strip() for s in optid.split(',')]
     else:
-        if ctx.obj['markowitz'] is not None:
+        if 'markowitz' in ctx.obj:
             markowitzs = [str(ctx.obj['markowitz'])]
         else:
             markowitzs = None
@@ -612,7 +612,7 @@ def turnover(ctx, optid, optlist):
     if optid is not None:
         markowitzs = [s.strip() for s in optid.split(',')]
     else:
-        if ctx.obj['markowitz'] is not None:
+        if 'markowitz' in ctx.obj:
             markowitzs = [str(ctx.obj['markowitz'])]
         else:
             markowitzs = None
