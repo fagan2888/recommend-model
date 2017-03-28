@@ -29,7 +29,9 @@ class HmmNesc(object):
 
     def __init__(self, globalid, start_date=None, end_date=None):
         self.ass_id = globalid
-        assets = {
+        self.start_date = start_date
+        self.end_date = end_date
+        self.assets = {
             '120000001':'2070000060', #沪深300
             '120000002':'2070000187', #中证500
             '120000013':'2070006545', #标普500指数
@@ -47,32 +49,6 @@ class HmmNesc(object):
             '120000028':set(['macd', 'pct_chg', 'atr']),
             '120000029':set(['pct_chg', 'priceosc', 'rsi']),
         }
-        if assets.has_key(globalid):
-            secode = assets[globalid]
-        else:
-            return (1, "globalid is not in dict")
-        # 根据asset id 得到view id
-        ass_vw_df = ass_view.get_viewid_by_indexid(globalid)
-        if ass_vw_df.empty:
-            return (2, 'has no view id for asset:' + globalid)
-        self.viewid = ass_vw_df['viewid'][0]
-        ass_vw_inc_df = ass_view_inc.get_asset_newest_view(self.viewid)
-        # 判断是否已经有历史view
-        self.view_newest_date = None
-        if not ass_vw_inc_df.empty:
-            self.view_newest_date = pd.Timestamp(ass_vw_inc_df['newest_date'][0])
-        # 从数据库加载指数数据(close, high, low, volume, open)
-        self.ori_data = load_index.load_index_daily_data(secode, start_date, end_date)
-        if self.ori_data.empty:
-            return (3, 'has no data for secode:' + secode)
-        # 从数据得到trade_dates表里数据
-        self.trade_dates = load_td.load_trade_dates()
-        for col in self.ori_data.columns:
-            self.ori_data[col].replace(to_replace=0, method='ffill', inplace=True)
-        # 计算技术指标
-        cal_tec_obj = CalTec(self.ori_data, self.trade_dates, data_type=2)
-        self.ori_data = cal_tec_obj.get_indic()
-        self.ori_data.dropna(inplace=True)
         # 隐形状态数目
         self.state_num = 13
         self.features = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', \
@@ -104,7 +80,62 @@ class HmmNesc(object):
         self.eva_indic = [0, 3]
         # 选取指标中排名前几的特征，2代表选取某一指标中排名前2的特征作为最终使用的特征
         self.rank_num = 2
-
+    def init_data(self):
+        result = self.get_secode()
+        if result[0] > 0:
+            return result
+        result = self.get_view_id()
+        if result[0] > 0:
+            return result
+        self.get_view_newest_date()
+        result = self.get_index_origin_data()
+        if result[0] > 0:
+            return result
+        result = self.get_trade_dates()
+        if result[0] > 0:
+            return result
+        result = self.cal_indictor()
+        return result
+    def get_secode(self):
+        if self.assets.has_key(self.ass_id):
+            self.secode = self.assets[self.ass_id]
+            return (0, 'get data sucess')
+        else:
+            return (1, "asset id is not in dict:" + self.ass_id)
+    def get_view_id(self):
+        ass_vw_df = ass_view.get_viewid_by_indexid(self.ass_id)
+        if ass_vw_df.empty:
+            return (2, "has no view id for asset:" + self.ass_id)
+        self.viewid = ass_vw_df['viewid'][0]
+        return (0, 'get data sucess')
+    def get_view_newest_date(self):
+        ass_vw_inc_df = ass_view_inc.get_asset_newest_view(self.viewid)
+        # 判断是否已经有历史view
+        self.view_newest_date = None
+        if not ass_vw_inc_df.empty:
+            if ass_vw_inc_df['newest_date'][0] != None:
+                self.view_newest_date = pd.Timestamp(ass_vw_inc_df['newest_date'][0])
+    def get_index_origin_data(self):
+        self.ori_data = load_index.load_index_daily_data(self.secode, \
+                        self.start_date, self.end_date)
+        if self.ori_data.empty:
+            return (3, 'has no data for secode:' + self.secode)
+        for col in self.ori_data.columns:
+            self.ori_data[col].replace(to_replace=0, method='ffill', inplace=True)
+        return (0, 'get data sucess')
+    def get_trade_dates(self):
+        self.trade_dates = load_td.load_trade_dates()
+        if self.trade_dates.empty:
+            return (4, 'has no data for trade dates')
+        return (0, 'get data sucess')
+    def cal_indictor(self):
+        cal_tec_obj = CalTec(self.ori_data, self.trade_dates, data_type=2)
+        try:
+            self.ori_data = cal_tec_obj.get_indic()
+        except Exception, e:
+            return (5, "cal tec indictor exception:" + e.message)
+        self.ori_data.dropna(inplace=True)
+        return (0, 'get data sucess')
     @staticmethod
     def feature_select(t_data, features, state_num, thres, feature_eva=[[0,1], 2]):
         """
@@ -423,11 +454,13 @@ class HmmNesc(object):
         means_arr = []
         all_data = self.ori_data[p_in_date:]
         while p_in_date <= p_e_date:
-            print p_in_date
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
-            [model, states] = self.training(p_data, list(feature_predict), self.state_num)
+            try:
+                [model, states] = self.training(p_data, list(feature_predict), self.state_num)
+            except:
+                return (1, "hmm training fail")
             means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             means_arr.append(means)
             if p_in_date != p_e_date:
@@ -577,4 +610,9 @@ if __name__ == "__main__":
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
-        print nesc_hmm.handle()
+        result = nesc_hmm.init_data()
+        if result[0] == 0:
+            result_handle = nesc_hmm.handle()
+            print result_handle
+        else:
+            print result
