@@ -41,18 +41,17 @@ logger = logging.getLogger(__name__)
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
+@click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
-def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, assets):
+def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, short_cut, assets):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optfull is False:
-            rc = ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, assets=assets)
-            if optid is None:
-                optid = str(rc)
+            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, short_cut=short_cut, assets=assets)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -192,7 +191,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
 @click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
-@click.option('--short-cut', type=click.Choice(['online', 'high', 'low']))
+@click.option('--short-cut', type=click.Choice(['default', 'high', 'low']))
 @click.argument('assets', nargs=-1)
 @click.pass_context
 def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover, short_cut, assets):
@@ -248,7 +247,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     if assets:
         assets = {k: v for k,v in [parse_asset(a) for a in assets]}
     else:
-        if short_cut == 'online':
+        if short_cut == 'high':
             assets = {
                 41110100:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
                 41110200:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
@@ -261,15 +260,15 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 41120502:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
             }
             if optname == 'markowitz':
-                optname = 'markowitz online'
+                optname = '马克维茨(高风险)'
         elif short_cut == 'low':
             assets = {
                 11220121:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
                 11220122:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
             }
             if optname == 'markowitz':
-                optname = 'markowitz low'
-        else: # short_cut == 'high'
+                optname = '马克维茨(低风险)'
+        else: # short_cut == 'default'
             assets = {
                 41110100:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
                 41110200:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
@@ -282,10 +281,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 41120502:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
             }
             if optname == 'markowitz':
-                optname = 'markowitz high'
+                optname = '马克维茨(实验)'
 
     df = markowitz_days(startdate, enddate, assets,
-        label=optname, lookback=lookback, adjust_period=adjust_period)
+        label='markowitz', lookback=lookback, adjust_period=adjust_period)
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
@@ -394,7 +393,16 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     
     click.echo(click.style("markowitz allocation complement! instance id [%s]" % (optid), fg='green'))
 
-    return optid
+    #
+    # 在ctx中记录markowitz id 以便命令链的后面使用
+    #
+    ctx.obj['markowitz'] = optid
+    if short_cut == 'high':
+        ctx.obj['markowitz.high'] = optid
+    if short_cut == 'low':
+        ctx.obj['markowitz.low'] = optid
+
+    return 0
 
 def parse_asset(asset):
     segments = [s.strip() for s in asset.strip().split(':')]
@@ -548,7 +556,10 @@ def nav(ctx, optid, optlist):
     if optid is not None:
         markowitzs = [s.strip() for s in optid.split(',')]
     else:
-        markowitzs = None
+        if ctx.obj['markowitz'] is not None:
+            markowitzs = [str(ctx.obj['markowitz'])]
+        else:
+            markowitzs = None
 
     df_markowitz = asset_mz_markowitz.load(markowitzs)
 
@@ -601,7 +612,10 @@ def turnover(ctx, optid, optlist):
     if optid is not None:
         markowitzs = [s.strip() for s in optid.split(',')]
     else:
-        markowitzs = None
+        if ctx.obj['markowitz'] is not None:
+            markowitzs = [str(ctx.obj['markowitz'])]
+        else:
+            markowitzs = None
 
     df_markowitz = asset_mz_markowitz.load(markowitzs)
 
@@ -698,47 +712,47 @@ def perform_delete(markowitz):
     mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == markowitz_id).execute()
     mz_markowitz.delete(mz_markowitz.c.globalid == markowitz_id).execute()
 
-@markowitz.command()
-@click.option('--id', 'optid', help=u'ids of markowitz to update')
-@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
-@click.pass_context
-def maxdd(ctx, optid, optlist):
-    ''' delete markowitz instance
-    '''
-    if optid is not None:
-        markowitzs = [s.strip() for s in optid.split(',')]
-    else:
-        markowitzs = None
+# @markowitz.command()
+# @click.option('--id', 'optid', help=u'ids of markowitz to update')
+# @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+# @click.pass_context
+# def maxdd(ctx, optid, optlist):
+#     ''' delete markowitz instance
+#     '''
+#     if optid is not None:
+#         markowitzs = [s.strip() for s in optid.split(',')]
+#     else:
+#         markowitzs = None
 
-    df_markowitz = asset_mz_markowitz.load(markowitzs)
+#     df_markowitz = asset_mz_markowitz.load(markowitzs)
 
-    if optlist:
+#     if optlist:
 
-        df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
-        print tabulate(df_markowitz, headers='keys', tablefmt='psql')
-        return 0
+#         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
+#         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
+#         return 0
 
-    data = []
-    for _, markowitz in df_markowitz.iterrows():
-        perform_maxdd(markowitz)
+#     data = []
+#     for _, markowitz in df_markowitz.iterrows():
+#         perform_maxdd(markowitz)
             
-def perform_maxdd(markowitz):
-    markowitz_id = markowitz['globalid']
-    sdate = '2012-07-27'
-    tdates = database.base_trade_dates_load_index(sdate);
-    # sr_nav = database.load_nav_series(markowitz_id, reindex=tdates, begin_date=sdate)
-    sr_nav = asset_mz_markowitz_nav.load_series(markowitz_id, reindex=tdates, begin_date=sdate)
+# def perform_maxdd(markowitz):
+#     markowitz_id = markowitz['globalid']
+#     sdate = '2012-07-27'
+#     tdates = database.base_trade_dates_load_index(sdate);
+#     # sr_nav = database.load_nav_series(markowitz_id, reindex=tdates, begin_date=sdate)
+#     sr_nav = asset_mz_markowitz_nav.load_series(markowitz_id, reindex=tdates, begin_date=sdate)
 
-    positive, total = (0, 0)
-    for w in [60, 120, 250]:
-        tmp = sr_nav.rolling(window=250, min_periods=250).apply(maxdd);
-        tmp = tmp.dropna()
-        print "win", w,  tmp.sum()/len(tmp)
+#     positive, total = (0, 0)
+#     for w in [60, 120, 250]:
+#         tmp = sr_nav.rolling(window=250, min_periods=250).apply(maxdd);
+#         tmp = tmp.dropna()
+#         print "win", w,  tmp.sum()/len(tmp)
 
-def maxdd(x):
-    y = x[-1]/x[0] - 1
-    max_drawdown = (x/np.maximum.accumulate(x) - 1).min()
-    if (y / abs(max_drawdown)) > 2:
-        return 1
-    return 0
+# def maxdd(x):
+#     y = x[-1]/x[0] - 1
+#     max_drawdown = (x/np.maximum.accumulate(x) - 1).min()
+#     if (y / abs(max_drawdown)) > 2:
+#         return 1
+#     return 0
     

@@ -8,6 +8,7 @@ import pandas as pd
 # import sys
 import logging
 import database
+from db import base_ra_index
 
 from dateutil.parser import parse
 
@@ -50,3 +51,50 @@ def load_asset_name(id_, category, xtype):
     s2 = categories_name(category)
 
     return "%s%s资产" % (s1, s2)
+
+def match_asset_pool(gid):
+    xtype = gid / 10000000
+
+    result = 0
+    if xtype == 1:
+        result =  gid
+    elif xtype == 5:
+        xtab = {
+            41110100: 19210111, #大盘资产修型	
+            41110101: 19210111, #大盘资产修型(实验)	
+            41110102: 19210111, #巨潮大盘指数修型	
+            41110105: 19210117, #价值资产修型	
+            41110200: 19210112, #小盘资产修型	
+            41110201: 19210112, #小盘资产修型(实验)	
+            41110202: 19210112, #巨潮小盘指数修型	
+            41110205: 19210113, #上涨资产修型	
+            41110206: 19210114, #震荡资产修型	
+            41110207: 19210115, #下跌资产修型	
+            41110208: 19210116, #成长资产修型	
+            41120200: 19240141, #标普资产修型	
+            41120500: 19240143, #恒生资产修型	
+            41120501: 19240143, #恒生资产修型(实验)	
+            41120502: 19240143, #恒生指数修型	
+            41400100: 19240142, #黄金资产修型	
+            41400101: 19240142, #黄金资产修型(实验)	
+            41400102: 19240142, #黄金指数修型	
+        }
+        if xtab[gid] is not None:
+            result = xtab[gid]
+
+    elif xtype == 12:
+        #
+        # 指数资产
+        #
+        asset = base_ra_index.find(gid)
+        name = asset['ra_name']
+        if '标普' in name:
+            result = 19240141
+        elif '黄金' in name:
+            result = 19240142
+        elif '恒生' in name:
+            result = 19240143
+    else:
+        pass
+
+    return result

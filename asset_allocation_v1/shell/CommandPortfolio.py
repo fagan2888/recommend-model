@@ -47,26 +47,27 @@ logger = logging.getLogger(__name__)
 @click.option('--name', 'optname', default=u'markowitz', help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
+@click.option('--ratio', 'optratio', type=int, default=None, help=u'specified which ratio_id to use')
+@click.option('--pool', 'optpool', default=0, help=u'which pool to use for each asset (eg. 120000001:19210111,120000002:19210112')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
 @click.pass_context
-def portfolio(ctx, optfull, optid, optname, opttype, optreplace):
+def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpool, optrisk, turnover):
 
     '''generate final portolio
     '''
-    # if ctx.invoked_subcommand is None:
-    #     # click.echo('I was invoked without subcommand')
-    #     if optfull is False:
-    #         rc = ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, assets=assets)
-    #         if optid is None:
-    #             optid = str(rc)
-    #         ctx.invoke(nav, optid=optid)
-    #         ctx.invoke(turnover, optid=optid)
-    #     else:
-    #         ctx.invoke(nav, optid=optid)
-    #         ctx.invoke(turnover, optid=optid)
-    # else:
-    #     # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
-    #     pass
-    pass
+    if ctx.invoked_subcommand is None:
+        # click.echo('I was invoked without subcommand')
+        if optfull is False:
+            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=turnover)
+            ctx.invoke(nav, optid=optid)
+            # ctx.invoke(turnover, optid=optid)
+        else:
+            ctx.invoke(nav, optid=optid)
+            # ctx.invoke(turnover, optid=optid)
+    else:
+        # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
+        pass
 
 @portfolio.command()
 @click.option('--id', 'optid', type=int, help=u'specify portfolio id')
@@ -83,8 +84,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     '''
 
     if optratio == 0:
-        click.echo(click.style("--ratio is required, aborted!", fg="red"))
-        return 0
+        if ctx.obj['highlow'] is None:
+            click.echo(click.style("--ratio is required, aborted!", fg="red"))
+            return 0
+        
+        optratio = ctx.obj['highlow']
     #
     # 处理id参数
     #
@@ -272,7 +276,13 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         # print df_tosave
         asset_ra_portfolio_pos.save(gid, df_tosave)
 
-        click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
+        # click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
+    #
+    # 在context中保存optid
+    #
+    ctx.obj['portfolio'] = optid
+    
+    click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
 
 def choose_fund_avg(day, pool_id, ratio, df_fund):
     # 比例均分

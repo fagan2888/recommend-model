@@ -61,42 +61,6 @@ def roboadvisor(ctx):
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
     #config.load()        
-    
-@roboadvisor.group()  
-@click.pass_context
-def measure(ctx):
-    '''calc fund measure
-    '''
-    click.echo("model")
-  
-@measure.command()
-@click.pass_context
-
-def sharpe(ctx):
-    '''calc fund sharpe ratio
-    '''
-    click.echo("Not integrated")
-
-@measure.command()
-@click.pass_context
-def jensen(ctx):
-    '''calc fund jensen alpha
-    '''
-    click.echo("Not integrated")
-
-@measure.command()
-@click.pass_context
-def sortino(ctx):
-    '''calc fund sortino ratio
-    '''
-    click.echo("Not integrated")
-
-@measure.command()
-@click.pass_context
-def ppw(ctx):
-    '''calc fund ppw measure
-    '''
-    click.echo("Not integrated")
 
 @roboadvisor.group()  
 @click.pass_context
@@ -111,6 +75,44 @@ def nav(ctx):
     '''fund pool group
     '''
     click.echo("")
+
+
+@roboadvisor.command()
+@click.option('--pool/--no-pool', 'optpool', default=True, help=u'include pool command group with in batch')
+@click.option('--timing/--no-timing', 'opttiming', default=True, help=u'include timing command group with in batch')
+@click.option('--reshape/--no-reshape', 'optreshape', default=True, help=u'include reshape command group with in batch')
+@click.option('--riskmgr/--no-riskmgr', 'optriskmgr', default=True, help=u'include riskmgr command group with in batch')
+@click.option('--markowitz/--no-markowitz', 'optmarkowtiz', default=True, help=u'include markowitz command group with in batch')
+@click.option('--highlow/--no-highlow', 'opthighlow', default=True, help=u'include highlow command group with in batch')
+@click.option('--portfolio/--no-portfolio', 'optportfolio', default=True, help=u'include portfolio command group with in batch')
+@click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance for timing and riskmgr')
+@click.pass_context
+def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, optonline):
+    '''run all command in batch
+    '''
+    if optpool:
+        # ctx.invoke(CommandPool.nav, optid='92101,92201,92301,92401')
+        ctx.invoke(CommandPool.nav, optid='92401')
+
+    if opttiming:
+        ctx.invoke(CommandTiming.timing, optonline=optonline)
+
+    if optreshape:
+        ctx.invoke(CommandReshape.reshape, optonline=optonline)
+
+    if optriskmgr:
+        ctx.invoke(CommandRiskManage.riskmgr, optonline=optonline)
+
+    if optmarkowtiz:
+        ctx.invoke(CommandMarkowitz.markowitz, short_cut='high')
+        ctx.invoke(CommandMarkowitz.markowitz, short_cut='low')
+
+    if opthighlow:
+        ctx.invoke(CommandHighlow.highlow)
+
+    if optportfolio:
+        ctx.invoke(CommandPortfolio.portfolio)
+    
 
 if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
