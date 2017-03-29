@@ -230,26 +230,29 @@ def m_markowitz(queue, random_index, df_inc, bound):
 def markowitz_bootstrape(df_inc, bound):
 
     process_num = 8
+    process_indexs = [[] for i in range(0, process_num)]
+
+    #print process_indexs
+
     look_back = len(df_inc)
     loop_num = look_back * 4
     #loop_num = 20
-    randoms = []
     rep_num = loop_num * (look_back / 2) / look_back
     day_indexs = range(0, look_back) * rep_num
     random.shuffle(day_indexs)
+    #print day_indexs
     day_indexs = np.array(day_indexs)
-    #print day_indexs
+
     day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
-    #print day_indexs
     for m in range(0, len(day_indexs)):
-        randoms.append(list(day_indexs[m]))
-    #print randoms
+        indexs = day_indexs[m]
+        mod = m % process_num
+        process_indexs[mod].append(list(indexs))
+
 
     q = multiprocessing.Queue()
     processes = []
-    process_index_num = len(randoms) / process_num
-    for m in range(0, process_num):
-        indexs = randoms[m * process_index_num : (m + 1) * process_index_num]
+    for indexs in process_indexs:
         p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound,))
         processes.append(p)
         p.start()
@@ -274,6 +277,7 @@ def markowitz_bootstrape(df_inc, bound):
 
     ws = wss / loop_num
     return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
+
 
 #利用blacklitterman做战略资产配置
 def strategicallocation(delta,    weq, V, tau, P, Q):
