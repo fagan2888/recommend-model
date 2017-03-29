@@ -66,39 +66,44 @@ class RiskMgrSimple(object):
 
         result_pos = {} # 结果仓位
         result_act = {} # 结果动作
-        for day, row in df.iterrows():
-            #
-            # 是否启动风控
-            #
-            if row['inc2d'] < self.maxdd:
-                status, empty_days, position, action = 1, 0, 0, 2
-            elif row['inc3d'] < self.maxdd:
-                status, empty_days, position, action = 1, 0, 0, 3
-            elif row['cnfdn'] is not None and row['inc5d'] < row['cnfdn'] and row['inc5d'] < self.mindd:
-                status, empty_days, position, action = 1, 0, 0, 5
+        with click.progressbar(length=len(df.index), label='riskmgr %-20s' % (asset)) as bar:
+            for day, row in df.iterrows():
+                #
+                # 是否启动风控
+                #
+                if row['inc2d'] < self.maxdd:
+                    status, empty_days, position, action = 1, 0, 0, 2
+                elif row['inc3d'] < self.maxdd:
+                    status, empty_days, position, action = 1, 0, 0, 3
+                elif row['cnfdn'] is not None and row['inc5d'] < row['cnfdn'] and row['inc5d'] < self.mindd:
+                    status, empty_days, position, action = 1, 0, 0, 5
 
-            #
-            # 根据当前的风控状态进行处理
-            #
-            if status == 0:
-                # 不在风控中
-                status, position, action = 0, 1, 0
-            else:
-                # 风控中 (status == 1)
-                if empty_days >= self.empty:
-                    if row['timing'] == 1.0:
-                        empty_days = 0
-                        status, position, action = 0, 1, 8 # 择时满仓
+                #
+                # 根据当前的风控状态进行处理
+                #
+                if status == 0:
+                    # 不在风控中
+                    status, position, action = 0, 1, 0
+                else:
+                    # 风控中 (status == 1)
+                    if empty_days >= self.empty:
+                        if row['timing'] == 1.0:
+                            empty_days = 0
+                            status, position, action = 0, 1, 8 # 择时满仓
+                        else:
+                            empty_days += 1
+                            status, position, action = 1, 0, 7 # 空仓等待择时加仓信号
                     else:
                         empty_days += 1
-                        status, position, action = 1, 0, 7 # 空仓等待择时加仓信号
-                else:
-                    empty_days += 1
-                    #if empty_days != 1:
-                    #    status, position, action = 1, 0, 6 # 无条件空仓
+                        #if empty_days != 1:
+                        #    status, position, action = 1, 0, 6 # 无条件空仓
 
-            result_act[day] = action
-            result_pos[day] = position
+                result_act[day] = action
+                result_pos[day] = position
+                #
+                # 更新进度条
+                #
+                bar.update(1)
         
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act})
         df_result.index.name = 'rm_date'
