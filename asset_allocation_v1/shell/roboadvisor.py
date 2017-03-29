@@ -26,6 +26,8 @@ import CommandRiskManage
 import CommandTiming
 import CommandHighlow
 
+from util import ProgressBar
+
 
 logger = logging.getLogger(__name__)
 
@@ -74,8 +76,27 @@ def model(ctx):
 def nav(ctx):
     '''fund pool group
     '''
-    click.echo("")
+    pass
 
+@roboadvisor.command()  
+@click.pass_context
+def test(ctx):
+    '''test code
+    '''
+    # pbar = click.progressbar(length=10, label='update nav')
+    # iterable=iterable, length=length, show_eta=show_eta,
+    #                    show_percent=show_percent, show_pos=show_pos,
+    #                    item_show_func=item_show_func, fill_char=fill_char,
+    #                    empty_char=empty_char, bar_template=bar_template,
+    #                    info_sep=info_sep, file=file, label=label,
+    #                    width=width, color=color)
+
+    with ProgressBar.ProgressBar(
+            range(0, 10), label='update nav',
+            item_show_func=lambda x: "subtask %d" % x if x is not None else '', fill_char='#', empty_char='-',
+            bar_template='%(label)-25s  [%(bar)s]  %(info)s', width=0) as bar:
+        for i in bar:
+            time.sleep(0.3)
 
 @roboadvisor.command()
 @click.option('--pool/--no-pool', 'optpool', default=True, help=u'include pool command group with in batch')
