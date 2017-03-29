@@ -100,7 +100,7 @@ def portfolio_nav2(df_pos, end_date=None) :
 
     dates = df_pos.index.get_level_values(0).unique()
     pairs = zip(dates[0:-1], dates[1:])
-    if max_date not in dates:
+    if max_date.strftime("%Y-%m-%d") not in dates:
         pairs.append((dates[-1], max_date))
 
     sr_nav_portfolio = pd.Series([1], index=[dates[0]]);

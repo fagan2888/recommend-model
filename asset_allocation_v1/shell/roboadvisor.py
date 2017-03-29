@@ -91,8 +91,8 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
     '''run all command in batch
     '''
     if optpool:
-        # ctx.invoke(CommandPool.nav, optid='92101,92201,92301,92401')
-        ctx.invoke(CommandPool.nav, optid='92401')
+        ctx.invoke(CommandPool.nav, optid='92101,92201,92301,92401')
+        #ctx.invoke(CommandPool.nav, optid='92401')
 
     if opttiming:
         ctx.invoke(CommandTiming.timing, optonline=optonline)

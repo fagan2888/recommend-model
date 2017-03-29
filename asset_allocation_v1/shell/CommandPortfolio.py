@@ -280,9 +280,9 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     #
     # 在context中保存optid
     #
-    gctx.obj['portfolio'] = optid
+    ctx.obj['portfolio'] = optid
     
-    click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
+    click.echo(click.style("portfolio allocation complement! instance id [%s]" % (optid), fg='green'))
 
 def choose_fund_avg(day, pool_id, ratio, df_fund):
     # 比例均分
@@ -303,7 +303,10 @@ def nav(ctx, optid, optlist):
     if optid is not None:
         portfolios = [s.strip() for s in optid.split(',')]
     else:
-        portfolios = None
+        if 'portfolio' in ctx.obj:
+            portfolios = [str(ctx.obj['portfolio'])]
+        else:
+            portfolios = None
 
     df_portfolio = asset_ra_portfolio.load(portfolios)
 

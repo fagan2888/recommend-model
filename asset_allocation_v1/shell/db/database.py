@@ -83,49 +83,69 @@ def batch(db, table, df_new, df_old, timestamp=True):
     index_delete = df_old.index.difference(df_new.index)
     index_update = df_new.index.intersection(df_old.index)
 
-    if len(index_delete):
-        keys = [table.c.get(c) for c in df_new.index.names]
-        table.delete(tuple_(*keys).in_(index_delete.tolist())).execute()
-
-        if len(index_delete) > 1:
-            logger.info("delete %s (%5d) : %s " % (table.name, len(index_insert), index_delete[0]))
-        
-        
-    if len(index_insert):
-        df_insert = df_new.loc[index_insert].copy()
-        if timestamp:
-            df_insert['updated_at'] = df_insert['created_at'] = datetime.now()
-
-        df_insert.to_sql(table.name, db, index=True, if_exists='append', chunksize=500)
-
-        if len(index_insert) > 1:
-            logger.info("insert %s (%5d) : %s " % (table.name, len(index_insert), index_insert[0]))
-
+    #
+    # 我们首先计算需要更新的条目个数, 因为更新的性能很差, 所以, 如果需
+    # 要更新的条目过多(>50), 则采用删除+插入的批量处理方式
+    #
     if len(index_update):
         df1 = df_new.loc[index_update].copy()
         df2 = df_old.loc[index_update].copy()
 
         masks = (df1 != df2)
         df_update = df1.loc[masks.any(axis=1)].copy()
+    else:
+        df_update = pd.DataFrame(columns=df_new.columns)
 
-        for key, row in df_update.iterrows():
-            origin = df2.loc[key]
-            columns = row[masks.loc[key]]
+    if len(df_update) > 50:
+        keys = [table.c.get(c) for c in df_old.index.names]
+        table.delete(tuple_(*keys).in_(df_old.index.tolist())).execute()
+        
+        if timestamp:
+            df_new['updated_at'] = df_new['created_at'] = datetime.now()
 
-            pkeys = zip(df_update.index.names, key)
+        df_new.to_sql(table.name, db, index=True, if_exists='append', chunksize=500)
 
-            dirty = {k:{'old':origin[k], 'new':v} for k,v in columns.iteritems()}
+        if len(df_new.index) >= 1:
+            logger.info("delete %s (%5d records) and reinsert (%5d records): %s " % (table.name, len(df_old.index), len(df_new.index), df_new.index[0]))
+    else:
 
+        if len(index_delete):
+            keys = [table.c.get(c) for c in df_new.index.names]
+            table.delete(tuple_(*keys).in_(index_delete.tolist())).execute()
+
+            if len(index_delete) > 1:
+                logger.info("delete %s (%5d records) : %s " % (table.name, len(index_insert), index_delete[0]))
+
+
+        if len(index_insert):
+            df_insert = df_new.loc[index_insert].copy()
             if timestamp:
-                columns['updated_at'] = text('NOW()')
+                df_insert['updated_at'] = df_insert['created_at'] = datetime.now()
 
-            values = {k:v for k,v in columns.iteritems()}
-            stmt = table.update(values=values)
-            for k, v in pkeys:
-                stmt = stmt.where(table.c.get(k) == v)
+            df_insert.to_sql(table.name, db, index=True, if_exists='append', chunksize=500)
 
-            logger.info("update %s : {key: %s, dirties: %s " % (table.name, str(pkeys), str(dirty)))
-            stmt.execute()
+            if len(index_insert) > 1:
+                logger.info("insert %s (%5d records) : %s " % (table.name, len(index_insert), index_insert[0]))
+
+        if len(df_update):
+            for key, row in df_update.iterrows():
+                origin = df2.loc[key]
+                columns = row[masks.loc[key]]
+
+                pkeys = zip(df_update.index.names, key)
+
+                dirty = {k:{'old':origin[k], 'new':v} for k,v in columns.iteritems()}
+
+                if timestamp:
+                    columns['updated_at'] = text('NOW()')
+
+                values = {k:v for k,v in columns.iteritems()}
+                stmt = table.update(values=values)
+                for k, v in pkeys:
+                    stmt = stmt.where(table.c.get(k) == v)
+
+                logger.info("update %s : {key: %s, dirties: %s} " % (table.name, str(pkeys), str(dirty)))
+                stmt.execute()
 
 def asset_tc_timing_scratch_load_signal(timings):
     db = connection('asset')
