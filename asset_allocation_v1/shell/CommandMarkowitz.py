@@ -191,10 +191,12 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
 @click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
+@click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
+@click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.option('--short-cut', type=click.Choice(['default', 'high', 'low']))
 @click.argument('assets', nargs=-1)
 @click.pass_context
-def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover, short_cut, assets):
+def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optcpu, short_cut, assets):
     '''calc high low model markowitz
     '''
 
@@ -292,7 +294,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 optname = '马克维茨(实验)'
 
     df = markowitz_days(startdate, enddate, assets,
-        label='markowitz', lookback=lookback, adjust_period=adjust_period)
+                        label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=optbootstrap, cpu_count=optcpu)
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
@@ -460,7 +462,7 @@ def merge_asset_name_and_type(asset_id, asset_data):
         'mz_asset_type': category,
     })
 
-def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period):
+def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0):
     '''perform markowitz asset for days
     '''
     # 加载时间轴数据
@@ -484,11 +486,11 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period)
             bar.update(1)
             logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
             # 高风险资产配置
-            data[day] = markowitz_day(day, lookback, assets)
+            data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count)
 
     return pd.DataFrame(data).T
 
-def markowitz_day(day, lookback, assets):
+def markowitz_day(day, lookback, assets, bootstrap, cpu_count):
     '''perform markowitz for single day
     '''
     
@@ -506,17 +508,19 @@ def markowitz_day(day, lookback, assets):
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
-    return markowitz_r(df_inc, assets)
+    return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 
-def markowitz_r(df_inc, limits):
+def markowitz_r(df_inc, limits, bootstrape, cpu_count):
     '''perform markowitz
     '''
     bound = []
     for asset in df_inc.columns:
         bound.append(limits[asset])
-    
-    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
-    # risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+
+    if not bootstrap:
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+    else:
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
