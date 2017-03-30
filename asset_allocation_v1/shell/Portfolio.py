@@ -227,10 +227,13 @@ def m_markowitz(queue, random_index, df_inc, bound):
         queue.put((risk, returns, ws, sharpe))
 
 
-def markowitz_bootstrape(df_inc, bound):
+def markowitz_bootstrape(df_inc, bound, cpu_count = 0):
 
-    process_num = 8
-    process_indexs = [[] for i in range(0, process_num)]
+    if cpu_count == 0:
+        count = multiprocessing.cpu_count()
+        cpu_count = count if count > 0 else 1
+    
+    process_indexs = [[] for i in range(0, cpu_count)]
 
     #print process_indexs
 
@@ -246,7 +249,7 @@ def markowitz_bootstrape(df_inc, bound):
     day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
     for m in range(0, len(day_indexs)):
         indexs = day_indexs[m]
-        mod = m % process_num
+        mod = m % cpu_count
         process_indexs[mod].append(list(indexs))
 
 

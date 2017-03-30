@@ -77,7 +77,7 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
         bound.append(bound_set[asset])
 
     risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
-    #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound)
+    #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=0)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
