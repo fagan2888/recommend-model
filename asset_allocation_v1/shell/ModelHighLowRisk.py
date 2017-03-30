@@ -61,15 +61,15 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
     # uplimit   = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3, 0.3, 0.3]
     # downlimit = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     bound_set = {
-        'largecap': {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'smallcap': {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'rise':     {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'decline':  {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'growth':   {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'value':    {'downlimit': 0.0, 'uplimit': 1.0, 'sumlimit': False},
-        'SP500.SPI':{'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
-        'GLNC':     {'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
-        'HSCI.HI':  {'downlimit': 0.0, 'uplimit': 0.3, 'sumlimit': True},
+        'largecap': {'lower': 0.0, 'upper': 1.0, 'sum1': 0,    'sum2': 0},
+        'smallcap': {'lower': 0.0, 'upper': 1.0, 'sum1': 0,    'sum2': 0},
+        'rise':     {'lower': 0.0, 'upper': 1.0, 'sum1': 0,    'sum2': 0},
+        'decline':  {'lower': 0.0, 'upper': 1.0, 'sum1': 0,    'sum2': 0},
+        'growth':   {'lower': 0.0, 'upper': 1.0, 'sum1': 0,    'sum2': 0},
+        'value':    {'lower': 0.0, 'upper': 1.0, 'sum1': 0,    'sum2': 0},
+        'SP500.SPI':{'lower': 0.0, 'upper': 0.3, 'sum1': 0.50, 'sum2': 0},
+        'GLNC':     {'lower': 0.0, 'upper': 0.3, 'sum1': 0.50, 'sum2': 0},
+        'HSCI.HI':  {'lower': 0.0, 'upper': 0.3, 'sum1': 0.50, 'sum2': 0},
     }
 
     bound = []
@@ -77,7 +77,7 @@ def asset_alloc_high_risk_per_day(day, lookback, df_inc=None, columns=None):
         bound.append(bound_set[asset])
 
     risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
-    #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=0)
+    #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=0, bootstrap_count=0)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),

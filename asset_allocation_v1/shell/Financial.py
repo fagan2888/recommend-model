@@ -18,7 +18,7 @@ import pylab
 import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(return_rate, bound, sumlimit=0.50):
+def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
 
     solvers.options['show_progress'] = False
 
@@ -26,10 +26,16 @@ def efficient_frontier_spe(return_rate, bound, sumlimit=0.50):
 
     asset_mean = np.mean(return_rate, axis = 1)
     #print asset_mean
+    l = len(asset_mean)
 
     cov        =     np.cov(return_rate)
 
     S           =     matrix(cov)
+    l2 = matrix(S * np.eye(l))
+    l2 = l2 * 2
+    S = S + l2
+    #S = l2
+
     pbar       =     matrix(asset_mean)
 
     #
@@ -48,10 +54,11 @@ def efficient_frontier_spe(return_rate, bound, sumlimit=0.50):
     #    4: 某类资产之和的上限, 由G的3*n_asset 行控制
     #
 
-    G = matrix(0.0, (3 * n_asset + 1,  n_asset))
-    h = matrix(0.0, (3 * n_asset + 1, 1) )
+    G = matrix(0.0, (3 * n_asset + 2,  n_asset))
+    h = matrix(0.0, (3 * n_asset + 2, 1) )
  
-    h[3* n_asset, 0] = sumlimit   
+    h[3* n_asset, 0] = sum1
+    h[3* n_asset + 1, 0] = sum2
     for i in range(0, n_asset):
         #
         # Wi >= 0
@@ -62,18 +69,21 @@ def efficient_frontier_spe(return_rate, bound, sumlimit=0.50):
         # Wi的下限
         #
         G[n_asset + i, i ]     = -1
-        h[n_asset + i, 0] = -1.0 * bound[i]['downlimit']
+        h[n_asset + i, 0] = -1.0 * bound[i]['lower']
         #
         # Wi的上限
         #
         G[2 * n_asset + i, i ] = 1
-        h[2 * n_asset + i, 0] = bound[i]['uplimit']
+        h[2 * n_asset + i, 0] = bound[i]['upper']
         #
         # 某类资产之和的上限
         #
-        if bound[i]['sumlimit'] == True or bound[i]['sumlimit'] == 1:
+        if bound[i]['sum1'] == True or bound[i]['sum1'] == 1:
             G[3 * n_asset, i] = 1
-            
+
+        if bound[i]['sum2'] == True or bound[i]['sum2'] == 1:
+            G[3 * n_asset + 1, i] = 1
+
     A          =  matrix(1.0, (1, n_asset))
     b          =  matrix(1.0)
 
