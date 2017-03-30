@@ -106,9 +106,12 @@ def test(ctx):
 @click.option('--markowitz/--no-markowitz', 'optmarkowtiz', default=True, help=u'include markowitz command group with in batch')
 @click.option('--highlow/--no-highlow', 'opthighlow', default=True, help=u'include highlow command group with in batch')
 @click.option('--portfolio/--no-portfolio', 'optportfolio', default=True, help=u'include portfolio command group with in batch')
+@click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
+@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
+@click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance for timing and riskmgr')
 @click.pass_context
-def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, optonline):
+def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, optbootstrap, optbootcount, optcpu, optonline):
     '''run all command in batch
     '''
     if optpool:
@@ -125,8 +128,8 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
         ctx.invoke(CommandRiskManage.riskmgr, optonline=optonline)
 
     if optmarkowtiz:
-        ctx.invoke(CommandMarkowitz.markowitz, short_cut='high')
-        ctx.invoke(CommandMarkowitz.markowitz, short_cut='low')
+        ctx.invoke(CommandMarkowitz.markowitz, short_cut='high', optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu)
+        ctx.invoke(CommandMarkowitz.markowitz, short_cut='low', optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu)
 
     if opthighlow:
         ctx.invoke(CommandHighlow.highlow)

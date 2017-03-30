@@ -5,6 +5,7 @@ import numpy as np
 import string
 import os
 import sys
+import logging
 sys.path.append("windshell")
 import Financial as fin
 import Const
@@ -15,6 +16,8 @@ import multiprocessing
 import random
 
 from Const import datapath
+
+logger = logging.getLogger(__name__)
 
 #strategicallocation
 
@@ -240,6 +243,8 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
         loop_num = bootstrap_count + 1
     else:
         loop_num = bootstrap_count
+
+    # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
         
     process_indexs = [[] for i in range(0, cpu_count)]
 
