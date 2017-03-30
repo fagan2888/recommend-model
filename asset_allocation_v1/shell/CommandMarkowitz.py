@@ -192,11 +192,12 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
 @click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
+@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.option('--short-cut', type=click.Choice(['default', 'high', 'low']))
 @click.argument('assets', nargs=-1)
 @click.pass_context
-def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optcpu, short_cut, assets):
+def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optbootcount, optcpu, short_cut, assets):
     '''calc high low model markowitz
     '''
 
@@ -251,50 +252,52 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     else:
         if short_cut == 'high':
             assets = {
-                41110100:  {'sum1limit': 0,    'sum2limit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110200:  {'sum1limit': 0,    'sum2limit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110205:  {'sum1limit': 0,    'sum2limit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110207:  {'sum1limit': 0,    'sum2limit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110208:  {'sum1limit': 0,    'sum2limit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110105:  {'sum1limit': 0,    'sum2limit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                120000013: {'sum1limit': 0.50, 'sum2limit': 0, 'uplimit': 0.3, 'downlimit': 0.0},
-                41400100:  {'sum1limit': 0.50, 'sum2limit': 0, 'uplimit': 0.3, 'downlimit': 0.0},
-                41120502:  {'sum1limit': 0.50, 'sum2limit': 0, 'uplimit': 0.3, 'downlimit': 0.0},
+                41110100:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110200:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110205:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110207:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110208:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110105:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                120000013: {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
+                41400100:  {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
+                41120502:  {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
             }
             if optname == 'markowitz':
                 optname = '马克维茨(高风险)'
         elif short_cut == 'low':
             assets = {
-                11220121:  {'sum1limit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                11220122:  {'sum1limit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                11220121:  {'sum1': 0, 'upper': 1.0, 'lower': 0.0},
+                11220122:  {'sum1': 0, 'upper': 1.0, 'lower': 0.0},
             }
             if optname == 'markowitz':
                 optname = '马克维茨(低风险)'
         else: # short_cut == 'default'
             assets = {
-                120000001:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #沪深300指数修型
-                120000002:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #中证500指数修型
-                120000013:  {'sum1limit': 0.65, 'sum2limit' : 0,   'uplimit': 0.35, 'downlimit': 0.0}, #标普500指数
-                120000015:  {'sum1limit': 0.65, 'sum2limit' : 0,   'uplimit': 0.35, 'downlimit': 0.0}, #恒生指数修型
-                120000014:  {'sum1limit': 0.65, 'sum2limit' : 0.45,'uplimit': 0.35, 'downlimit': 0.0}, #黄金指数修型
-                # 120000029:  {'sum1limit': 0.65, 'sum2limit' : 0.45,'uplimit': 0.20, 'downlimit': 0.0}, #南华商品指数
-                # 120000028:  {'sum1limit': 0.65, 'sum2limit' : 0.45,'uplimit': 0.20, 'downlimit': 0.0}, #标普高盛原油商品指数收益率
-                # 120000019:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #MSCI全球
-                # 120000020:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #纳斯达克100
-                # 120000021:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #MSCI亚洲
-                # 120000022:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #MSCI中华
-                # 120000023:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #MSCI中华
-                # 120000024:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #MSCI中华
-                # 120000025:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #MSCI中华
-                # 120000030:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #MSCI中华
-                # 120000031:  {'sum1limit': 0,    'sum2limit' : 0,   'uplimit': 1.0,  'downlimit': 0.0}, #MSCI中华
+                120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
+                120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #中证500指数修型
+                120000013:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
+                120000015:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
+                120000014:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.35, 'lower': 0.0}, #黄金指数修型
+                # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
+                # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
+                # 120000019:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI全球
+                # 120000020:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #纳斯达克100
+                # 120000021:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI亚洲
+                # 120000022:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000023:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000024:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000025:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000030:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000031:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
             }
 
             if optname == 'markowitz':
                 optname = '马克维茨(实验)'
 
+    bootstrap = optbootcount if optbootstrap else None
+        
     df = markowitz_days(startdate, enddate, assets,
-                        label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=optbootstrap, cpu_count=optcpu)
+                        label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=bootstrap, cpu_count=optcpu)
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
@@ -336,8 +339,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_asset.index.name = 'mz_markowitz_asset_id'
     df_asset['mz_markowitz_id'] = optid
     df_asset.rename(inplace=True, columns={
-        'uplimit':  'mz_upper_limit', 'downlimit':'mz_lower_limit',
-        'sum1limit':'mz_sum1_limit',  'sum2limit': 'mz_sum2_limit'
+        'upper':  'mz_upper_limit', 'lower':'mz_lower_limit',
+        'sum1':'mz_sum1_limit',  'sum2': 'mz_sum2_limit'
     })
     df_asset = df_asset.reset_index().set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
     asset_mz_markowitz_asset.save(optid, df_asset)
@@ -424,20 +427,22 @@ def parse_asset(asset):
 
     if len(segments) == 1:
         result = (int(segments[0]), {
-            'uplimit': 1.0, 'downlimit': 0.0, 'sumlimit': 0})
+            'upper': 1.0, 'lower': 0.0, 'sum1': 0, 'sum2': 0})
     elif len(segments) == 2:
         result = (int(segments[0]), {
-            'uplimit': float(segments[1]), 'downlimit': 0.0, 'sumlimit': 0})
+            'upper': float(segments[1]), 'lower': 0.0, 'sum1': 0, 'sum2', 0})
     elif len(segments) == 3:
         result = (int(segments[0]), {
-            'uplimit': float(segments[1]), 'downlimit': float(segments[2]), 'sumlimit': 0})
+            'upper': float(segments[1]), 'lower': float(segments[2]), 'sum1': 0, 'sum2': 0})
+    elif len(segments) == 4:
+        result = (int(segments[0]), {
+            'upper': float(segments[1]), 'lower': float(segments[2]), 'sum1': float(segments[3]), 'sum2': 0})
     else:
-        if len(segments) >= 4:
-            sumlimit = 1 if segments[3] == '1' else 0
+        if len(segments) >= 5:
             result = (int(segments[0]), {
-                'uplimit': float(segments[1]), 'downlimit': float(segments[2]), 'sumlimit': sumlimit})
+                'upper': float(segments[1]), 'lower': float(segments[2]), 'sum1': float(segments[3]), 'sum2': float(segments[4]) })
         else:
-            result = (None, {'uplimit': 1.0, 'downlimit': 0.0, 'sumlimit': 0})
+            result = (None, {'upper': 1.0, 'lower': 0.0, 'sum1': 0, 'sum2': 0})
 
     return result
 
@@ -517,10 +522,10 @@ def markowitz_r(df_inc, limits, bootstrape, cpu_count):
     for asset in df_inc.columns:
         bound.append(limits[asset])
 
-    if not bootstrap:
+    if bootstrap is None:
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
