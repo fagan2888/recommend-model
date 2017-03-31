@@ -61,10 +61,10 @@ def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpo
         if optfull is False:
             ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=turnover)
             ctx.invoke(nav, optid=optid)
-            # ctx.invoke(turnover, optid=optid)
+            ctx.invoke(turnover, optid=optid)
         else:
             ctx.invoke(nav, optid=optid)
-            # ctx.invoke(turnover, optid=optid)
+            ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
