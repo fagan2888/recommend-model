@@ -186,7 +186,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 
 @markowitz.command()
 @click.option('--id', 'optid', type=int, help=u'specify markowitz id')
-@click.option('--name', 'optname', default=u'markowitz', help=u'specify markowitz name')
+@click.option('--name', 'optname', default=None, help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
@@ -265,15 +265,15 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 41400100:  {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
                 41120502:  {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
             }
-            if optname == 'markowitz':
-                optname = '马克维茨(高风险)'
+            if optname is None:
+                optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
         elif short_cut == 'low':
             assets = {
                 11220121:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
                 11220122:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
             }
-            if optname == 'markowitz':
-                optname = '马克维茨(低风险)'
+            if optname is None:
+                optname = u'马克维茨%s(低风险)' % today.strftime("%m%d")
         else: # short_cut == 'default'
             assets = {
                 120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
@@ -294,8 +294,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 # 120000031:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
             }
 
-            if optname == 'markowitz':
-                optname = '马克维茨(实验)'
+    if optname is None:
+        optname = u'马克维茨%s(实验)' % today.strftime("%m%d")
 
     bootstrap = optbootcount if optbootstrap else None
         
@@ -473,7 +473,6 @@ def merge_asset_name_and_type(asset_id, asset_data):
 def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0):
     '''perform markowitz asset for days
     '''
-    print assets
     # 加载时间轴数据
     index = DBData.trade_date_index(start_date, end_date=end_date)
 
