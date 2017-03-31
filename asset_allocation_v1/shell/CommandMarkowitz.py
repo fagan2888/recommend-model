@@ -269,8 +269,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 optname = '马克维茨(高风险)'
         elif short_cut == 'low':
             assets = {
-                11220121:  {'sum1': 0, 'upper': 1.0, 'lower': 0.0},
-                11220122:  {'sum1': 0, 'upper': 1.0, 'lower': 0.0},
+                11220121:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                11220122:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
             }
             if optname == 'markowitz':
                 optname = '马克维茨(低风险)'
@@ -473,6 +473,7 @@ def merge_asset_name_and_type(asset_id, asset_data):
 def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0):
     '''perform markowitz asset for days
     '''
+    print assets
     # 加载时间轴数据
     index = DBData.trade_date_index(start_date, end_date=end_date)
 
