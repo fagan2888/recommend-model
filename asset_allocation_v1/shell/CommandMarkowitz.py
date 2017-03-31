@@ -41,17 +41,20 @@ logger = logging.getLogger(__name__)
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
+@click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
+@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
+@click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
-def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, short_cut, assets):
+def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optbootstrap, optbootcount, optcpu, short_cut, assets):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optfull is False:
-            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, short_cut=short_cut, assets=assets)
+            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, short_cut=short_cut, assets=assets)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -191,10 +194,13 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
 @click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
+@click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
+@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
+@click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.option('--short-cut', type=click.Choice(['default', 'high', 'low']))
 @click.argument('assets', nargs=-1)
 @click.pass_context
-def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover, short_cut, assets):
+def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optbootcount, optcpu, short_cut, assets):
     '''calc high low model markowitz
     '''
 
@@ -249,42 +255,52 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     else:
         if short_cut == 'high':
             assets = {
-                41110100:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110200:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110205:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110207:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110208:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110105:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-                41400100:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-                41120502:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                41110100:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110200:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110205:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110207:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110208:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                41110105:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                120000013: {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
+                41400100:  {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
+                41120502:  {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
             }
             if optname == 'markowitz':
                 optname = '马克维茨(高风险)'
         elif short_cut == 'low':
             assets = {
-                11220121:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                11220122:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
+                11220121:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                11220122:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
             }
             if optname == 'markowitz':
                 optname = '马克维茨(低风险)'
         else: # short_cut == 'default'
             assets = {
-                41110100:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                41110200:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                # 41110205:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                # 41110207:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                # 41110208:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                # 41110105:  {'sumlimit': 0, 'uplimit': 1.0, 'downlimit': 0.0},
-                120000013: {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-                41400100:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
-                41120502:  {'sumlimit': 1, 'uplimit': 0.3, 'downlimit': 0.0},
+                120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
+                120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #中证500指数修型
+                120000013:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
+                120000015:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
+                120000014:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.35, 'lower': 0.0}, #黄金指数修型
+                # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
+                # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
+                # 120000019:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI全球
+                # 120000020:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #纳斯达克100
+                # 120000021:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI亚洲
+                # 120000022:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000023:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000024:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000025:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000030:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000031:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
             }
+
             if optname == 'markowitz':
                 optname = '马克维茨(实验)'
 
+    bootstrap = optbootcount if optbootstrap else None
+        
     df = markowitz_days(startdate, enddate, assets,
-        label='markowitz', lookback=lookback, adjust_period=adjust_period)
+                        label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=bootstrap, cpu_count=optcpu)
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
@@ -326,7 +342,9 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_asset.index.name = 'mz_markowitz_asset_id'
     df_asset['mz_markowitz_id'] = optid
     df_asset.rename(inplace=True, columns={
-        'uplimit':'mz_upper_limit', 'downlimit':'mz_lower_limit', 'sumlimit':'mz_sum1_limit'})
+        'upper':  'mz_upper_limit', 'lower':'mz_lower_limit',
+        'sum1':'mz_sum1_limit',  'sum2': 'mz_sum2_limit'
+    })
     df_asset = df_asset.reset_index().set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
     asset_mz_markowitz_asset.save(optid, df_asset)
 
@@ -334,8 +352,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # 导入数据: markowitz_pos
     #
     df = df.round(4)             # 四舍五入到万分位
+ 
+    #每四周做平滑
+    # df = df.rolling(window = 4, min_periods = 1).mean()
+
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
-    # print df.head()
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     if turnover >= 0.01:
@@ -409,20 +430,22 @@ def parse_asset(asset):
 
     if len(segments) == 1:
         result = (int(segments[0]), {
-            'uplimit': 1.0, 'downlimit': 0.0, 'sumlimit': 0})
+            'upper': 1.0, 'lower': 0.0, 'sum1': 0, 'sum2': 0})
     elif len(segments) == 2:
         result = (int(segments[0]), {
-            'uplimit': float(segments[1]), 'downlimit': 0.0, 'sumlimit': 0})
+            'upper': float(segments[1]), 'lower': 0.0, 'sum1': 0, 'sum2': 0})
     elif len(segments) == 3:
         result = (int(segments[0]), {
-            'uplimit': float(segments[1]), 'downlimit': float(segments[2]), 'sumlimit': 0})
+            'upper': float(segments[1]), 'lower': float(segments[2]), 'sum1': 0, 'sum2': 0})
+    elif len(segments) == 4:
+        result = (int(segments[0]), {
+            'upper': float(segments[1]), 'lower': float(segments[2]), 'sum1': float(segments[3]), 'sum2': 0})
     else:
-        if len(segments) >= 4:
-            sumlimit = 1 if segments[3] == '1' else 0
+        if len(segments) >= 5:
             result = (int(segments[0]), {
-                'uplimit': float(segments[1]), 'downlimit': float(segments[2]), 'sumlimit': sumlimit})
+                'upper': float(segments[1]), 'lower': float(segments[2]), 'sum1': float(segments[3]), 'sum2': float(segments[4]) })
         else:
-            result = (None, {'uplimit': 1.0, 'downlimit': 0.0, 'sumlimit': 0})
+            result = (None, {'upper': 1.0, 'lower': 0.0, 'sum1': 0, 'sum2': 0})
 
     return result
 
@@ -447,9 +470,10 @@ def merge_asset_name_and_type(asset_id, asset_data):
         'mz_asset_type': category,
     })
 
-def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period):
+def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0):
     '''perform markowitz asset for days
     '''
+    print assets
     # 加载时间轴数据
     index = DBData.trade_date_index(start_date, end_date=end_date)
 
@@ -471,11 +495,11 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period)
             bar.update(1)
             logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
             # 高风险资产配置
-            data[day] = markowitz_day(day, lookback, assets)
+            data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count)
 
     return pd.DataFrame(data).T
 
-def markowitz_day(day, lookback, assets):
+def markowitz_day(day, lookback, assets, bootstrap, cpu_count):
     '''perform markowitz for single day
     '''
     
@@ -493,16 +517,19 @@ def markowitz_day(day, lookback, assets):
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
-    return markowitz_r(df_inc, assets)
+    return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 
-def markowitz_r(df_inc, limits):
+def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     '''perform markowitz
     '''
     bound = []
     for asset in df_inc.columns:
         bound.append(limits[asset])
-    
-    risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+
+    if bootstrap is None:
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+    else:
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),

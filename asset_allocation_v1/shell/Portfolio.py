@@ -5,6 +5,7 @@ import numpy as np
 import string
 import os
 import sys
+import logging
 sys.path.append("windshell")
 import Financial as fin
 import Const
@@ -15,6 +16,8 @@ import multiprocessing
 import random
 
 from Const import datapath
+
+logger = logging.getLogger(__name__)
 
 #strategicallocation
 
@@ -227,15 +230,25 @@ def m_markowitz(queue, random_index, df_inc, bound):
         queue.put((risk, returns, ws, sharpe))
 
 
-def markowitz_bootstrape(df_inc, bound):
+def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
 
-    process_num = 8
-    process_indexs = [[] for i in range(0, process_num)]
-
-    #print process_indexs
+    if cpu_count == 0:
+        count = multiprocessing.cpu_count()
+        cpu_count = count if count > 0 else 1
 
     look_back = len(df_inc)
-    loop_num = look_back * 4
+    if bootstrap_count <= 0:
+        loop_num = look_back * 4
+    elif bootstrap_count % 2:
+        loop_num = bootstrap_count + 1
+    else:
+        loop_num = bootstrap_count
+
+    # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
+        
+    process_indexs = [[] for i in range(0, cpu_count)]
+
+    #print process_indexs
     #loop_num = 20
     rep_num = loop_num * (look_back / 2) / look_back
     day_indexs = range(0, look_back) * rep_num
@@ -246,7 +259,7 @@ def markowitz_bootstrape(df_inc, bound):
     day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
     for m in range(0, len(day_indexs)):
         indexs = day_indexs[m]
-        mod = m % process_num
+        mod = m % cpu_count
         process_indexs[mod].append(list(indexs))
 
 
