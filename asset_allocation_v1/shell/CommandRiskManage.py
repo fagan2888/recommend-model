@@ -224,7 +224,7 @@ def make_rm_risk_mgr_if_not_exist(id_):
 
 @riskmgr.command(name='import')
 @click.option('--id', 'optid', type=int, help=u'specify markowitz id')
-@click.option('--name', 'optname', type=int, help=u'specify markowitz name')
+@click.option('--name', 'optname',  help=u'specify riskmgr name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.argument('csv', type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=False), required=True)

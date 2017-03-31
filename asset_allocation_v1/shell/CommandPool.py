@@ -395,7 +395,7 @@ def load_fund_category(pid, category):
     
 @pool.command(name='import')
 @click.option('--id', 'optid', type=int, help=u'specify fund pool id')
-@click.option('--name', 'optname', type=int, help=u'specify fund pool name')
+@click.option('--name', 'optname', help=u'specify fund pool name')
 @click.option('--otype', 'optotype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--dtype', 'optdtype', type=click.Choice(['1', '2']), default='2', help=u'date type(1:day, 2:week)')
 @click.option('--ftype', 'optftype', type=click.Choice(['0', '1', '2', '3', '4']), default='0', help=u'fund type(0:unknow; 1:stock; 2:bond; 3:money; 4:other)')
