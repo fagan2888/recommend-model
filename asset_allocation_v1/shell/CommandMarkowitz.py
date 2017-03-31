@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 @click.group(invoke_without_command=True)  
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
 @click.option('--id', 'optid', help=u'specify markowitz id')
-@click.option('--name', 'optname', default=u'markowitz', help=u'specify markowitz name')
+@click.option('--name', 'optname', default=None, help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
@@ -354,7 +354,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df = df.round(4)             # 四舍五入到万分位
  
     #每四周做平滑
-    # df = df.rolling(window = 4, min_periods = 1).mean()
+    df = df.rolling(window = 4, min_periods = 1).mean()
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
