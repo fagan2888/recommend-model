@@ -144,8 +144,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         'asset_type':'ra_asset_type',
         'pool_id': 'ra_pool_id',
     })
-    
-    
+
+    if 19230131 not in df_asset['ra_asset_id']:
+        sr = ( 19230131, '货币资产', 31, 19230131)
+        df_asset.ix[len(df_asset.index)] = sr
+        
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     ra_portfolio        = Table('ra_portfolio', metadata, autoload=True)
@@ -172,14 +175,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         'ra_persistent': 0, 'created_at': func.now(), 'updated_at': func.now()
     }
     ra_portfolio.insert(row).execute()
-
-    #
-    # 导入数据: portfolio_asset
-    #
-    df_asset_tosave = df_asset.copy()
-    df_asset_tosave['ra_portfolio_id'] = optid
-    df_asset_tosave = df_asset_tosave.set_index(['ra_portfolio_id', 'ra_asset_id'])
-    asset_ra_portfolio_asset.save(optid, df_asset_tosave)
 
     #
     # 计算每个风险的配置
@@ -279,6 +274,16 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         # print df_tosave
         asset_ra_portfolio_pos.save(gid, df_tosave)
 
+        #
+        # 导入数据: portfolio_asset
+        #
+        pool_ids = df.index.levels[2]
+        df_asset_tosave = df_asset[df_asset['ra_pool_id'].isin(pool_ids)].copy()
+        df_asset_tosave['ra_portfolio_id'] = gid
+        df_asset_tosave = df_asset_tosave.set_index(['ra_portfolio_id', 'ra_asset_id'])
+        asset_ra_portfolio_asset.save(gid, df_asset_tosave)
+
+        
         # click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
     #
     # 在context中保存optid
