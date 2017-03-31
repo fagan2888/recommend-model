@@ -79,21 +79,31 @@ def match_asset_pool(gid):
             41400101: 19240142, #黄金资产修型(实验)	
             41400102: 19240142, #黄金指数修型	
         }
-        if xtab[gid] is not None:
+        if gid in xtab:
             result = xtab[gid]
 
     elif xtype == 12:
         #
         # 指数资产
         #
-        asset = base_ra_index.find(gid)
-        name = asset['ra_name']
-        if '标普' in name:
-            result = 19240141
-        elif '黄金' in name:
-            result = 19240142
-        elif '恒生' in name:
-            result = 19240143
+        xtab = {
+            120000001: 19210111, # 沪深300, 大盘池
+            120000002: 19210112, # 中证500, 小盘池
+            120000003: 19210111, # 巨潮大盘, 大盘池
+            120000004: 19210112, # 巨潮小盘, 小盘池
+            120000014: 19240142, # 沪金指数, 黄金池
+        }
+        if gid in xtab:
+            result = xtab[gid]
+        else:
+            asset = base_ra_index.find(gid)
+            name = asset['ra_name']
+            if '标普' in name:
+                result = 19240141
+            elif '黄金' in name:
+                result = 19240142
+            elif '恒生' in name:
+                result = 19240143
     else:
         pass
 
