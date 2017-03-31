@@ -41,20 +41,21 @@ logger = logging.getLogger(__name__)
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
+@click.option('--turnover', 'optturnover', type=float, default=0, help=u'fitler by turnover')
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
 @click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
-def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optbootstrap, optbootcount, optcpu, short_cut, assets):
+def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optcpu, short_cut, assets):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optfull is False:
-            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, short_cut=short_cut, assets=assets)
+            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, short_cut=short_cut, assets=assets)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
