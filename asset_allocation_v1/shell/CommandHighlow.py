@@ -60,7 +60,7 @@ def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, 
 
 @highlow.command()
 @click.option('--id', 'optid', type=int, help=u'specify markowitz id')
-@click.option('--name', 'optname', default=u'高低风险', help=u'specify markowitz name')
+@click.option('--name', 'optname', default=None, help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.option('--high', 'opthigh', type=int, default=0, help=u'high asset id')
@@ -121,6 +121,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
             else:
                 optid = int(max_id) + 10
 
+    if optname is None:
+        optname = u'高低风险%s' % today.strftime("%m%d")
     #
     # 加载用到的资产
     #
