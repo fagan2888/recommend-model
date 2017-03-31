@@ -348,6 +348,66 @@ def nav_update(alloc):
     asset_ra_portfolio_nav.save(alloc_id, df_result)
 
 @portfolio.command()
+@click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.pass_context
+def turnover(ctx, optid, optlist):
+    ''' calc pool turnover and inc
+    '''
+    if optid is not None:
+        portfolios = [s.strip() for s in optid.split(',')]
+    else:
+        if 'portfolio' in ctx.obj:
+            portfolios = [str(ctx.obj['portfolio'])]
+        else:
+            portfolios = None
+
+    df_portfolio = asset_ra_portfolio.load(portfolios)
+
+    if optlist:
+
+        df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_portfolio, headers='keys', tablefmt='psql')
+        return 0
+    
+    data = []
+    with click.progressbar(length=len(df_portfolio), label='update turnover') as bar:
+        for _, portfolio in df_portfolio.iterrows():
+            bar.update(1)
+            turnover_update_alloc(portfolio)
+
+def turnover_update_alloc(portfolio):
+    df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
+    
+    with click.progressbar(length=len(df_alloc), label='update turnover %d' % (portfolio['globalid'])) as bar:
+        for _, alloc in df_alloc.iterrows():
+            bar.update(1)
+            turnover_update(alloc)
+
+            
+def turnover_update(portfolio):
+    portfolio_id = portfolio['globalid']
+    # 加载仓位信息
+    df = asset_ra_portfolio_pos.load_fund_pos(portfolio_id)
+    df = df.unstack()
+
+
+    # 计算宽口换手率
+    sr_turnover = DFUtil.calc_turnover(df)
+
+    criteria_id = 6
+    df_result = sr_turnover.to_frame('ra_value')
+    df_result['ra_portfolio_id'] = portfolio_id
+    df_result['ra_criteria_id'] = criteria_id
+    df_result = df_result.reset_index().set_index(['ra_portfolio_id', 'ra_criteria_id', 'ra_date'])
+
+    asset_ra_portfolio_criteria.save(portfolio_id, criteria_id,  df_result)
+
+    total_turnover = sr_turnover.sum()
+
+    return total_turnover
+
+@portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
 # @click.option('-m', '--msg')  
 # @click.option('--dry-run', is_flag=True, help=u'pretend to run')
@@ -443,7 +503,7 @@ def stockavg(ctx, datadir, optinput, optoutput):
 @click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.pass_context
-def turnover(ctx, optInst, optAlloc, startdate, enddate, optlist):
+def turnover_o(ctx, optInst, optAlloc, startdate, enddate, optlist):
     '''run constant risk model
     '''    
     if not enddate:
