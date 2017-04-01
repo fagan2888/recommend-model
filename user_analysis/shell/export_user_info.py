@@ -61,10 +61,10 @@ if __name__ == '__main__':
 
     conn  = MySQLdb.connect(**trade)
     conn.autocommit(True)
-    sql = 'select yt_uid, yt_portfolio_txn_id, yt_fund_code, yt_trade_type, yt_placed_amount, yt_placed_date from yingmi_trade_statuses'
-    df = pd.read_sql(sql, conn, index_col = ['yt_uid'])
+    sql = 'select yp_uid, yp_portfolio_id, yp_trade_type, yp_placed_amount, yp_placed_percentage ,yp_placed_date from yingmi_portfolio_trade_statuses'
+    df = pd.read_sql(sql, conn, index_col = ['yp_uid'])
     #print df
-    df.to_csv('yingmi_trade_status.csv', encoding = 'utf8')
+    df.to_csv('yingmi_portfolio_trade_status.csv', encoding = 'utf8')
 
     conn  = MySQLdb.connect(**recommend)
     conn.autocommit(True)
