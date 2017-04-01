@@ -495,11 +495,13 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
     #
     # 马科维兹资产配置
     #
-    s = 'perform %s' % label
+    s = 'perform %-12s' % label
     data = {}
-    with click.progressbar(length=len(adjust_index), label=s) as bar:
-        for day in adjust_index:
-            bar.update(1)
+    with click.progressbar(
+            adjust_index, label=s,
+            item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+        for day in bar:
+            # bar.update(1)
             logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
             # 高风险资产配置
             data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count)
@@ -598,14 +600,15 @@ def nav(ctx, optid, optlist):
     df_markowitz = asset_mz_markowitz.load(markowitzs)
 
     if optlist:
-
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
         return 0
     
-    with click.progressbar(length=len(df_markowitz), label='update nav') as bar:
-        for _, markowitz in df_markowitz.iterrows():
-            bar.update(1)
+    with click.progressbar(
+            df_markowitz.iterrows(), len(df_markowitz.index), label='%-20s' % 'update nav',
+            item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
+        for _, markowitz in bar:
+            # bar.update(1)
             nav_update(markowitz)
 
 def nav_update(markowitz):
@@ -660,9 +663,11 @@ def turnover(ctx, optid, optlist):
         return 0
     
     data = []
-    with click.progressbar(length=len(df_markowitz), label='update turnover') as bar:
-        for _, markowitz in df_markowitz.iterrows():
-            bar.update(1)
+    with click.progressbar(
+            df_markowitz.iterrows(), length=len(df_markowitz.index), label= '%-20s' % 'update turnover',
+            item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
+        for _, markowitz in bar:
+            # bar.update(1)
             turnover = turnover_update(markowitz)
             data.append((markowitz['globalid'], "%6.2f" % (turnover * 100)))
 
@@ -719,9 +724,10 @@ def delete(ctx, optid, optlist, optexec):
          return 0
     
     data = []
-    with click.progressbar(length=len(df_markowitz), label='markowitz delete') as bar:
-        for _, markowitz in df_markowitz.iterrows():
-            bar.update(1)
+    with click.progressbar(
+            df_markowitz.iterrows(), length=len(df_markowitz.index), label= '%-20s' % 'delete markowitz',
+            item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
+        for _, markowitz in bar:
             perform_delete(markowitz)
             
 def perform_delete(markowitz):
