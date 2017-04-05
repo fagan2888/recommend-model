@@ -73,3 +73,18 @@ if __name__ == '__main__':
 
     df.to_csv('user_question_answer.csv', encoding = 'utf8')
     #print df
+
+
+    conn  = MySQLdb.connect(**recommend)
+    conn.autocommit(True)
+    sql = 'select id, uq_question, uq_question_type from user_questionnaire_questions'
+    df = pd.read_sql(sql, conn, index_col = ['id'])
+    df.to_csv('user_questionnaire_questions.csv', encoding = 'gbk')
+    #print df
+
+    conn  = MySQLdb.connect(**recommend)
+    conn.autocommit(True)
+    sql = 'select uq_question_id, uq_option_key, uq_option_val from user_questionnaire_options'
+    df = pd.read_sql(sql, conn, index_col = ['uq_question_id'])
+    df.to_csv('user_questionnaire_options.csv', encoding = 'gbk')
+    #print df
