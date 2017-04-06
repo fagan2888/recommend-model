@@ -289,8 +289,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 120000013:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
                 120000015:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
                 120000014:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.35, 'lower': 0.0}, #黄金指数修型
-                # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
-                # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
+                120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
+                120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
                 # 120000019:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI全球
                 # 120000020:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #纳斯达克100
                 # 120000021:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI亚洲
