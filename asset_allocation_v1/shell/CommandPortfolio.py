@@ -50,16 +50,16 @@ logger = logging.getLogger(__name__)
 @click.option('--ratio', 'optratio', type=int, default=None, help=u'specified which ratio_id to use')
 @click.option('--pool', 'optpool', default=0, help=u'which pool to use for each asset (eg. 120000001:19210111,120000002:19210112')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
-@click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
+@click.option('--turnover', 'optturnover',  type=float, default=0, help=u'fitler by turnover')
 @click.pass_context
-def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpool, optrisk, turnover):
+def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpool, optrisk, optturnover):
 
     '''generate final portolio
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optfull is False:
-            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=turnover)
+            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
