@@ -40,7 +40,7 @@ if __name__ == '__main__':
     conn  = MySQLdb.connect(**trade)
     conn.autocommit(True)
 
-    sql = 'select ya_uid, ya_identity_no, created_at from yingmi_accounts'
+    sql = 'select ya_uid, ya_name, ya_identity_no, created_at from yingmi_accounts'
 
     df = pd.read_sql(sql, conn, index_col = ['ya_uid'])
 
