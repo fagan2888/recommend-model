@@ -18,4 +18,8 @@ if __name__ == '__main__':
 
     account_df = account_df.loc[uids]
 
-    account_df.to_csv('account.csv')
+    user_info_df = pd.read_csv('user_account_infos.csv', index_col = ['ua_uid'])
+
+    df = pd.concat([account_df, user_info_df], join_axes = [account_df.index], axis = 1)
+
+    df.to_csv('account.csv')

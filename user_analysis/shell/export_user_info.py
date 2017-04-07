@@ -34,6 +34,15 @@ recommend = {
 }
 
 
+asset_allocation = {
+    "host": "rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com",
+    "port": 3306,
+    "user": "jiaoyang",
+    "passwd": "wgOdGq9SWruwATrVWGwi",
+    "db":"asset_allocation",
+    "charset": "utf8"
+}
+
 if __name__ == '__main__':
 
 
@@ -88,3 +97,11 @@ if __name__ == '__main__':
     df = pd.read_sql(sql, conn, index_col = ['uq_question_id'])
     df.to_csv('user_questionnaire_options.csv', encoding = 'gbk')
     #print df
+
+    conn  = MySQLdb.connect(**asset_allocation)
+    conn.autocommit(True)
+
+    sql = 'select ua_uid, ua_service_id from user_account_infos'
+
+    df = pd.read_sql(sql, conn, index_col = ['ua_uid'])
+    df.to_csv('user_account_infos.csv')
