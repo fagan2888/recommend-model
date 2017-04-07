@@ -179,109 +179,115 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     #
     # 计算每个风险的配置
     #
-    for (risk, ratio_id) in database.load_alloc_and_risk(optratio):
-        gid = optid + (int(risk * 10) % 10)
-        name = optname + u"-等级%d" % int(risk * 10)
+    with click.progressbar(
+            database.load_alloc_and_risk(optratio),
+            label='update %-13s' % 'portfolio',
+            item_show_func=lambda x:  'risk %d' % int(x[0] * 10) if x else None) as bar:
+        for (risk, ratio_id) in bar:
+            gid = optid + (int(risk * 10) % 10)
+            name = optname + u"-等级%d" % int(risk * 10)
 
-        # 加载资产配置比例
-        df_ratio = database.load_pos_frame(ratio_id)
-        # print df_ratio.sum(axis=1)
-        df_ratio[19230131] = 1 - df_ratio.sum(axis=1)
-        # print df_ratio.head()
+            # 加载资产配置比例
+            df_ratio = database.load_pos_frame(ratio_id)
+            # print df_ratio.sum(axis=1)
+            df_ratio[19230131] = 1 - df_ratio.sum(axis=1)
+            # print df_ratio.head()
 
-        start = df_ratio.index.min()
-        index = df_ratio.index.copy()
-        #
-        # 加载基金池
-        #
-        pools = {}
-        for _, row in df_asset.iterrows():
-            fund = asset_ra_pool_fund.load(row['ra_pool_id'])
-            index = index.union(fund.index.get_level_values(0)).unique()
-            pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
-            pools[row['ra_asset_id']] = pool
-        else:
-            fund = asset_ra_pool_fund.load(19230131)
-            index = index.union(fund.index.get_level_values(0)).unique()
-            pool = (19230131, fund[['ra_fund_code', 'ra_fund_type']])
-            pools[19230131] = pool
+            start = df_ratio.index.min()
+            index = df_ratio.index.copy()
+            #
+            # 加载基金池
+            #
+            pools = {}
+            for _, row in df_asset.iterrows():
+                fund = asset_ra_pool_fund.load(row['ra_pool_id'])
+                if not fund.empty:
+                    index = index.union(fund.index.get_level_values(0)).unique()
+                pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
+                pools[row['ra_asset_id']] = pool
+            else:
+                fund = asset_ra_pool_fund.load(19230131)
+                if not fund.empty:
+                    index = index.union(fund.index.get_level_values(0)).unique()
+                pool = (19230131, fund[['ra_fund_code', 'ra_fund_type']])
+                pools[19230131] = pool
 
-        #
-        # 根据基金池和配置比例的索引并集reindex数据
-        #
-        index = index[index >= start]
-        df_ratio = df_ratio.reindex(index, method='pad')
-        tmp = {}
-        for k, v in pools.iteritems():
-            (pool, df_fund) = v
-            tmp[k] = (pool, df_fund.unstack().reindex(index, method='pad').stack())
-        pools = tmp
-                      
-        #
-        # 计算基金配置比例
-        #
-        data = []
-        for day, row in df_ratio.iterrows():
-            for asset_id, ratio in row.iteritems():
-                if (ratio <= 0):
-                    continue
-                # 选择基金
-                (pool_id, df_fund) = pools[asset_id]
-                segments = choose_fund_avg(day, pool_id, ratio, df_fund.loc[day])
-                data.extend(segments)
+            #
+            # 根据基金池和配置比例的索引并集reindex数据
+            #
+            index = index[index >= start]
+            df_ratio = df_ratio.reindex(index, method='pad')
+            tmp = {}
+            for k, v in pools.iteritems():
+                (pool, df_fund) = v
+                tmp[k] = (pool, df_fund.unstack().reindex(index, method='pad').stack())
+            pools = tmp
 
-        df_raw = pd.DataFrame(data, columns=['ra_date', 'ra_pool_id', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_ratio'])
-        df_raw.set_index(['ra_date', 'ra_pool_id', 'ra_fund_id'], inplace=True)
-        
-        #
-        # 导入数据: portfolio_alloc
-        #
-        row = {
-            'globalid': gid, 'ra_type':opttype, 'ra_name': name,
-            'ra_portfolio_id': optid, 'ra_ratio_id': ratio_id, 'ra_risk': risk,
-            'created_at': func.now(), 'updated_at': func.now()
-        }
-        ra_portfolio_alloc.insert(row).execute()
+            #
+            # 计算基金配置比例
+            #
+            data = []
+            for day, row in df_ratio.iterrows():
+                for asset_id, ratio in row.iteritems():
+                    if (ratio <= 0):
+                        continue
+                    # 选择基金
+                    (pool_id, df_fund) = pools[asset_id]
+                    segments = choose_fund_avg(day, pool_id, ratio, df_fund.loc[day])
+                    data.extend(segments)
 
-        #
-        # 导入数据: portfolio_pos
-        #
-        #print df_raw.head()
-        df_raw.loc[df_raw['ra_fund_ratio'] < 0.00009999, 'ra_fund_ratio'] = 0 # 过滤掉过小的份额
-        df_raw['ra_fund_ratio'] = df_raw['ra_fund_ratio'].round(4)            # 四舍五入到万分位
+            df_raw = pd.DataFrame(data, columns=['ra_date', 'ra_pool_id', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_ratio'])
+            df_raw.set_index(['ra_date', 'ra_pool_id', 'ra_fund_id'], inplace=True)
 
-        df_tmp = df_raw[['ra_fund_ratio']]
-        # print df_tmp.head(20)
-        
-        df_tmp = df_tmp.unstack([1, 2])
-        df_tmp = df_tmp.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
-        df_tmp = DFUtil.filter_same_with_last(df_tmp)          # 过滤掉相同
-        if turnover >= 0.01:
-            df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
-        df_tmp = df_tmp.stack([1, 2])
+            #
+            # 导入数据: portfolio_alloc
+            #
+            row = {
+                'globalid': gid, 'ra_type':opttype, 'ra_name': name,
+                'ra_portfolio_id': optid, 'ra_ratio_id': ratio_id, 'ra_risk': risk,
+                'created_at': func.now(), 'updated_at': func.now()
+            }
+            ra_portfolio_alloc.insert(row).execute()
 
-        df = df_tmp.merge(df_raw[['ra_fund_code', 'ra_fund_type']], how='left', left_index=True, right_index=True)
-        # print df_tmp.head(20)
-        # print df_raw.head()
-        # print df.head()
+            #
+            # 导入数据: portfolio_pos
+            #
+            #print df_raw.head()
+            df_raw.loc[df_raw['ra_fund_ratio'] < 0.00009999, 'ra_fund_ratio'] = 0 # 过滤掉过小的份额
+            df_raw['ra_fund_ratio'] = df_raw['ra_fund_ratio'].round(4)            # 四舍五入到万分位
 
-        # index
-        df['ra_portfolio_id'] = gid
-        df = df.reset_index().set_index(['ra_portfolio_id', 'ra_date', 'ra_pool_id', 'ra_fund_id'])
-        df_tosave = df.loc[(df['ra_fund_ratio'] > 0)].copy()
+            df_tmp = df_raw[['ra_fund_ratio']]
+            # print df_tmp.head(20)
 
-        # save
-        # print df_tosave
-        asset_ra_portfolio_pos.save(gid, df_tosave)
+            df_tmp = df_tmp.unstack([1, 2])
+            df_tmp = df_tmp.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+            df_tmp = DFUtil.filter_same_with_last(df_tmp)          # 过滤掉相同
+            if turnover >= 0.01:
+                df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
+            df_tmp = df_tmp.stack([1, 2])
 
-        #
-        # 导入数据: portfolio_asset
-        #
-        pool_ids = df.index.levels[2]
-        df_asset_tosave = df_asset[df_asset['ra_pool_id'].isin(pool_ids)].copy()
-        df_asset_tosave['ra_portfolio_id'] = gid
-        df_asset_tosave = df_asset_tosave.set_index(['ra_portfolio_id', 'ra_asset_id'])
-        asset_ra_portfolio_asset.save(gid, df_asset_tosave)
+            df = df_tmp.merge(df_raw[['ra_fund_code', 'ra_fund_type']], how='left', left_index=True, right_index=True)
+            # print df_tmp.head(20)
+            # print df_raw.head()
+            # print df.head()
+
+            # index
+            df['ra_portfolio_id'] = gid
+            df = df.reset_index().set_index(['ra_portfolio_id', 'ra_date', 'ra_pool_id', 'ra_fund_id'])
+            df_tosave = df.loc[(df['ra_fund_ratio'] > 0)].copy()
+
+            # save
+            # print df_tosave
+            asset_ra_portfolio_pos.save(gid, df_tosave)
+
+            #
+            # 导入数据: portfolio_asset
+            #
+            pool_ids = df.index.levels[2]
+            df_asset_tosave = df_asset[df_asset['ra_pool_id'].isin(pool_ids)].copy()
+            df_asset_tosave['ra_portfolio_id'] = gid
+            df_asset_tosave = df_asset_tosave.set_index(['ra_portfolio_id', 'ra_asset_id'])
+            asset_ra_portfolio_asset.save(gid, df_asset_tosave)
 
         
         # click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
@@ -329,9 +335,14 @@ def nav(ctx, optid, optlist):
 def nav_update_alloc(portfolio):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     
-    with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
-        for _, alloc in df_alloc.iterrows():
-            bar.update(1)
+    with click.progressbar(
+            df_alloc.iterrows(), length=len(df_alloc.index),
+            label='update nav %-9d' % (portfolio['globalid']),
+            item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
+        for _, alloc in bar:
+    # with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
+    #     for _, alloc in :
+    #         bar.update(1)
             nav_update(alloc)
     
 def nav_update(alloc):
@@ -376,17 +387,20 @@ def turnover(ctx, optid, optlist):
         return 0
     
     data = []
-    with click.progressbar(length=len(df_portfolio), label='update turnover') as bar:
-        for _, portfolio in df_portfolio.iterrows():
-            bar.update(1)
-            turnover_update_alloc(portfolio)
+    for _, portfolio in df_portfolio.iterrows():
+        turnover_update_alloc(portfolio)
 
 def turnover_update_alloc(portfolio):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     
-    with click.progressbar(length=len(df_alloc), label='update turnover %d' % (portfolio['globalid'])) as bar:
-        for _, alloc in df_alloc.iterrows():
-            bar.update(1)
+    with click.progressbar(
+            df_alloc.iterrows(), length=len(df_alloc.index),
+            label='turnover %-11d' % (portfolio['globalid']),
+            item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
+        for _, alloc in bar:
+    # with click.progressbar(length=len(df_alloc), label='update turnover %d' % (portfolio['globalid'])) as bar:
+    #     for _, alloc in df_alloc.iterrows():
+    #         bar.update(1)
             turnover_update(alloc)
 
             

@@ -52,6 +52,25 @@ def load_asset_name(id_, category, xtype):
 
     return "%s%s资产" % (s1, s2)
 
+def find(globalid):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('ra_pool', metadata, autoload=True)
+
+    columns = [
+        t.c.id,
+        t.c.ra_type,
+        t.c.ra_date_type,
+        t.c.ra_fund_type,
+        t.c.ra_lookback,
+        t.c.ra_name,
+    ]
+
+    s = select(columns).where(t.c.id == globalid)
+
+    return s.execute().first()
+    
+
 def match_asset_pool(gid):
     xtype = gid / 10000000
 
