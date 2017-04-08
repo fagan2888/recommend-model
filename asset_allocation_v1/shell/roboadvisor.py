@@ -132,7 +132,7 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
 
     if optmarkowtiz:
         ctx.invoke(CommandMarkowitz.markowitz, short_cut='high', startdate=startdate, optturnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optreplace=optreplace)
-        ctx.invoke(CommandMarkowitz.markowitz, short_cut='low', startdate=startdate, optturnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optreplace=optreplace)
+        ctx.invoke(CommandMarkowitz.markowitz, short_cut='low', startdate=startdate, optturnover=optturnover, optbootstrap=False, optbootcount=optbootcount, optcpu=optcpu)
 
     if opthighlow:
         ctx.invoke(CommandHighlow.highlow, optreplace=optreplace)
