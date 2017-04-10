@@ -25,6 +25,7 @@ def find(globalid):
         t.c.rm_asset_id,
         t.c.rm_timing_id,
         t.c.rm_start_date,
+        t.c.rm_argv,
         t.c.rm_name,
     ]
 
@@ -46,6 +47,7 @@ def load(gids, xtypes=None):
         t.c.rm_asset_id,
         t.c.rm_timing_id,
         t.c.rm_start_date,
+        t.c.rm_argv,
         t.c.rm_name,
     ]
 
@@ -72,6 +74,7 @@ def where_asset_id(asset_id):
         t.c.rm_asset_id,
         t.c.rm_timing_id,
         t.c.rm_start_date,
+        t.c.rm_argv,
         t.c.rm_name,
     ]
 

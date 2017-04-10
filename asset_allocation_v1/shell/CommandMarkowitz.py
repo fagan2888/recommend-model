@@ -263,6 +263,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 120000014:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.35, 'lower': 0.0}, #黄金指数修型
                 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
                 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
+                120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
             }
             if optname is None:
                 optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
