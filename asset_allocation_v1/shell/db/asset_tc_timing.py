@@ -44,3 +44,13 @@ def load(timings, xtypes=None):
 
     return df
 
+def max_id_between(min_id, max_id):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('tc_timing', metadata, autoload=True)
+
+    columns = [ t.c.globalid ]
+
+    s = select([func.max(t.c.globalid).label('maxid')]).where(t.c.globalid.between(min_id, max_id))
+
+    return s.execute().scalar()

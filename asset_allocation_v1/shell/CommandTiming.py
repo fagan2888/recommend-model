@@ -23,6 +23,7 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, base_ra_index_nav, asset_tc_timing
+from util.xdebug import dd
 
 import traceback, code
 
@@ -235,3 +236,86 @@ def nav_update(timing):
     database.batch(db, t2, df_new, df_old, timestamp=False)
     
     #print df_result.head()
+
+@timing.command()
+@click.option('--id', 'optid', help=u'id of timing to generate coverage')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--n1', 'optn1', default='4', help=u'n1 arguments')
+@click.option('--n2', 'optn2', default='4', help=u'n2 arguments')
+@click.option('--n3', 'optn3', default='4', help=u'n3 arguments')
+@click.option('--n4', 'optn4', default='4', help=u'n4 arguments')
+@click.pass_context
+def coverage(ctx, optid, optlist, optn1, optn2, optn3, optn4):
+    ''' calc pool coverage and inc
+    '''
+    if optid is not None:
+        timings = [s.strip() for s in optid.split(',')]
+    else:
+        timings = None
+
+    n1s = [int(s.strip()) for s in optn1.split(',')]
+    n2s = [int(s.strip()) for s in optn2.split(',')]
+    n3s = [int(s.strip()) for s in optn3.split(',')]
+    n4s = [int(s.strip()) for s in optn4.split(',')]
+
+    df_timing = asset_tc_timing.load(timings)
+
+    if optlist:
+
+        df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_timing, headers='keys', tablefmt='psql')
+        return 0
+
+    with click.progressbar(
+            df_timing.iterrows(), length=len(df_timing.index),
+            label='update %-13s' % 'coverage',
+            item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
+        for _, timing in bar:
+            coverage_update(timing, n1s, n2s, n3s, n4s)
+
+def coverage_update(timing, n1s, n2s, n3s, n4s):
+    timing_id = timing['globalid']
+
+    min_id = timing_id
+    max_id = int(timing_id / 100) * 100 + 99
+
+    gid = start_id = asset_tc_timing.max_id_between(min_id, max_id)
+    
+    argv = 'n1=%d,n2=%d,n3=%d,n4=%d'
+    name = timing['tc_name']
+    xtype = 1
+    method = 1
+
+    data = []
+    for n1 in n1s:
+        for n2 in n2s:
+            for n3 in n3s:
+                for n4 in n4s:
+                    gid += 1
+                    if gid > max_id:
+                        click.echo(click.style("run out of globalid", fg='red'))
+                        sys.exit(-1)
+                    name = '%s%d%d%d%d' % (timing['tc_name'], n1, n2, n3, n4)
+                    argv = 'n1=%d,n2=%d,n3=%d,n4=%d' % (n1, n2, n3, n4)
+                    data.append((gid, name, xtype, method, timing['tc_index_id'], timing['tc_begin_date'], argv))
+    df = pd.DataFrame(data, columns=['globalid', 'tc_name', 'tc_type', 'tc_method', 'tc_index_id', 'tc_begin_date', 'tc_argv'])
+    df = df.set_index(['globalid'])
+    
+    # 加载旧数据
+    db = database.connection('asset')
+    t2 = Table('tc_timing', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.globalid,
+        t2.c.tc_name,
+        t2.c.tc_type,
+        t2.c.tc_method,
+        t2.c.tc_index_id,
+        t2.c.tc_begin_date,
+        t2.c.tc_argv,
+    ]
+    stmt_select = select(columns2, (t2.c.globalid.between(start_id + 1, max_id)))
+    df_old = pd.read_sql(stmt_select, db, index_col=['globalid'])
+
+    # 更新数据库
+    database.batch(db, t2, df, df_old, timestamp=False)
+    
