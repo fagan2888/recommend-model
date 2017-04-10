@@ -375,12 +375,16 @@ def signal(ctx, optid, optlist, optonline):
 
 def signal_update(riskmgr):
     riskmgr_id = riskmgr['globalid']
+
+    argv = {'e': 5}
+    if riskmgr['rm_argv'] != '':
+        argv.update({k: int(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(',')]})
     
     # 加载择时信号
     sr_timing = asset_tc_timing_signal.load_series(riskmgr['rm_timing_id'])
     # print sr_timing.head()
     if sr_timing.empty:
-        click.echo(click.style("\nempty timing signal (%d, %d)\n" % (riskmgr_id, riskmgr['rm_timing_id']), fg="red"))
+        click.echo(click.style("\nempty timing signal (%d, %d), suppose all 1\n" % (riskmgr_id, riskmgr['rm_timing_id']), fg="red"))
     
     # 加载资产收益率
     # min_date = df_position.index.min()
@@ -401,7 +405,7 @@ def signal_update(riskmgr):
     if riskmgr['rm_algo'] == 1:
         risk_mgr = RiskManagement.RiskManagement()
     elif riskmgr['rm_algo'] == 2:
-        risk_mgr = RiskMgrSimple.RiskMgrSimple()
+        risk_mgr = RiskMgrSimple.RiskMgrSimple(empty=argv['e'])
     else:
         click.echo(click.style("\nunsupported riskmgr algo (%d, %d)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
         return false
