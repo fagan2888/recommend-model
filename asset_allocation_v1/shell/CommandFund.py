@@ -267,6 +267,7 @@ def sharpe_update(measure, codes):
     with click.progressbar(length=len(df_fund.index), label='update sharpe %d' % (measure['globalid'])) as bar:
         for _,fund in df_fund.iterrows():
             bar.update(1)
+            print fund['ra_code']
             tmp = sharpe_update_fund(measure, fund)
 
 def sharpe_update_fund(measure, fund):

@@ -351,7 +351,7 @@ def base_ra_fund_find(globalid):
 
     return s.execute().first()
 
-def base_ra_fund_load(globalids=None, codes=None):
+def base_ra_fund_load(globalids=None, codes=None, with_disabled=False):
     db = connection('base')
     metadata = MetaData(bind=db)
     t = Table('ra_fund', metadata, autoload=True)
@@ -372,6 +372,9 @@ def base_ra_fund_load(globalids=None, codes=None):
 
     if codes is not None:
         s = s.where(t.c.ra_code.in_(codes))
+
+    if not with_disabled:
+        s = s.where(t.c.ra_mask != 1)
 
     df = pd.read_sql(s, db)
 
