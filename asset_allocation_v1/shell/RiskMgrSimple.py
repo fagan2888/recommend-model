@@ -26,7 +26,7 @@ def confidence(x, per):
 
 class RiskMgrSimple(object):
 
-    def __init__(self, empty=5, maxdd=-0.075, mindd=-0.07, period=252):
+    def __init__(self, empty=5, maxdd=-0.075, mindd=-0.05, period=252):
         self.maxdd = maxdd
         self.mindd = mindd
         self.empty = empty
