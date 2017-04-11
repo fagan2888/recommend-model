@@ -105,3 +105,9 @@ if __name__ == '__main__':
 
     df = pd.read_sql(sql, conn, index_col = ['ua_uid'])
     df.to_csv('user_account_infos.csv')
+
+    sql = 'select ip_uid, ip_portfolio_id, ip_date, ip_nav, ip_principal from investor_portfolio_holding_actuals'
+
+    df = pd.read_sql(sql, conn, index_col = ['ip_uid'])
+    #print df
+    df.to_csv('investor_portfolio_holding_actuals.csv')
