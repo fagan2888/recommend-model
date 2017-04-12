@@ -6,11 +6,13 @@ import numpy as np
 import scipy.optimize
 
 
+
 def obj_fun(x, target_r, n):
     p = 1
     for i in range(0, n):
-       p = p * ((((1 - 1.0 * i / 10) ** 0.5) * x) + 1 )
+       p = p * ((((1 - 1.0 * i / n) ** 0.5) * x) + 1 )
     return (p - target_r) ** 2
+
 
 
 if __name__ == '__main__':
@@ -54,7 +56,7 @@ if __name__ == '__main__':
                 #break
                 risk_level = 10
 
-            r = dfr.loc[tmp_d, 'risk' + str( risk_level)]
+            r = dfr.loc[tmp_d, 'risk' + str( risk_level )]
             v = v * (1 + r)
             if v >= target_r:
                 break

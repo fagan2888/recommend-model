@@ -50,7 +50,7 @@ if __name__ == '__main__':
         for j in range(0, len(risk_levels)):
             risk_level = risk_levels[j]
             d = dates[ i + j ]
-            r = dfr.loc[d, 'risk' + str( j + 1 )]
+            r = dfr.loc[d, 'risk' + str( risk_level )]
             #print d, risk_level, r
             v = v * (r + 1)
         print dates[i], v
