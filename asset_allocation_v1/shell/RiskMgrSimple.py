@@ -12,6 +12,7 @@ import datetime
 import numpy as np
 import utils
 import os
+import sys
 import click
 import DFUtil
 from scipy import stats
@@ -25,7 +26,7 @@ def confidence(x, per):
 
 class RiskMgrSimple(object):
 
-    def __init__(self, maxdd=-0.075, mindd=-0.03, empty=5, period=252):
+    def __init__(self, empty=5, maxdd=-0.075, mindd=-0.05, period=252):
         self.maxdd = maxdd
         self.mindd = mindd
         self.empty = empty

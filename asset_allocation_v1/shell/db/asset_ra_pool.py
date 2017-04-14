@@ -52,6 +52,25 @@ def load_asset_name(id_, category, xtype):
 
     return "%s%s资产" % (s1, s2)
 
+def find(globalid):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('ra_pool', metadata, autoload=True)
+
+    columns = [
+        t.c.id,
+        t.c.ra_type,
+        t.c.ra_date_type,
+        t.c.ra_fund_type,
+        t.c.ra_lookback,
+        t.c.ra_name,
+    ]
+
+    s = select(columns).where(t.c.id == globalid)
+
+    return s.execute().first()
+    
+
 def match_asset_pool(gid):
     xtype = gid / 10000000
 
@@ -92,6 +111,9 @@ def match_asset_pool(gid):
             120000003: 19210111, # 巨潮大盘, 大盘池
             120000004: 19210112, # 巨潮小盘, 小盘池
             120000014: 19240142, # 沪金指数, 黄金池
+            120000028: 11400300, # 原油指数, 原油池
+            120000029: 11400400, # 商品指数, 商品池
+            120000031: 11400500, # 房地产指数, 房地产池
         }
         if gid in xtab:
             result = xtab[gid]

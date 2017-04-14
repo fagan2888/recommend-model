@@ -8,14 +8,19 @@ import pandas as pd
 # import sys
 import logging
 import database
+import asset_ra_pool
 
 from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
 
 def load(gid, reindex=None):
-    asset_id = gid % 10000000
-    (pool_id, category) = (asset_id / 100, asset_id % 100)
+    pool = asset_ra_pool.find(gid)
+    if pool:
+        (pool_id, category) = (gid, 0)
+    else:
+        asset_id = gid % 10000000
+        (pool_id, category) = (asset_id / 100, asset_id % 100)
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -95,7 +100,7 @@ def tlsFundType(gid, default=0):
     if gid in tls:
         return tls[gid]
     else:
-        return default
+        return int((gid % 10000000) / 100)
 
 
 # def save(gid, df):

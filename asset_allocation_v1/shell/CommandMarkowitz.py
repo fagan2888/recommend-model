@@ -255,23 +255,15 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         assets = {k: v for k,v in [parse_asset(a) for a in assets]}
     else:
         if short_cut == 'high':
-            # assets = {
-            #     41110100:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
-            #     41110200:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
-            #     41110205:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
-            #     41110207:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
-            #     41110208:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
-            #     41110105:  {'sum1': 0,    'sum2': 0, 'upper': 1.0, 'lower': 0.0},
-            #     120000013: {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
-            #     41400100:  {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
-            #     41120502:  {'sum1': 0.50, 'sum2': 0, 'upper': 0.3, 'lower': 0.0},
-            # }
             assets = {
-                120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
-                120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #中证500指数修型
+                120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
+                120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
                 120000013:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
                 120000015:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
                 120000014:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.35, 'lower': 0.0}, #黄金指数修型
+                # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
+                # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
+                # 120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
             }
             if optname is None:
                 optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
@@ -286,20 +278,20 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             assets = {
                 120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
                 120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #中证500指数修型
-                120000013:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
-                120000015:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
-                120000014:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.35, 'lower': 0.0}, #黄金指数修型
+
+                # 120000013:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
+                # 120000015:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
+                # 120000014:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.35, 'lower': 0.0}, #黄金指数修型
                 # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
-                # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
-                # 120000019:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI全球
-                # 120000020:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #纳斯达克100
-                # 120000021:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI亚洲
-                # 120000022:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
-                # 120000023:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
-                # 120000024:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
-                # 120000025:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
-                # 120000030:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
-                # 120000031:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #MSCI中华
+                # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益
+
+                120000013:  {'sum1': 0, 'sum2' : 0,   'upper': 0.55, 'lower': 0.0}, #标普500指数
+                120000015:  {'sum1': 0, 'sum2' : 0,   'upper': 0.55, 'lower': 0.0}, #恒生指数修型
+                120000014:  {'sum1': 0, 'sum2' : 0,'upper': 0.32, 'lower': 0.0}, #黄金指数修型
+                120000029:  {'sum1': 0, 'sum2' : 0,'upper': 0.20, 'lower': 0.0}, #南华商品指数
+                120000028:  {'sum1': 0, 'sum2' : 0,'upper': 0.15, 'lower': 0.0}, #标普高盛原油商品指数收益率
+                120000031:  {'sum1': 0, 'sum2' : 0,'upper': 0.20, 'lower': 0.0}, #房地产指数
+
             }
 
     if optname is None:
@@ -426,8 +418,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # 在ctx中记录markowitz id 以便命令链的后面使用
     #
     ctx.obj['markowitz'] = optid
-    if short_cut == 'high':
-        ctx.obj['markowitz.high'] = optid
+    ctx.obj['markowitz.high'] = optid
     if short_cut == 'low':
         ctx.obj['markowitz.low'] = optid
 
