@@ -78,9 +78,11 @@ if __name__ == '__main__':
     n = 12
     interval = 1
 
-    risk_levels = target_life_risklevels(df, target_r, n, interval)
+    #risk_levels = target_life_risklevels(df, target_r, n, interval)
     risk_levels = []
     for i in range(0, n):
         risk_levels.append(10)
+    #risk_levels = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+    #risk_levels = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
     prob(df, target_r, risk_levels, n , interval)
-    print risk_levels
+    #print risk_levels
