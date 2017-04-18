@@ -116,7 +116,13 @@ def portfolio_nav2(df_pos, end_date=None) :
         days = pd.date_range(sdate, edate)
         df_nav = Nav.Nav().load(df_ratio.columns, sdate=sdate, edate=edate)
         df_inc = df_nav.pct_change().fillna(0.0)
-
+        #
+        # 有些基金在最后一次调仓的时候, 没有净值数据, 比如周一, 周二计算的QDII基金
+        # 我们需要不足这些不存在的列
+        #
+        for column in df_ratio.columns:
+            if column not in df_inc:
+                df_inc[column] = 0
         #
         # 不足仓位补充现金
         #
