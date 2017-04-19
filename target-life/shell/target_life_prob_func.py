@@ -59,7 +59,7 @@ def prob(df, target_r, risk_levels, n, interval):
             v = v * (r + 1)
         print dates[i], v
         total = total + 1
-        if v > 1.06:
+        if v > target_r:
             num = num + 1
 
     print total
@@ -74,15 +74,15 @@ if __name__ == '__main__':
     df = pd.read_csv('./data/nav.csv', index_col = ['date'], parse_dates = ['date'])
     df = df.resample('M', how='last')
 
-    target_r = 1.10
-    n = 12
+    target_r = 1.04
+    n = 10
     interval = 1
 
     #risk_levels = target_life_risklevels(df, target_r, n, interval)
     risk_levels = []
     for i in range(0, n):
-        risk_levels.append(10)
-    #risk_levels = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
-    #risk_levels = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+        risk_levels.append(6)
+    #risk_levels = [8, 8, 8, 7, 7, 7, 6, 6, 6, 6]
+    #risk_levels = [6, 6, 6, 6, 3, 3, 3, 3, 2, 2]
     prob(df, target_r, risk_levels, n , interval)
     #print risk_levels
