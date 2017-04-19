@@ -418,7 +418,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # 在ctx中记录markowitz id 以便命令链的后面使用
     #
     ctx.obj['markowitz'] = optid
-    ctx.obj['markowitz.high'] = optid
+    if short_cut == 'high' or short_cut == 'default':
+        ctx.obj['markowitz.high'] = optid
     if short_cut == 'low':
         ctx.obj['markowitz.low'] = optid
 
