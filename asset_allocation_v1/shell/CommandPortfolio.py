@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.option('--ratio', 'optratio', type=int, default=None, help=u'specified which ratio_id to use')
-@click.option('--pool', 'optpool', default=0, help=u'which pool to use for each asset (eg. 120000001:19210111,120000002:19210112')
+@click.option('--pool', 'optpool', default=0, help=u'which pool to use for each asset (eg. 120000001:11110100,120000002:11110100')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--turnover', 'optturnover',  type=float, default=0, help=u'fitler by turnover')
 @click.pass_context
@@ -75,7 +75,7 @@ def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpo
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace portfolio if exists')
 @click.option('--ratio', 'optratio', type=int, default=None, help=u'specified which ratio_id to use')
-@click.option('--pool', 'optpool', default=0, help=u'which pool to use for each asset (eg. 120000001:19210111,120000002:19210112')
+@click.option('--pool', 'optpool', default=0, help=u'which pool to use for each asset (eg. 120000001:11110100,120000002:11110200')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
 @click.pass_context
