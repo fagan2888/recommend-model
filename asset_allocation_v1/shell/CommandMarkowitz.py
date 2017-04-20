@@ -199,9 +199,10 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.option('--short-cut', type=click.Choice(['default', 'high', 'low']))
+@click.option('--algo', 'optalgo', type=click.Choice(['markowitz', 'average']), help=u'which algorithm to use for allocate')
 @click.argument('assets', nargs=-1)
 @click.pass_context
-def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optbootcount, optcpu, short_cut, assets):
+def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optbootcount, optcpu, short_cut, optalgo, assets):
     '''calc high low model markowitz
     '''
 
@@ -274,6 +275,9 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             }
             if optname is None:
                 optname = u'马克维茨%s(低风险)' % today.strftime("%m%d")
+            if optalgo is None:
+                optalgo = 'average'
+                
         else: # short_cut == 'default'
             assets = {
                 120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
@@ -298,9 +302,13 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         optname = u'马克维茨%s(实验)' % today.strftime("%m%d")
 
     bootstrap = optbootcount if optbootstrap else None
-        
-    df = markowitz_days(startdate, enddate, assets,
-                        label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=bootstrap, cpu_count=optcpu)
+
+    if optalgo == 'average':
+        df = average_days(startdate, enddate, assets)
+    else:
+        df = markowitz_days(
+            startdate, enddate, assets,
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=bootstrap, cpu_count=optcpu)
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
@@ -469,6 +477,23 @@ def merge_asset_name_and_type(asset_id, asset_data):
         'mz_markowitz_asset_name': name,
         'mz_asset_type': category,
     })
+
+def average_days(start_date, end_date, assets):
+    '''perform markowitz asset for days
+    '''
+    
+    if len(assets) > 0:
+        ratio = 1.0 / len(assets)
+    else:
+        ratio = 0
+
+    data = {k: {start_date: 0} for k in ['return', 'risk', 'sharpe']}
+    
+    data.update({k: {start_date: ratio} for k in assets.keys()})
+
+    df = pd.DataFrame(data)
+
+    return df
 
 def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0):
     '''perform markowitz asset for days
