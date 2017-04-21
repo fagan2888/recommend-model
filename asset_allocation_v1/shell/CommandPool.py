@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)  
 @click.option('--id', 'optid', default='12101,12201', help=u'reshape id')
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--datadir', '-d', type=click.Path(exists=True), help=u'dir used to store tmp data')
 @click.pass_context
 def pool(ctx, optid, datadir):
     '''fund pool group
@@ -57,7 +57,7 @@ def pool(ctx, optid, datadir):
 
 
 @pool.command()
-@click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help=u'dir used to store tmp data')
+@click.option('--datadir', '-d', type=click.Path(exists=True), help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--period', 'optperiod', type=int, default=13, help=u'adjust period by week')
@@ -70,6 +70,8 @@ def pool(ctx, optid, datadir):
 def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
     '''run constant risk model
     '''    
+    if datadir is None:
+        datadir = "./tmp"
     Const.datadir = datadir
 
     if not enddate:
