@@ -30,7 +30,6 @@ class RiskMgrLow(object):
 
     def perform(self, asset, df_input):
         #
-
         df = pd.DataFrame({
             'nav' : df_input['nav'],
             'max': df_input['nav'].rolling(25).max(),
@@ -59,7 +58,7 @@ class RiskMgrLow(object):
                 nav = row['nav']
                 _max = row['max']
 
-                print day, (_max - nav) / _max
+                # print day, (_max - nav) / _max
                 if (_max - nav) / _max >= 0.015:
                     status, empty_days, position, action = 1, 0, 0, 2
 
