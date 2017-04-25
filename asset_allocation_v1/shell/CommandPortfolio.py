@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)  
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
-@click.option('--id', 'optid', help=u'specify markowitz id')
+@click.option('--id', 'optid', help=u'specify portfolio id')
 @click.option('--name', 'optname', default=None, help=u'specify portfolio name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
@@ -59,7 +59,7 @@ def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpo
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optfull is False:
-            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
+            ctx.invoke(allocate, optid=int(optid), optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -92,6 +92,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     #
     # 处理id参数
     #
+    today = datetime.now()
     if optid is not None:
         #
         # 检查id是否存在
@@ -108,7 +109,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         #
         # 自动生成id
         #
-        today = datetime.now()
         prefix = '80' + today.strftime("%m%d");
         between_min, between_max = ('%s00' % (prefix), '%s99' % (prefix))
 
