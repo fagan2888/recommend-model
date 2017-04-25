@@ -263,13 +263,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             df_tmp = df_tmp.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
             df_tmp = DFUtil.filter_same_with_last(df_tmp)          # 过滤掉相同
             if turnover >= 0.01:
-                df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
+                df_tmp = DFUtil.filter_by_turnover(df_tmp, turnover)   # 基于换手率进行规律
+                df_tmp.index.name = 'ra_date'
             df_tmp = df_tmp.stack([1, 2])
-
             df = df_tmp.merge(df_raw[['ra_fund_code', 'ra_fund_type']], how='left', left_index=True, right_index=True)
-            # print df_tmp.head(20)
-            # print df_raw.head()
-            # print df.head()
+
 
             # index
             df['ra_portfolio_id'] = gid
