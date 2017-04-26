@@ -315,6 +315,8 @@ def nav_update_category(db, pool, category):
 
     df_nav = DBData.db_fund_value_daily(
         min_date, max_date, codes=df_position.columns)
+    if '000000' in df_position.columns:
+        df_nav['000000'] = 1
     df_inc = df_nav.pct_change().fillna(0.0)
 
     # 计算复合资产净值
