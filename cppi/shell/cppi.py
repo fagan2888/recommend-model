@@ -8,7 +8,7 @@ import numpy as np
 if __name__ == '__main__':
 
     df = pd.read_csv('./data/nav.csv', index_col = ['date'], parse_dates = ['date'])
-    df = df.iloc[-400:]
+    df = df.iloc[-500:]
     df = df.resample('W-FRI').last()
 
     low_df = df['risk1']
