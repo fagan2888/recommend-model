@@ -270,8 +270,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
         elif short_cut == 'low':
             assets = {
-                19220121:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
-                19220122:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                120000010:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                120000011:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
             }
             if optname is None:
                 optname = u'马克维茨%s(低风险)' % today.strftime("%m%d")
