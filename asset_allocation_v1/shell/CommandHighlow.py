@@ -148,7 +148,9 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     for k, v in df_asset.iterrows():
         dt_pool[k] = asset_ra_pool.match_asset_pool(k)
     df_asset['mz_pool_id'] = pd.Series(dt_pool)
-    
+
+    if 11310100 not in df_asset.index:
+        df_asset.loc[11310100] = (0, u'货币', 31, 0, 11310100)
     
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -232,10 +234,15 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
             df_low_riskmgr = df_low_riskmgr.reindex(index, method='pad')
             for column in df_low.columns:
                 data[column] = df_low[column] * df_low_riskmgr[column] * ratio_l
-
         df = pd.DataFrame(data)
-        # print df.head()
 
+        #
+        # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
+        # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
+        # 天的持仓100%， 如果因为风控空仓，需要用货币补足。
+        #
+        if 11310100 not in df.columns:
+            df[11310100] = 1 - df.sum(axis=1)
         #
         # 导入数据: highlow_alloc
         #
