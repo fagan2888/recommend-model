@@ -106,12 +106,30 @@ if __name__ == '__main__':
 
     high_risk = 'risk10'
     low_risk = 'risk1'
-    max_loss = 0.01
+    max_loss = 0.00
     multi_v = 10
     turnover = 0.2
     weeks = 12
 
-    result_df = cppi(df, high_risk, low_risk, max_loss, multi_v, turnover, weeks)
-    result_df.to_csv('cppi.csv')
+    dates = df.index
+    num = 0
+    total = 0
+    rs = []
+    for i in range(0, len(dates) - 12):
+        tmp_df = df.iloc[ i : ]
+        result_df = cppi(tmp_df, high_risk, low_risk, max_loss, multi_v, turnover, weeks)
+        vs = result_df['v']
+        #tmp_df = tmp_df / tmp_df.iloc[0]
+        #vs = tmp_df['risk10']
+        if vs[12] > 1.0:
+            num += 1
+        total += 1
+        print dates[i], vs[12]
+        rs.append(vs[12] / 1.0 - 1)
+
+    print 1.0 * num / total
+    print np.mean(rs)
+        #print dates[i], np.min(result_df['v'])
+    #result_df.to_csv('cppi.csv')
     #print result_df.iloc[-1]
-    print result_df
+    #print result_df
