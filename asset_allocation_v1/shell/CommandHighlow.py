@@ -197,7 +197,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         df_high = asset_mz_markowitz_pos.load_raw(opthigh)
         df_high_riskmgr = load_riskmgr(df_high.columns, df_high.index)
         index = df_high.index.union(df_high_riskmgr.index)
-        
     #
     # 加载低风险资产仓位
     #
@@ -299,7 +298,7 @@ def load_riskmgr(assets, reindex=None):
         else:
             gid = df_riskmgr.ix[0, 'globalid']
             sr = asset_rm_riskmgr_signal.load_series(gid)
-        data[asset_id] = sr
+        data[asset_id] = sr.reindex(reindex, method='pad')
         
     df = pd.DataFrame(data).fillna(method='pad')
     df.columns.name = 'mz_asset_id'
