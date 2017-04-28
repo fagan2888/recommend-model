@@ -59,7 +59,11 @@ def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpo
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optfull is False:
-            ctx.invoke(allocate, optid=int(optid), optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
+            if optid is not None:
+                tmpid = int(optid)
+            else:
+                tmpid = optid
+            ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
