@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     gids = []
     for i in range(0, 10):
-        gid = 80042810 + i
+        gid = 80050200 + i
         gids.append(gid)
 
     gids_str = ','.join([repr(gid) for gid in gids])

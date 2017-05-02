@@ -22,11 +22,14 @@ if __name__ == '__main__':
 
     conn  = MySQLdb.connect(**db_base)
 
-    sql = 'select on_date, on_asset_id, on_ratio from on_online_markowitz where on_online_id = 800010'
+    sql = 'select ra_date, ra_fund_code, sum(ra_fund_ratio) from ra_portfolio_pos where ra_portfolio_id = 80050201 group by ra_date, ra_fund_code'
 
-    df = pd.read_sql(sql, conn, index_col = ['on_date', 'on_asset_id'])
+    df = pd.read_sql(sql, conn, index_col = ['ra_date', 'ra_fund_code'])
+    #df = df.groupby(by = df.index, group_keys = False).sum()
+    #print df
+    #print df.index
     df = df.unstack()
     df = df.fillna(0.0)
     print df
 
-    df.to_csv('data/pos.csv')
+    df.to_csv('data/risk1_pos.csv')
