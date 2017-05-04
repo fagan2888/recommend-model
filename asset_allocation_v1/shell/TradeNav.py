@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 class TradeNav(object):
     
-    def __init__(self):
+    def __init__(self, debug=False):
         #
         # 用户当前持仓: DataFrame
-        #      columns        share  share_buying share_redeeming share_bonusing amount_bonusing div_mode
+        #      columns        share  share_buying nav, nav_date, share_redeeming nav_redeeming, share_bonusing amount_bonusing div_mode
         #      index
         # (fund_id, order_id) 
         # 
@@ -44,6 +44,8 @@ class TradeNav(object):
         #     （gid, portfolio_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode）
         # 
         self.orders = [];
+
+        self.debug = debug
 
     def calc(self, df_pos):
 
@@ -207,6 +209,14 @@ class TradeNav(object):
             self.df_share.loc[(fund_id, argv['share_id']), 'share_redeeming'] -= argv['share']
             self.cash += argv['share'] * argv['nav'] - argv['fee']
 
+        elif op == 8:
+            #
+            # 调仓处理
+            # 
+            # df_share: 是当前状态；argv['pos']: 是目标状态
+            #
+                  
+
         elif op == 15:
             #
             # 基金分红：权益登记
@@ -292,7 +302,7 @@ class TradeNav(object):
             #
             # 记录持仓
             #
-            if self.df_share.sum().sum() > 0.000099:
+            if self.debug and self.df_share.sum().sum() > 0.000099:
                 self.holdings[dt] = self.df_share.copy()
             #
             # 记录净值
