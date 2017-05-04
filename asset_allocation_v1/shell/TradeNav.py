@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import calendar
+import heapq
 from sqlalchemy import *
 
 from db import database
@@ -22,13 +23,25 @@ class TradeNav(object):
         # 
         #
         self.df_share = pd.DataFrame()
+
         #
         # 历史持仓
         #
         self.holdings = {}
 
+        #
+        # 净值/市值序列
+        #
+        self.nav = {}
+
+        #
+        # 业绩归因序列
+        #
+        self.contrib = {}
+        
         # 
-        # 订单列表，用于保存所有生成的订单
+        # 订单列表，用于保存整个过程中产生的订单, 每个订单是一个字典，包含如下项目
+        #     （gid, portfolio_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode）
         # 
         self.orders = [];
 
@@ -79,7 +92,6 @@ class TradeNav(object):
             }
             ev = (row['ra_record_date'] + timedelta(hours=22), 15, row['ra_fund_id'], argv)
             heapq.heappush(events, ev)
-        
 
         # 
         # 加载分拆信息
@@ -159,7 +171,7 @@ class TradeNav(object):
             #
             # 净值更新
             #
-            df = df_share.loc[fund_id]
+            df = self.df_share.loc[fund_id]
             if not df.empty:
                 df['yield'] = (df['share'] + df['share_buying']) * (df['nav'] - argv['nav'])
                 df['nav'] = argv['nav']
@@ -170,7 +182,7 @@ class TradeNav(object):
             # 申购
             #
             self.cash -= argv['share'] * argv['nav'] + argv['fee']
-            df_share.loc[(fund_id, argv['order_id'])] = {
+            self.df_share.loc[(fund_id, argv['order_id'])] = {
                 'share': 0, 'share_buying': argv['share'], 'share_redeeming': 0
             }
 
@@ -178,28 +190,28 @@ class TradeNav(object):
             #
             # 申购确认
             #
-            df_share.loc[(fund_id, argv['order_id']), 'share'] = df_share.loc[(fund_id, argv['order_id']), 'share_buying']
-            df_share.loc[(fund_id, argv['order_id']), 'share_buying'] = 0
+            self.df_share.loc[(fund_id, argv['order_id']), 'share'] = self.df_share.loc[(fund_id, argv['order_id']), 'share_buying']
+            self.df_share.loc[(fund_id, argv['order_id']), 'share_buying'] = 0
 
         elif op == 2:
             #
             # 赎回
             #
-            df_share.loc[(fund_id, argv['share_id']), 'share'] -= argv['share']
-            df_share.loc[(fund_id, argv['share_id']), 'share_redeeming'] += argv['share']
+            self.df_share.loc[(fund_id, argv['share_id']), 'share'] -= argv['share']
+            self.df_share.loc[(fund_id, argv['share_id']), 'share_redeeming'] += argv['share']
 
         elif op == 12:
             #
             # 赎回确认
             #
-            df_share.loc[(fund_id, argv['share_id']), 'share_redeeming'] -= argv['share']
+            self.df_share.loc[(fund_id, argv['share_id']), 'share_redeeming'] -= argv['share']
             self.cash += argv['share'] * argv['nav'] - argv['fee']
 
         elif op == 15:
             #
             # 基金分红：权益登记
             #
-            df = df_share.loc[fund_id]
+            df = self.df_share.loc[fund_id]
             df['share_bonusing'] = (df['share'] + df['share_buying'])
             share = df['share_bonusing'].sum()
             argv2 = {
@@ -211,14 +223,23 @@ class TradeNav(object):
             ev2 = (argv['dividend_date'], 16, fund_id, argv2)
             result.append(ev2)
             #
-            # todo：记录分红操作
+            # 记录分红操作
             #
+            share_dividend = df.loc[df['div_mode'] == 1, 'share_bonusing'].sum()
+            share_cash = df['share_bonusing'].sum() - share_dividend
+            if share_dividend > 0:
+                self.orders.append(
+                    self.make_bonus_order(dt, fund_id, share_dividend, argv, 1))
+
+            if share_cash > 0:
+                self.orders.append(
+                    self.make_bonus_order(dt, fund_id, share_cash, argv, 0))
 
         elif op == 16:
             #
             # 基金分红：除息
             #
-            df = df_share.loc[fund_id]
+            df = self.df_share.loc[fund_id]
             df['amount_bonusing'] = df['share_bonusing'] * argv['bonus_ratio']
             argv2 = {
                 'bound_nav': argv['bonus_nav'],
@@ -235,7 +256,7 @@ class TradeNav(object):
             #
             # 基金分红：派息
             #
-            df = df_share.loc[fund_id]
+            df = self.df_share.loc[fund_id]
             #
             # 现金分红
             #
@@ -256,7 +277,7 @@ class TradeNav(object):
             #
             # 基金分拆
             #
-            df = df_share.loc[fund_id]
+            df = self.df_share.loc[fund_id]
             df['share'] *= argv['fs_split_proportion']
             df['share_buying'] *= argv['fs_split_proportion']
             df['share_redeeming'] *= argv['fs_split_proportion']
@@ -268,7 +289,51 @@ class TradeNav(object):
             df['nav'] /= argv['fs_split_proportion']
 
         elif op == 19:
-            if df_share.sum().sum() > 0.000099:
-                self.holdings[dt] = df_share.copy()
+            #
+            # 记录持仓
+            #
+            if self.df_share.sum().sum() > 0.000099:
+                self.holdings[dt] = self.df_share.copy()
+            #
+            # 记录净值
+            #
+            amount = (self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] \
+                     + self.df_share['share_redeeming'] * self.df_share['nav_redeeming'] \
+                     + self.df_share['amount_bonusing']
+            self.nav[dt] = amount
+            #
+            # 记录业绩归因
+            #
+            self.contrib[dt] = self.df_share['yield'].groupby(level=1).sum()
 
         return result
+
+    def make_bonus_order(dt, fund_id, order_share, bonus, div_mode):
+        amount = order_share * bonus['bonus_ratio']
+        if div_mode == 1:
+            #
+            # 红利再投
+            #
+            nav, nav_date, ack_amount = bonus['nav'], bonus['nav_date'], 0
+            ack_share = amount / nav
+        else:
+            nav, nav_date, ack_share, ack_amount = 0, '0000-00-00', 0, amount
+                
+        return {
+            'gid': self.new_order_id(dt),
+            'portfolio_id': self.portfolio_id,
+            'fund_id': fund_id,
+            # 'fund_code': fund_code,
+            'op': 3,
+            'place_date': bonus['dividend_date'],
+            'place_time': '15:00:00',
+            'share': order_share,
+            'amount': amount,
+            'fee': 0,
+            'nav': nav,
+            'nav_date': nav_date,
+            'ack_date': bonus['payment_date'],
+            'ack_amount': ack_amount,
+            'ack_share': ack_share,
+            'div_mode': div_mode,
+        }
