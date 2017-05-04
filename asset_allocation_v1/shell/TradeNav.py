@@ -215,7 +215,11 @@ class TradeNav(object):
             # 
             # df_share: 是当前状态；argv['pos']: 是目标状态
             #
-                  
+            # 调仓逻辑里面，首先取消掉所有未提交的订单，然后在根据当前状态
+            # 重新生成订单
+            #
+            self.remove_flying_op(events)
+            result = self.adjust(self.df_share, argv['pos'])
 
         elif op == 15:
             #
@@ -347,3 +351,11 @@ class TradeNav(object):
             'ack_share': ack_share,
             'div_mode': div_mode,
         }
+
+    def adjust(df_share, df_dst):
+        '''
+        生成调仓订单
+        '''
+        
+        df_src = ((df_share['share'] + df_share['share_buying']) * df_share['nav'] + df_share['amount_bonusing']).groupby(level=0).sum()
+        total = df_src.sum() + (df_share['share_redeeming'] * df_share['nav_redeeming']).sum()
