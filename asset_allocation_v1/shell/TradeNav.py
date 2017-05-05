@@ -17,13 +17,42 @@ class TradeNav(object):
     def __init__(self, debug=False):
         #
         # 用户当前持仓: DataFrame
-        #      columns        share  share_buying nav, nav_date, share_redeeming nav_redeeming, share_bonusing amount_bonusing div_mode
-        #      index
-        # (fund_id, order_id) 
         # 
+        #      columns        share,  share_buying, redeemable_date,  nav, nav_date, share_bonusing amount_bonusing div_mode
+        #      index
+        # (fund_id, share_id)
+        #      
+        #  其中，
+        #
+        #    share_id: 持仓ID，直接采用购买操作的订单号order_id，因
+        #              为每次购买会生成唯一的持仓
+        #
+        #    redeemable_date: 份额可赎回日期
         #
         self.df_share = pd.DataFrame()
 
+        #
+        # 赎回上下文：DataFrame
+        #      columns        share_id, share,  nav, nav_date, confirm_date
+        #      index
+        # (fund_id, redeem_id)
+        #
+        #  其中，
+        #
+        #    redeem_id: 赎回ID，直接采用赎回操作的订单号order_id，因为
+        #               每个赎回会生成唯一的赎回上下文
+        #
+        #    share_id : 被赎回的持仓的ID，为被赎回的持仓的ID，多个赎回
+        #               上下文可能会具有相同的share_id，也就意味着被提
+        #               交了多个赎回的请求（这个是留着为将来支持用户赎
+        #               回和调仓同时进行的伏笔）
+        #
+        #    share & nav : 赎回的份额 和 净值（用于赎回确认的净值）
+        #
+        #    confirm_date: 到账日期，也就是赎回款最终到账，可用于进一步购买日期
+        #
+        self.df_redeem = pd.DataFrame()
+        
         #
         # 历史持仓
         #
@@ -185,7 +214,7 @@ class TradeNav(object):
             #
             self.cash -= argv['share'] * argv['nav'] + argv['fee']
             self.df_share.loc[(fund_id, argv['order_id'])] = {
-                'share': 0, 'share_buying': argv['share'], 'share_redeeming': 0
+                'share': 0, 'share_buying': argv['share']
             }
 
         elif op == 11:
@@ -200,14 +229,21 @@ class TradeNav(object):
             # 赎回
             #
             self.df_share.loc[(fund_id, argv['share_id']), 'share'] -= argv['share']
-            self.df_share.loc[(fund_id, argv['share_id']), 'share_redeeming'] += argv['share']
+            # 生成赎回上下文
+            self.df_redeem.loc[(fund_id, argv['order_id'])] = {
+                'share_id': argv['share_id'],
+                'share': argv['share'],
+                'nav': argv['nav'],
+                'nav_date': argv['nav_date'],
+                'confirm_date': argv['confirm_date']
+            }
 
         elif op == 12:
             #
             # 赎回确认
             #
-            self.df_share.loc[(fund_id, argv['share_id']), 'share_redeeming'] -= argv['share']
             self.cash += argv['share'] * argv['nav'] - argv['fee']
+            self.df_redeem.drop((fund_id, argv['redeem_id']))
 
         elif op == 8:
             #
@@ -219,7 +255,7 @@ class TradeNav(object):
             # 重新生成订单
             #
             self.remove_flying_op(events)
-            result = self.adjust(self.df_share, argv['pos'])
+            result = self.adjust(dt, argv['pos'])
 
         elif op == 15:
             #
@@ -294,7 +330,6 @@ class TradeNav(object):
             df = self.df_share.loc[fund_id]
             df['share'] *= argv['fs_split_proportion']
             df['share_buying'] *= argv['fs_split_proportion']
-            df['share_redeeming'] *= argv['fs_split_proportion']
             #
             # 理论上此时的净值为昨天的净值, 因为分拆是在调整今天净值之前处理的.
             #
@@ -311,9 +346,9 @@ class TradeNav(object):
             #
             # 记录净值
             #
-            amount = (self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] \
-                     + self.df_share['share_redeeming'] * self.df_share['nav_redeeming'] \
-                     + self.df_share['amount_bonusing']
+            amount = ((self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] + self.df_share['amount_bonusing']).sum()
+            
+            amount += (self.df_redeem['share'] * self.df_redeem['nav']).sum()
             self.nav[dt] = amount
             #
             # 记录业绩归因
@@ -352,17 +387,18 @@ class TradeNav(object):
             'div_mode': div_mode,
         }
 
-    def adjust(df_share, df_dst):
+    def adjust(df_dst):
         '''
         生成调仓订单
         '''
+        result = []
         #
         # 计算当前持仓的持仓比例
         #
         # 计算当前基金的持仓金额
-        df_src = ((df_share['share'] + df_share['share_buying']) * df_share['nav'] + df_share['amount_bonusing']).groupby(level=0).sum()
+        df_src = ((self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] + self.df_share['amount_bonusing']).groupby(level=0).sum()
         # 计算用户总持仓金额
-        total = df_src.sum() + (df_share['share_redeeming'] * df_share['nav_redeeming']).sum()
+        total = df_src.sum() + (self.df_redeem['share'] * self.df_redeem['nav']).sum()
         # 计算当前基金的持仓比例（金额比例）
         df_src['src'] = df_src / total
 
@@ -370,5 +406,140 @@ class TradeNav(object):
         # 计算各个基金的调仓比例和调仓金额
         #
         df = df_src.merge(df_dst, how='outer', left_index=True, right_index=True).fillna(0)
-        df['diff'] = df['
+        df['diff_ratio'] = df['src'] - df['pos']
+        df['diff_amount'] = total * df['diff_ratio']
+
+        #
+        # 生成调仓订单。 具体地，
+        #
+        #     1. 首先生成赎回订单，针对每只基金，按照赎回费率少的优先
+        #        的方式赎回。 因为基金的最小赎回份额和最小保留份额都是
+        #        按整个基金算的，所以简单的贪心算法就可以生成最优的赎
+        #        回方案。
+        #
+        #     2. 在赎回订单到账的基础上，按照调入金额的买入比例买入。
+        #        理论上来说，这里有两种买入策略可以选择：（1）按照调入
+        #        金额的比例买入；（2）优先买入单支基金；这里选择按比例
+        #        买入，主要是考虑QDII的赎回到账时间可能会比较长（比如
+        #        T+7），那么先到账的基金优先买入A股还是货币显然会引入
+        #        比较大的差别。（由于我们不考虑最小申购金额的限制，所
+        #        以按比例买入能够更好的提现调仓的本质）。如果考虑最小
+        #        申购金额限制，可以采用能平均买入就平均，否则就买单支
+        #        的方式）
+        #
+        #     3. 为了防止购买订单碎片化，我们同一天到账的金额进行了汇
+        #        总，利用汇总的金额生成购买订单。
+        #
+        #     4. 需要考虑在途资金（也就是以前的赎回尚未到账的资金，因
+        #        为跟该赎回相关的购买订单已经被需要，所以需要重新生成），
+        #        生成方法也是根据在途资金的到账日期来下购买订单。
+        #
+
+        dt_flying = {}          # 在途资金
         
+        #
+        # 贪心算法生成赎回订单
+        #
+        for fund_id, row in df[df['diff_amount'] < 0].iterrows():
+            amount = abs(row['diff_amount'])
+            df_share_fund = self.df_share.loc[fund_id]
+            count = len(df_share_fund.index)
+
+            for k, v in df_share_fund.iterrows():
+                fund_id, share_id = k
+                redeem_amount = min(amount, (v['share'] + v['share_buying']) * v['nav'])
+                redeem_share = redeem_amount / v['nav']
+                if v['share'] > 0:
+                    place_date = dt
+                    # sr['share'] -= redeem_share
+                    nav = v['nav']
+                else:
+                    place_date = v['redeemable_date']
+                    # sr['share_buying'] -= redeem_share
+                    nav = None
+                #
+                # 生成赎回订单
+                #
+                order = self.make_redeem_order(
+                    place_date, fund_id, redeem_share, v['buy_date'], nav)
+                result.append(order)
+                #
+                # 记录赎回到账金额，为购买记录做准备
+                #
+                if order['ack_date'] in dt_flying:
+                    dt_flying[order['ack_date']] += order['ack_amount']
+                else:
+                    dt_flying[order['ack_date']] = order['ack_amount']
+                #
+                # 调整需要赎回的金额，看是否需要进一步赎回
+                #
+                amount -= redeem_amount
+                if amount < 0.0001:
+                    break
+
+            #
+            # 退出赎回循环，正确性检查
+            #
+            if amount >= 0.0001:
+                # logger.error("SNH: bad redeem amount, something left: fund_id: %d, total: %f, left: %f", fund_id, abs(row['diff_amount']), amount)
+                print "SNH: bad redeem amount, something left: fund_id: %d, total: %f, left: %f" % (fund_id, abs(row['diff_amount']), amount)
+                sys.exit(0)
+                
+        #
+        # 统计所有赎回到账日期和到账金额
+        #
+        df_new_redeem = pd.DataFrame({'new_redeem': dt_flying})
+        df_new_redeem.index.name = 'date'
+        df_old_redeem  = (self.df_redeem['share'] * self.df_redeem['nav']).groupby(by=self.df_redeem['confirm_date']).sum().to_frame('old_redeem')
+        
+        df_flying = df_new_redeem.merge(df_old_redeem, left_index=True, right_index=True)
+        df_flying['amount'] = df_flying['old_redeem'] + df_flying['new_redeem']
+
+        #
+        # 根据赎回到账日期，生成购买订单
+        #
+        # 就算不同基金的购买比例
+        df_ratio =  df[df['diff_amount'] > 0, ['diff_amount']]
+        df_ratio['ratio'] = df_ratio['diff_amount'] / df_ratio['diff_amount']
+        # 生成购买订单
+        for day, v in df_flying.iterrows():
+            sr_buy = (df_ratio['ratio'] * v['amount']).round(2)
+
+            for fund_id, amount in sr_buy.iterrows():
+                order = self.make_buy_order(day, fund_id, amount)
+                result.append(order)
+
+        #
+        # 返回所有订单，即调仓计划
+        #
+        return result
+                
+            
+    def make_redeem_order(dt, fund_id, share, buy_date, nav):
+        if nav is None:
+            (nav, nav_date) = self.get_tdate_and_nav(fund_id, dt)
+        else:
+            nav_date = dt
+
+        amount = share * nav
+        fee = self.get_redeem_fee(fund_id, buy_date, amount)
+        
+        return {
+            'gid': self.new_order_id(dt),
+            'portfolio_id': self.portfolio_id,
+            'fund_id': fund_id,
+            # 'fund_code': fund_code,
+            'op': 2,
+            'place_date': dt,
+            'place_time': '14:30:00',
+            'share': share,
+            'amount': amount,
+            'fee': fee,
+            'nav': nav,
+            'nav_date': nav_date,
+            'ack_date': self.get_redeem_ack_date(fund_id, nav_date), 
+            'ack_amount': amount - fee,
+            'ack_share': share,
+            'div_mode': 0,
+        }
+            
