@@ -356,6 +356,19 @@ class TradeNav(object):
         '''
         生成调仓订单
         '''
-        
+        #
+        # 计算当前持仓的持仓比例
+        #
+        # 计算当前基金的持仓金额
         df_src = ((df_share['share'] + df_share['share_buying']) * df_share['nav'] + df_share['amount_bonusing']).groupby(level=0).sum()
+        # 计算用户总持仓金额
         total = df_src.sum() + (df_share['share_redeeming'] * df_share['nav_redeeming']).sum()
+        # 计算当前基金的持仓比例（金额比例）
+        df_src['src'] = df_src / total
+
+        #
+        # 计算各个基金的调仓比例和调仓金额
+        #
+        df = df_src.merge(df_dst, how='outer', left_index=True, right_index=True).fillna(0)
+        df['diff'] = df['
+        
