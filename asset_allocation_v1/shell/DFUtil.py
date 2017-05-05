@@ -362,8 +362,7 @@ def categories_name(category, default='unknown'):
         return default
 
 def calc_turnover(df):
-    return (df - df.shift(1).fillna(0)).abs().sum(axis=1);
-
+    return (df.fillna(0) - df.shift(1).fillna(0)).abs().sum(axis=1)
 
 
 if __name__ == '__main__':
