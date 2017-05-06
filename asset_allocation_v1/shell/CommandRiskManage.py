@@ -25,7 +25,7 @@ from dateutil.parser import parse
 from Const import datapath
 from tabulate import tabulate
 from sqlalchemy import MetaData, Table, select, func
-from db import database, asset_rm_risk_mgr, asset_rm_riskmgr, asset_tc_timing_signal, asset_rm_riskmgr_signal, asset_rm_riskmgr_nav
+from db import *
 
 import traceback, code
 
@@ -396,7 +396,7 @@ def signal_update(riskmgr):
     else:
         sdate = None
 
-    tdates = database.base_trade_dates_load_index(sdate)
+    tdates = base_trade_dates.load_index(sdate)
         
     sr_nav = database.load_nav_series(riskmgr['rm_asset_id'], reindex=tdates, begin_date=sdate)
 
