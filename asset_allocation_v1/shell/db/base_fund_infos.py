@@ -22,7 +22,7 @@ def load_ack(gids=None, codes=None, xtype=5):
         t.c.fi_globalid,
         t.c.fi_code,
         t.c.fi_yingmi_confirm_time,
-        t.c.fi_yingmi_to_account_time，
+        t.c.fi_yingmi_to_account_time
     ]
 
     s = select(columns)
@@ -34,9 +34,10 @@ def load_ack(gids=None, codes=None, xtype=5):
 
     df = pd.read_sql(s, db, index_col=['fi_globalid'])
 
-    df['buy'] += df['fi_yingmi_confirm_time'] + 1 # 实际中，购买完成，份额可赎回时间是订单确认时间 + 1天
+    df['buy'] = df['fi_yingmi_confirm_time'] + 1 # 实际中，购买完成，份额可赎回时间是订单确认时间 + 1天
     sr = df['fi_yingmi_to_account_time'] - 2
-    df['redeem'] = sr.where(sr >= 1, 1) 
+    df['redeem'] = sr.where(sr >= 1, 1)
+    df['code'] = df['fi_code'].apply(lambda x: "%06d" % x)
 
     return df[['code', 'buy', 'redeem']]
 

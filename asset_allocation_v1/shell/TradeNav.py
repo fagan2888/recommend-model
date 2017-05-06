@@ -6,7 +6,11 @@ import numpy as np
 import datetime
 import calendar
 import heapq
+import TradeNav
+
+from datetime import datetime, timedelta
 from sqlalchemy import *
+from util.xdebug import dd
 
 from db import *
 
@@ -120,7 +124,7 @@ class TradeNav(object):
 
     def calc(self, df_pos, principal):
 
-        sdate = df_pos.index.min()
+        sdate = df_pos.index.levels[0].min()
         edate = datetime.now() - timedelta(days=1)
 
         #
@@ -128,31 +132,36 @@ class TradeNav(object):
         #
 
         # 所有用到的基金ID
-        fund_ids = df_pos.get_level_values(1)
+        fund_ids = df_pos.index.levels[1]
+
         #
         # 赎回费率，延迟加载，因为跟持仓基金有关
         self.df_redeem_fee = base_fund_fee.load_redeem(fund_ids)
 
         # 购买费率，延迟加载，因为跟持仓基金有关
         self.df_buy_fee = base_fund_fee.load_buy(fund_ids)
+        # dd(self.df_buy_fee.head(), self.df_redeem_fee.head())
+
 
 
         # 赎回到账期限 记录了每个基金的到账日到底是T+n；
         # 购买确认日期 记录了每个基金的到购买从份额确认到可以赎回需要T+n；
         self.df_ack = base_fund_infos.load_ack(fund_ids)
-
+        # dd(self.df_ack.loc[(self.df_ack['buy'] > 10) | (self.df_ack['redeem'] > 10) ])
 
         # 未来交易日 记录了每个交易日的t+n是哪个交易日
-        max_n = df_ack.max().max()
+        max_n = int(max(self.df_ack['buy'].max(), self.df_ack['redeem'].max()))
         dates = base_trade_dates.load_index(sdate, edate)
         self.df_t_plus_n = pd.DataFrame(dates, index=dates)
-        for i in xrange(1, n + 1):
-            self.df_t_plus_n[i] = self.df_t_plus_n[0].shift(-i)
-        self.df_t_plus_n.drop(0, axis=1)
+        for i in xrange(1, max_n + 1):
+            self.df_t_plus_n[i] = self.df_t_plus_n['td_date'].shift(-i)
+        self.df_t_plus_n.drop('td_date', axis=1)
+        # dd(self.df_t_plus_n, max_n, self.df_t_plus_n.index)
 
 
         # 净值/市值序列
         self.dt_nav = Nav.Nav().load_tdate_and_nav(fund_ids, sdate, edate)
+        # dd(self.dt_nav)
         
         #
         # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;8:调仓;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;19:记录当前持仓;
@@ -255,7 +264,7 @@ class TradeNav(object):
         # 本模块不负责保存具体的计算结果
         #
 
-    def process(self， ev):
+    def process(self, ev):
         result = []
         # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;19:记录当前持仓;
         dt, op, fund_id, argv = ev
@@ -632,7 +641,7 @@ class TradeNav(object):
         （3）黄金基金（比如华安黄金000217），同A股一样，无需特殊处理。
 
         '''
-        if fund_id not self.dt_nav:
+        if fund_id not in self.dt_nav:
             print "SNH: missing nav: fund_id: %d, day: %s" % (fund_id, day.strftime("%Y-%m-%d"))
             sys.exit(0)
 
