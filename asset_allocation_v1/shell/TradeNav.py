@@ -82,7 +82,12 @@ class TradeNav(object):
         self.contrib = {}
 
         #
-        # 净值/市值序列
+        # 计算结果：净值/市值序列
+        #
+        self.nav = {}
+
+        #
+        # 基金净值
         #
         # 延迟加载，因为跟具体配置有关
         #
@@ -113,7 +118,7 @@ class TradeNav(object):
         self.df_t_plus_n = None
 
 
-    def calc(self, df_pos):
+    def calc(self, df_pos, principal):
 
         sdate = df_pos.index.min()
         edate = datetime.now() - timedelta(days=1)
