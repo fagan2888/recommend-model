@@ -290,6 +290,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
 
 def load_riskmgr(assets, reindex=None):
     data = {}
+    index = reindex.copy()
     for asset_id in assets:
         df_riskmgr = asset_rm_riskmgr.where_asset_id(asset_id)
         if df_riskmgr.empty:
@@ -298,9 +299,10 @@ def load_riskmgr(assets, reindex=None):
         else:
             gid = df_riskmgr.ix[0, 'globalid']
             sr = asset_rm_riskmgr_signal.load_series(gid)
-        data[asset_id] = sr.reindex(reindex, method='pad')
-        
-    df = pd.DataFrame(data).fillna(method='pad')
+            index = index.union(sr.index)
+        data[asset_id] = sr
+
+    df = pd.DataFrame(data, index=index).fillna(method='pad')
     df.columns.name = 'mz_asset_id'
 
     return df
