@@ -315,6 +315,7 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--fee', 'optfee', default='9', help=u('fee type(8:with fee; 9:without fee'))
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
 def nav(ctx, optid, optlist):
@@ -328,17 +329,20 @@ def nav(ctx, optid, optlist):
         else:
             portfolios = None
 
+    fees = [int(s.strip()) for s in optfee.split(',')]
+
     df_portfolio = asset_ra_portfolio.load(portfolios)
 
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_portfolio, headers='keys', tablefmt='psql')
         return 0
-    
-    for _, portfolio in df_portfolio.iterrows():
-        nav_update_alloc(portfolio)
 
-def nav_update_alloc(portfolio):
+    for fee in fees:
+        for _, portfolio in df_portfolio.iterrows():
+            nav_update_alloc(portfolio, fee)
+
+def nav_update_alloc(portfolio, fee):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     
     with click.progressbar(
@@ -349,9 +353,9 @@ def nav_update_alloc(portfolio):
     # with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
     #     for _, alloc in :
     #         bar.update(1)
-            nav_update(alloc)
+            nav_update(alloc, fee)
     
-def nav_update(alloc):
+def nav_update(alloc, fee):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
@@ -359,7 +363,12 @@ def nav_update(alloc):
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
     # 计算复合资产净值
-    sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
+    if fee == 8:
+        tn = TradeNav.TradeNav()
+        tn.calc(df_pos, 100000)
+        sr_nav_portfolio = pd.Series(tn.nav)
+    else:
+        sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
 
     df_result = sr_nav_portfolio.to_frame('ra_nav')
     df_result.index.name = 'ra_date'
