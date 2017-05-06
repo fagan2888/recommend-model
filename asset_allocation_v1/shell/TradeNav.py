@@ -18,7 +18,7 @@ class TradeNav(object):
         #
         # 用户当前持仓: DataFrame
         # 
-        #      columns        share,  share_buying, redeemable_date,  nav, nav_date, share_bonusing amount_bonusing div_mode
+        #      columns        share,  share_buying, ack_date,  nav, nav_date, share_bonusing amount_bonusing div_mode
         #      index
         # (fund_id, share_id)
         #      
@@ -27,9 +27,14 @@ class TradeNav(object):
         #    share_id: 持仓ID，直接采用购买操作的订单号order_id，因
         #              为每次购买会生成唯一的持仓
         #
-        #    redeemable_date: 份额可赎回日期
+        #    ack_date: 购买确认日期（实际上是份额可赎回开始日期，不同
+        #              于交易中的订单确认日期，因为订单确认日期在费率
+        #              计算中没有任何实际意义。
         #
-        self.df_share = pd.DataFrame()
+        self.df_share = pd.DataFrame(
+            index=pd.MultiIndex(names=['fund_id','share_id'], levels=[[], []], labels=[[],[]]),
+            columns=['share', 'share_buying', 'nav', 'nav_date', 'ack_date', 'share_bonusing', 'amount_bonusing', 'div_mode']
+        )
 
         #
         # 赎回上下文：DataFrame
@@ -51,17 +56,20 @@ class TradeNav(object):
         #
         #    confirm_date: 到账日期，也就是赎回款最终到账，可用于进一步购买日期
         #
-        self.df_redeem = pd.DataFrame()
+        self.df_redeem = pd.DataFrame(
+            index=pd.MultiIndex(names=['fund_id','redeem_id'], levels=[[], []], labels=[[],[]]),
+            columns=['share_id', 'share', 'nav', 'nav_date', 'ack_date']
+        )
         
         #
         # 历史持仓
         #
-        self.holdings = {}
+        self.dt_holding = {}
 
         #
         # 净值/市值序列
         #
-        self.nav = {}
+        self.dt_nav = {}
 
         #
         # 业绩归因序列
@@ -72,7 +80,21 @@ class TradeNav(object):
         # 订单列表，用于保存整个过程中产生的订单, 每个订单是一个字典，包含如下项目
         #     （gid, portfolio_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode）
         # 
-        self.orders = [];
+        self.orders = []
+
+        self.df_redeem_fee = pd.DataFrame()
+        self.df_buy_fee = pd.DataFrame()
+        self.dt_nav = {}
+
+        #
+        # 赎回到账期限 记录了每个基金的到账日到底是T+n；
+        #
+        self.df_fund_ack = pd.DataFrame()
+
+        #
+        # 未来交易日 记录了每个交易日的t+n是哪个交易日
+        #
+        self.df_t_plus_n = pd.DataFrame()
 
         self.debug = debug
 
@@ -182,7 +204,7 @@ class TradeNav(object):
         #     ->where('ih_fund_id', $this->productId)
         #     ->where('ih_origin', $this->origin)
         #     ->delete();
-        # AssetInvestorHoldingFund::insert($this->holdings);
+        # AssetInvestorHoldingFund::insert($this->dt_holding);
 
         # #
         # # 保存交易数据
@@ -342,7 +364,7 @@ class TradeNav(object):
             # 记录持仓
             #
             if self.debug and self.df_share.sum().sum() > 0.000099:
-                self.holdings[dt] = self.df_share.copy()
+                self.dt_holding[dt] = self.df_share.copy()
             #
             # 记录净值
             #
@@ -454,7 +476,7 @@ class TradeNav(object):
                     # sr['share'] -= redeem_share
                     nav = v['nav']
                 else:
-                    place_date = v['redeemable_date']
+                    place_date = v['ack_date']
                     # sr['share_buying'] -= redeem_share
                     nav = None
                 #
@@ -522,7 +544,7 @@ class TradeNav(object):
             nav_date = dt
 
         amount = share * nav
-        fee = self.get_redeem_fee(fund_id, buy_date, amount)
+        fee = self.get_redeem_fee(dt, fund_id, buy_date, amount)
         
         return {
             'gid': self.new_order_id(dt),
@@ -542,4 +564,148 @@ class TradeNav(object):
             'ack_share': share,
             'div_mode': 0,
         }
+
+    def get_tdate_and_nav(fund_id, day):
+        '''
+        获取day对应的交易日和该交易日基金的净值。
+
+        对于国内基金，情形比较直接，无需废话。但对于QDII基金：
+
+        （1）美股基金（比如大成标普096001），购买份额确认和赎回的到账
+             的T+N采用的A股交易日，如果遇到A股交易日和美股非交易日，一
+             般这类基金会暂停申购赎回。
+
+        （2）港股基金（比如华夏恒生000071），同美股一样。也即，购买份
+             额确认和赎回的到账的T+N采用的A股交易日，如果遇到A股交易日
+             和美股非交易日，一般这类基金会暂停申购赎回。
+
+        （3）黄金基金（比如华安黄金000217），同A股一样，无需特殊处理。
+
+        '''
+        if fund_id not self.dt_nav:
+            print "SNH: missing nav: fund_id: %d, day: %s" % (fund_id, day.strftime("%Y-%m-%d"))
+            sys.exit(0)
+
+        df_nav = self.dt_nav[fund_id]
+
+        return df_nav.loc[day, ['nav', 'nav_date']]
+
+    def get_redeem_fee(dt, fund_id, buy_date, amount):
+        '''
+        获取赎回费用
+
+        如果在赎回费用表中不存在， 则默认无费率. 此外，需要注意的是基
+        金赎回的持有日期是按自然日算的。
+
+        赎回费计算公式（来自中国证监会网站）：
+            赎回总金额=赎回份额×T日基金份额净值
+            赎回费用=赎回总金额×赎回费率
+
+        '''
+        df = self.df_redeem_fee.loc[fund_id]
+
+        if df.empty: return 0
+
+        # 持有日期
+        ndays = (dt - buy_date).days
+
+        sr = df.loc[df['ff_max_value'] >= ndays].iloc[0]
+        if sr['ff_fee_type'] == 2: # 固定费用模式，一般是0元，持有期足够长，赎回免费
+            fee = sr['ff_fee']
+        else:
+            fee = amount * sr['ff_fee'] # 标准费率计算方式
+
+        return fee
+
+    def get_redeem_ack_date(fund_id, tdate):
+        '''
+        获取赎回到账的A股交易日
+
+        所有的赎回到账以A股交易日为准。目前，我们涉及的QDII基金的赎回到账是按A股交易日计。
+        '''
+
+        #
+        # 涉及到两个全局数据:
+        #   df_fund_ack 记录了每个基金的到账日是T+n；
+        #   df_t_plus_n 记录了每个交易日的t+n是哪一天
+        #
+        n = 3 # 默认t+3到账
+        if fund_id in self.df_fund_ack.index:
+            n = self.df_fund_ack.at[fund_id, 'fi_yingmi_to_account_time']
+        else:
+            print "WARN: missing yingmi_to_account_time, use default(t+3): fund_id: %d" % fund_id
+
             
+        ack_date = self.df_t_plus_n.at[tdate, "t+%d" % n]
+
+        return ack_date
+
+    def make_buy_order(dt, fund_id, amount):
+        (nav, nav_date) = self.get_tdate_and_nav(fund_id, dt)
+
+        fee = self.get_buy_fee(dt, fund_id, amount)
+        ack_amount = amount - fee
+        share = ack_amount / nav
+        
+        return {
+            'gid': self.new_order_id(dt),
+            'portfolio_id': self.portfolio_id,
+            'fund_id': fund_id,
+            # 'fund_code': fund_code,
+            'op': 1,
+            'place_date': nav_date,
+            'place_time': '14:30:00',
+            'share': share,
+            'amount': amount,
+            'fee': fee,
+            'nav': nav,
+            'nav_date': nav_date,
+            'ack_date': self.get_buy_ack_date(fund_id, nav_date), 
+            'ack_amount': amount - fee,
+            'ack_share': share,
+            'div_mode': 0,
+        }
+
+    def get_buy_fee(dt, fund_id, amount):
+        '''
+        获取申购费用和净申购金额
+
+        计算公式如下（来自中国证监会官网）：
+        
+            净申购金额=申购金额/（1+申购费率）
+            申购费用=申购金额-净申购金额
+
+        '''
+        df = self.df_buy_fee.loc[fund_id]
+
+        if df.empty: return 0
+
+        sr = df.loc[df['ff_max_value'] < amount].iloc[0]
+        if sr['ff_fee_type'] == 2: # 固定费用模式，一般是申购额足够大，费用封顶
+            fee = sr['ff_fee']
+        else:
+            fee = amount - amount / (1 + sr['ff_fee']) # 标准费率计算方式
+
+        return fee
+
+    def get_buy_ack_date(fund_id, buy_date):
+        '''
+        获取购买可赎回日期
+
+        所有的可赎回日期以A股交易日为准。目前，我们涉及的QDII基金的可赎回日期是按A股交易日计。
+        '''
+        #
+        # 涉及到两个全局数据:
+        #   df_buy_ack 记录了每个基金的可赎回是T+n；
+        #   df_t_plus_n 记录了每个交易日的t+n是哪一天
+        #
+        n = 2 # 默认t+2到账
+        if fund_id in self.df_buy_ack.index:
+            n = self.df_buy_ack.at[fund_id, 'fi_yingmi_confirm_time']
+        else:
+            print "WARN: missing yingmi_to_confirm_time, use default(t+2): fund_id: %d" % fund_id
+            
+        ack_date = self.df_t_plus_n.at[tdate, "t+%d" % n]
+
+        return ack_date
+        
