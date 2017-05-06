@@ -85,6 +85,9 @@ def filter_by_turnover(df, turnover):
         if sr_last is None:
             result[k] = v
             sr_last = vv
+        elif vv.values == 1.0:
+            result[k] = vv
+            sr_last == vv
         else:
             xsum = (vv - sr_last).abs().sum()
             if xsum >= turnover:
@@ -160,16 +163,35 @@ if __name__ == '__main__':
     #print result_df.iloc[-1]
     #print result_df
     '''
-
+    '''
     result_df = cppi(df, high_risk, low_risk, max_loss, multi_v, turnover, weeks)
     result_df.to_csv('result.csv')
     pos_df = combine_pos(result_df[[high_risk, low_risk]], risk10_pos_df, risk1_pos_df, high_risk, low_risk)
     #print result_df
     turnover = pos_df.diff().abs().sum().sum()
-    print turnover
-    #for i in range(0, len(dates) - 12):
-    #    tmp_df = df.iloc[ i : ]
-    #    result_df = cppi(tmp_df, high_risk, low_risk, max_loss, multi_v, turnover, weeks)
-    #    pos_df = combine_pos(result_df[[high_risk, low_risk]], risk10_pos_df, risk1_pos_df, high_risk, low_risk)
-    #    turnover = pos_df.diff().abs().sum().sum()
-    #    print dates[i], turnover
+    #print turnover
+
+    tmp_df = pd.concat([result_df, df], axis = 1, join_axes = [result_df.index])
+    tmp_df = tmp_df[['v', 'risk10']]
+    tmp_df = tmp_df / tmp_df.iloc[0]
+    #print tmp_df
+    tmp_df.to_csv('tmp.csv')
+
+    '''
+
+    rs = []
+    ds = []
+    for i in range(0, len(dates) - 12):
+        tmp_df = df.iloc[ i : ]
+        result_df = cppi(tmp_df, high_risk, low_risk, max_loss, multi_v, turnover, weeks)
+        pos_df = combine_pos(result_df[[high_risk, low_risk]], risk10_pos_df, risk1_pos_df, high_risk, low_risk)
+        turnover = pos_df.diff().abs().sum().sum()
+        print dates[i], turnover, np.min(result_df['v'])
+        high_risk_df = tmp_df[[high_risk]]
+        #print high_risk_df
+        ds.append(dates[i])
+        rs.append([tmp_df[high_risk].iloc[12] / tmp_df[high_risk].iloc[0] - 1, result_df['v'].iloc[12] / result_df['v'].iloc[0] - 1])
+
+    df = pd.DataFrame(np.matrix(rs), index = ds, columns = [high_risk,'cppi'])
+    print df
+    df.to_csv('tmp.csv')
