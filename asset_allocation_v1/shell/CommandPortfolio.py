@@ -29,6 +29,7 @@ import FixRisk
 import DFUtil
 import LabelAsset
 import util_numpy as npu
+import TradeNav
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -36,6 +37,7 @@ from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
 from db import *
+from util.xdebug import dd
 
 import traceback, code
 
@@ -315,10 +317,10 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
-@click.option('--fee', 'optfee', default='9', help=u('fee type(8:with fee; 9:without fee'))
+@click.option('--fee', 'optfee', default='9', help=u'fee type(8:with fee; 9:without fee')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def nav(ctx, optid, optlist):
+def nav(ctx, optid, optlist, optfee):
     ''' calc pool nav and inc
     '''
     if optid is not None:
