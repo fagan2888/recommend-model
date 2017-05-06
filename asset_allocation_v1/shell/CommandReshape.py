@@ -21,7 +21,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_rs_reshape, asset_rs_reshape_pos, asset_ra_pool_nav, asset_tc_timing_signal
+from db import *
 from Reshape import Reshape
 
 
@@ -225,7 +225,7 @@ def pos_update(reshape):
     else:
         sdate = None
 
-    tdates = database.base_trade_dates_load_index(sdate)
+    tdates = base_trade_dates.load_index(sdate)
 
     sr_nav = database.load_nav_series(reshape['rs_asset_id'], reindex=tdates, begin_date=sdate)
     

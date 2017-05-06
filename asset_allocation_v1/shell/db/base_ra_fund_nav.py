@@ -102,3 +102,5 @@ def load_series(code, reindex=None, begin_date=None, end_date=None):
 
     return df['nav']
 
+
+    

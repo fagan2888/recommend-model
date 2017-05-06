@@ -140,3 +140,27 @@ class Nav(object):
             df_result = df_result.reindex(reindex, method='pad')
 
         return df_result
+
+    def load_tdate_and_nav(gids, sdate, edate):
+        dfs = []
+        for xtype, v in groupby(gids, key = lambda x: x / 10000000):
+            if xtype == 3:
+                
+                
+            if (xtype == 1):
+                df = self.load_pool_nav(gids, sdate=sdate, edate=edate)
+            else:
+                (db, s) = self.select(xtype, v, sdate, edate)
+                if s is not None:
+                    df = pd.read_sql(s, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
+                    df = df.unstack(0)
+                    df.columns = df.columns.droplevel(0)
+            if df is not None:
+                dfs.append(df)
+
+        df_result = pd.concat(dfs, axis=1)
+        if  reindex is not None:
+            df_result = df_result.reindex(reindex, method='pad')
+
+        return df_result
+

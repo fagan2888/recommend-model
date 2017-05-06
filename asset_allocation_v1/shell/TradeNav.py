@@ -111,7 +111,7 @@ class TradeNav(object):
         # 延迟加载，具体跟调仓序列有关
         #
         self.df_t_plus_n = None
-        
+
 
     def calc(self, df_pos):
 
@@ -134,17 +134,21 @@ class TradeNav(object):
 
         # 赎回到账期限 记录了每个基金的到账日到底是T+n；
         # 购买确认日期 记录了每个基金的到购买从份额确认到可以赎回需要T+n；
-        self.df_ack = base_fund_info.load_ack(fund_ids)
+        self.df_ack = base_fund_infos.load_ack(fund_ids)
 
 
         # 未来交易日 记录了每个交易日的t+n是哪个交易日
         max_n = df_ack.max().max()
-        sr = base_trade_dates.load_series(sdate, edate)
-        self.df_t_plus_n = pd.DataFrame(sr.index, index=sr.index)
+        dates = base_trade_dates.load_index(sdate, edate)
+        self.df_t_plus_n = pd.DataFrame(dates, index=dates)
         for i in xrange(1, n + 1):
             self.df_t_plus_n[i] = self.df_t_plus_n[0].shift(-i)
         self.df_t_plus_n.drop(0, axis=1)
 
+
+        # 净值/市值序列
+        self.dt_nav = base_ra_fund_nav.load_tdate_and_nav(fund_ids, sdate, edate)
+        
         #
         # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;8:调仓;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;19:记录当前持仓;
         #
