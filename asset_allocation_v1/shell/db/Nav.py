@@ -141,26 +141,37 @@ class Nav(object):
 
         return df_result
 
-    def load_tdate_and_nav(gids, sdate, edate):
-        dfs = []
+    def load_tdate_and_nav(gids, sdate=None, edate=None):
+        result = {}
+        index = pd.Datatime64Index(pd.date_range(sdate, edate))
         for xtype, v in groupby(gids, key = lambda x: x / 10000000):
             if xtype == 3:
-                
-                
-            if (xtype == 1):
-                df = self.load_pool_nav(gids, sdate=sdate, edate=edate)
-            else:
-                (db, s) = self.select(xtype, v, sdate, edate)
-                if s is not None:
-                    df = pd.read_sql(s, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
-                    df = df.unstack(0)
-                    df.columns = df.columns.droplevel(0)
-            if df is not None:
-                dfs.append(df)
+                #
+                # 基金资产
+                #
+                db = database.connection('base')
+                t = self.tabs.setdefault(xtype, Table('ra_fund_nav', MetaData(bind=db), autoload=True))
 
-        df_result = pd.concat(dfs, axis=1)
-        if  reindex is not None:
-            df_result = df_result.reindex(reindex, method='pad')
+                columns = [
+                    t.c.ra_fund_id.label('ra_asset_id'), 
+                    t.c.ra_nav,
+                    t.c.ra_date,
+                ]
 
-        return df_result
+                s = select(columns).where(t.c.ra_fund_id.in_(gids)).where(t.c.ra_mask.op('&')(0x01) == 0)
+                if sdate is not None:
+                    s = s.where(t.c.ra_date >= sdate)
+                if edate is not None:
+                    s = s.where(t.c.ra_date <= edate)
+ 
+                df = pd.read_sql(s, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
+
+                for asset_id in df.index.get_level_values(0):
+                    df_nav = df.loc[asset_id].copy()
+                    df_nav['nav_date'] = df_nav.index
+                    df_nav = df_nav.reindex(index, method='bfill')
+
+                    result[asset_id] = append(df_nav)
+
+        return result
 

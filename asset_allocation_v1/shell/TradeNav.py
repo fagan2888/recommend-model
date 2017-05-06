@@ -8,7 +8,7 @@ import calendar
 import heapq
 from sqlalchemy import *
 
-from db import database
+from db import *
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +147,7 @@ class TradeNav(object):
 
 
         # 净值/市值序列
-        self.dt_nav = base_ra_fund_nav.load_tdate_and_nav(fund_ids, sdate, edate)
+        self.dt_nav = Nav.Nav().load_tdate_and_nav(fund_ids, sdate, edate)
         
         #
         # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;8:调仓;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;19:记录当前持仓;
