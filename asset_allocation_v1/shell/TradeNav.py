@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 class TradeNav(object):
     
     def __init__(self, debug=False):
+
+        # 调试模式 会记录整个计算的上下文，默认为关闭
+        self.debug = debug
+
         #
         # 用户当前持仓: DataFrame
         # 
@@ -66,42 +70,80 @@ class TradeNav(object):
         #
         self.dt_holding = {}
 
-        #
-        # 净值/市值序列
-        #
-        self.dt_nav = {}
-
-        #
-        # 业绩归因序列
-        #
-        self.contrib = {}
-        
         # 
         # 订单列表，用于保存整个过程中产生的订单, 每个订单是一个字典，包含如下项目
         #     （gid, portfolio_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode）
         # 
         self.orders = []
 
-        self.df_redeem_fee = pd.DataFrame()
-        self.df_buy_fee = pd.DataFrame()
-        self.dt_nav = {}
+        #
+        # 业绩归因序列
+        #
+        self.contrib = {}
 
         #
-        # 赎回到账期限 记录了每个基金的到账日到底是T+n；
+        # 净值/市值序列
         #
-        self.df_fund_ack = pd.DataFrame()
+        # 延迟加载，因为跟具体配置有关
+        #
+        self.dt_nav = None
+
+        #
+        # 赎回费率，延迟加载，因为跟持仓基金有关
+        #
+        self.df_redeem_fee = None
+        #
+        # 购买费率，延迟加载，因为跟持仓基金有关
+        #
+        self.df_buy_fee = None
+
+        #
+        # redeem 赎回到账期限 记录了每个基金的到账日到底是T+n；
+        # buy    购买确认日期 记录了每个基金的到购买从份额确认到可以赎回需要T+n；
+        # 
+        # 延迟加载，因为跟具体持仓基金有关
+        #
+        self.df_ack = None
 
         #
         # 未来交易日 记录了每个交易日的t+n是哪个交易日
         #
-        self.df_t_plus_n = pd.DataFrame()
-
-        self.debug = debug
+        # 延迟加载，具体跟调仓序列有关
+        #
+        self.df_t_plus_n = None
+        
 
     def calc(self, df_pos):
 
         sdate = df_pos.index.min()
         edate = datetime.now() - timedelta(days=1)
+
+        #
+        # 初始化用到的计算数据
+        #
+
+        # 所有用到的基金ID
+        fund_ids = df_pos.get_level_values(1)
+        #
+        # 赎回费率，延迟加载，因为跟持仓基金有关
+        self.df_redeem_fee = base_fund_fee.load_redeem(fund_ids)
+
+        # 购买费率，延迟加载，因为跟持仓基金有关
+        self.df_buy_fee = base_fund_fee.load_buy(fund_ids)
+
+
+        # 赎回到账期限 记录了每个基金的到账日到底是T+n；
+        # 购买确认日期 记录了每个基金的到购买从份额确认到可以赎回需要T+n；
+        self.df_ack = base_fund_info.load_ack(fund_ids)
+
+
+        # 未来交易日 记录了每个交易日的t+n是哪个交易日
+        max_n = df_ack.max().max()
+        sr = base_trade_dates.load_series(sdate, edate)
+        self.df_t_plus_n = pd.DataFrame(sr.index, index=sr.index)
+        for i in xrange(1, n + 1):
+            self.df_t_plus_n[i] = self.df_t_plus_n[0].shift(-i)
+        self.df_t_plus_n.drop(0, axis=1)
 
         #
         # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;8:调仓;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;19:记录当前持仓;
@@ -197,24 +239,12 @@ class TradeNav(object):
 
             for ev in evs:
                 heapq.heappush(events, ev)
-        # #
-        # # 保存持仓数据
-        # #
-        # AssetInvestorHoldingFund::where('ih_uid', $this->uid)
-        #     ->where('ih_fund_id', $this->productId)
-        #     ->where('ih_origin', $this->origin)
-        #     ->delete();
-        # AssetInvestorHoldingFund::insert($this->dt_holding);
 
-        # #
-        # # 保存交易数据
-        # #
-        # AssetInvestorTradeFlow::where('it_uid', $this->uid)
-        #     ->where('it_type', 3)
-        #     ->where('it_product_id', $this->productId)
-        #     ->where('it_origin', $this->origin)
-        #     ->delete();
-        # AssetInvestorTradeFlow::insert($this->bonusOrders);
+        #
+        # 保存计算结果
+        #
+        # 本模块不负责保存具体的计算结果
+        #
 
     def process(self， ev):
         result = []
@@ -277,7 +307,18 @@ class TradeNav(object):
             # 重新生成订单
             #
             self.remove_flying_op(events)
-            result = self.adjust(dt, argv['pos'])
+            orders = self.adjust(dt, argv['pos'])
+
+            #
+            # 将订单插入事件队列
+            #
+            for order in orders:
+                argv = order
+                if order['op'] == 1:
+                    ev = (order['nav_date'] + timedelta(hours=16), 1, fund_id, argv)
+                else:
+                    ev = (order['nav_date'] + timedelta(hours=16, minutes=30), 2, fund_id, argv)
+                heapq.heappush(events, ev)
 
         elif op == 15:
             #
@@ -626,12 +667,12 @@ class TradeNav(object):
 
         #
         # 涉及到两个全局数据:
-        #   df_fund_ack 记录了每个基金的到账日是T+n；
+        #   df_ack 记录了每个基金的到账日是T+n；
         #   df_t_plus_n 记录了每个交易日的t+n是哪一天
         #
         n = 3 # 默认t+3到账
-        if fund_id in self.df_fund_ack.index:
-            n = self.df_fund_ack.at[fund_id, 'fi_yingmi_to_account_time']
+        if fund_id in self.df_ack.index:
+            n = self.df_ack.at[fund_id, 'redeem']
         else:
             print "WARN: missing yingmi_to_account_time, use default(t+3): fund_id: %d" % fund_id
 
@@ -696,12 +737,12 @@ class TradeNav(object):
         '''
         #
         # 涉及到两个全局数据:
-        #   df_buy_ack 记录了每个基金的可赎回是T+n；
+        #   df_ack 记录了每个基金的可赎回是T+n；
         #   df_t_plus_n 记录了每个交易日的t+n是哪一天
         #
         n = 2 # 默认t+2到账
         if fund_id in self.df_buy_ack.index:
-            n = self.df_buy_ack.at[fund_id, 'fi_yingmi_confirm_time']
+            n = self.df_buy_ack.at[fund_id, 'buy']
         else:
             print "WARN: missing yingmi_to_confirm_time, use default(t+2): fund_id: %d" % fund_id
             
