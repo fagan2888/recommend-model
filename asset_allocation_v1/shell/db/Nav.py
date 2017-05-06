@@ -11,6 +11,7 @@ from itertools import groupby
 from operator import itemgetter
 
 from db import database
+from util.xdebug import dd
 
 logger = logging.getLogger(__name__)
 
@@ -141,9 +142,9 @@ class Nav(object):
 
         return df_result
 
-    def load_tdate_and_nav(gids, sdate=None, edate=None):
+    def load_tdate_and_nav(self, gids, sdate=None, edate=None):
         result = {}
-        index = pd.Datatime64Index(pd.date_range(sdate, edate))
+        index = pd.DatetimeIndex(pd.date_range(sdate, edate))
         for xtype, v in groupby(gids, key = lambda x: x / 10000000):
             if xtype == 3:
                 #
@@ -166,12 +167,13 @@ class Nav(object):
  
                 df = pd.read_sql(s, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
 
-                for asset_id in df.index.get_level_values(0):
+                for asset_id in df.index.levels[0]:
+                    print "load nav", asset_id
                     df_nav = df.loc[asset_id].copy()
                     df_nav['nav_date'] = df_nav.index
                     df_nav = df_nav.reindex(index, method='bfill')
 
-                    result[asset_id] = append(df_nav)
+                    result[asset_id] = df_nav
 
         return result
 
