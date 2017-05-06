@@ -33,3 +33,6 @@ import base_ra_fund
 import base_ra_fund_nav
 import base_ra_index
 import base_ra_index_nav
+import base_trade_dates
+import base_fund_fee
+import base_fund_infos

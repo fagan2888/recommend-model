@@ -24,7 +24,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
-from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates
 from util import xdict
 
 import traceback, code
@@ -796,7 +796,7 @@ def perform_delete(markowitz):
 # def perform_maxdd(markowitz):
 #     markowitz_id = markowitz['globalid']
 #     sdate = '2012-07-27'
-#     tdates = database.base_trade_dates_load_index(sdate);
+#     tdates = base_trade_dates.load_index(sdate);
 #     # sr_nav = database.load_nav_series(markowitz_id, reindex=tdates, begin_date=sdate)
 #     sr_nav = asset_mz_markowitz_nav.load_series(markowitz_id, reindex=tdates, begin_date=sdate)
 

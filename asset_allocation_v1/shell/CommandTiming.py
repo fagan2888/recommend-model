@@ -22,7 +22,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, base_ra_index_nav, asset_tc_timing
+from db import *
 from util.xdebug import dd
 
 import traceback, code
@@ -84,7 +84,7 @@ def signal_update(timing):
     sdate = timing['tc_begin_date'].strftime("%Y-%m-%d")
     edate = yesterday.strftime("%Y-%m-%d")
 
-    tdates = database.base_trade_dates_load_index(sdate, edate)
+    tdates = base_trade_dates.load_index(sdate, edate)
     
     #
     # 解析模型参数
