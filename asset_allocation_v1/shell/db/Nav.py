@@ -168,12 +168,45 @@ class Nav(object):
                 df = pd.read_sql(s, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
 
                 for asset_id in df.index.levels[0]:
-                    print "load nav", asset_id
+                    # print "load nav", asset_id
                     df_nav = df.loc[asset_id].copy()
                     df_nav['nav_date'] = df_nav.index
                     df_nav = df_nav.reindex(index, method='bfill')
 
                     result[asset_id] = df_nav
+
+        return result
+
+    def load_nav_and_date(self, gids, sdate=None, edate=None):
+        dfs = []
+        for xtype, v in groupby(gids, key = lambda x: x / 10000000):
+            if xtype == 3:
+                #
+                # 基金资产
+                #
+                db = database.connection('base')
+                t = self.tabs.setdefault(xtype, Table('ra_fund_nav', MetaData(bind=db), autoload=True))
+
+                columns = [
+                    t.c.ra_fund_id.label('ra_asset_id'), 
+                    t.c.ra_nav,
+                    t.c.ra_date,
+                ]
+
+                s = select(columns).where(t.c.ra_fund_id.in_(gids)).where(t.c.ra_mask.op('&')(0x01) == 0)
+                if sdate is not None:
+                    s = s.where(t.c.ra_date >= sdate)
+                if edate is not None:
+                    s = s.where(t.c.ra_date <= edate)
+ 
+                df = pd.read_sql(s, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
+
+                dfs.append(df)
+
+        if len(dfs) == 1:
+            result = dfs[0]
+        else:
+            result = pd.concat(dfs)
 
         return result
 
