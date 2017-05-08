@@ -30,4 +30,3 @@ if __name__ == '__main__':
     df = df.fillna(method = 'pad')
     print df
     df.to_csv('stock_fund_value.csv')
-

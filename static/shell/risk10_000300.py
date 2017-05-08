@@ -22,9 +22,9 @@ if __name__ == '__main__':
     dates = df.index
     ds = []
     rs = []
-    for i in range(0, len(dates) - 90):
+    for i in range(0, len(dates) - 1080):
         d = dates[i]
-        next_d = dates[i + 90]
+        next_d = dates[i + 1080]
 
         #print d, df.loc[next_d, 'risk10'] / df.loc[d, 'risk10'] - 1
         ds.append(d)
