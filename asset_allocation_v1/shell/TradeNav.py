@@ -91,7 +91,7 @@ class TradeNav(object):
         self.nav = {}
 
         #
-        # 基金净值
+        # 基金自然日使用的交易日及其净值
         #
         # 延迟加载，因为跟具体配置有关
         #
@@ -121,6 +121,27 @@ class TradeNav(object):
         #
         self.df_t_plus_n = None
 
+        #
+        # 分红信息
+        #
+        # 延迟加载，具体跟调仓序列有关
+        #
+        self.df_bonus = None
+        
+        #
+        # 拆分信息
+        #
+        # 延迟加载，具体跟调仓序列有关
+        #
+        self.df_split = None
+
+        #
+        # 基金净值
+        #
+        # 延迟加载，因为跟具体配置有关
+        #
+        self.df_nav = None
+        
 
     def calc(self, df_pos, principal):
 
@@ -159,16 +180,37 @@ class TradeNav(object):
         # dd(self.df_t_plus_n, max_n, self.df_t_plus_n.index)
 
 
-        # 净值/市值序列
+        # 任何自然日所属交易日及其对应的净值序列
         self.dt_nav = Nav.Nav().load_tdate_and_nav(fund_ids, sdate, edate)
         # dd(self.dt_nav)
         
         #
-        # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;8:调仓;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;19:记录当前持仓;
+        # 加载分红信息
+        #
+        self.df_bonus = base_ra_fund_bonus.load(fund_ids, sdate=sdate, edate=edate)
+        # dd(self.df_bonus, self.df_bonus.loc[('2016-01-20', [523, 524]), :])
+        
+        # 
+        # 加载分拆信息
+        # 
+        #
+        self.df_split = base_fund_split.load(fund_ids, sdate, edate)
+
+        # 
+        # 加载基金净值
+        #
+        self.df_nav = Nav.Nav().load_nav_and_date(fund_ids, sdate, edate)
+        self.df_nav = self.df_nav.swaplevel(0, 1, axis=0)
+        self.df_nav.sort_index(inplace=True)
+        # dd(self.df_nav.head(20))
+        
+        #
+        # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;
+        #         100:例行事件生成;101:记录当前持仓;
         #
         # 事件队列，基于heapq实现，元组来实现
         #
-        #     (dt, op, fund_id, amount, share, nav, nav_date, {others})
+        #     (dt, op, order_id, fund_id, amount, share, nav, nav_date, {others})
         #
         # 其中，
         #
@@ -179,8 +221,9 @@ class TradeNav(object):
         #
         #          各个事件的处理时间如下：
         #
+        #          00:00:01 生成持仓相关的当日例行事件（更新净值，分拆，分红，记录当日持仓）
         #          01:00:00 分拆
-        #          15:00:00 基金净值
+        #          15:00:00 更新净值
         #          16:00:00 购买
         #          16:30:00 赎回
         #          17:00:00 调仓处理
@@ -195,15 +238,19 @@ class TradeNav(object):
         #
         # 加载分红信息
         #
-        df = base_ra_fund_bounus.load(fund_ids, sdate, edate)
-        for _, row in df.iterrows():
+        df = base_ra_fund_bonus.load(fund_ids, sdate=sdate, edate=edate)
+        # dd(df, sdate, edate, fund_ids)
+        for key, row in df.iterrows():
+            fund_id, record_date = key
             argv = {
                 'bonus_ratio': row['ra_bonus'],
                 'bonus_nav': row['ra_bonus_nav'],
-                'dividend_date': row['ra_dividend_date'] + timedelta(hours=22,minites=30),
-                'payment_date': row['ra_payment_date'] + timedelta(hours=22,minites=45),
+                'bonus_nav_date': row['ra_bonus_nav_date'],
+                'dividend_date': row['ra_dividend_date'] + timedelta(hours=22,minutes=30),
+                'payment_date': row['ra_payment_date'] + timedelta(hours=22,minutes=45),
             }
-            ev = (row['ra_record_date'] + timedelta(hours=22), 15, row['ra_fund_id'], argv)
+            ev = (record_date + timedelta(hours=22), 15, 0, fund_id, argv)
+            # dd(row['ra_record_date'] + timedelta(hours=22), argv)
             heapq.heappush(events, ev)
 
         # 
@@ -211,20 +258,21 @@ class TradeNav(object):
         # 
         #
         df = base_fund_split.load(fund_ids, sdate, edate)
-        for _, row in df.iterrows():
-            argv = {'fs_split_proportion': row['fs_split_proportion']}
-            ev = (row['fs_split_date'] + timedelta(hours=1), 18, row['fs_fund_id'], argv)
+        for key, row in df.iterrows():
+            fund_id, split_date = key
+            argv = {'ra_split_proportion': row['ra_split_proportion']}
+            ev = (split_date + timedelta(hours=1), 18, 0, fund_id, argv)
             heapq.heappush(events, ev)
         
         # 
         # 加载基金净值
         #
-        df = base_ra_fund_nav.load_nav_date(fund_ids, sdate, edate)
+        df = Nav.Nav().load_nav_and_date(fund_ids, sdate, edate)
         for key, row in df.iterrows():
-            day, fund_id = key
+            fund_id, day = key
             if row['ra_nav']:
-                argv = {'nav': row['ra_nav'], 'nav_date': row['ra_nav_date']}
-                ev = (day + timedelta(hours=15), 0, fund_id, argv)
+                argv = {'nav': row['ra_nav'], 'nav_date': day}
+                ev = (day + timedelta(hours=15), 0, 0, fund_id, argv)
                 heapq.heappush(events, ev)
             else:
                 logger.error('zero ra_nav detected(ra_fund_id: %d, ra_date:%s)', fund_id, day.strftime("%Y-%m-%d"))
@@ -233,7 +281,7 @@ class TradeNav(object):
         #
         for day, v0 in df_pos.groupby(level=0):
             argv = {'pos': v0}
-            ev = (day + timedelta(hours=17), 0, fund_id, argv)
+            ev = (day + timedelta(hours=17), 0, 0, fund_id, argv)
             heapq.heappush(events, ev)
         
         #
@@ -242,7 +290,7 @@ class TradeNav(object):
         dates = pd.date_range(sdate, edate)
         for day in dates:
             argv = {}
-            ev = (day + timedelta(hours=23, minutes=59, seconds=59), 19, 0, argv)
+            ev = (day + timedelta(hours=23, minutes=59, seconds=59), 101, 0, 0, argv)
             heapq.heappush(events, ev)
 
         #
@@ -254,6 +302,7 @@ class TradeNav(object):
                 break
 
             evs = self.process(ev)
+            print "process ev: ", ev
 
             for ev in evs:
                 heapq.heappush(events, ev)
@@ -266,17 +315,19 @@ class TradeNav(object):
 
     def process(self, ev):
         result = []
-        # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;19:记录当前持仓;
-        dt, op, fund_id, argv = ev
+        # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;
+        #         100:例行事件生成;101:记录当前持仓;
+        dt, op, order_id, fund_id, argv = ev
         if op == 0:
             #
             # 净值更新
             #
-            df = self.df_share.loc[fund_id]
-            if not df.empty:
-                df['yield'] = (df['share'] + df['share_buying']) * (df['nav'] - argv['nav'])
-                df['nav'] = argv['nav']
-                df['nav_date'] = argv['nav_date']
+            if fund_id in self.df_share.index.levels[0]:
+                df = self.df_share.loc[fund_id]
+                if not df.empty:
+                    df['yield'] = (df['share'] + df['share_buying']) * (df['nav'] - argv['nav'])
+                    df['nav'] = argv['nav']
+                    df['nav_date'] = argv['nav_date']
 
         elif op == 1:
             #
@@ -333,10 +384,10 @@ class TradeNav(object):
             for order in orders:
                 argv = order
                 if order['op'] == 1:
-                    ev = (order['nav_date'] + timedelta(hours=16), 1, fund_id, argv)
+                    ev2 = (order['nav_date'] + timedelta(hours=16), 1, order['order_id'], fund_id, argv)
                 else:
-                    ev = (order['nav_date'] + timedelta(hours=16, minutes=30), 2, fund_id, argv)
-                heapq.heappush(events, ev)
+                    ev2 = (order['nav_date'] + timedelta(hours=16, minutes=30), 2, order['order_id'], fund_id, argv)
+                result.append(ev2)
 
         elif op == 15:
             #
@@ -351,7 +402,7 @@ class TradeNav(object):
                 'bonus_nav': argv['bound_nav'],
                 'payment_date': argv['payment_date'],
             }
-            ev2 = (argv['dividend_date'], 16, fund_id, argv2)
+            ev2 = (argv['dividend_date'], 16, 0, fund_id, argv2)
             result.append(ev2)
             #
             # 记录分红操作
@@ -376,7 +427,7 @@ class TradeNav(object):
                 'bound_nav': argv['bonus_nav'],
                 'payment_date': argv['payment_date'],
             }
-            ev2 = (argv['payment_date'], 17, fund_id, argv2)
+            ev2 = (argv['payment_date'], 17, 0, fund_id, argv2)
             result.append(ev2)
             #
             # 记录在途分红资金
@@ -418,7 +469,13 @@ class TradeNav(object):
             #
             df['nav'] /= argv['fs_split_proportion']
 
-        elif op == 19:
+        elif op == 100:
+            #
+            # 当日持仓相关的例行事件
+            #
+            result.extend(self.share_routine(dt, argv))
+            
+        elif op == 101:
             #
             # 记录持仓
             #
@@ -767,4 +824,61 @@ class TradeNav(object):
         ack_date = self.df_t_plus_n.at[tdate, "t+%d" % n]
 
         return ack_date
+
+    def share_routine(dt, argv):
+        '''
+        生成与当日持仓相关的例行事件
+        '''
+        evs = []
+        fund_ids = self.df_share.index.levels[0]
+        #
+        # 如果当日有分红事件
+        #
+        if dt in self.df_bonus.index.levels[0]:
+            df = self.df_bonus.loc[(dt, fund_ids), :]
+            for key, row in df.iterrows():
+                record_date, fund_id = key
+                argv = {
+                    'bonus_ratio': row['ra_bonus'],
+                    'bonus_nav': row['ra_bonus_nav'],
+                    'bonus_nav_date': row['ra_bonus_nav_date'],
+                    'dividend_date': row['ra_dividend_date'] + timedelta(hours=22,minutes=30),
+                    'payment_date': row['ra_payment_date'] + timedelta(hours=22,minutes=45),
+                }
+                ev = (record_date + timedelta(hours=22), 15, 0, fund_id, argv)
+                # dd(row['ra_record_date'] + timedelta(hours=22), argv)
+                evs.append(ev)
+
+        # 
+        # 加载分拆信息
+        # 
+        #
+        if dt in self.df_bonus.index.levels[0]:
+            df = self.df_bonus.loc[(dt, fund_ids), :]
+            for key, row in df.iterrows():
+                split_date, fund_id = key
+                argv = {'ra_split_proportion': row['ra_split_proportion']}
+                ev = (split_date + timedelta(hours=1), 18, 0, fund_id, argv)
+                evs.append(ev)
         
+        # 
+        # 加载基金净值
+        #
+        df = self.df_nav.loc[(dt, fund_id), :]
+        for key, row in df.iterrows():
+            day, fund_id = key
+            if row['ra_nav']:
+                argv = {'nav': row['ra_nav'], 'nav_date': day}
+                ev = (day + timedelta(hours=15), 0, 0, fund_id, argv)
+                result.append(ev)
+            else:
+                logger.error('zero ra_nav detected(ra_fund_id: %d, ra_date:%s)', fund_id, day.strftime("%Y-%m-%d"))
+
+        #
+        # 记录持仓事件
+        #
+        argv = {}
+        ev = (dt + timedelta(hours=23, minutes=59, seconds=59), 101, 0, 0, argv)
+        result.append(ev)
+
+        return result
