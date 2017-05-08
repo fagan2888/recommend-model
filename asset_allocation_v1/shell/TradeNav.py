@@ -236,47 +236,6 @@ class TradeNav(object):
         events = [];
         
         #
-        # 加载分红信息
-        #
-        df = base_ra_fund_bonus.load(fund_ids, sdate=sdate, edate=edate)
-        # dd(df, sdate, edate, fund_ids)
-        for key, row in df.iterrows():
-            fund_id, record_date = key
-            argv = {
-                'bonus_ratio': row['ra_bonus'],
-                'bonus_nav': row['ra_bonus_nav'],
-                'bonus_nav_date': row['ra_bonus_nav_date'],
-                'dividend_date': row['ra_dividend_date'] + timedelta(hours=22,minutes=30),
-                'payment_date': row['ra_payment_date'] + timedelta(hours=22,minutes=45),
-            }
-            ev = (record_date + timedelta(hours=22), 15, 0, fund_id, argv)
-            # dd(row['ra_record_date'] + timedelta(hours=22), argv)
-            heapq.heappush(events, ev)
-
-        # 
-        # 加载分拆信息
-        # 
-        #
-        df = base_fund_split.load(fund_ids, sdate, edate)
-        for key, row in df.iterrows():
-            fund_id, split_date = key
-            argv = {'ra_split_proportion': row['ra_split_proportion']}
-            ev = (split_date + timedelta(hours=1), 18, 0, fund_id, argv)
-            heapq.heappush(events, ev)
-        
-        # 
-        # 加载基金净值
-        #
-        df = Nav.Nav().load_nav_and_date(fund_ids, sdate, edate)
-        for key, row in df.iterrows():
-            fund_id, day = key
-            if row['ra_nav']:
-                argv = {'nav': row['ra_nav'], 'nav_date': day}
-                ev = (day + timedelta(hours=15), 0, 0, fund_id, argv)
-                heapq.heappush(events, ev)
-            else:
-                logger.error('zero ra_nav detected(ra_fund_id: %d, ra_date:%s)', fund_id, day.strftime("%Y-%m-%d"))
-        #
         # 加载调仓信息
         #
         for day, v0 in df_pos.groupby(level=0):
@@ -285,12 +244,12 @@ class TradeNav(object):
             heapq.heappush(events, ev)
         
         #
-        # 记录持仓事件
+        # 生成每日例行事件的事件
         #
         dates = pd.date_range(sdate, edate)
         for day in dates:
             argv = {}
-            ev = (day + timedelta(hours=23, minutes=59, seconds=59), 101, 0, 0, argv)
+            ev = (day + timedelta(seconds=1), 100, 0, 0, argv)
             heapq.heappush(events, ev)
 
         #
