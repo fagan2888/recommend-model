@@ -1,5 +1,6 @@
 #coding=utf8
 
+import sys
 import logging
 import pandas as pd
 import numpy as np
@@ -39,10 +40,19 @@ class TradeNav(object):
         #              于交易中的订单确认日期，因为订单确认日期在费率
         #              计算中没有任何实际意义。
         #
-        self.df_share = pd.DataFrame(
+        self.df_share = pd.DataFrame({
+            'share': pd.Series(dtype=float),
+            'yield': pd.Series(dtype=float),
+            'share_buying': pd.Series(dtype=float),
+            'nav': pd.Series(dtype=float),
+            'nav_date':  pd.Series(dtype='datetime64[ns]'),
+            'ack_date':  pd.Series(dtype=float),
+            'share_bonusing':  pd.Series(dtype=float),
+            'amount_bonusing':  pd.Series(dtype=float),
+            'div_mode': pd.Series(dtype=int)},
             index=pd.MultiIndex(names=['fund_id','share_id'], levels=[[], []], labels=[[],[]]),
-            columns=['share', 'yield', 'share_buying', 'nav', 'nav_date', 'ack_date', 'share_bonusing', 'amount_bonusing', 'div_mode']
         )
+        # dd(self.df_share, self.df_share['nav'], self.df_share['nav_date'])
 
         #
         # 状态变量：赎回上下文：DataFrame
@@ -272,11 +282,11 @@ class TradeNav(object):
             if ev is None:
                 break
 
-            print "process ev: ", ev
+            self.dump_event('-', ev)
             evs = self.process(ev)
 
             for ev in evs:
-                print ev
+                self.dump_event('+', ev)
                 heapq.heappush(self.events, ev)
 
 
@@ -285,7 +295,8 @@ class TradeNav(object):
         #
         # 本模块不负责保存具体的计算结果
         #
-        dd(self.nav, "completed")
+        df_result_nav = pd.Series(self.nav).to_frame('nav') 
+        dd(df_result_nav, "completed")
 
     def process(self, ev):
         result = []
@@ -298,10 +309,12 @@ class TradeNav(object):
             #
             if fund_id in self.df_share.index.levels[0]:
                 df = self.df_share.loc[fund_id]
-                if not df.empty:
-                    df['yield'] = (df['share'] + df['share_buying']) * (df['nav'] - argv['nav'])
-                    df['nav'] = argv['nav']
-                    df['nav_date'] = argv['nav_date']
+                df['yield'] = (df['share'] + df['share_buying']) * (df['nav'] - argv['nav'])
+                df['nav'] = argv['nav']
+                df['nav_date'] = argv['nav_date']
+            else:
+                dd("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+                
 
         elif op == 1:
             #
@@ -902,13 +915,47 @@ class TradeNav(object):
 
     def dump_orders(self, orders, die=True):
         if len(orders) > 0:
-            print "%10s|%2s|%8s|%10s|%10s|%8s|%10s|%6s|%7s|%10s|%10s|%10s|%10s" % (
+            print "order|%10s|%2s|%8s|%10s|%10s|%8s|%10s|%6s|%7s|%10s|%10s|%10s|%10s" % (
                 "order_id", 'op', 'fund_id', 'place_date', 'place_time', 'amount', 'share', 'fee', 'nav', 'nav_date', 'ack_date', 'ack_amount', 'ack_share')
         for o in orders:
             #     （order_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode）
-            print "%s|%2d|%d|%s|%10s|%8.2f|%10.4f|%6.2f|%7.4f|%s|%s|%10.2f|%10.4f" % (
+            print "order|%s|%2d|%d|%s|%10s|%8.2f|%10.4f|%6.2f|%7.4f|%s|%s|%10.2f|%10.4f" % (
                 o['order_id'], o['op'], o['fund_id'], o['place_date'].strftime("%Y-%m-%d"), o['place_time'], o['amount'], o['share'], o['fee'], o['nav'],o['nav_date'].strftime("%Y-%m-%d"),o['ack_date'].strftime("%Y-%m-%d"), o['ack_amount'], o['ack_share'])
 
         if die:
             dd('----end orders----')
+
+    def dump_event(self, x, e, die=False):
+        dt, op, order_id, fund_id, argv = e
+        if op == 0:
+            s = "nav:%.4f, nav_date:%s" % (argv['nav'], argv['nav_date'].strftime("%Y-%m-%d"))
+        elif op == 1:
+            s = "at:%s %s, share:%.4f, nav:%.4f, fee:%.2f" % (argv['place_date'].strftime("%Y-%m-%d"), argv['place_time'], argv['share'], argv['nav'], argv['fee'])
+        elif op == 11:
+            s = "ack_date:%s, share:%.4f " % (argv['ack_date'].strftime("%Y-%m-%d"), argv['share'])
+        elif op == 2:
+            s = "at:%s %s, share:%.4f, nav:%.4f, fee:%.2f" % (argv['place_date'].strftime("%Y-%m-%d"), argv['place_time'], argv['share'], argv['nav'], argv['fee'])
+        elif op == 12:
+            s = "ack_date:%s, share:%.4f " % (argv['ack_date'].strftime("%Y-%m-%d"), argv['share'])
+        elif op == 8:
+            s = ''
+        elif op == 15:
+            s = ''
+        elif op == 16:
+            s = ''
+        elif op == 17:
+            s = ''
+        elif op == 18:
+            s = ''
+        elif op == 100:
+            s = ''
+        elif op == 101:
+            s = ''
+        
+        print "%c xev|%20s|%3d|%10s|%10s|%s" % (
+                x, dt.strftime("%Y-%m-%d %H:%M:%S"), op, order_id, fund_id, s)
+
+        if die:
+            dd('----end orders----')
+        
 
