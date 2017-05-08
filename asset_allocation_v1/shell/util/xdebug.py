@@ -5,6 +5,7 @@
 # from datetime import datetime, timedelta
 # import os
 import sys
+import pandas as pd
 # import logging
 
 def dd(*args, **kwargs):
@@ -13,12 +14,23 @@ def dd(*args, **kwargs):
     precedence goes to key value pairs in latter dicts.
     """
     if len(args) > 0 and len(kwargs) > 0:
-        print args, kwargs
+        print ""
+        for arg in args:
+            print arg
+        for k, v in kwargs.iteritems():
+            print k, v
         sys.exit(0)
 
     if len(args) > 0:
-        print args
+        print ""
+        for arg in args:
+            print arg
     elif len(kwargs) > 0:
-        print kwargs
+        for k, v in kwargs.iteritems():
+            if isinstance(v, pd.DataFrame):
+                print k, ":", type(v)
+                print v
+            else:
+                print k, ":",  v
 
     sys.exit(0)

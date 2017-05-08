@@ -170,7 +170,7 @@ class Nav(object):
                 for asset_id in df.index.levels[0]:
                     # print "load nav", asset_id
                     df_nav = df.loc[asset_id].copy()
-                    df_nav['nav_date'] = df_nav.index
+                    df_nav['ra_nav_date'] = df_nav.index
                     df_nav = df_nav.reindex(index, method='bfill')
 
                     result[asset_id] = df_nav
