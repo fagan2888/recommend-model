@@ -30,9 +30,11 @@ import asset_rs_reshape_nav
 import asset_rs_reshape_pos
 import asset_tc_timing_signal
 import base_ra_fund
+import base_ra_fund_bonus
 import base_ra_fund_nav
 import base_ra_index
 import base_ra_index_nav
 import base_trade_dates
 import base_fund_fee
 import base_fund_infos
+import base_fund_split
