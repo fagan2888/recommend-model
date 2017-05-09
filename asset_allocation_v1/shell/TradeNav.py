@@ -83,6 +83,7 @@ class TradeNav(object):
         #    ack_date: 到账日期，也就是赎回款最终到账，可用于进一步购买日期
         #
         self.df_redeem = pd.DataFrame(
+            {'share_id': pd.Series(dtype=str), 'share': pd.Series(dtype=float), 'nav': pd.Series(dtype=float), 'nav_date':pd.Series(dtype='datetime64[ns]'), 'ack_date': pd.Series(dtype='datetime64[ns]')}
             index=pd.MultiIndex(names=['fund_id','redeem_id'], levels=[[], []], labels=[[],[]]),
             columns=['share_id', 'share', 'nav', 'nav_date', 'ack_date']
         )
@@ -322,18 +323,8 @@ class TradeNav(object):
                 self.df_share.loc[fund_id, 'yield'] = (df['share'] + df['share_buying']) * (argv['nav'] - df['nav'])
                 self.df_share.loc[fund_id, 'nav'] = argv['nav']
                 self.df_share.loc[fund_id, 'nav_date'] = argv['nav_date']
-                # print "before"
-                # print self.df_share
-                # print "xxxx"
-                # print (df['share'] + df['share_buying']) * (df['nav'] - argv['nav'])
-                # self.df_share.loc[fund_id, 'yield'] = (df['share'] + df['share_buying']) * (df['nav'] - argv['nav'])
-                # self.df_share.loc[fund_id, 'nav'] = argv['nav']
-                # self.df_share.loc[fund_id, 'nav_date'] = argv['nav_date']
-                # print "after"
-                # dd(self.df_share)
             else:
-                dd("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-                
+                dd("SNH: fund_id not in df_share.index", fund_id, self.df_share)
 
         elif op == 1:
             #
@@ -382,13 +373,18 @@ class TradeNav(object):
                 'nav_date': argv['nav_date'],
                 'ack_date': argv['ack_date']
             })
+            #
+            # 生成赎回确认订单
+            #
+            ev2 = (argv['ack_date'] + timedelta(hours=2), 12, order_id, fund_id, argv)
+            result.append(ev2)
 
         elif op == 12:
             #
             # 赎回确认
             #
             self.cash += argv['share'] * argv['nav'] - argv['fee']
-            self.df_redeem.drop((fund_id, argv['redeem_id']))
+            self.df_redeem.drop((fund_id, argv['order_id']))
 
         elif op == 8:
             #
