@@ -318,9 +318,10 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
 @click.option('--fee', 'optfee', default='9', help=u'fee type(8:with fee; 9:without fee')
+@click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def nav(ctx, optid, optlist, optfee):
+def nav(ctx, optid, optlist, optfee, optdebug):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -342,9 +343,9 @@ def nav(ctx, optid, optlist, optfee):
 
     for fee in fees:
         for _, portfolio in df_portfolio.iterrows():
-            nav_update_alloc(portfolio, fee)
+            nav_update_alloc(portfolio, fee, optdebug)
 
-def nav_update_alloc(portfolio, fee):
+def nav_update_alloc(portfolio, fee, debug):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     
     with click.progressbar(
@@ -355,9 +356,9 @@ def nav_update_alloc(portfolio, fee):
     # with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
     #     for _, alloc in :
     #         bar.update(1)
-            nav_update(alloc, fee)
+            nav_update(alloc, fee, debug)
     
-def nav_update(alloc, fee):
+def nav_update(alloc, fee, debug):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
@@ -367,7 +368,7 @@ def nav_update(alloc, fee):
     # 计算复合资产净值
     if fee == 8:
         df_pos = df_pos.loc[df_pos.index.get_level_values(0) >= '2017-03-27']
-        tn = TradeNav.TradeNav()
+        tn = TradeNav.TradeNav(debug=debug)
         tn.calc(df_pos, 100000)
         sr_nav_portfolio = pd.Series(tn.nav)
     else:

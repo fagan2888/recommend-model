@@ -83,7 +83,7 @@ class TradeNav(object):
         #    ack_date: 到账日期，也就是赎回款最终到账，可用于进一步购买日期
         #
         self.df_redeem = pd.DataFrame(
-            {'share_id': pd.Series(dtype=str), 'share': pd.Series(dtype=float), 'nav': pd.Series(dtype=float), 'nav_date':pd.Series(dtype='datetime64[ns]'), 'ack_date': pd.Series(dtype='datetime64[ns]')}
+            {'share_id': pd.Series(dtype=str), 'share': pd.Series(dtype=float), 'nav': pd.Series(dtype=float), 'nav_date':pd.Series(dtype='datetime64[ns]'), 'ack_date': pd.Series(dtype='datetime64[ns]')},
             index=pd.MultiIndex(names=['fund_id','redeem_id'], levels=[[], []], labels=[[],[]]),
             columns=['share_id', 'share', 'nav', 'nav_date', 'ack_date']
         )
@@ -361,18 +361,16 @@ class TradeNav(object):
             #
             # 赎回
             #
-            print self.df_share,
-            print fund_id
-            print argv
             self.df_share.loc[(fund_id, argv['share_id']), 'share'] -= argv['share']
             # 生成赎回上下文
-            self.df_redeem.loc[(fund_id, argv['order_id'])] = pd.Series({
+            sr = pd.Series({
                 'share_id': argv['share_id'],
                 'share': argv['share'],
                 'nav': argv['nav'],
                 'nav_date': argv['nav_date'],
                 'ack_date': argv['ack_date']
             })
+            self.df_redeem.loc[(fund_id, argv['order_id']), :] = sr 
             #
             # 生成赎回确认订单
             #
@@ -383,8 +381,9 @@ class TradeNav(object):
             #
             # 赎回确认
             #
+            pdb.set_trace()
             self.cash += argv['share'] * argv['nav'] - argv['fee']
-            self.df_redeem.drop((fund_id, argv['order_id']))
+            self.df_redeem.drop((fund_id, argv['order_id']), inplace=True)
 
         elif op == 8:
             #
@@ -397,7 +396,6 @@ class TradeNav(object):
             #
             self.remove_flying_op()
             orders = self.adjust(dt, argv['pos'])
-
             #
             # 将订单插入事件队列
             #
@@ -513,7 +511,7 @@ class TradeNav(object):
             #
             self.contrib[dt] = self.df_share['yield'].groupby(level=1).sum()
 
-            # self.idebug(dt)
+            self.idebug(dt)
 
         return result
 
@@ -551,7 +549,6 @@ class TradeNav(object):
         '''
         生成调仓订单
         '''
-        pdb.set_trace()
         result = []
         #
         # 计算当前持仓的持仓比例
@@ -683,11 +680,12 @@ class TradeNav(object):
         #
         # 返回所有订单，即调仓计划
         #
-        # self.dump_orders(result, False)
-        if (dt.strftime("%Y-%m-%d") == '2017-04-21'):
-            self.dump_orders(result, True)
-        else:
-            self.dump_orders(result, False)
+        self.dump_orders(result, False)
+        # if (dt.strftime("%Y-%m-%d") == '2017-04-21'):
+        #     self.dump_orders(result, True)
+        # else:
+        #     self.dump_orders(result, False)
+
         return result
                 
             
@@ -989,9 +987,11 @@ class TradeNav(object):
 
     def idebug(self, dt):
         while True:
-            line = raw_input('enter debug [%s]. Command?  (s: share, r: redeem, c:continue) ' % dt.strftime("%Y-%m-%d"))
-            if line == 'c':
+            line = raw_input('enter debug [%s]. Command?  (s: share, r: redeem. Enter to continue, q to quit) ' % dt.strftime("%Y-%m-%d"))
+            if line == '':
                 break
+            elif line == 'q':
+                sys.exit(0)
             elif line == 's':
                 print ""
                 print self.df_share
