@@ -366,7 +366,7 @@ def nav_update(alloc, fee):
 
     # 计算复合资产净值
     if fee == 8:
-        df_pos = df_pos.loc[df_pos.index.get_level_values(0) >= '2017-04-21']
+        df_pos = df_pos.loc[df_pos.index.get_level_values(0) >= '2017-03-27']
         tn = TradeNav.TradeNav()
         tn.calc(df_pos, 100000)
         sr_nav_portfolio = pd.Series(tn.nav)
