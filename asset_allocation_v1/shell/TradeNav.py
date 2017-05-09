@@ -224,6 +224,7 @@ class TradeNav(object):
         # 
         #
         self.df_split = base_fund_split.load(fund_ids, sdate, edate)
+        # dd(self.df_split)
 
         # 
         # 加载基金净值
@@ -331,19 +332,11 @@ class TradeNav(object):
             # 申购
             #
             self.cash -= argv['share'] * argv['nav'] + argv['fee']
-            sr = pd.Series({
-                'share': 0,
-                'yield': 0,
-                'share_buying': argv['share'],
-                'nav': argv['nav'],
-                'nav_date': argv['nav_date'],
-                'buy_date': argv['nav_date'],
-                'ack_date': argv['ack_date'],
-                'share_bonusing': 0,
-                'amount_bonusing': 0,
-                'div_mode': argv['div_mode'],
-            })
-            self.df_share.loc[(fund_id, argv['order_id']), :] = sr
+            buy_date = argv['nav_date']
+            df_tmp = self.make_share(
+                fund_id, order_id, argv['share'], buy_date, argv['nav'], argv['nav_date'], argv['ack_date'], argv['div_mode'])
+            self.df_share = self.df_share.append(df_tmp)
+
             #
             # 生成申购确认事件
             #
@@ -363,14 +356,10 @@ class TradeNav(object):
             #
             self.df_share.loc[(fund_id, argv['share_id']), 'share'] -= argv['share']
             # 生成赎回上下文
-            sr = pd.Series({
-                'share_id': argv['share_id'],
-                'share': argv['share'],
-                'nav': argv['nav'],
-                'nav_date': argv['nav_date'],
-                'ack_date': argv['ack_date']
-            })
-            self.df_redeem.loc[(fund_id, argv['order_id']), :] = sr 
+
+            row = (fund_id, argv['order_id'], argv['share_id'], argv['share'], argv['nav'], argv['nav_date'], argv['ack_date'])
+            tmp = pd.DataFrame([row], columns=['fund_id', 'redeem_id', 'share_id', 'share', 'nav', 'nav_date', 'ack_date'])
+            self.df_redeem = self.df_redeem.append(tmp.set_index(['fund_id', 'redeem_id']))
             #
             # 生成赎回确认订单
             #
@@ -406,72 +395,134 @@ class TradeNav(object):
                 else:
                     ev2 = (order['nav_date'] + timedelta(hours=16, minutes=30), 2, order['order_id'], order['fund_id'], argv)
                 result.append(ev2)
+                
+            self.orders.extend(orders)
 
         elif op == 15:
             #
             # 基金分红：权益登记
             #
-            df = self.df_share.loc[fund_id]
-            df['share_bonusing'] = (df['share'] + df['share_buying'])
+            # [XXX] 这里啰嗦几句基金分红的处理：基金的分红方式有两种，
+            # 现金分红和红利再投。
+            #
+            # 对于红利再投的方式，再投份额的折算发生在除息日，按照除息
+            # 日的净值，但该部分份额不可赎回，直到派息日方可赎回。
+            #
+            # 对于现金分红方式，除息日扣除相应的净值，派息日打款
+            #  
+            #
+            df = self.df_share.loc[[fund_id]]
+            df['share_bonusing'] = df['share'] + df['share_buying']
+
+            #
+            # 生成分红订单，记录分红操作
+            #
+            share_dividend = df.loc[df['div_mode'] == 1, 'share_bonusing'].sum()
+            share_cash = df['share_bonusing'].sum() - share_dividend
+            orders, dividend_id, cash_id = [], "0", "0"
+            if share_dividend > 0:
+                order = self.make_bonus_order(dt, fund_id, share_dividend, argv, 1)
+                orders.append(order)
+                dividend_id = order['order_id']
+
+            if share_cash > 0:
+                order = self.make_bonus_order(dt, fund_id, share_cash, argv, 0)
+                orders.append(order)
+                cash_id = order['order_id']
+            if orders:
+                self.dump_orders(orders, False)
+                self.orders.extend(orders)
+
+            self.df_share.loc[[fund_id]] = df
+            # dd(orders, argv, self.df_share.loc[[fund_id]], dt, share_dividend, share_cash, df)
+            
+            #
+            # 调度除息事件
+            #
             share = df['share_bonusing'].sum()
             argv2 = {
                 'share': share,
                 'bonus_ratio': argv['bonus_ratio'],
-                'bonus_nav': argv['bound_nav'],
+                'bonus_nav': argv['bonus_nav'],
+                'bonus_nav_date': argv['bonus_nav_date'],
                 'payment_date': argv['payment_date'],
+                'order_dividend': dividend_id,
+                'order_cash': cash_id,
             }
-            ev2 = (argv['dividend_date'], 16, 0, fund_id, argv2)
+            ev2 = (argv['dividend_date']+ timedelta(hours=22,minutes=30), 16, 0, fund_id, argv2)
             result.append(ev2)
-            #
-            # 记录分红操作
-            #
-            share_dividend = df.loc[df['div_mode'] == 1, 'share_bonusing'].sum()
-            share_cash = df['share_bonusing'].sum() - share_dividend
-            if share_dividend > 0:
-                self.orders.append(
-                    self.make_bonus_order(dt, fund_id, share_dividend, argv, 1))
-
-            if share_cash > 0:
-                self.orders.append(
-                    self.make_bonus_order(dt, fund_id, share_cash, argv, 0))
 
         elif op == 16:
             #
             # 基金分红：除息
             #
-            df = self.df_share.loc[fund_id]
+            # pdb.set_trace()
+            df = self.df_share.loc[[fund_id]]
             df['amount_bonusing'] = df['share_bonusing'] * argv['bonus_ratio']
-            argv2 = {
-                'bound_nav': argv['bonus_nav'],
-                'payment_date': argv['payment_date'],
-            }
-            ev2 = (argv['payment_date'], 17, 0, fund_id, argv2)
+            ev2 = (argv['payment_date'] + timedelta(hours=22,minutes=45), 17, 0, fund_id, argv)
             result.append(ev2)
             #
-            # 记录在途分红资金
+            # 处理红利再投的份额转换
             #
-            # self.cash_bonusing += df['amount_bonusing'].sum()
+            mask = (df['div_mode'] == 1)
+            share = df.loc[mask, 'amount_bonusing'].sum() /  argv['bonus_nav']
+            #
+            # 清除红利再投上下文
+            #
+            df.loc[mask, 'share_bonusing']  = 0
+            df.loc[mask, 'amount_bonusing'] = 0
+
+            self.df_share.loc[[fund_id]] = df
+            
+            #
+            # 生成再投份额
+            #
+            df_tmp = self.make_share(
+                fund_id, argv['order_dividend'], share, pd.to_datetime(dt.date()), argv['bonus_nav'], argv['bonus_nav_date'], argv['payment_date'], 1)
+            self.df_share = self.df_share.append(df_tmp)
+
+            # tmp = {
+            #     'share': 0.0,
+            #     'yield': 0.0,
+            #     'share_buying': share,
+            #     'nav': argv['bonus_nav'],
+            #     'nav_date': argv['bonus_nav_date'],
+            #     'buy_date': pd.to_datetime(dt.date()),
+            #     'ack_date': argv['payment_date'],
+            #     'share_bonusing': 0.0,
+            #     'amount_bonusing': 0.0,
+            #     'div_mode': 1,
+            # }
+            # self.df_share.loc[(fund_id, argv['order_dividend']), :] = tmp
+            
+            
 
         elif op == 17:
+            # pdb.set_trace()
             #
             # 基金分红：派息
             #
-            df = self.df_share.loc[fund_id]
+            
+            df = self.df_share.loc[[fund_id]]
             #
             # 现金分红
             #
             mask = (df['div_mode'] == 0)
-            self.cash_bounused = df.loc[mask, 'amount_bonusing'].sum()
+            if mask.any():
+                self.cash_bounused = df.loc[mask, 'amount_bonusing'].sum()
+                #
+                # 清除现金分红上下文
+                #
+                df.loc[mask, 'share_bonusing']  = 0
+                df.loc[mask, 'amount_bonusing'] = 0
+
             #
-            # 红利再投
+            # 红利再投, 确认红利再投份额
             #
-            mask = ~mask
-            df.loc[mask, 'share'] += df.loc[mask, 'amount_bonusing'] / argv['bonus_nav']
-            #
-            # 清除分红上下文
-            #
-            df.loc['share_bonusing']  = 0
-            df.loc['amount_bonusing'] = 0
+            df.loc[(fund_id, argv['order_dividend']), 'share'] = df.loc[(fund_id, argv['order_dividend']), 'share_buying']
+            df.loc[(fund_id, argv['order_dividend']), 'share_buying'] = 0
+            
+            self.df_share.loc[[fund_id]] = df
 
         elif op == 18:
             #
@@ -527,7 +578,7 @@ class TradeNav(object):
             #
             # 红利再投
             #
-            nav, nav_date, ack_amount = bonus['nav'], bonus['nav_date'], 0
+            nav, nav_date, ack_amount = bonus['bonus_nav'], bonus['bonus_nav_date'], 0
             ack_share = amount / nav
         else:
             nav, nav_date, ack_share, ack_amount = 0, '0000-00-00', 0, amount
@@ -670,6 +721,8 @@ class TradeNav(object):
             if self.cash > 0.0099:
                 sr_buy = (sr_ratio * self.cash).round(2)
                 for fund_id, amount in sr_buy.iteritems():
+                    if amount < 0.009999:
+                        continue
                     order = self.make_buy_order(dt, fund_id, amount)
                     result.append(order)
             
@@ -797,6 +850,8 @@ class TradeNav(object):
         return ack_date
 
     def make_buy_order(self, dt, fund_id, amount):
+        if amount < 0.01:
+            pdb.set_trace()
         (nav, nav_date) = self.get_tdate_and_nav(fund_id, dt)
 
         fee = self.get_buy_fee(dt, fund_id, amount)
@@ -891,19 +946,20 @@ class TradeNav(object):
                         'bonus_ratio': row['ra_bonus'],
                         'bonus_nav': row['ra_bonus_nav'],
                         'bonus_nav_date': row['ra_bonus_nav_date'],
-                        'dividend_date': row['ra_dividend_date'] + timedelta(hours=22,minutes=30),
-                        'payment_date': row['ra_payment_date'] + timedelta(hours=22,minutes=45),
+                        'dividend_date': row['ra_dividend_date'],
+                        'payment_date': row['ra_payment_date']
                     }
                     ev = (record_date + timedelta(hours=22), 15, 0, fund_id, argv)
-                    # dd(row['ra_record_date'] + timedelta(hours=22), argv)
+                    # dd(record_date + timedelta(hours=22), ev)
                     evs.append(ev)
 
             # 
             # 加载分拆信息
             # 
             #
-            if day in self.df_bonus.index.levels[0]:
-                df = self.df_bonus.loc[(day, fund_ids), :]
+            if day in self.df_split.index.levels[0]:
+                dd(self.df_split, day)
+                df = self.df_split.loc[(day, fund_ids), :]
                 for key, row in df.iterrows():
                     split_date, fund_id = key
                     argv = {'ra_split_proportion': row['ra_split_proportion']}
@@ -944,6 +1000,14 @@ class TradeNav(object):
         self.dsn  += 1
 
         return "%s%02d" % (dt.strftime("%Y%m%d"), self.dsn)
+
+    def make_share(self, fund_id, share_id, share,buy_date,  nav, nav_date, ack_date, div_mode):
+        #     fund_id, share_id, share yield     nav     nav_date          share_buying   buy_date          ack_date          share_bonusing  amount_bonusing  div_mode
+        row = (fund_id, share_id, 0.0, 0.0, nav, nav_date, share, buy_date, ack_date, 0.0, 0.0, div_mode)
+        df_tmp = pd.DataFrame([row], columns=['fund_id', 'share_id', 'share', 'yield', 'nav', 'nav_date', 'share_buying', 'buy_date', 'ack_date', 'share_bonusing', 'amount_bonusing', 'div_mode'])
+        df_tmp = df_tmp.set_index(['fund_id', 'share_id'])
+        return df_tmp
+
 
     def dump_orders(self, orders, die=True):
         if len(orders) > 0:
