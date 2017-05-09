@@ -381,7 +381,7 @@ class TradeNav(object):
             #
             # 赎回确认
             #
-            pdb.set_trace()
+            # pdb.set_trace()
             self.cash += argv['share'] * argv['nav'] - argv['fee']
             self.df_redeem.drop((fund_id, argv['order_id']), inplace=True)
 
@@ -495,6 +495,12 @@ class TradeNav(object):
             
         elif op == 101:
             #
+            # 删除无用持仓
+            #
+            mask = (self.df_share['share'] + self.df_share['share_buying'] + self.df_share['amount_bonusing']) < 0.000099
+            if mask.any():
+                self.df_share.drop(self.df_share[mask].index, inplace=True)
+            #
             # 记录持仓
             #
             if self.debug and self.df_share.sum().sum() > 0.000099:
@@ -511,7 +517,7 @@ class TradeNav(object):
             #
             self.contrib[dt] = self.df_share['yield'].groupby(level=1).sum()
 
-            self.idebug(dt)
+            # self.idebug(dt)
 
         return result
 
