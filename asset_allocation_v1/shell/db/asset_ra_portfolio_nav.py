@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 #     return df
 
-def save(gid, df):
+def save(gid, xtype, df):
     fmt_columns = ['ra_nav', 'ra_inc']
     fmt_precision = 6
     if not df.empty:
@@ -51,12 +51,12 @@ def save(gid, df):
     db = database.connection('asset')
     t2 = Table('ra_portfolio_nav', MetaData(bind=db), autoload=True)
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
-    s = select(columns, (t2.c.ra_portfolio_id == gid))
-    df_old = pd.read_sql(s, db, index_col=['ra_portfolio_id', 'ra_date'], parse_dates=['ra_date'])
+    s = select(columns, (t2.c.ra_portfolio_id == gid)).where(t2.c.ra_type == xtype)
+    df_old = pd.read_sql(s, db, index_col=['ra_portfolio_id', 'ra_type', 'ra_date'], parse_dates=['ra_date'])
     if not df_old.empty:
         df_old = database.number_format(df_old, fmt_columns, fmt_precision)
 
     # 更新数据库
     # print df_new.head()
     # print df_old.head()
-    database.batch(db, t2, df, df_old, timestamp=False)
+    database.batch(db, t2, df, df_old, timestamp=True)
