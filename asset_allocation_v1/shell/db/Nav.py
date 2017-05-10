@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import calendar
+# import pdb
 from sqlalchemy import *
 
 from itertools import groupby
@@ -156,6 +157,8 @@ class Nav(object):
                 columns = [
                     t.c.ra_fund_id.label('ra_asset_id'), 
                     t.c.ra_nav,
+                    t.c.ra_nav_adjusted,
+                    t.c.ra_type,
                     t.c.ra_date,
                 ]
 
@@ -166,6 +169,10 @@ class Nav(object):
                     s = s.where(t.c.ra_date <= edate)
  
                 df = pd.read_sql(s, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
+
+                # pdb.set_trace()
+                df.loc[df['ra_type'] == 3, 'ra_nav'] = df['ra_nav_adjusted']
+                df.drop(['ra_type', 'ra_nav_adjusted'], axis=1, inplace=True)
 
                 for asset_id in df.index.levels[0]:
                     # print "load nav", asset_id
@@ -190,6 +197,8 @@ class Nav(object):
                 columns = [
                     t.c.ra_fund_id.label('ra_asset_id'), 
                     t.c.ra_nav,
+                    t.c.ra_nav_adjusted,
+                    t.c.ra_type,
                     t.c.ra_date,
                 ]
 
@@ -200,6 +209,10 @@ class Nav(object):
                     s = s.where(t.c.ra_date <= edate)
  
                 df = pd.read_sql(s, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
+
+                # pdb.set_trace()
+                df.loc[df['ra_type'] == 3, 'ra_nav'] = df['ra_nav_adjusted']
+                df.drop(['ra_type', 'ra_nav_adjusted'], axis=1, inplace=True)
 
                 dfs.append(df)
 
