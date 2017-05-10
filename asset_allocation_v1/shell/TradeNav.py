@@ -22,6 +22,51 @@ from db import *
 logger = logging.getLogger(__name__)
 readline.parse_and_bind('tab: complete')
 
+def dump_orders(orders, die=True):
+    if len(orders) > 0:
+        print "\norder|%10s|%2s|%8s|%10s|%10s|%8s|%10s|%6s|%7s|%10s|%10s|%10s|%10s|%10s" % (
+            "order_id", 'op', 'fund_id', 'place_date', 'place_time', 'amount', 'share', 'fee', 'nav', 'nav_date', 'ack_date', 'ack_amount', 'ack_share', 'share_id')
+    for o in orders:
+        #     （order_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode）
+        print "order|%s|%2d|%d|%s|%10s|%8.2f|%10.4f|%6.2f|%7.4f|%s|%s|%10.2f|%10.4f|%10s" % (
+            o['order_id'], o['op'], o['fund_id'], o['place_date'].strftime("%Y-%m-%d"), o['place_time'], o['amount'], o['share'], o['fee'], o['nav'],o['nav_date'].strftime("%Y-%m-%d"),o['ack_date'].strftime("%Y-%m-%d"), o['ack_amount'], o['ack_share'], o['share_id'])
+
+    if die:
+        dd('----end orders----')
+
+def dump_event(x, e, die=False):
+    dt, op, order_id, fund_id, argv = e
+    if op == 0:
+        s = "nav:%.4f, nav_date:%s" % (argv['nav'], argv['nav_date'].strftime("%Y-%m-%d"))
+    elif op == 1:
+        s = "at:%s %s, share:%.4f, nav:%.4f, fee:%.2f" % (argv['place_date'].strftime("%Y-%m-%d"), argv['place_time'], argv['share'], argv['nav'], argv['fee'])
+    elif op == 11:
+        s = "ack_date:%s, share:%.4f " % (argv['ack_date'].strftime("%Y-%m-%d"), argv['share'])
+    elif op == 2:
+        s = "at:%s %s, share:%.4f, nav:%.4f, fee:%.2f" % (argv['place_date'].strftime("%Y-%m-%d"), argv['place_time'], argv['share'], argv['nav'], argv['fee'])
+    elif op == 12:
+        s = "ack_date:%s, share:%.4f " % (argv['ack_date'].strftime("%Y-%m-%d"), argv['share'])
+    elif op == 8:
+        s = ''
+    elif op == 15:
+        s = ''
+    elif op == 16:
+        s = ''
+    elif op == 17:
+        s = ''
+    elif op == 18:
+        s = ''
+    elif op == 100:
+        s = ''
+    elif op == 101:
+        s = ''
+
+    print "%c xev|%20s|%3d|%10s|%10s|%s" % (
+            x, dt.strftime("%Y-%m-%d %H:%M:%S"), op, order_id, fund_id, s)
+
+    if die:
+        dd('----end events----')
+        
 class TradeNav(object):
     
     def __init__(self, debug=False):
@@ -296,12 +341,12 @@ class TradeNav(object):
                 break
 
             if self.debug:
-                self.dump_event('-', ev)
+                dump_event('-', ev)
             evs = self.process(ev)
 
             for ev in evs:
                 if self.debug:
-                    self.dump_event('+', ev)
+                    dump_event('+', ev)
                 heapq.heappush(self.events, ev)
 
 
@@ -445,7 +490,7 @@ class TradeNav(object):
                 orders.append(order)
                 cash_id = order['order_id']
             if orders:
-                self.dump_orders(orders, False)
+                dump_orders(orders, False)
                 self.orders.extend(orders)
 
             self.df_share.loc[[fund_id]] = df
@@ -748,7 +793,7 @@ class TradeNav(object):
             for day, v in df_flying.iterrows():
                 if v['amount'] < 0.009999:
                     continue
-                sr_buy = (sr_ratio * v['amount']).round(2)
+                sr_buy = (sr_ratio * v['amount'])
 
                 for fund_id, amount in sr_buy.iteritems():
                     order = self.make_buy_order(day, fund_id, amount)
@@ -757,11 +802,11 @@ class TradeNav(object):
         #
         # 返回所有订单，即调仓计划
         #
-        self.dump_orders(result, False)
+        dump_orders(result, False)
         # if (dt.strftime("%Y-%m-%d") == '2017-04-21'):
-        #     self.dump_orders(result, True)
+        #     dump_orders(result, True)
         # else:
-        #     self.dump_orders(result, False)
+        #     dump_orders(result, False)
 
         return result
                 
@@ -951,6 +996,7 @@ class TradeNav(object):
         #
         self.dsn = 0
         self.day = dt
+        print "day", dt.strftime("%Y-%m-%d")
 
         evs = []
         fund_ids = self.df_share.index.get_level_values(0).unique().tolist()
@@ -1014,7 +1060,17 @@ class TradeNav(object):
         return evs
 
     def remove_flying_op(self):
-        pass
+        '''
+        取消未下单的购买和赎回
+        '''
+        def should_keep(e):
+            if e[1] == 1 or e[1] == 2:
+                dump_event('x', e)
+                return False
+            return True
+
+        self.events = [e for e in self.events if should_keep(e)]
+        heapq.heapify(self.events)
 
     def new_order_id(self):
         '''
@@ -1030,52 +1086,6 @@ class TradeNav(object):
         df_tmp = pd.DataFrame([row], columns=['fund_id', 'share_id', 'share', 'yield', 'nav', 'nav_date', 'share_buying', 'buy_date', 'ack_date', 'share_bonusing', 'amount_bonusing', 'div_mode'])
         df_tmp = df_tmp.set_index(['fund_id', 'share_id'])
         return df_tmp
-
-
-    def dump_orders(self, orders, die=True):
-        if len(orders) > 0:
-            print "\norder|%10s|%2s|%8s|%10s|%10s|%8s|%10s|%6s|%7s|%10s|%10s|%10s|%10s|%10s" % (
-                "order_id", 'op', 'fund_id', 'place_date', 'place_time', 'amount', 'share', 'fee', 'nav', 'nav_date', 'ack_date', 'ack_amount', 'ack_share', 'share_id')
-        for o in orders:
-            #     （order_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode）
-            print "order|%s|%2d|%d|%s|%10s|%8.2f|%10.4f|%6.2f|%7.4f|%s|%s|%10.2f|%10.4f|%10s" % (
-                o['order_id'], o['op'], o['fund_id'], o['place_date'].strftime("%Y-%m-%d"), o['place_time'], o['amount'], o['share'], o['fee'], o['nav'],o['nav_date'].strftime("%Y-%m-%d"),o['ack_date'].strftime("%Y-%m-%d"), o['ack_amount'], o['ack_share'], o['share_id'])
-
-        if die:
-            dd('----end orders----')
-
-    def dump_event(self, x, e, die=False):
-        dt, op, order_id, fund_id, argv = e
-        if op == 0:
-            s = "nav:%.4f, nav_date:%s" % (argv['nav'], argv['nav_date'].strftime("%Y-%m-%d"))
-        elif op == 1:
-            s = "at:%s %s, share:%.4f, nav:%.4f, fee:%.2f" % (argv['place_date'].strftime("%Y-%m-%d"), argv['place_time'], argv['share'], argv['nav'], argv['fee'])
-        elif op == 11:
-            s = "ack_date:%s, share:%.4f " % (argv['ack_date'].strftime("%Y-%m-%d"), argv['share'])
-        elif op == 2:
-            s = "at:%s %s, share:%.4f, nav:%.4f, fee:%.2f" % (argv['place_date'].strftime("%Y-%m-%d"), argv['place_time'], argv['share'], argv['nav'], argv['fee'])
-        elif op == 12:
-            s = "ack_date:%s, share:%.4f " % (argv['ack_date'].strftime("%Y-%m-%d"), argv['share'])
-        elif op == 8:
-            s = ''
-        elif op == 15:
-            s = ''
-        elif op == 16:
-            s = ''
-        elif op == 17:
-            s = ''
-        elif op == 18:
-            s = ''
-        elif op == 100:
-            s = ''
-        elif op == 101:
-            s = ''
-        
-        print "%c xev|%20s|%3d|%10s|%10s|%s" % (
-                x, dt.strftime("%Y-%m-%d %H:%M:%S"), op, order_id, fund_id, s)
-
-        if die:
-            dd('----end events----')
         
 
     def idebug(self, dt):
