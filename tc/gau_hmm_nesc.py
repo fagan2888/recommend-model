@@ -30,7 +30,7 @@ class HmmNesc(object):
         self.year = year
         # print self.ori_data
         # 隐形状态数目
-        self.state_num = 6
+        self.state_num = 5
         # 特征集"SI", "SRMI",
         # self.features = ["pct_chg", "PRICEOSC", "ROC", "MTM", "DPO", "CCI", "RSI", "BIAS"]
         self.features = ["pct_chg", "high", "PVT", "WVAD", "PRICEOSC", "slowKD", "ROC", "MTM", "DPO", "ATR", "CCI",
@@ -349,13 +349,15 @@ class HmmNesc(object):
             print feature_selected
             os._exit(0)
 
-        feature_selected = ['high', 'pct_chg', 'low', 'close', 'open', 'volume']# 096001
+        #feature_selected = ['high', 'pct_chg', 'low', 'close', 'open', 'volume']# 096001
+        feature_selected = ['bias', 'pct_chg', 'priceosc', 'roc']# 096001
         #feature_selected = ['sobv', 'pct_chg', 'bias', 'pvt']# 000905
         #feature_selected = ['sobv', 'pct_chg', 'bias', 'pvt'] #000300
         test_dates = self.ori_data[self.test_start:self.test_end].index
+        self.test_start, p_in_date, p_e_date, tmp_e_date = self.get_year(year)
         p_s_date = self.test_start
         p_test_end_date = self.test_end
-        p_in_date, p_e_date, tmp_e_date = self.get_year(year)
+        #p_in_date, p_e_date, tmp_e_date = self.get_year(year)
         tmp_date = p_in_date
         is_holding = []
         means_arr = []
@@ -414,17 +416,17 @@ class HmmNesc(object):
         test_data = self.ori_data[tmp_date:tmp_e_date]
         pct_chg = np.array(test_data['pct_chg'])
         union_data_tmp = {}
-        # union_data_tmp['state_today'] = state_today_arr
-        # union_data_tmp['state_tomo'] = state_tomo_arr
-        # union_data_tmp['state_ori_today'] = state_ori_today_arr
-        # union_data_tmp['state_ori_tomo'] = state_ori_tomo_arr
-        # union_data_tmp['trans_mat'] = trans_mat
+        union_data_tmp['state_today'] = state_today_arr
+        union_data_tmp['state_tomo'] = state_tomo_arr
+        union_data_tmp['state_ori_today'] = state_ori_today_arr
+        union_data_tmp['state_ori_tomo'] = state_ori_tomo_arr
+        #union_data_tmp['trans_mat'] = trans_mat
         union_data_tmp['pct_chg'] = pct_chg
-        # union_data_tmp['means'] = means_arr
+        #union_data_tmp['means'] = means_arr
         union_data_tmp['means_tomo'] = means_tomo_arr
-        # union_data_tmp['variance'] = var_arr
+        #union_data_tmp['variance'] = var_arr
         union_data_tmp = pd.DataFrame(union_data_tmp, index=test_data.index)
-        union_data_tmp.to_csv("predict_states_" + ass_name + "_" + year + "_day.csv")
+        union_data_tmp.to_csv("predict_states_" + ass_name + "_" + year + "_tmp.csv")
 
         return None
 
@@ -652,28 +654,28 @@ class HmmNesc(object):
         return date
     def get_year(self, year):
         if year == "2012":
-            return datetime.datetime(2012, 1, 6), datetime.datetime(2012, 12, 31), datetime.datetime(2012, 12, 31)
+            return datetime.datetime(2006, 1, 6), datetime.datetime(2012, 1, 6), datetime.datetime(2012, 12, 31), datetime.datetime(2012, 12, 31)
         elif year == "2013":
-            return datetime.datetime(2013, 1, 4), datetime.datetime(2013, 12, 31), datetime.datetime(2013, 12, 31)
+            return datetime.datetime(2007, 1, 5), datetime.datetime(2013, 1, 4), datetime.datetime(2013, 12, 31), datetime.datetime(2013, 12, 31)
         elif year == "2014":
-            return datetime.datetime(2014, 1, 3), datetime.datetime(2014, 12, 31), datetime.datetime(2014, 12, 31)
+            return datetime.datetime(2008, 1, 4), datetime.datetime(2014, 1, 3), datetime.datetime(2014, 11, 21), datetime.datetime(2014, 11, 21)
         elif year == "2015":
-            return datetime.datetime(2015, 1, 9), datetime.datetime(2015, 12, 31), datetime.datetime(2015, 12, 31)
+            return datetime.datetime(2009, 1, 2), datetime.datetime(2015, 1, 9), datetime.datetime(2015, 12, 31), datetime.datetime(2015, 12, 31)
         elif year == "2016":
-            return datetime.datetime(2016, 1, 8), datetime.datetime(2016, 12, 31), datetime.datetime(2016, 12, 31)
+            return datetime.datetime(2011, 1, 1), datetime.datetime(2016, 1, 8), datetime.datetime(2016, 12, 31), datetime.datetime(2016, 12, 31)
         elif year == "now":
-            return datetime.datetime(2012, 1, 6), datetime.datetime(2017, 4, 21), datetime.datetime(2017, 4, 21)
+            return datetime.datetime(2006, 1, 6), datetime.datetime(2012, 1, 6), datetime.datetime(2014, 11, 21), datetime.datetime(2014, 11, 21)
         else:
             os._exit(0)
 if __name__ == "__main__":
-    data_handle = open("../tmp/120000001_indicator.csv")
+    data_handle = open("/home/data/yitao/tmp/120000001_indicator.csv")
     years = ["2012", "2013", "2014", "2015", "2016"]
     #years = ["now"]
     ass_name = "120000001_week_rank"
     nesc_hmm = HmmNesc(data_handle, "2012")
     fs = 0
     if fs == 1:
-        year = "2019"
+        year = "2017"
         nesc_hmm.tmp_method_test(year, ass_name, fs)
     for year in years:
         nesc_hmm.tmp_method_test(year, ass_name, fs)
