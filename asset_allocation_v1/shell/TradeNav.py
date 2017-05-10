@@ -92,6 +92,8 @@ class TradeNav(object):
         # 状态变量：当日订单计数
         #
         self.dsn = 0 # day sequenece no
+        self.day = 0 # 当天日期
+        self.ts = pd.to_datetime('1990-01-01')  # 当前模拟时钟
         
         #
         # 输出变量：历史持仓
@@ -224,6 +226,7 @@ class TradeNav(object):
         # 
         #
         self.df_split = base_fund_split.load(fund_ids, sdate, edate)
+        self.df_split.sort_index(inplace=True)
         # dd(self.df_split)
 
         # 
@@ -315,12 +318,24 @@ class TradeNav(object):
         # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;8:调仓;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;
         #         100:例行事件生成;101:记录当前持仓;
         dt, op, order_id, fund_id, argv = ev
+
+        #
+        # 更新模拟时钟
+        #
+        if dt >= self.ts:
+            self.ts = dt
+        else:
+            dd("SNH: ev out of date", self.ts, ev)
+            
         if op == 0:
             #
             # 净值更新
             #
             if fund_id in self.df_share.index.levels[0]:
-                df = self.df_share.loc[[fund_id]]
+                # if dt.strftime("%Y-%m-%d") == '2014-11-11' and fund_id == 30000237:
+                #     pdb.set_trace()
+                # df = self.df_share.query('fund_id in [%d]' % fund_id)
+                df = self.df_share.loc[self.df_share.index.get_level_values(0) == fund_id]
                 self.df_share.loc[fund_id, 'yield'] = (df['share'] + df['share_buying']) * (argv['nav'] - df['nav'])
                 self.df_share.loc[fund_id, 'nav'] = argv['nav']
                 self.df_share.loc[fund_id, 'nav_date'] = argv['nav_date']
@@ -528,15 +543,18 @@ class TradeNav(object):
             #
             # 基金分拆
             #
-            df = self.df_share.loc[fund_id]
-            df['share'] *= argv['fs_split_proportion']
-            df['share_buying'] *= argv['fs_split_proportion']
+            
+            df = self.df_share.loc[[fund_id]]
+            df['share'] *= argv['ra_split_proportion']
+            df['share_buying'] *= argv['ra_split_proportion']
             #
             # 理论上此时的净值为昨天的净值, 因为分拆是在调整今天净值之前处理的.
             #
             # 要保证后面日收益计算的正确, 这个地方需要对净值进行折算.
             #
-            df['nav'] /= argv['fs_split_proportion']
+            df['nav'] /= argv['ra_split_proportion']
+            self.df_share.loc[[fund_id]] = df
+            
 
         elif op == 100:
             #
@@ -584,7 +602,7 @@ class TradeNav(object):
             nav, nav_date, ack_share, ack_amount = 0, '0000-00-00', 0, amount
                 
         return {
-            'order_id': self.new_order_id(dt),
+            'order_id': self.new_order_id(),
             'fund_id': fund_id,
             # 'fund_code': fund_code,
             'op': 3,
@@ -755,7 +773,7 @@ class TradeNav(object):
         # dd(nav, nav_date, share, amount, fee)
         
         return {
-            'order_id': self.new_order_id(dt),
+            'order_id': self.new_order_id(),
             'fund_id': fund_id,
             # 'fund_code': fund_code,
             'op': 2,
@@ -859,7 +877,7 @@ class TradeNav(object):
         share = ack_amount / nav
         
         return {
-            'order_id': self.new_order_id(dt),
+            'order_id': self.new_order_id(),
             'fund_id': fund_id,
             # 'fund_code': fund_code,
             'op': 1,
@@ -916,8 +934,11 @@ class TradeNav(object):
             n = self.df_ack.at[fund_id, 'buy']
         else:
             print "WARN: missing yingmi_to_confirm_time, use default(t+2): fund_id: %d" % fund_id
-            
-        ack_date = self.df_t_plus_n.at[buy_date, "T+%d" % n]
+
+        if np.isnan(n): # 默认为2
+            n = 2
+
+        ack_date = self.df_t_plus_n.at[buy_date, "T+%d" % int(n)]
 
         return ack_date
 
@@ -925,13 +946,15 @@ class TradeNav(object):
         '''
         生成与当日持仓相关的例行事件
         '''
-        evs = []
-        fund_ids = self.df_share.index.get_level_values(0).unique().tolist()
-
         #
         # 清空当日订单计数
         #
         self.dsn = 0
+        self.day = dt
+
+        evs = []
+        fund_ids = self.df_share.index.get_level_values(0).unique().tolist()
+
         
         day = pd.to_datetime(dt.date())
         if len(fund_ids) != 0:
@@ -958,7 +981,7 @@ class TradeNav(object):
             # 
             #
             if day in self.df_split.index.levels[0]:
-                dd(self.df_split, day)
+                # dd(self.df_split, day)
                 df = self.df_split.loc[(day, fund_ids), :]
                 for key, row in df.iterrows():
                     split_date, fund_id = key
@@ -993,13 +1016,13 @@ class TradeNav(object):
     def remove_flying_op(self):
         pass
 
-    def new_order_id(self, dt):
+    def new_order_id(self):
         '''
         获取下一个订单号
         '''
         self.dsn  += 1
 
-        return "%s%02d" % (dt.strftime("%Y%m%d"), self.dsn)
+        return "%s%02d" % (self.day.strftime("%Y%m%d"), self.dsn)
 
     def make_share(self, fund_id, share_id, share,buy_date,  nav, nav_date, ack_date, div_mode):
         #     fund_id, share_id, share yield     nav     nav_date          share_buying   buy_date          ack_date          share_bonusing  amount_bonusing  div_mode
