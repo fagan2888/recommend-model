@@ -295,7 +295,7 @@ class TradeNav(object):
         #
         #     dt： 日内事件处理时间，主要用于事件在队列中的排序，不一
         #          定等同于下单时间。比如：3:00pm前下的购买订单的处理
-        #          时间可能是16:00，因为15:30净值才出来，而购买赎回都
+        #          时间可能是16:00，因为15:00净值才出来，而购买赎回都
         #          需要使用当天的净值。
         #
         #          各个事件的处理时间如下：
@@ -305,13 +305,37 @@ class TradeNav(object):
         #          02:00:00 购买确认
         #          03:00:00 赎回确认
         #          15:00:00 更新净值
-        #          15:30:00 调仓处理
-        #          16:00:00 购买
-        #          16:30:00 赎回
-        #          22:00:00 分红权益登记
-        #          22:30:00 分红除息
-        #          22:45:00 分红派息
+        #          16:00:00 分红权益登记
+        #          16:30:00 分红除息
+        #          16:45:00 分红派息
+        #          17:00:00 调仓处理
+        #          18:00:00 购买
+        #          18:30:00 赎回
         #          23:59:59 记录当日持仓
+        #
+        #          时间的处理顺序之所以这样排序，原因如下：
+        #
+        #          由于分拆日的净值是日末净值，也就是分拆之后的，所以
+        #          分拆需要在更新净值之前进行。
+        #
+        #          购买的确认和赎回确认也需要在更新净值在前进行，因为T
+        #          日确认的购买份额在T日是可以赎回的，所以应该在开盘之
+        #          前完成结算。T日确认的赎回份额，在T日不再计算收益，
+        #          所以需要在在更新净值之前完成
+        #
+        #          理论上，分拆和购买/赎回确认的顺序可以互换，甚至先处
+        #          理确认，再处理分拆可能更合理，但代码写出先分拆了，
+        #          因为不影响最后结果，也就不改了。
+        #
+        #          分红，申购，赎回依赖当日净值，所以需要在净值更新之
+        #          后进行。具体的，红利在投资的份额是依据除息日的净值
+        #          的。申购和赎回的是按T日的净值计算金额的。
+        #
+        #          分红需要在购买和赎回之前进行，因为权益登记日购买的
+        #          份额是不享受分红的，权益登记赎回的份额是享受分红的。
+        #
+        #          分红本身的权益登记、除息、派息需要按顺序进行，因为
+        #          三个日子可能是一天。
         # 
         #
         self.events = [];
@@ -321,7 +345,7 @@ class TradeNav(object):
         #
         for day, v0 in df_pos.groupby(level=0):
             argv = {'pos': v0.loc[day]}
-            ev = (day + timedelta(hours=15, minutes=30), 8, 0, 0, argv)
+            ev = (day + timedelta(hours=17), 8, 0, 0, argv)
             heapq.heappush(self.events, ev)
         
         #
@@ -356,8 +380,8 @@ class TradeNav(object):
         #
         # 本模块不负责保存具体的计算结果
         #
-        df_result_nav = pd.Series(self.nav).to_frame('nav') 
-        dd(df_result_nav, "completed")
+        # df_result_nav = pd.Series(self.nav).to_frame('nav') 
+        # dd(df_result_nav, "completed")
 
     def process(self, ev):
         result = []
@@ -451,9 +475,9 @@ class TradeNav(object):
             for order in orders:
                 argv = order
                 if order['op'] == 1:
-                    ev2 = (order['nav_date'] + timedelta(hours=16), 1, order['order_id'], order['fund_id'], argv)
+                    ev2 = (order['nav_date'] + timedelta(hours=18), 1, order['order_id'], order['fund_id'], argv)
                 else:
-                    ev2 = (order['nav_date'] + timedelta(hours=16, minutes=30), 2, order['order_id'], order['fund_id'], argv)
+                    ev2 = (order['nav_date'] + timedelta(hours=18, minutes=30), 2, order['order_id'], order['fund_id'], argv)
                 result.append(ev2)
                 
             self.orders.extend(orders)
@@ -509,7 +533,7 @@ class TradeNav(object):
                 'order_dividend': dividend_id,
                 'order_cash': cash_id,
             }
-            ev2 = (argv['dividend_date']+ timedelta(hours=22,minutes=30), 16, 0, fund_id, argv2)
+            ev2 = (argv['dividend_date']+ timedelta(hours=16,minutes=30), 16, 0, fund_id, argv2)
             result.append(ev2)
 
         elif op == 16:
@@ -519,7 +543,7 @@ class TradeNav(object):
             # pdb.set_trace()
             df = self.df_share.loc[[fund_id]]
             df['amount_bonusing'] = df['share_bonusing'] * argv['bonus_ratio']
-            ev2 = (argv['payment_date'] + timedelta(hours=22,minutes=45), 17, 0, fund_id, argv)
+            ev2 = (argv['payment_date'] + timedelta(hours=16,minutes=45), 17, 0, fund_id, argv)
             result.append(ev2)
             #
             # 处理红利再投的份额转换
@@ -608,10 +632,13 @@ class TradeNav(object):
             result.extend(self.share_routine(dt, argv))
             
         elif op == 101:
+            # if dt.strftime("%Y-%m-%d") == '2017-03-24':
+            #     pdb.set_trace()
+            day = pd.to_datetime(dt.date())
             #
             # 删除无用持仓
             #
-            mask = (self.df_share['share'] + self.df_share['share_buying'] + self.df_share['amount_bonusing']) < 0.000099
+            mask = (self.df_share['share'] + self.df_share['share_buying'] + self.df_share['amount_bonusing']) < 0.000000001
             if mask.any():
                 self.df_share.drop(self.df_share[mask].index, inplace=True)
             #
@@ -623,15 +650,14 @@ class TradeNav(object):
             # 记录净值
             #
             amount = ((self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] + self.df_share['amount_bonusing']).sum()
-            
             amount += (self.df_redeem['share'] * self.df_redeem['nav']).sum() + self.cash
-            self.nav[dt] = amount
+            self.nav[day] = amount
             #
             # 记录业绩归因
             #
-            self.contrib[dt] = self.df_share['yield'].groupby(level=1).sum()
+            self.contrib[day] = self.df_share['yield'].groupby(level=1).sum()
 
-            print "%s: %.6f / %.6f" % (self.day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
+            print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
 
             # self.idebug(dt)
 
@@ -689,7 +715,7 @@ class TradeNav(object):
         df = df_src.merge(df_dst, how='outer', left_index=True, right_index=True).fillna(0)
         df['diff_ratio'] = df['ra_fund_ratio'] - df['src_ratio']
         df['diff_amount'] = total * df['diff_ratio']
-        # if dt.strftime("%Y-%m-%d") == '2016-12-23':
+        # if dt.strftime("%Y-%m-%d") == '2017-03-24':
         #     pdb.set_trace()
 
         #
@@ -916,8 +942,8 @@ class TradeNav(object):
         return ack_date
 
     def make_buy_order(self, dt, fund_id, amount):
-        if amount < 0.01:
-            pdb.set_trace()
+        # if amount < 0.0000001:
+        #     pdb.set_trace()
         (nav, nav_date) = self.get_tdate_and_nav(fund_id, dt)
 
         fee = self.get_buy_fee(dt, fund_id, amount)
@@ -1021,8 +1047,8 @@ class TradeNav(object):
                         'dividend_date': row['ra_dividend_date'],
                         'payment_date': row['ra_payment_date']
                     }
-                    ev = (record_date + timedelta(hours=22), 15, 0, fund_id, argv)
-                    # dd(record_date + timedelta(hours=22), ev)
+                    ev = (record_date + timedelta(hours=16), 15, 0, fund_id, argv)
+                    # dd(record_date + timedelta(hours=16), ev)
                     evs.append(ev)
 
             # 

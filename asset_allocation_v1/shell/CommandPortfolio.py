@@ -367,21 +367,24 @@ def nav_update(alloc, fee, debug):
 
     # 计算复合资产净值
     if fee == 8:
+        xtype = 8
         df_pos = df_pos.loc[df_pos.index.get_level_values(0) >= '2012-07-27']
         tn = TradeNav.TradeNav(debug=debug)
-        tn.calc(df_pos, 100000)
+        tn.calc(df_pos, 1)
         sr_nav_portfolio = pd.Series(tn.nav)
     else:
+        xtype = 9
         sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
 
     df_result = sr_nav_portfolio.to_frame('ra_nav')
     df_result.index.name = 'ra_date'
-    df_result['ra_type'] = fee
+    df_result['ra_type'] = xtype
     df_result['ra_inc'] = df_result['ra_nav'].pct_change().fillna(0.0)
     df_result['ra_portfolio_id'] = alloc['globalid']
-    df_result = df_result.reset_index().set_index(['ra_portfolio_id', 'ra_date'])
+    df_result = df_result.reset_index().set_index(['ra_portfolio_id', 'ra_type', 'ra_date'])
 
-    asset_ra_portfolio_nav.save(alloc_id, df_result)
+    asset_ra_portfolio_nav.save(alloc_id, xtype, df_result)
+    dd("abort")
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
