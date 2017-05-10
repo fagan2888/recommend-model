@@ -9,6 +9,7 @@ import pandas as pd
 # import sys
 import logging
 import database
+# import pdb
 
 from dateutil.parser import parse
 
@@ -43,7 +44,16 @@ def load(gids=None, codes=None, sdate=None, edate=None):
     if edate is not None:
         s = s.where(t.c.ra_record_date <= edate)
 
-    df = pd.read_sql(s, db, index_col=['ra_record_date', 'ra_fund_id'], parse_dates=['ra_record_date', 'ra_dividend_date', 'ra_payment_date', 'ra_bonus_nav_date'])
+    df = pd.read_sql(s, db, parse_dates=['ra_record_date', 'ra_dividend_date', 'ra_payment_date', 'ra_bonus_nav_date'])
+
+    #
+    # QDII基金的除息日经常在权益登记日之前，但实际上，QDII的权益登记日
+    # 登记的是除息日的份额，为了计算方便， 如果权益登记日 > 除息日，则
+    # 将除息日设置为权益登记日。
+    #
+    # pdb.set_trace()
+    df.loc[df['ra_record_date'] > df['ra_dividend_date'], 'ra_record_date'] = df['ra_dividend_date']
+    df = df.set_index(['ra_record_date', 'ra_fund_id']).sort_index()
 
     return df
 
