@@ -1,6 +1,6 @@
 #coding=utf8
 
-
+import pdb
 import getopt
 import string
 import json
@@ -372,9 +372,11 @@ def nav_update(alloc, fee, debug):
         tn = TradeNav.TradeNav(debug=debug)
         tn.calc(df_pos, 1)
         sr_nav_portfolio = pd.Series(tn.nav)
+        sr_contrib = pd.concat(tn.contrib)
     else:
         xtype = 9
         sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
+        sr_contrib = pd.Series()
 
     df_result = sr_nav_portfolio.to_frame('ra_nav')
     df_result.index.name = 'ra_date'
@@ -384,6 +386,15 @@ def nav_update(alloc, fee, debug):
     df_result = df_result.reset_index().set_index(['ra_portfolio_id', 'ra_type', 'ra_date'])
 
     asset_ra_portfolio_nav.save(alloc_id, xtype, df_result)
+
+    if not sr_contrib.empty:
+        df_contrib = sr_contrib.to_frame('ra_return')
+        df_contrib.index.names=[u'ra_date', u'ra_fund_id']
+        df_contrib['ra_type'] = xtype
+        df_contrib['ra_portfolio_id'] = alloc_id
+        df_contrib = df_contrib.reset_index().set_index(['ra_portfolio_id', 'ra_type', 'ra_date', 'ra_fund_id'])
+
+        asset_ra_portfolio_contrib.save(alloc_id, xtype, df_contrib)
     dd("abort")
 
 @portfolio.command()
