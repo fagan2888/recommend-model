@@ -221,7 +221,7 @@ class TradeNav(object):
         self.cash = principal
         
         sdate = df_pos.index.get_level_values(0).min()
-        edate = datetime.now() - timedelta(days=1)
+        edate = pd.to_datetime(datetime.now().date()) - timedelta(days=1)
         # dd(sdate, edate)
         #
 
@@ -254,7 +254,8 @@ class TradeNav(object):
         for i in xrange(1, max_n + 1):
             self.df_t_plus_n["T+%d" % i] = self.df_t_plus_n['td_date'].shift(-i)
         self.df_t_plus_n = self.df_t_plus_n.drop('td_date', axis=1)
-        # dd(self.df_t_plus_n, max_n, self.df_t_plus_n.index)
+        self.df_t_plus_n.fillna(pd.to_datetime('2029-01-01'), inplace=True)
+        # dd(self.df_t_plus_n)
 
 
         # 任何自然日所属交易日及其对应的净值序列
@@ -360,6 +361,7 @@ class TradeNav(object):
         #
         # 依次处理每个事件
         #
+        max_ts = edate + timedelta(hours=24)
         while self.events:
             ev = heapq.heappop(self.events)
             if ev is None:
@@ -370,6 +372,8 @@ class TradeNav(object):
             evs = self.process(ev)
 
             for ev in evs:
+                if ev[0] >= max_ts:
+                    continue
                 if self.debug:
                     dump_event('+', ev)
                 heapq.heappush(self.events, ev)
@@ -632,8 +636,8 @@ class TradeNav(object):
             result.extend(self.share_routine(dt, argv))
             
         elif op == 101:
-            # if dt.strftime("%Y-%m-%d") == '2017-03-24':
-            #     pdb.set_trace()
+            if dt.strftime("%Y-%m-%d") in ['2014-02-10']:
+                pdb.set_trace()
             day = pd.to_datetime(dt.date())
             #
             # 删除无用持仓
@@ -655,7 +659,7 @@ class TradeNav(object):
             #
             # 记录业绩归因
             #
-            self.contrib[day] = self.df_share['yield'].groupby(level=1).sum()
+            self.contrib[day] = self.df_share['yield'].groupby(level=0).sum()
 
             print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
 
@@ -1026,6 +1030,11 @@ class TradeNav(object):
         self.dsn = 0
         self.day = dt
         # print "day", dt.strftime("%Y-%m-%d")
+
+        #
+        # 清空当日收益
+        #
+        self.df_share['yield'] = 0
 
         evs = []
         fund_ids = self.df_share.index.get_level_values(0).unique().tolist()
