@@ -14,6 +14,7 @@ import logging
 import Const
 
 from sqlalchemy import *
+from util.xlist import chunks
 
 from dateutil.parser import parse
 
@@ -98,7 +99,8 @@ def batch(db, table, df_new, df_old, timestamp=True):
 
     if len(df_update) > 50:
         keys = [table.c.get(c) for c in df_old.index.names]
-        table.delete(tuple_(*keys).in_(df_old.index.tolist())).execute()
+        for segment in chunks(df_old.index.tolist(), 500):
+            table.delete(tuple_(*keys).in_(segment)).execute()
         
         if timestamp:
             df_new['updated_at'] = df_new['created_at'] = datetime.now()
