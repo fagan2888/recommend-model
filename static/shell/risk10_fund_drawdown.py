@@ -17,6 +17,7 @@ if __name__ == '__main__':
 
 
     highrisk_df = pd.read_csv('data/nav.csv', index_col = ['date'], parse_dates = ['date'])
+    #highrisk_df = pd.read_csv('data/online_nav.csv', index_col = ['date'], parse_dates = ['date'])
     highrisk_df = highrisk_df[['risk10']]
 
     stock_fund_df = pd.read_csv('stock_fund_value.csv', index_col = ['date'], parse_dates = ['date'])
@@ -25,9 +26,11 @@ if __name__ == '__main__':
 
     df = df.fillna(method = 'pad')
 
+    df = df.iloc[-270 : ]
+    print df
     #print df
 
-    window = 1080
+    window = 90
     drawdown_df = nav_max_drawdown_window(df, window)
     drawdown_df.to_csv('risk10_drawdown.csv')
 

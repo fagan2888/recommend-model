@@ -9,6 +9,7 @@ if __name__ == '__main__':
 
 
     highrisk_df = pd.read_csv('data/nav.csv', index_col = ['date'], parse_dates = ['date'])
+    #highrisk_df = pd.read_csv('data/online_nav.csv', index_col = ['date'], parse_dates = ['date'])
     highrisk_df = highrisk_df[['risk10']]
 
     stock_fund_df = pd.read_csv('fund_value.csv', index_col = ['date'], parse_dates = ['date'])
@@ -17,9 +18,10 @@ if __name__ == '__main__':
 
     df = df.fillna(method = 'pad')
 
-    #print df
+    df = df.iloc[-270 : ]
+    print df
 
-    period = 1080
+    period = 180
     dates = df.index
     ds = []
     ranks = []
@@ -49,13 +51,15 @@ if __name__ == '__main__':
         print d, index, len(rs), 1.0 * index / len(rs)
 
         ds.append(d)
-        ranks.append([index + 1, len(rs) + 1])
+        ranks.append([index + 1, len(rs) + 1, 1.0 * (index + 1) / (len(rs) + 1)])
         #print rs
         #print d, df.loc[next_d, 'risk10'] / df.loc[d, 'risk10'] - 1
         #ds.append(d)
         #rs.append([df.loc[next_d, 'risk10'] / df.loc[d, 'risk10'] - 1, df.loc[next_d, '000300.SH'] / df.loc[d, '000300.SH'] - 1])
 
-    df = pd.DataFrame(np.matrix(ranks), index = ds, columns = ['risk10_rank', 'all_fund_num'])
+    df = pd.DataFrame(np.matrix(ranks), index = ds, columns = ['risk10_rank', 'all_fund_num', 'ratio'])
     df.to_csv('risk10_rank.csv')
+
+    print np.mean(df['ratio'])
 
     #print df
