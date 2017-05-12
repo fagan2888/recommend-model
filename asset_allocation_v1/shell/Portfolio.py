@@ -529,3 +529,145 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
     #for code in largecap:
 
     return fund_codes, ws
+
+
+def black_litterman(weq, df_inc, P, Q):
+
+    tau = 0.05
+    delta = 2.5
+    weq = np.array(weq)
+    P = np.array(P)
+    Q = np.array(Q)
+
+    return_rate = []
+    for code in df_inc.columns:
+        return_rate.append(df_inc[code].values)
+
+    sigma = np.cov(return_rate)
+    tauV = tau * sigma
+    Omega = np.dot(np.dot(P, tauV), P.T) * np.eye(Q.shape[0])
+
+    # Reverse optimize and back out the equilibrium returns
+    # This is formula (12) page 6.
+    pi = weq.dot(sigma * delta)
+    # print(pi)
+    # We use tau * sigma many places so just compute it once
+    ts = tau * sigma
+    # Compute posterior estimate of the mean
+    # This is a simplified version of formula (8) on page 4.
+
+    middle = linalg.inv(np.dot(np.dot(P,ts),P.T) + Omega)
+    # print(middle)
+    # print(Q-np.expand_dims(np.dot(P,pi.T),axis=1))
+    er = np.expand_dims(pi,axis=0).T + np.dot(np.dot(np.dot(ts,P.T),middle),(Q - np.expand_dims(np.dot(P,pi.T),axis=1)))
+    # Compute posterior estimate of the uncertainty in the mean
+    # This is a simplified and combined version of formulas (9) and (15)
+    posteriorSigma = sigma + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
+    # print(posteriorSigma)
+    # Compute posterior weights based on uncertainty in mean
+    w = er.T.dot(linalg.inv(delta * posteriorSigma)).T
+    # Compute lambda value
+    # We solve for lambda from formula (17) page 7, rather than formula (18)
+    # just because it is less to type, and we've already computed w*.
+    lmbda = np.dot(linalg.pinv(P).T,(w.T * (1 + tau) - weq).T)
+
+    solvers.options['show_progress'] = False
+    n_asset = len(df_inc.columns)
+    S          =     matrix(posteriorSigma)
+    pbar       =     matrix(er)
+
+    G          =     matrix(0.0, ( 3 * n_asset, n_asset))
+    #G[::n_asset + 1]  =  -1.0
+    h                 =  matrix(0.0, (3 * n_asset, 1))
+    A                 =  matrix(1.0, (1, n_asset))
+    b                 =  matrix(1.0)
+
+
+    #print weq
+    for i in range(0, n_asset):
+        G[i, i] = -1
+
+        G[n_asset + i, i] = -1
+        h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.03)
+
+        '''
+        if i == 4:
+            h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.20)
+        else:
+            h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.10)
+        '''
+        #h[n_asset + i, 0] = 0
+
+        G[2 * n_asset + i, i] = 1
+        h[2 * n_asset + i, 0] = weq[i] + 0.03
+
+
+        '''
+        if i == 4:
+            h[2 * n_asset + i, 0] =  weq[i] + 0.20
+        else:
+            h[2 * n_asset + i, 0] =  weq[i] + 0.10
+        '''
+        #h[2 * n_asset + i, 0] =  1.0
+
+    #print h
+
+    #print S
+    N = 200
+    mus = [ 10**(5.0*t/N-1.0) for t in range(N) ]
+    portfolios = [ solvers.qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
+    returns = [ cvxopt.blas.dot(pbar,x) for x in portfolios ]
+    risks = [ math.sqrt(cvxopt.blas.dot(x, S*x)) for x in portfolios ]
+
+    rf = Const.rf
+
+    final_risk = 0
+    final_return = 0
+    final_ws = []
+    final_sharp = -np.inf
+    final_codes = []
+
+    for j in range(0, len(risks)):
+        sharp = (returns[j] - rf) / risks[j]
+        if sharp > final_sharp:
+            final_risk = risks[j]
+            final_return = returns[j]
+            final_ws = portfolios[j]
+            final_sharp = sharp
+
+    #print np.mean(return_rate, axis = 1)
+    #print
+    #print Q
+    #print
+    #print final_ws
+    #print
+    #print final_ws
+
+    return final_risk, final_return, final_ws, final_sharp
+
+    #print risks
+    #print np.dot(er, w)
+    #return [er, w, lmbda]
+
+
+def risk_parity(dfr):
+    cov = dfr.cov()
+    cov = cov.values
+    cov = cov * 10000
+    #print len(cov)
+    asset_num = len(cov)
+    w = 1.0 * np.ones(asset_num) / asset_num
+    bound = [ (0.0 , 1.0) for i in range(asset_num)]
+    constrain = ({'type':'eq', 'fun': lambda w: sum(w)-1.0 })
+    result = scipy.optimize.minimize(riskparity_obj_func, w, (cov), method='SLSQP', constraints=constrain, bounds=bound)
+    ws = result.x
+    return ws
+
+
+def riskparity_obj_func(w, cov):
+    n = len(cov)
+    risk_sum = 0
+    for i in range(0, n):
+        for j in range(i + 1, n):
+            risk_sum = risk_sum + ( 5 * np.dot(w, cov[i]) - np.dot(w , cov[j])) ** 2
+    return risk_sum
