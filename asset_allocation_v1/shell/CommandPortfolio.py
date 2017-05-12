@@ -317,11 +317,12 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
 @click.option('--fee', 'optfee', default='9', help=u'fee type(8:with fee; 9:without fee')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def nav(ctx, optid, optlist, optfee, optdebug):
+def nav(ctx, optid, optlist, optrisk, optfee, optdebug):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -333,6 +334,7 @@ def nav(ctx, optid, optlist, optfee, optdebug):
             portfolios = None
 
     fees = [int(s.strip()) for s in optfee.split(',')]
+    risks = [int(s.strip()) for s in optrisk.split(',')]
 
     df_portfolio = asset_ra_portfolio.load(portfolios)
 
@@ -343,10 +345,11 @@ def nav(ctx, optid, optlist, optfee, optdebug):
 
     for fee in fees:
         for _, portfolio in df_portfolio.iterrows():
-            nav_update_alloc(portfolio, fee, optdebug)
+            nav_update_alloc(portfolio, risks, fee, optdebug)
 
-def nav_update_alloc(portfolio, fee, debug):
+def nav_update_alloc(portfolio, risks, fee, debug):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
+    df_alloc = df_alloc.loc[(df_alloc['ra_risk'] * 10).astype(int).isin(risks)]
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
@@ -395,7 +398,6 @@ def nav_update(alloc, fee, debug):
         df_contrib = df_contrib.reset_index().set_index(['ra_portfolio_id', 'ra_type', 'ra_date', 'ra_fund_id', 'ra_return_type'])
 
         asset_ra_portfolio_contrib.save(alloc_id, xtype, df_contrib)
-    dd("abort")
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
