@@ -24,13 +24,13 @@ readline.parse_and_bind('tab: complete')
 
 def dump_orders(orders, s, die=True):
     if len(orders) > 0:
-        print "\n", s
-        print "order|%10s|%2s|%8s|%10s|%10s|%8s|%10s|%6s|%7s|%10s|%10s|%10s|%10s|%10s" % (
-            "order_id", 'op', 'fund_id', 'place_date', 'place_time', 'amount', 'share', 'fee', 'nav', 'nav_date', 'ack_date', 'ack_amount', 'ack_share', 'share_id')
+        # print "\n", s
+        logger.info("order|%10s|%2s|%8s|%10s|%10s|%8s|%10s|%6s|%7s|%10s|%10s|%10s|%10s|%10s" % (
+            "order_id", 'op', 'fund_id', 'place_date', 'place_time', 'amount', 'share', 'fee', 'nav', 'nav_date', 'ack_date', 'ack_amount', 'ack_share', 'share_id'))
     for o in orders:
         #     （order_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode）
-        print "order|%s|%2d|%d|%s|%10s|%8.2f|%10.4f|%6.2f|%7.4f|%s|%s|%10.2f|%10.4f|%10s" % (
-            o['order_id'], o['op'], o['fund_id'], o['place_date'].strftime("%Y-%m-%d"), o['place_time'], o['amount'], o['share'], o['fee'], o['nav'],o['nav_date'].strftime("%Y-%m-%d"),o['ack_date'].strftime("%Y-%m-%d"), o['ack_amount'], o['ack_share'], o['share_id'])
+        logger.info("order|%s|%2d|%d|%s|%10s|%8.6f|%10.6f|%6.6f|%7.4f|%s|%s|%10.6f|%10.6f|%10s" % (
+            o['order_id'], o['op'], o['fund_id'], o['place_date'].strftime("%Y-%m-%d"), o['place_time'], o['amount'], o['share'], o['fee'], o['nav'],o['nav_date'].strftime("%Y-%m-%d"),o['ack_date'].strftime("%Y-%m-%d"), o['ack_amount'], o['ack_share'], o['share_id']))
 
     if die:
         dd('----end orders----')
@@ -62,8 +62,8 @@ def dump_event(x, e, die=False):
     elif op == 101:
         s = ''
 
-    print "%c xev|%20s|%3d|%10s|%10s|%s" % (
-            x, dt.strftime("%Y-%m-%d %H:%M:%S"), op, order_id, fund_id, s)
+    logger.info("%c xev|%20s|%3d|%10s|%10s|%s" % (
+            x, dt.strftime("%Y-%m-%d %H:%M:%S"), op, order_id, fund_id, s))
 
     if die:
         dd('----end events----')
@@ -441,8 +441,9 @@ class TradeNav(object):
             #
             # 申购确认
             #
-            self.df_share.loc[(fund_id, order_id), 'share'] = self.df_share.loc[(fund_id, order_id), 'share_buying']
-            self.df_share.loc[(fund_id, order_id), 'share_buying'] = 0
+            if argv['order_id'] in self.df_share.index.get_level_values(1):
+                self.df_share.loc[(fund_id, order_id), 'share'] = self.df_share.loc[(fund_id, order_id), 'share_buying']
+                self.df_share.loc[(fund_id, order_id), 'share_buying'] = 0
 
         elif op == 2:
             #
@@ -673,6 +674,7 @@ class TradeNav(object):
             # 记录业绩归因
             #
             sr_yield = self.df_share['yield'].groupby(level=0).sum()
+            sr_yield = sr_yield.loc[sr_yield.abs() > 0.00000099]
             sr_fee_buy = pd.Series(self.dt_today_fee_buy)
             sr_fee_redeem = pd.Series(self.dt_today_fee_redeem)
             sr_bonus = pd.Series(self.dt_today_bonus)
@@ -1014,8 +1016,7 @@ class TradeNav(object):
         if fund_id not in self.df_buy_fee.index:
             return 0
         
-        df = self.df_buy_fee.loc[fund_id]
-
+        df = self.df_buy_fee.loc[[fund_id], :]
         sr = df.loc[df['ff_max_value'] > amount].iloc[0]
         if sr['ff_fee_type'] == 2: # 固定费用模式，一般是申购额足够大，费用封顶
             fee = sr['ff_fee']
