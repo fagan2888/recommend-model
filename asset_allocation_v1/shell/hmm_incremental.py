@@ -41,21 +41,21 @@ class HmmNesc(object):
             '120000029':'2070006789', #标普高盛原油商品指数收益率
         }
         self.feature_selected = {
-            '120000001':set(['high', 'pct_chg', 'atr', 'macd']),
-            '120000002':set(['high', 'sobv', 'vstd']),
-            '120000013':set(['vstd', 'sobv', 'macd', 'vma']),
-            '120000014':set(['wvad', 'pct_chg', 'roc', 'vstd']),
-            '120000015':set(['priceosc', 'pct_chg', 'atr']),
+            '120000001':set(['bias', 'pct_chg', 'priceosc', 'roc']),
+            '120000002':set(['sobv', 'pct_chg', 'bias', 'pvt']),
+            '120000013':set(['sobv', 'pct_chg', 'vstd', 'macd']),
+            '120000014':set(['vstd', 'pct_chg', 'roc', 'wvad']),
+            '120000015':set(['priceosc', 'pct_chg', 'bias', 'roc']),
             '120000028':set(['macd', 'pct_chg', 'atr']),
-            '120000029':set(['pct_chg', 'priceosc', 'rsi']),
+            '120000029':set(['priceosc', 'pct_chg', 'bias', 'roc']),
         }
         # 隐形状态数目
-        self.state_num = 13
+        self.state_num = 5
         self.features = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', \
                         'slowkd', 'pct_chg', 'pvt', 'wvad', 'priceosc', \
                         'bias', 'vma', 'vstd', 'dpo']
         # 模型训练用到的样本数, 149加1即为这个样本数
-        self.train_num = 149
+        self.train_num = 249
         # 训练开始时间
         self.t_start = datetime.datetime(2005, 8, 1)
         # 训练结束时间
@@ -421,6 +421,18 @@ class HmmNesc(object):
 
         return states
     @staticmethod
+    def cal_stats_pro(model, states, ratio):
+        state_today = states[-1]
+        trans_mat_today = model.transmat_[states[-1]]
+        mean_today = model.means_[state_today, 1]
+        mean_rank_today = sum(model.means_[:, 1] < mean_today)
+        
+        next_day_state = np.argmax(trans_mat_today)
+        next_day_pro = trans_mat_today[next_day_state]
+        next_day_mean = model.means_[next_day_state, 1]
+        next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
+        return next_day_mean
+    @staticmethod
     def statistic_win_ratio(ratios, means_arr, stds_arr):
         ratio_num = len(ratios)
         win_num = 0.0
@@ -457,11 +469,14 @@ class HmmNesc(object):
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
+            ratios = np.array(p_data['pct_chg'])
             try:
                 [model, states] = self.training(p_data, list(feature_predict), self.state_num)
-            except:
+            except Exception, e:
+                print e
                 return (1, "hmm training fail")
-            means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            means = HmmNesc.cal_stats_pro(model, states, ratios)
             means_arr.append(means)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]

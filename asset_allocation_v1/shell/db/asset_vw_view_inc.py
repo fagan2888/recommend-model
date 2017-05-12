@@ -57,9 +57,9 @@ if __name__ == "__main__":
                 '42110202':'means_000905.csv',
                 '42120201':'means_sp.csv',
                 '42120502':'means_hs.csv',
-                '42400102':'hmm_au9999.csv',
-                '42400400':'hmm_nh0100nhf.csv',
-                '42400300':'hmm_spgscltrspi.csv',
+                '42400102':'means_gold.csv',
+                #'42400400':'means_nh0100nhf.csv',
+                '42400300':'means_spgscltrspi.csv',
             }
     for (viewid, ass) in assets.iteritems():
         print viewid, ass

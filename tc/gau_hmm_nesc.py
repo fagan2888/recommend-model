@@ -350,11 +350,15 @@ class HmmNesc(object):
             os._exit(0)
 
         #feature_selected = ['high', 'pct_chg', 'low', 'close', 'open', 'volume']# 096001
-        feature_selected = ['bias', 'pct_chg', 'priceosc', 'roc']# 096001
+        feature_selected = ['bias', 'pct_chg', 'priceosc', 'roc']# 000300
         #feature_selected = ['sobv', 'pct_chg', 'bias', 'pvt']# 000905
+        #feature_selected = ['sobv', 'pct_chg', 'vstd', 'macd']# 096001
         #feature_selected = ['sobv', 'pct_chg', 'bias', 'pvt'] #000300
-        test_dates = self.ori_data[self.test_start:self.test_end].index
+        feature_selected = ['vstd', 'pct_chg', 'roc', 'wvad'] #gold
+        feature_selected = ['priceosc', 'pct_chg', 'bias', 'roc'] #hs
+        #test_dates = self.ori_data[self.test_start:self.test_end].index
         self.test_start, p_in_date, p_e_date, tmp_e_date = self.get_year(year)
+        test_dates = self.ori_data[self.test_start:self.test_end].index
         p_s_date = self.test_start
         p_test_end_date = self.test_end
         #p_in_date, p_e_date, tmp_e_date = self.get_year(year)
@@ -658,20 +662,22 @@ class HmmNesc(object):
         elif year == "2013":
             return datetime.datetime(2007, 1, 5), datetime.datetime(2013, 1, 4), datetime.datetime(2013, 12, 31), datetime.datetime(2013, 12, 31)
         elif year == "2014":
-            return datetime.datetime(2008, 1, 4), datetime.datetime(2014, 1, 3), datetime.datetime(2014, 11, 21), datetime.datetime(2014, 11, 21)
+            return datetime.datetime(2008, 1, 4), datetime.datetime(2014, 1, 3), datetime.datetime(2014, 12, 31), datetime.datetime(2014, 12, 31)
         elif year == "2015":
             return datetime.datetime(2009, 1, 2), datetime.datetime(2015, 1, 9), datetime.datetime(2015, 12, 31), datetime.datetime(2015, 12, 31)
         elif year == "2016":
             return datetime.datetime(2011, 1, 1), datetime.datetime(2016, 1, 8), datetime.datetime(2016, 12, 31), datetime.datetime(2016, 12, 31)
+        elif year == "2017":
+            return datetime.datetime(2012, 1, 6), datetime.datetime(2017, 1, 6), datetime.datetime(2017, 12, 31), datetime.datetime(2017, 12, 31)
         elif year == "now":
-            return datetime.datetime(2006, 1, 6), datetime.datetime(2012, 1, 6), datetime.datetime(2014, 11, 21), datetime.datetime(2014, 11, 21)
+            return datetime.datetime(2010, 3, 26), datetime.datetime(2012, 1, 6), datetime.datetime(2017, 12, 31), datetime.datetime(2017, 12, 31)
         else:
             os._exit(0)
 if __name__ == "__main__":
-    data_handle = open("/home/data/yitao/tmp/120000001_indicator.csv")
-    years = ["2012", "2013", "2014", "2015", "2016"]
-    #years = ["now"]
-    ass_name = "120000001_week_rank"
+    data_handle = open("/home/data/yitao/tmp/120000014_indicator.csv")
+    years = ["2012", "2013", "2014", "2015", "2016", "2017"]
+    years = ["now"]
+    ass_name = "120000014_week_rank"
     nesc_hmm = HmmNesc(data_handle, "2012")
     fs = 0
     if fs == 1:
