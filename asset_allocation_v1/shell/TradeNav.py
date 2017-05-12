@@ -443,7 +443,8 @@ class TradeNav(object):
             #
             # 赎回
             #
-            self.df_share.loc[(fund_id, argv['share_id']), 'share'] -= argv['share']
+            left = self.df_share.loc[(fund_id, argv['share_id']), 'share'] - argv['share']
+            self.df_share.loc[(fund_id, argv['share_id']), 'share'] = left if left > 0.00000099 else 0
             # 生成赎回上下文
             row = (fund_id, argv['order_id'], argv['share_id'], argv['share'], argv['nav'], argv['nav_date'], argv['ack_date'], argv['fee'])
             tmp = pd.DataFrame([row], columns=['fund_id', 'redeem_id', 'share_id', 'share', 'nav', 'nav_date', 'ack_date', 'fee'])
@@ -501,19 +502,21 @@ class TradeNav(object):
             #
             df = self.df_share.loc[[fund_id]]
             df['share_bonusing'] = df['share'] + df['share_buying']
-
+            if dt.strftime("%Y-%m-%d") == '2013-05-16':
+                pdb.set_trace()
+        
             #
             # 生成分红订单，记录分红操作
             #
             share_dividend = df.loc[df['div_mode'] == 1, 'share_bonusing'].sum()
             share_cash = df['share_bonusing'].sum() - share_dividend
             orders, dividend_id, cash_id = [], "0", "0"
-            if share_dividend > 0:
+            if share_dividend > 0.000000001:
                 order = self.make_bonus_order(dt, fund_id, share_dividend, argv, 1)
                 orders.append(order)
                 dividend_id = order['order_id']
 
-            if share_cash > 0:
+            if share_cash > 0.000000001:
                 order = self.make_bonus_order(dt, fund_id, share_cash, argv, 0)
                 orders.append(order)
                 cash_id = order['order_id']
@@ -528,17 +531,18 @@ class TradeNav(object):
             # 调度除息事件
             #
             share = df['share_bonusing'].sum()
-            argv2 = {
-                'share': share,
-                'bonus_ratio': argv['bonus_ratio'],
-                'bonus_nav': argv['bonus_nav'],
-                'bonus_nav_date': argv['bonus_nav_date'],
-                'payment_date': argv['payment_date'],
-                'order_dividend': dividend_id,
-                'order_cash': cash_id,
-            }
-            ev2 = (argv['dividend_date']+ timedelta(hours=16,minutes=30), 16, 0, fund_id, argv2)
-            result.append(ev2)
+            if share > 0.000000001:
+                argv2 = {
+                    'share': share,
+                    'bonus_ratio': argv['bonus_ratio'],
+                    'bonus_nav': argv['bonus_nav'],
+                    'bonus_nav_date': argv['bonus_nav_date'],
+                    'payment_date': argv['payment_date'],
+                    'order_dividend': dividend_id,
+                    'order_cash': cash_id,
+                }
+                ev2 = (argv['dividend_date']+ timedelta(hours=16,minutes=30), 16, 0, fund_id, argv2)
+                result.append(ev2)
 
         elif op == 16:
             #
@@ -607,8 +611,9 @@ class TradeNav(object):
             #
             # 红利再投, 确认红利再投份额
             #
-            df.loc[(fund_id, argv['order_dividend']), 'share'] = df.loc[(fund_id, argv['order_dividend']), 'share_buying']
-            df.loc[(fund_id, argv['order_dividend']), 'share_buying'] = 0
+            if argv['order_dividend'] in df.index.get_level_values(1):
+                df.loc[(fund_id, argv['order_dividend']), 'share'] = df.loc[(fund_id, argv['order_dividend']), 'share_buying']
+                df.loc[(fund_id, argv['order_dividend']), 'share_buying'] = 0
             
             self.df_share.loc[[fund_id]] = df
 
@@ -636,9 +641,12 @@ class TradeNav(object):
             result.extend(self.share_routine(dt, argv))
             
         elif op == 101:
-            if dt.strftime("%Y-%m-%d") in ['2014-02-10']:
-                pdb.set_trace()
+            # if dt.strftime("%Y-%m-%d") in ['2014-02-10']:
+            #     pdb.set_trace()
             day = pd.to_datetime(dt.date())
+            # if dt.strftime("%Y-%m-%d") == '2013-05-16':
+            #     pdb.set_trace()
+        
             #
             # 删除无用持仓
             #
@@ -1035,6 +1043,10 @@ class TradeNav(object):
         # 清空当日收益
         #
         self.df_share['yield'] = 0
+
+        # if dt.strftime("%Y-%m-%d") == '2013-05-16':
+        #     pdb.set_trace()
+        
 
         evs = []
         fund_ids = self.df_share.index.get_level_values(0).unique().tolist()
