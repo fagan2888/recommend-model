@@ -125,14 +125,12 @@ def nav_update(alloc, fee, debug):
 
     if not sr_contrib.empty:
         df_contrib = sr_contrib.to_frame('on_return_value')
-        df_contrib.index.names=[u'on_date', u'on_fund_id']
+        df_contrib.index.names=[u'on_date', u'on_return_type', u'on_fund_id']
         df_contrib['on_type'] = xtype
         df_contrib['on_online_id'] = alloc_id
-        df_contrib['on_return_type'] = 0
         df_contrib = df_contrib.reset_index().set_index(['on_online_id', 'on_type', 'on_date', 'on_fund_id', 'on_return_type'])
 
         asset_on_online_contrib.save(alloc_id, xtype, df_contrib)
-    dd("abort")
 
 @online.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
