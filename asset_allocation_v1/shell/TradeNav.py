@@ -156,6 +156,9 @@ class TradeNav(object):
         # 输出变量：业绩归因序列
         #
         self.contrib = {}
+        self.dt_today_fee_buy = {}   # 业绩归因的当日申赎上下文
+        self.dt_today_fee_redeem = {}   # 业绩归因的当日申赎上下文
+        self.dt_today_bonus = {} # 业绩归因的当日分红上下文
 
         #
         # 输出变量：计算的净值/市值序列
@@ -425,6 +428,8 @@ class TradeNav(object):
             df_tmp = self.make_share(
                 fund_id, order_id, argv['share'], buy_date, argv['nav'], argv['nav_date'], argv['ack_date'], argv['div_mode'])
             self.df_share = self.df_share.append(df_tmp)
+            # 记录购买费率
+            self.dt_today_fee_buy[fund_id] = self.dt_today_fee_buy.setdefault(fund_id, 0) + (-argv['fee'])
 
             #
             # 生成申购确认事件
@@ -449,8 +454,11 @@ class TradeNav(object):
             row = (fund_id, argv['order_id'], argv['share_id'], argv['share'], argv['nav'], argv['nav_date'], argv['ack_date'], argv['fee'])
             tmp = pd.DataFrame([row], columns=['fund_id', 'redeem_id', 'share_id', 'share', 'nav', 'nav_date', 'ack_date', 'fee'])
             self.df_redeem = self.df_redeem.append(tmp.set_index(['fund_id', 'redeem_id']))
+            # 记录赎回费率
+            self.dt_today_fee_redeem[fund_id] = self.dt_today_fee_redeem.setdefault(fund_id, 0) + (-argv['fee'])
+
             #
-            # 生成赎回确认订单
+            # 生成赎回确认事件
             #
             ev2 = (argv['ack_date'] + timedelta(hours=2), 12, order_id, fund_id, argv)
             result.append(ev2)
@@ -553,6 +561,9 @@ class TradeNav(object):
             df['amount_bonusing'] = df['share_bonusing'] * argv['bonus_ratio']
             ev2 = (argv['payment_date'] + timedelta(hours=16,minutes=45), 17, 0, fund_id, argv)
             result.append(ev2)
+            # 记录分红业绩
+            self.dt_today_bonus[fund_id] = self.dt_today_bonus.setdefault(fund_id, 0) + df['amount_bonusing'].sum()
+            
             #
             # 处理红利再投的份额转换
             #
@@ -644,15 +655,9 @@ class TradeNav(object):
             # if dt.strftime("%Y-%m-%d") in ['2014-02-10']:
             #     pdb.set_trace()
             day = pd.to_datetime(dt.date())
-            # if dt.strftime("%Y-%m-%d") == '2013-05-16':
+            # if dt.strftime("%Y-%m-%d") == '2016-10-10':
             #     pdb.set_trace()
         
-            #
-            # 删除无用持仓
-            #
-            mask = (self.df_share['share'] + self.df_share['share_buying'] + self.df_share['amount_bonusing']) < 0.000000001
-            if mask.any():
-                self.df_share.drop(self.df_share[mask].index, inplace=True)
             #
             # 记录持仓
             #
@@ -662,14 +667,29 @@ class TradeNav(object):
             # 记录净值
             #
             amount = ((self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] + self.df_share['amount_bonusing']).sum()
-            amount += (self.df_redeem['share'] * self.df_redeem['nav']).sum() + self.cash
+            amount += (self.df_redeem['share'] * self.df_redeem['nav'] - self.df_redeem['fee']).sum() + self.cash
             self.nav[day] = amount
             #
             # 记录业绩归因
             #
-            self.contrib[day] = self.df_share['yield'].groupby(level=0).sum()
+            sr_yield = self.df_share['yield'].groupby(level=0).sum()
+            sr_fee_buy = pd.Series(self.dt_today_fee_buy)
+            sr_fee_redeem = pd.Series(self.dt_today_fee_redeem)
+            sr_bonus = pd.Series(self.dt_today_bonus)
+
+            sr_contrib = pd.concat({0:sr_yield, 1:sr_fee_buy, 2:sr_fee_redeem, 3:sr_bonus})
+            sr_contrib.index.names=['ra_return_type', 'ra_fund_id']
+            
+            self.contrib[day] = sr_contrib
 
             print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
+
+            #
+            # 删除无用持仓
+            #
+            mask = (self.df_share['share'] + self.df_share['share_buying'] + self.df_share['amount_bonusing']) < 0.000000001
+            if mask.any():
+                self.df_share.drop(self.df_share[mask].index, inplace=True)
 
             # self.idebug(dt)
 
@@ -1043,6 +1063,9 @@ class TradeNav(object):
         # 清空当日收益
         #
         self.df_share['yield'] = 0
+        self.dt_today_fee_buy = {}
+        self.dt_today_fee_redeem = {}
+        self.dt_today_bonus = {}
 
         # if dt.strftime("%Y-%m-%d") == '2013-05-16':
         #     pdb.set_trace()

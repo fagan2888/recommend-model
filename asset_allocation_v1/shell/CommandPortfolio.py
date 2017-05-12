@@ -389,10 +389,9 @@ def nav_update(alloc, fee, debug):
 
     if not sr_contrib.empty:
         df_contrib = sr_contrib.to_frame('ra_return_value')
-        df_contrib.index.names=[u'ra_date', u'ra_fund_id']
+        df_contrib.index.names=[u'ra_date', u'ra_return_type', u'ra_fund_id']
         df_contrib['ra_type'] = xtype
         df_contrib['ra_portfolio_id'] = alloc_id
-        df_contrib['ra_return_type'] = 0
         df_contrib = df_contrib.reset_index().set_index(['ra_portfolio_id', 'ra_type', 'ra_date', 'ra_fund_id', 'ra_return_type'])
 
         asset_ra_portfolio_contrib.save(alloc_id, xtype, df_contrib)
