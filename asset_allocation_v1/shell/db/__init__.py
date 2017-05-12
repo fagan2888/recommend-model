@@ -12,6 +12,11 @@ import asset_mz_markowitz_asset
 import asset_mz_markowitz_nav
 import asset_mz_markowitz_pos
 import asset_mz_markowitz_sharpe
+import asset_on_online
+import asset_on_online_alloc
+import asset_on_online_fund
+import asset_on_online_nav
+import asset_on_online_contrib
 import asset_ra_pool
 import asset_ra_pool_fund
 import asset_ra_pool_nav
@@ -39,3 +44,4 @@ import base_trade_dates
 import base_fund_fee
 import base_fund_infos
 import base_fund_split
+
