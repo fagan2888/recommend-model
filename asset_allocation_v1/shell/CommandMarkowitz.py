@@ -559,6 +559,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
+        '''
         weq = []
         for i in range(0, len(df_inc.columns)):
             weq.append(ws[i])
@@ -570,13 +571,9 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         for indexid in df_inc.columns:
             viewid = asset_vw_view.get_viewid_by_indexid(indexid).values[0][0]
             views = asset_vw_view_inc.get_asset_day_view(viewid, day).values[0][0]
-            #print views
-            #print day, viewid, views
             Q.append([views])
-        #for asset in df_inc.columns:
-        #    next_week_r = base_ra_index_nav.load_onemore_week(asset, end_date)
-        #    Q.append([next_week_r])
         risk, returns, ws, sharpe = PF.black_litterman(weq, df_inc, P, Q)
+        '''
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
