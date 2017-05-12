@@ -23,8 +23,8 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
-from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_vw_view, asset_vw_view_inc
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav
 from util import xdict
 
 import traceback, code
@@ -519,6 +519,8 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
             item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
         for day in bar:
             # bar.update(1)
+            if day.strftime('%Y-%m-%d') >= '2017-05-01':
+                continue
             logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
             # 高风险资产配置
             data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count)
@@ -556,6 +558,25 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+
+        weq = []
+        for i in range(0, len(df_inc.columns)):
+            weq.append(ws[i])
+        day = df_inc.index[-1]
+        P = np.eye(len(df_inc.columns))
+        Q = []
+
+
+        for indexid in df_inc.columns:
+            viewid = asset_vw_view.get_viewid_by_indexid(indexid).values[0][0]
+            views = asset_vw_view_inc.get_asset_day_view(viewid, day).values[0][0]
+            #print views
+            #print day, viewid, views
+            Q.append([views])
+        #for asset in df_inc.columns:
+        #    next_week_r = base_ra_index_nav.load_onemore_week(asset, end_date)
+        #    Q.append([next_week_r])
+        risk, returns, ws, sharpe = PF.black_litterman(weq, df_inc, P, Q)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),

@@ -23,6 +23,7 @@ def get_asset_newest_view(viewid):
         func.max(t.c.vw_date).label('newest_date'),
     ]
     s = select(columns).where(t.c.vw_view_id == viewid)
+    print s
     df = pd.read_sql(s, db)
     return df
 def insert_predict_pct(view_df):
@@ -51,6 +52,23 @@ def insert_predict_pct(view_df):
         result = (1, "Insert into vw_veiw_inc fail: " + e.message)
     return result
 
+def get_asset_day_view(viewid, day):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('vw_view_inc', metadata, autoload=True)
+    # Session = sessionmaker(bind=db)
+    # qry = session.query(
+    #     func.max(t.vw_date).label("newest_date"), \
+    # )
+    # metadata = MetaData(bind=db)
+    # t = Table('vw_view_inc', metadata, autoload=True)
+    columns = [
+        #func.max(t.c.vw_date).label('newest_date'),
+        t.c.vw_inc.label('inc')
+    ]
+    s = select(columns).where(t.c.vw_view_id == viewid).where(t.c.vw_date == day)
+    df = pd.read_sql(s, db)
+    return df
 if __name__ == "__main__":
     assets = {
                 '42110102':'means_000300.csv',
