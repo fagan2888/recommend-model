@@ -48,11 +48,12 @@ def online(ctx, optid, opttype):
 
 @online.command()
 @click.option('--id', 'optid', help=u'ids of online to update')
+@click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
 @click.option('--fee', 'optfee', default='9', help=u'fee type(8:with fee; 9:without fee')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def nav(ctx, optid, optlist, optfee, optdebug):
+def nav(ctx, optid, optlist, optrisk, optfee, optdebug):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -64,6 +65,7 @@ def nav(ctx, optid, optlist, optfee, optdebug):
             onlines = None
 
     fees = [int(s.strip()) for s in optfee.split(',')]
+    risks = [int(s.strip()) for s in optrisk.split(',')]
 
     df_online = asset_on_online.load(onlines)
 
@@ -74,10 +76,11 @@ def nav(ctx, optid, optlist, optfee, optdebug):
 
     for fee in fees:
         for _, online in df_online.iterrows():
-            nav_update_alloc(online, fee, optdebug)
+            nav_update_alloc(online, risks, fee, optdebug)
 
-def nav_update_alloc(online, fee, debug):
+def nav_update_alloc(online, risks, fee, debug):
     df_alloc = asset_on_online_alloc.where_online_id(online['globalid'])
+    df_alloc = df_alloc.loc[(df_alloc['on_risk'] * 10).astype(int).isin(risks)]
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),

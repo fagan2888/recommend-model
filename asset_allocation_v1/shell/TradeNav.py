@@ -25,7 +25,7 @@ readline.parse_and_bind('tab: complete')
 def dump_orders(orders, s, die=True):
     if len(orders) > 0:
         # print "\n", s
-        logger.info("order|%10s|%2s|%8s|%10s|%10s|%8s|%10s|%6s|%7s|%10s|%10s|%10s|%10s|%10s" % (
+        logger.info("order|%10s|%2s|%8s|%10s|%10s|%8s|%10s|%8s|%7s|%10s|%10s|%10s|%10s|%10s" % (
             "order_id", 'op', 'fund_id', 'place_date', 'place_time', 'amount', 'share', 'fee', 'nav', 'nav_date', 'ack_date', 'ack_amount', 'ack_share', 'share_id'))
     for o in orders:
         #     （order_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode）
