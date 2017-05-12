@@ -1,6 +1,6 @@
 #coding=utf8
 
-
+import pdb
 import getopt
 import string
 import json
@@ -29,6 +29,7 @@ import FixRisk
 import DFUtil
 import LabelAsset
 import util_numpy as npu
+import TradeNav
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -36,6 +37,7 @@ from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
 from db import *
+from util.xdebug import dd
 
 import traceback, code
 
@@ -315,9 +317,12 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
+@click.option('--fee', 'optfee', default='9', help=u'fee type(8:with fee; 9:without fee')
+@click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def nav(ctx, optid, optlist):
+def nav(ctx, optid, optlist, optrisk, optfee, optdebug):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -328,18 +333,23 @@ def nav(ctx, optid, optlist):
         else:
             portfolios = None
 
+    fees = [int(s.strip()) for s in optfee.split(',')]
+    risks = [int(s.strip()) for s in optrisk.split(',')]
+
     df_portfolio = asset_ra_portfolio.load(portfolios)
 
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_portfolio, headers='keys', tablefmt='psql')
         return 0
-    
-    for _, portfolio in df_portfolio.iterrows():
-        nav_update_alloc(portfolio)
 
-def nav_update_alloc(portfolio):
+    for fee in fees:
+        for _, portfolio in df_portfolio.iterrows():
+            nav_update_alloc(portfolio, risks, fee, optdebug)
+
+def nav_update_alloc(portfolio, risks, fee, debug):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
+    df_alloc = df_alloc.loc[(df_alloc['ra_risk'] * 10).astype(int).isin(risks)]
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
@@ -349,9 +359,9 @@ def nav_update_alloc(portfolio):
     # with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
     #     for _, alloc in :
     #         bar.update(1)
-            nav_update(alloc)
+            nav_update(alloc, fee, debug)
     
-def nav_update(alloc):
+def nav_update(alloc, fee, debug):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
@@ -359,15 +369,35 @@ def nav_update(alloc):
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
     # 计算复合资产净值
-    sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
+    if fee == 8:
+        xtype = 8
+        df_pos = df_pos.loc[df_pos.index.get_level_values(0) >= '2012-07-27']
+        tn = TradeNav.TradeNav(debug=debug)
+        tn.calc(df_pos, 1)
+        sr_nav_portfolio = pd.Series(tn.nav)
+        sr_contrib = pd.concat(tn.contrib)
+    else:
+        xtype = 9
+        sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
+        sr_contrib = pd.Series()
 
     df_result = sr_nav_portfolio.to_frame('ra_nav')
     df_result.index.name = 'ra_date'
+    df_result['ra_type'] = xtype
     df_result['ra_inc'] = df_result['ra_nav'].pct_change().fillna(0.0)
     df_result['ra_portfolio_id'] = alloc['globalid']
-    df_result = df_result.reset_index().set_index(['ra_portfolio_id', 'ra_date'])
+    df_result = df_result.reset_index().set_index(['ra_portfolio_id', 'ra_type', 'ra_date'])
 
-    asset_ra_portfolio_nav.save(alloc_id, df_result)
+    asset_ra_portfolio_nav.save(alloc_id, xtype, df_result)
+
+    if not sr_contrib.empty:
+        df_contrib = sr_contrib.to_frame('ra_return_value')
+        df_contrib.index.names=[u'ra_date', u'ra_return_type', u'ra_fund_id']
+        df_contrib['ra_type'] = xtype
+        df_contrib['ra_portfolio_id'] = alloc_id
+        df_contrib = df_contrib.reset_index().set_index(['ra_portfolio_id', 'ra_type', 'ra_date', 'ra_fund_id', 'ra_return_type'])
+
+        asset_ra_portfolio_contrib.save(alloc_id, xtype, df_contrib)
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')

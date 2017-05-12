@@ -14,6 +14,7 @@ import logging
 import Const
 
 from sqlalchemy import *
+from util.xlist import chunks
 
 from dateutil.parser import parse
 
@@ -98,7 +99,8 @@ def batch(db, table, df_new, df_old, timestamp=True):
 
     if len(df_update) > 50:
         keys = [table.c.get(c) for c in df_old.index.names]
-        table.delete(tuple_(*keys).in_(df_old.index.tolist())).execute()
+        for segment in chunks(df_old.index.tolist(), 500):
+            table.delete(tuple_(*keys).in_(segment)).execute()
         
         if timestamp:
             df_new['updated_at'] = df_new['created_at'] = datetime.now()
@@ -234,29 +236,6 @@ def asset_rm_risk_mgr_signal_load(
 
     return df
     
-
-#
-# base.trade_dates
-#
-def base_trade_dates_load_index(begin_date=None, end_date=None):
-    db = connection('base')
-    metadata = MetaData(bind=db)
-    t1 = Table('trade_dates', metadata, autoload=True)
-
-    columns = [
-        t1.c.td_date,
-        t1.c.td_type,
-    ]
-
-    s = select(columns)
-    if begin_date is not None:
-        s = s.where(t1.c.td_date >= begin_date)
-    if end_date is not None:
-        s = s.where(t1.c.td_date <= end_date)
-        
-    df = pd.read_sql(s, db, index_col = ['td_date'], parse_dates=['td_date'])
-
-    return df.index
 
 def asset_tc_timing_signal_load(timings, begin_date=None, end_date=None):
     db = connection('asset')

@@ -34,7 +34,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database, base_ra_index_nav, base_ra_fund_nav
+from db import *
 
 import traceback, code
 
@@ -69,7 +69,7 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, op
         optenddate = yesterday.strftime("%Y-%m-%d")
 
     if optdatetype == 't':
-        dates = database.base_trade_dates_load_index(optstartdate, optenddate)
+        dates = base_trade_dates.load_index(optstartdate, optenddate)
     else:
         print "not implement!!"
         return 0;

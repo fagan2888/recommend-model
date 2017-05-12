@@ -25,6 +25,7 @@ import CommandReshape
 import CommandRiskManage
 import CommandTiming
 import CommandHighlow
+import CommandOnline
 
 from util import ProgressBar
 
@@ -157,6 +158,7 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandRiskManage.riskmgr)
     roboadvisor.add_command(CommandTiming.timing)
     roboadvisor.add_command(CommandHighlow.highlow)
+    roboadvisor.add_command(CommandOnline.online)
 
     roboadvisor(obj={})  
     
