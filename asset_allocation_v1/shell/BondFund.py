@@ -10,9 +10,9 @@ import utils
 class BondFundFilter(object):
     def __init__(self):
         # 回测开始时间
-        self.test_start = datetime.datetime(2017, 1, 4)
+        self.test_start = datetime.datetime(2017, 3, 3)
         # 回测结束时间
-        self.test_end = datetime.datetime(2017, 1, 4)
+        self.test_end = datetime.datetime(2017, 3, 3)
         # 沪深300指数数据
         sh300 = pd.read_csv("../tmp/000300.csv", index_col=['date'], parse_dates=['date'])
         sh300 = sh300[sh300.index.get_level_values(0) >= self.test_start]
@@ -64,6 +64,7 @@ class BondFundFilter(object):
         print choose_date
         holdings = {}
         self.trade_dates.append(datetime.datetime(2016, 11, 25))
+        print self.trade_dates
         while choose_date <= self.test_end:
             print choose_date
             if choose_date in self.trade_dates:
@@ -251,7 +252,7 @@ class BondFundFilter(object):
         print "filter sharpe ratio before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
         print "filter sharpe ratio after: " + str(len(fund_base_info))
-        fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
+        fund_base_info.to_csv(self.tmp_file, index_label=['SECURITYID'], encoding='utf8')
         #fund_sharpe = pd.DataFrame(fund_sharpe, index=fund_base_info.index)
         #fund_sharpe.to_csv("../tmp/bondfunds_sharpe.csv")
 
@@ -280,7 +281,7 @@ class BondFundFilter(object):
         print "filter stock ratio before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
         print "filter stock ratio after: " + str(len(fund_base_info))
-        fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
+        fund_base_info.to_csv(self.tmp_file, index_label=['SECURITYID'], encoding='utf8')
         return None
     def filter_ins_holding(self):
         fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], \
@@ -312,7 +313,7 @@ class BondFundFilter(object):
         print "filter ins. holding before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
         print "filter ins. holding after: " + str(len(fund_base_info))
-        fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
+        fund_base_info.to_csv(self.tmp_file, index_label=['SECURITYID'], encoding='utf8')
         return None
     def filter_manager(self):
         fund_base_info = pd.read_csv(self.tmp_file, index_col=['SECURITYID'], \
@@ -338,7 +339,7 @@ class BondFundFilter(object):
         print "filter manager before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
         print "filter manager after: " + str(len(fund_base_info))
-        fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
+        fund_base_info.to_csv(self.tmp_file, index_label=['SECURITYID'], encoding='utf8')
         return None
     def filter_volume(self):
         #self.fund_volume = para
@@ -403,7 +404,7 @@ class BondFundFilter(object):
         print "filter volume before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
         print "filter volume after: " + str(len(fund_base_info))
-        fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
+        fund_base_info.to_csv(self.tmp_file, index_label=['SECURITYID'], encoding='utf8')
 
     def filter_share(self):
         """
@@ -446,7 +447,7 @@ class BondFundFilter(object):
         print "filter share before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info.drop(list(delete_list))
         print "filter share after: " + str(len(fund_base_info))
-        fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
+        fund_base_info.to_csv(self.tmp_file, index_label=['SECURITYID'], encoding='utf8')
 
     def filter_types(self, choose_date):
         """
@@ -467,7 +468,7 @@ class BondFundFilter(object):
         print "filter year before: " + str(len(fund_base_info))
         fund_base_info = fund_base_info[fund_base_info['FOUNDDATE'] <= one_year_ago]
         print "filter year after: " + str(len(fund_base_info))
-        fund_base_info.to_csv(self.tmp_file, index_col=['SECURITYID'], encoding='utf8')
+        fund_base_info.to_csv(self.tmp_file, index_label=['SECURITYID'], encoding='utf8')
     def cal_sharpe_nav(self):
         #bindex = pd.read_csv("../tmp/bondindex.csv", index_col=['date'], parse_dates=['date'])
         #start = datetime.datetime(2016, 1, 4)

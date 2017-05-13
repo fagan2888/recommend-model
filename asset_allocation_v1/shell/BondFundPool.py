@@ -31,9 +31,9 @@ def load_save_fund_types():
     df.to_csv('../tmp/fund_types.csv', encoding='utf8')
 
     # 加载基金最低申购金额
-    #sql_fund_buy_amount = 'select fi_code, fi_amount, fi_yingmi_subscribe_status from fund_infos'
-    #df_fund_buy_amount = pd.read_sql(sql_fund_buy_amount, conn_mofang, index_col = 'fi_code')
-    #df_fund_buy_amount.to_csv("../tmp/bondfunds_buy_amount.csv", encoding="utf8")
+    sql_fund_buy_amount = 'select fi_code, fi_amount, fi_yingmi_subscribe_status from fund_infos'
+    df_fund_buy_amount = pd.read_sql(sql_fund_buy_amount, conn_mofang, index_col = 'fi_code')
+    df_fund_buy_amount.to_csv("../tmp/bondfunds_buy_amount.csv", encoding="utf8")
 
 def load_bond_funds(types, ftime, otime):
     """
@@ -42,7 +42,7 @@ def load_bond_funds(types, ftime, otime):
     :param ftime: 筛选时间点
     :return: 返回相应代码基金,以dataframe格式返回
     """
-    # load_save_fund_types()
+    load_save_fund_types()
     end_date_str = '19000101'
     end_date_int = 19000101
     end_date = datetime.datetime(1900, 1, 1)
