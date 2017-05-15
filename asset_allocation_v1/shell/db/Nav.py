@@ -178,7 +178,7 @@ class Nav(object):
                     # print "load nav", asset_id
                     df_nav = df.loc[asset_id].copy()
                     df_nav['ra_nav_date'] = df_nav.index
-                    df_nav = df_nav.reindex(index, method='bfill')
+                    df_nav = df_nav.reindex(index, method='bfill').fillna(method='ffill')
 
                     result[asset_id] = df_nav
 
