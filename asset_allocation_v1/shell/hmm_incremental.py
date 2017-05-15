@@ -28,8 +28,11 @@ from cal_tech_indic import CalTechIndic as CalTec
 class HmmNesc(object):
 
     def __init__(self, globalid, start_date=None, end_date=None):
+        # asset id
         self.ass_id = globalid
+        # 从数据库load原始数据开始时间
         self.start_date = start_date
+        # 从数据库load原始数据结束时间
         self.end_date = end_date
         self.assets = {
             '120000001':'2070000060', #沪深300
@@ -37,7 +40,7 @@ class HmmNesc(object):
             '120000013':'2070006545', #标普500指数
             '120000014':'2070000626', #黄金指数
             '120000015':'2070000076', #恒生指数
-            '120000028':'2070006521', #南华商品指数
+            '120000028':'2070006521', #南华商品指数, 数据库缺数据，无法使用
             '120000029':'2070006789', #标普高盛原油商品指数收益率
         }
         self.feature_selected = {
@@ -51,10 +54,11 @@ class HmmNesc(object):
         }
         # 隐形状态数目
         self.state_num = 5
+        # 所有技术指标
         self.features = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', \
                         'slowkd', 'pct_chg', 'pvt', 'wvad', 'priceosc', \
                         'bias', 'vma', 'vstd', 'dpo']
-        # 模型训练用到的样本数, 149加1即为这个样本数
+        # 模型训练用到的样本数, train_num加1即为这个样本数(只是为方便处理数据)
         self.train_num = 249
         # 训练开始时间
         self.t_start = datetime.datetime(2005, 8, 1)
@@ -81,19 +85,25 @@ class HmmNesc(object):
         # 选取指标中排名前几的特征，2代表选取某一指标中排名前2的特征作为最终使用的特征
         self.rank_num = 2
     def init_data(self):
+        # 得到资产在财汇的secode
         result = self.get_secode()
         if result[0] > 0:
             return result
+        # 得到当前资产已设定的view id
         result = self.get_view_id()
         if result[0] > 0:
             return result
+        # 得到当前资产已有的最新view日期，方便增量更新view
         self.get_view_newest_date()
+        # 从财汇数据库取当前资产原始数据(high, low, close, volume, open, etc.)
         result = self.get_index_origin_data()
         if result[0] > 0:
             return result
+        # 从数据库取交易日日期
         result = self.get_trade_dates()
         if result[0] > 0:
             return result
+        # 计算当前资产技术指标
         result = self.cal_indictor()
         return result
     def get_secode(self):
@@ -129,6 +139,9 @@ class HmmNesc(object):
             return (4, 'has no data for trade dates')
         return (0, 'get data sucess')
     def cal_indictor(self):
+        """
+        Usage:计算周数据技术指标
+        """
         cal_tec_obj = CalTec(self.ori_data, self.trade_dates, data_type=2)
         try:
             self.ori_data = cal_tec_obj.get_indic()
@@ -426,7 +439,7 @@ class HmmNesc(object):
         trans_mat_today = model.transmat_[states[-1]]
         mean_today = model.means_[state_today, 1]
         mean_rank_today = sum(model.means_[:, 1] < mean_today)
-        
+
         next_day_state = np.argmax(trans_mat_today)
         next_day_pro = trans_mat_today[next_day_state]
         next_day_mean = model.means_[next_day_state, 1]
@@ -448,13 +461,16 @@ class HmmNesc(object):
         """
         feature_predict = self.feature_selected[self.ass_id]
         all_dates = self.ori_data.index
-        if self.view_newest_date == None:
+        ###
+        ### p_s_date:每次训练开始时间,p_in_date:每次训练结束时间
+        ### p_e_date:整个数据最后日期
+        if self.view_newest_date == None:# 当前资产在数据库没有view
             p_s_date = all_dates[0]
             p_in_date = all_dates[self.train_num]
             p_e_date = all_dates[-1]
             p_s_num = 0
             p_in_num = self.train_num
-        else:
+        else: # 当前资产在数据库有view
             newest_date_pos = np.argwhere(all_dates == self.view_newest_date)[0,0]
             if newest_date_pos == len(all_dates) - 1:
                 return (0, "newest view in database, no need to update")
@@ -463,7 +479,9 @@ class HmmNesc(object):
             p_e_date = all_dates[-1]
             p_s_num = newest_date_pos - self.train_num
             p_in_num = newest_date_pos + 1
+        # 预测的涨跌幅
         means_arr = []
+        # 需要预测的数据
         all_data = self.ori_data[p_in_date:]
         while p_in_date <= p_e_date:
             p_s_num += 1
@@ -475,7 +493,9 @@ class HmmNesc(object):
             except Exception, e:
                 print e
                 return (1, "hmm training fail")
+            # 以当前状态的转移状态的涨跌幅均值乘以转移概率得到的预测涨跌幅
             #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            # 以状态平均涨跌幅划分状态后预测的状态的涨跌幅均值作为预测涨跌幅
             means = HmmNesc.cal_stats_pro(model, states, ratios)
             means_arr.append(means)
             if p_in_date != p_e_date:
@@ -483,7 +503,6 @@ class HmmNesc(object):
                 p_in_date = all_dates[p_in_num]
             else:
                 p_in_date += datetime.timedelta(days=1)
-        ####### state statistic
         union_data_tmp = {}
         union_data_tmp["means"] = means_arr
         union_data_tmp["dates"] = all_data.index
