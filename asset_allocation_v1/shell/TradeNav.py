@@ -511,8 +511,8 @@ class TradeNav(object):
             #
             df = self.df_share.loc[[fund_id]]
             df['share_bonusing'] = df['share'] + df['share_buying']
-            if dt.strftime("%Y-%m-%d") == '2013-05-16':
-                pdb.set_trace()
+            # if dt.strftime("%Y-%m-%d") == '2013-05-16':
+            #     pdb.set_trace()
         
             #
             # 生成分红订单，记录分红操作
@@ -858,6 +858,7 @@ class TradeNav(object):
                     continue
                 sr_buy = (sr_ratio * v['amount'])
 
+                print df_flying
                 for fund_id, amount in sr_buy.iteritems():
                     order = self.make_buy_order(day, fund_id, amount)
                     result.append(order)
@@ -922,7 +923,11 @@ class TradeNav(object):
 
         df_nav = self.dt_nav[fund_id]
 
-        return df_nav.loc[day.date(), ['ra_nav', 'ra_nav_date']]
+        date = pd.to_datetime(day.date())
+        max_date = df_nav.index.max() 
+        if date > max_date:
+            date = max_date
+        return df_nav.loc[date, ['ra_nav', 'ra_nav_date']]
 
     def get_redeem_fee(self, dt, fund_id, buy_date, amount):
         '''
@@ -978,6 +983,8 @@ class TradeNav(object):
     def make_buy_order(self, dt, fund_id, amount):
         # if amount < 0.0000001:
         #     pdb.set_trace()
+        if dt.strftime("%Y-%m-%d") == '2029-01-01':
+            pdb.set_trace()
         (nav, nav_date) = self.get_tdate_and_nav(fund_id, dt)
 
         fee = self.get_buy_fee(dt, fund_id, amount)
@@ -1045,7 +1052,12 @@ class TradeNav(object):
         if np.isnan(n): # 默认为2
             n = 2
 
-        ack_date = self.df_t_plus_n.at[buy_date, "T+%d" % int(n)]
+        date = pd.to_datetime(buy_date.date())
+        max_date = self.df_t_plus_n.index.max() 
+        if date > max_date:
+            date = max_date
+        print date
+        ack_date = self.df_t_plus_n.at[date, "T+%d" % int(n)]
 
         return ack_date
 

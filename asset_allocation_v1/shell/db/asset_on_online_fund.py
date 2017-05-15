@@ -79,6 +79,7 @@ def load_fund_pos(gid):
     #
     df_result = df.groupby(level=['on_date', 'on_fund_id']).sum()
 
+    print df_result
     df_result = df_result.loc[df_result['on_fund_ratio'] > 0]
 
     # df_result = df_result.unstack().fillna(0.0)
