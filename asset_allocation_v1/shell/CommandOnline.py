@@ -49,11 +49,13 @@ def online(ctx, optid, opttype):
 @online.command()
 @click.option('--id', 'optid', help=u'ids of online to update')
 @click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
-@click.option('--fee', 'optfee', default='9', help=u'fee type(8:with fee; 9:without fee')
+@click.option('--type', 'opttype', default='9', help=u'type type(8:with fee; 9:without fee')
+@click.option('--fee/--no-fee', 'optfee', default=True, help=u'specify with/without fee for type 8')
+@click.option('--t0/--no-t0', 'optt0', default=False, help=u'specify use t+0 or not for type 8')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def nav(ctx, optid, optlist, optrisk, optfee, optdebug):
+def nav(ctx, optid, optlist, optrisk, opttype, optdebug, optfee, optt0):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -64,7 +66,7 @@ def nav(ctx, optid, optlist, optrisk, optfee, optdebug):
         else:
             onlines = None
 
-    fees = [int(s.strip()) for s in optfee.split(',')]
+    types = [int(s.strip()) for s in opttype.split(',')]
     risks = [int(s.strip()) for s in optrisk.split(',')]
 
     df_online = asset_on_online.load(onlines)
@@ -74,11 +76,11 @@ def nav(ctx, optid, optlist, optrisk, optfee, optdebug):
         print tabulate(df_online, headers='keys', tablefmt='psql')
         return 0
 
-    for fee in fees:
+    for xtype in types:
         for _, online in df_online.iterrows():
-            nav_update_alloc(online, risks, fee, optdebug)
+            nav_update_alloc(online, risks, xtype, optdebug, optfee, optt0)
 
-def nav_update_alloc(online, risks, fee, debug):
+def nav_update_alloc(online, risks, xtype, debug, optfee, optt0):
     df_alloc = asset_on_online_alloc.where_online_id(online['globalid'])
     df_alloc = df_alloc.loc[(df_alloc['on_risk'] * 10).astype(int).isin(risks)]
     
@@ -90,9 +92,9 @@ def nav_update_alloc(online, risks, fee, debug):
     # with click.progressbar(length=len(df_alloc), label='update nav %d' % (online['globalid'])) as bar:
     #     for _, alloc in :
     #         bar.update(1)
-            nav_update(alloc, fee, debug)
+            nav_update(alloc, xtype, debug, optfee, optt0)
     
-def nav_update(alloc, fee, debug):
+def nav_update(alloc, xtype, debug, optfee, optt0):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_on_online_fund.load_fund_pos(alloc_id)
@@ -107,10 +109,10 @@ def nav_update(alloc, fee, debug):
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
     # 计算复合资产净值
-    if fee == 8:
+    if xtype == 8:
         xtype = 8
         df_pos = df_pos.loc[df_pos.index.get_level_values(0) >= '2012-07-27']
-        tn = TradeNav.TradeNav(debug=debug)
+        tn = TradeNav.TradeNav(debug=debug, optfee=optfee, optt0=optt0)
         # tn.calc(df_pos, 100000)
         tn.calc(df_pos, 1)
         sr_nav_online = pd.Series(tn.nav)
