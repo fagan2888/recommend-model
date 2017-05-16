@@ -365,6 +365,9 @@ def nav_update(alloc, fee, debug):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
+    if df_pos.empty:
+        click.echo(click.style("\nswarning: empty df_pos for alloc %d, skiped!" % (alloc_id), fg='yellow'))
+        return
     
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
