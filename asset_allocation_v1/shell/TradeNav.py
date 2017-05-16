@@ -70,10 +70,12 @@ def dump_event(x, e, die=False):
         
 class TradeNav(object):
     
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, optfee=True, optt0=False):
 
         # 调试模式 会记录整个计算的上下文，默认为关闭
         self.debug = debug
+        self.optfee = optfee
+        self.optt0 = optt0
 
         #
         # 状态变量：用户当前持仓: DataFrame
@@ -950,7 +952,9 @@ class TradeNav(object):
             赎回费用=赎回总金额×赎回费率
 
         '''
-        return 0
+        if self.optfee == False:
+            return 0
+        
         if fund_id not in self.df_redeem_fee.index:
             return 0
         
@@ -979,11 +983,14 @@ class TradeNav(object):
         #   df_ack 记录了每个基金的到账日是T+n；
         #   df_t_plus_n 记录了每个交易日的t+n是哪一天
         #
-        n = 3 # 默认t+3到账
-        if fund_id in self.df_ack.index:
-            n = self.df_ack.at[fund_id, 'redeem']
+        if self.optt0:
+            n = 0
         else:
-            print "WARN: missing yingmi_to_account_time, use default(t+3): fund_id: %d" % fund_id
+            n = 3 # 默认t+3到账
+            if fund_id in self.df_ack.index:
+                n = self.df_ack.at[fund_id, 'redeem']
+            else:
+                print "WARN: missing yingmi_to_account_time, use default(t+3): fund_id: %d" % fund_id
 
         ack_date = self.df_t_plus_n.at[tdate, "T+%d" % n]
 
@@ -1029,7 +1036,9 @@ class TradeNav(object):
             申购费用=申购金额-净申购金额
 
         '''
-        return 0
+        if self.optfee == False:
+            return 0
+        
         if fund_id not in self.df_buy_fee.index:
             return 0
         
@@ -1053,14 +1062,17 @@ class TradeNav(object):
         #   df_ack 记录了每个基金的可赎回是T+n；
         #   df_t_plus_n 记录了每个交易日的t+n是哪一天
         #
-        n = 2 # 默认t+2到账
-        if fund_id in self.df_ack.index:
-            n = self.df_ack.at[fund_id, 'buy']
+        if self.optt0:
+            n = 0
         else:
-            print "WARN: missing yingmi_to_confirm_time, use default(t+2): fund_id: %d" % fund_id
+            n = 2 # 默认t+2到账
+            if fund_id in self.df_ack.index:
+                n = self.df_ack.at[fund_id, 'buy']
+            else:
+                print "WARN: missing yingmi_to_confirm_time, use default(t+2): fund_id: %d" % fund_id
 
-        if np.isnan(n): # 默认为2
-            n = 2
+            if np.isnan(n): # 默认为2
+                n = 2
 
         date = pd.to_datetime(buy_date.date())
         max_date = self.df_t_plus_n.index.max() 
