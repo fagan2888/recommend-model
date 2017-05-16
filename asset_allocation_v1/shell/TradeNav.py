@@ -254,7 +254,7 @@ class TradeNav(object):
         max_n = int(max(self.df_ack['buy'].max(), self.df_ack['redeem'].max()))
         dates = base_trade_dates.load_index(sdate, edate)
         self.df_t_plus_n = pd.DataFrame(dates, index=dates, columns=["td_date"])
-        for i in xrange(1, max_n + 1):
+        for i in xrange(0, max_n + 1):
             self.df_t_plus_n["T+%d" % i] = self.df_t_plus_n['td_date'].shift(-i)
         self.df_t_plus_n = self.df_t_plus_n.drop('td_date', axis=1)
         self.df_t_plus_n.fillna(pd.to_datetime('2029-01-01'), inplace=True)
@@ -434,7 +434,12 @@ class TradeNav(object):
             #
             # 生成申购确认事件
             #
-            ev2 = (argv['ack_date'] + timedelta(hours=2), 11, order_id, fund_id, argv)
+            if argv['ack_date'].date() == dt.date():
+                hours = 19
+            else:
+                hours = 2
+                
+            ev2 = (argv['ack_date'] + timedelta(hours=hours), 11, order_id, fund_id, argv)
             result.append(ev2)
 
         elif op == 11:
@@ -461,7 +466,12 @@ class TradeNav(object):
             #
             # 生成赎回确认事件
             #
-            ev2 = (argv['ack_date'] + timedelta(hours=2), 12, order_id, fund_id, argv)
+            if argv['ack_date'].date() == dt.date():
+                hours = 19
+            else:
+                hours = 2
+                
+            ev2 = (argv['ack_date'] + timedelta(hours=hours), 12, order_id, fund_id, argv)
             result.append(ev2)
 
         elif op == 12:
@@ -749,8 +759,8 @@ class TradeNav(object):
         df = df_src.merge(df_dst, how='outer', left_index=True, right_index=True).fillna(0)
         df['diff_ratio'] = df['ra_fund_ratio'] - df['src_ratio']
         df['diff_amount'] = total * df['diff_ratio']
-        # if dt.strftime("%Y-%m-%d") == '2017-03-24':
-        #     pdb.set_trace()
+        if dt.strftime("%Y-%m-%d") == '2016-09-12':
+            pdb.set_trace()
 
         #
         # 生成调仓订单。 具体地，
@@ -858,7 +868,6 @@ class TradeNav(object):
                     continue
                 sr_buy = (sr_ratio * v['amount'])
 
-                print df_flying
                 for fund_id, amount in sr_buy.iteritems():
                     order = self.make_buy_order(day, fund_id, amount)
                     result.append(order)
@@ -941,6 +950,7 @@ class TradeNav(object):
             赎回费用=赎回总金额×赎回费率
 
         '''
+        return 0
         if fund_id not in self.df_redeem_fee.index:
             return 0
         
@@ -975,7 +985,6 @@ class TradeNav(object):
         else:
             print "WARN: missing yingmi_to_account_time, use default(t+3): fund_id: %d" % fund_id
 
-            
         ack_date = self.df_t_plus_n.at[tdate, "T+%d" % n]
 
         return ack_date
@@ -983,8 +992,8 @@ class TradeNav(object):
     def make_buy_order(self, dt, fund_id, amount):
         # if amount < 0.0000001:
         #     pdb.set_trace()
-        if dt.strftime("%Y-%m-%d") == '2029-01-01':
-            pdb.set_trace()
+        # if dt.strftime("%Y-%m-%d") == '2029-01-01':
+        #     pdb.set_trace()
         (nav, nav_date) = self.get_tdate_and_nav(fund_id, dt)
 
         fee = self.get_buy_fee(dt, fund_id, amount)
@@ -1020,6 +1029,7 @@ class TradeNav(object):
             申购费用=申购金额-净申购金额
 
         '''
+        return 0
         if fund_id not in self.df_buy_fee.index:
             return 0
         
@@ -1056,7 +1066,7 @@ class TradeNav(object):
         max_date = self.df_t_plus_n.index.max() 
         if date > max_date:
             date = max_date
-        print date
+
         ack_date = self.df_t_plus_n.at[date, "T+%d" % int(n)]
 
         return ack_date

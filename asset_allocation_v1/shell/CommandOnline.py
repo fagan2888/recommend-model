@@ -96,8 +96,13 @@ def nav_update(alloc, fee, debug):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_on_online_fund.load_fund_pos(alloc_id)
+    if df_pos.empty:
+         click.echo(click.style("\nswarning: empty df_pos for alloc %d, skiped!" % (alloc_id), fg='yellow'))
+         return 
+
     df_pos.index.names=['ra_date', 'ra_fund_id']
     df_pos = df_pos.rename(columns={'on_fund_ratio': 'ra_fund_ratio'})
+
     
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
@@ -106,6 +111,7 @@ def nav_update(alloc, fee, debug):
         xtype = 8
         df_pos = df_pos.loc[df_pos.index.get_level_values(0) >= '2012-07-27']
         tn = TradeNav.TradeNav(debug=debug)
+        # tn.calc(df_pos, 100000)
         tn.calc(df_pos, 1)
         sr_nav_online = pd.Series(tn.nav)
         sr_contrib = pd.concat(tn.contrib)
