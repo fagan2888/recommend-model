@@ -24,6 +24,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import *
 from util import xdict
+from util.xdebug import dd
 
 import traceback, code
 
@@ -48,7 +49,7 @@ def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, 
         # click.echo('I was invoked without subcommand')
         if optfull is False:
             # ctx.obj['highlow'] = 70032880
-            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
+            ctx.invoke(allocate, optid=int(optid), optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -83,6 +84,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     #
     # 处理id参数
     #
+    today = datetime.now()
     if optid is not None:
         #
         # 检查id是否存在
@@ -99,7 +101,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         #
         # 自动生成id
         #
-        today = datetime.now()
         prefix = '70' + today.strftime("%m%d");
         between_min, between_max = ('%s00' % (prefix), '%s99' % (prefix))
 
@@ -150,7 +151,9 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     df_asset['mz_pool_id'] = pd.Series(dt_pool)
 
     if 11310100 not in df_asset.index:
-        df_asset.loc[11310100] = (0, u'货币', 31, 0, 11310100)
+        df_asset.loc[11310100] = (0, u'货币(低)', 31, 0, 11310100)
+    if 11310101 not in df_asset.index:
+        df_asset.loc[11310101] = (0, u'货币(高)', 31, 0, 11310101)
     
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -215,33 +218,46 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     #
 
     for risk in [int(x) for x in optrisk.split(',')]:
-        data = {}
         highlow_id = optid + (risk % 10)
         name = optname + u"-等级%d" % (risk)
         # 配置比例
         ratio_h  = (risk - 1) * 1.0 / 9
         ratio_l  = 1 - ratio_h
 
+        data_h = {}
         if not df_high.empty:
             df_high = df_high.reindex(index, method='pad')
             df_high_riskmgr = df_high_riskmgr.reindex(index, method='pad')
             for column in df_high.columns:
-                data[column] = df_high[column] * df_high_riskmgr[column] * ratio_h
+                data_h[column] = df_high[column] * df_high_riskmgr[column] * ratio_h
+        df_h = pd.DataFrame(data_h)
 
+        data_l = {}
         if not df_low.empty:
             df_low = df_low.reindex(index, method='pad')
             df_low_riskmgr = df_low_riskmgr.reindex(index, method='pad')
             for column in df_low.columns:
-                data[column] = df_low[column] * df_low_riskmgr[column] * ratio_l
-        df = pd.DataFrame(data)
-
+                data_l[column] = df_low[column] * df_low_riskmgr[column] * ratio_l
+        df_l = pd.DataFrame(data_l)
         #
         # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
         # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
         # 天的持仓100%， 如果因为风控空仓，需要用货币补足。
         #
-        if 11310100 not in df.columns:
-            df[11310100] = 1 - df.sum(axis=1)
+        if ratio_h > 0:
+            sr = ratio_h - df_h.sum(axis=1)
+            if (sr > 0.000099).any():
+                df_h[11310101] = sr
+
+        if ratio_l > 0:
+            sr = ratio_l - df_l.sum(axis=1)
+            if (sr > 0.000099).any():
+                df_h[11310100] = sr
+        #
+        # 合并持仓
+        #
+        df = pd.concat([df_h, df_l], axis=1)
+
         #
         # 导入数据: highlow_alloc
         #
@@ -257,7 +273,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         df = df.round(4)             # 四舍五入到万分位
         df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
         # print df.head()
-        # df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+        df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
         # df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
         # if turnover >= 0.01:
         #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
@@ -304,6 +320,9 @@ def load_riskmgr(assets, reindex=None):
 
     df = pd.DataFrame(data, index=index).fillna(method='pad')
     df.columns.name = 'mz_asset_id'
+
+    if reindex is not None:
+        df = df[reindex.min():]
 
     return df
 

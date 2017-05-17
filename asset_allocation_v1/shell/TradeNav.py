@@ -761,8 +761,8 @@ class TradeNav(object):
         df = df_src.merge(df_dst, how='outer', left_index=True, right_index=True).fillna(0)
         df['diff_ratio'] = df['ra_fund_ratio'] - df['src_ratio']
         df['diff_amount'] = total * df['diff_ratio']
-        if dt.strftime("%Y-%m-%d") == '2016-09-12':
-            pdb.set_trace()
+        # if dt.strftime("%Y-%m-%d") == '2016-09-12':
+        #     pdb.set_trace()
 
         #
         # 生成调仓订单。 具体地，
