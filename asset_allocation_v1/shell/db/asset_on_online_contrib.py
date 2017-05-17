@@ -1,5 +1,6 @@
 #coding=utf8
 
+import pdb
 from sqlalchemy import MetaData, Table, select, func, literal_column
 # import string
 # from datetime import datetime, timedelta
@@ -59,4 +60,5 @@ def save(gid, xtype, df):
     # 更新数据库
     # print df_new.head()
     # print df_old.head()
+    # pdb.set_trace()
     database.batch(db, t2, df, df_old, timestamp=True)
