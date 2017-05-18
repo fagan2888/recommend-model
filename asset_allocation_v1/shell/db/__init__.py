@@ -34,6 +34,7 @@ import asset_rm_risk_mgr
 import asset_rs_reshape
 import asset_rs_reshape_nav
 import asset_rs_reshape_pos
+import asset_tc_timing
 import asset_tc_timing_signal
 import base_ra_fund
 import base_ra_fund_bonus
