@@ -308,7 +308,17 @@ def load_riskmgr(assets, reindex=None):
     data = {}
     index = reindex.copy()
     for asset_id in assets:
-        df_riskmgr = asset_rm_riskmgr.where_asset_id(asset_id)
+        #
+        # 这里打个小补丁，为了兼容先容0424的历史
+        #
+        if asset_id == 19220121:
+            riskmgr_asset_id = 120000010
+        elif asset_id == 19220122:
+            riskmgr_asset_id = 120000011
+        else:
+            riskmgr_asset_id = asset_id
+            
+        df_riskmgr = asset_rm_riskmgr.where_asset_id(riskmgr_asset_id)
         if df_riskmgr.empty:
             sr = pd.Series(1.0, index=reindex)
             sr.index.name = 'mz_date'
