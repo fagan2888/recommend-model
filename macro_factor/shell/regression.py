@@ -6,6 +6,20 @@ import numpy as np
 import statsmodels.api as sm
 
 
+def resample_delay_process(factor, index_price, resample, factor_delay):
+
+	index_price = index_price.resample(resample, how = 'last')
+	factor = factor.resample(resample, how = 'last')
+	factor = factor.shift(factor_delay)
+
+	factor = factor.dropna()
+
+	index = index_price.index & factor.index
+	factor = factor.loc[index]
+	index_price = index_price.loc[index]
+	
+	return factor, index_price
+
 
 if __name__ == '__main__':
 
@@ -30,17 +44,9 @@ if __name__ == '__main__':
 	town_unemployment_rate = macro_economic_df['town_unemployment_rate'] / 100.0
 	zz1000 =  macro_index_df['000852.SH'].fillna(method = 'pad')
 
-	town_unemployment_rate = town_unemployment_rate.dropna()
-	zz1000 = zz1000.dropna()
-	zz1000 = zz1000.resample('M', how = 'last')
-	town_unemployment_rate = town_unemployment_rate.reindex(zz1000.index)
-	town_unemployment_rate = town_unemployment_rate.shift(1)
-	town_unemployment_rate = town_unemployment_rate.dropna()
-
-	index = town_unemployment_rate.index & zz1000.index
-	town_unemployment_rate = town_unemployment_rate.loc[index]
-	zz1000 = zz1000.loc[index]
-
+	town_unemployment_rate, zz1000 = resample_delay_process(town_unemployment_rate, zz1000, 'M', 1)
+	#print town_unemployment_rate
+	#print zz1000
 
 	zz1000 = zz1000.shift(-1).dropna()
 	zz1000_r = zz1000.pct_change().dropna()
