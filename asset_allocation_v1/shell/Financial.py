@@ -14,8 +14,8 @@ import cvxopt
 from cvxopt import matrix, solvers
 from numpy import isnan
 from scipy import linalg
-import pylab
-import matplotlib.pyplot as plt
+#import pylab
+#import matplotlib.pyplot as plt
 
 
 def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
