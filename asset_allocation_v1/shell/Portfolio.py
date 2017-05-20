@@ -232,6 +232,8 @@ def m_markowitz(queue, random_index, df_inc, bound):
 
 def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
 
+    os.environ['OMP_NUM_THREADS'] = '1'
+
     if cpu_count == 0:
         count = multiprocessing.cpu_count()
         cpu_count = count if count > 0 else 1
