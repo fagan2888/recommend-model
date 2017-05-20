@@ -49,7 +49,11 @@ def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, 
         # click.echo('I was invoked without subcommand')
         if optfull is False:
             # ctx.obj['highlow'] = 70032880
-            ctx.invoke(allocate, optid=int(optid), optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
+            if optid is not None:
+                tmpid = int(optid)
+            else:
+                tmpid = optid
+            ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
