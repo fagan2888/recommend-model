@@ -37,10 +37,15 @@ if __name__ == '__main__':
 
 	macro_index_df = pd.read_csv('./data/macro_index.csv', index_col = ['date'], parse_dates = ['date'])
 
-	#print macro_index_df
+	#print macro_index_df.columns
 	#print monetrary_foreign_df
 	#print macro_inflation_df
+	#print macro_economic_df.columns
+	col = macro_economic_df.columns[3]
+	print macro_economic_df[col].dropna()
 
+
+	'''
 	town_unemployment_rate = macro_economic_df['town_unemployment_rate'] / 100.0
 	zz1000 =  macro_index_df['000852.SH'].fillna(method = 'pad')
 
@@ -67,3 +72,4 @@ if __name__ == '__main__':
 	model = sm.OLS(y, X)
 	result = model.fit()
 	print result.summary()
+	'''
