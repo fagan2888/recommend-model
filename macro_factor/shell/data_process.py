@@ -31,23 +31,35 @@ if __name__ == '__main__':
 	#按月resample
 	df = df.resample('M').last()
 
+	#处理季度累计数据
+	tmp_df = df['urban_income'].copy()
+	tmp_df = tmp_df.dropna()
+	tmp_df = tmp_df.groupby(by = tmp_df.index.year).apply(lambda x : x.rolling(window = 2, min_periods = 1).apply(lambda x : x[1] - x[0] if len(x) >= 2 else x[0]))
+	tmp_df = tmp_df.reindex(df.index)
+	df['urban_income'] = tmp_df
+
 	#做线性插值
-	#df['town_unemployment_rate'] = df['town_unemployment_rate'].interpolate()
-	#df['town_unemployment_insurance_num'] = df['town_unemployment_insurance_num'].interpolate()
-	#df['urban_income'] = df['urban_income'].interpolate()
-	#df['gdp_yoy'] = df['gdp_yoy'].interpolate()
-	#df['payment_balance_budget'] = df['payment_balance_budget'].interpolate()
+	df['town_unemployment_rate'] = df['town_unemployment_rate'].interpolate()
+	df['town_unemployment_insurance_num'] = df['town_unemployment_insurance_num'].interpolate()
+	df['urban_income'] = df['urban_income'].interpolate()
+	df['gdp_yoy'] = df['gdp_yoy'].interpolate()
+	df['payment_balance_budget'] = df['payment_balance_budget'].interpolate()
 
 
 	#更改同比计数方式
 	df['cgpi_yoy'] = df['cgpi_yoy'] - 100
 
+	#更改数据类型
+	df.astype({'industrial_value_added_yoy' : float, 'payment_balance_budget' : float})
+	
+	'''
+	计算延迟期数
 	df = df.iloc[-4:]
 	#print df
 	for col in df.columns:
 		print "'" + col + "':", 4 - len(df[col].dropna())
+	'''
 
 	#保存文件
+	df.index.name = 'date'
 	df.to_csv('./data/macro_factor_index.csv')
-
-	#print df
