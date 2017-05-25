@@ -268,6 +268,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 120000036:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #中小板指数
                 120000018:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #创业板指数
                 120000029:  {'sum1': 0,    'sum2' : 0,  'upper': 1.0, 'lower': 0.0}, #南华商品指数
+                120000040:  {'sum1': 0,    'sum2' : 0,  'upper': 1.0, 'lower': 0.0}, #房地产指数
 
             }
             if optname is None:

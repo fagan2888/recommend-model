@@ -327,6 +327,41 @@ def jensen(portfolio, market, rf):
 
     return alpha
 
+def treynor(portfolio, market, rf):
+
+    p = []
+    m = []
+    for i in range(0, len(portfolio)):
+        #print portfolio[i], market[i]
+        p.append(portfolio[i] - rf)
+        m.append(market[i] - rf)
+
+    p = np.array(p)
+    m = np.array(m)
+
+    clf       = linear_model.LinearRegression()
+    clf.fit(m.reshape(len(m),1), p.reshape(len(p), 1))
+    #clf.fit(m, p)
+    alpha = clf.intercept_[0]
+    beta  = clf.coef_[0]
+
+    annual_return = (np.mean(p) - rf) * 250
+    #if np.isnan(alpha) or np.isinf(alpha):
+    #    alpha = 0.0
+
+    return annual_return / beta
+
+
+def ir(portfolio, market, rf):
+
+    p = []
+    m = []
+    diff_r = []
+
+    for i in range(0, len(portfolio)):
+        diff_r.append(portfolio[i] - market[i])
+
+    return np.mean(diff_r) / np.std(diff_r)
 
 
 #sharp
@@ -337,6 +372,12 @@ def sharp(portfolio, rf):
     if np.isnan(sharpe) or np.isinf(sharpe):
         sharpe = 0.0
     return    sharpe
+
+
+#def calmar_ratio(portfolio, rf):
+
+
+
 
 
 #sharp
