@@ -40,6 +40,33 @@ logger = logging.getLogger(__name__)
 
 #     return df
 
+def load_series(gid, xtype, reindex=None, begin_date=None, end_date=None):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_portfolio_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date,
+        t1.c.ra_nav,
+    ]
+
+    s = select(columns)
+
+    s = s.where(t1.c.ra_portfolio_id == gid).where(t1.c.ra_type == xtype)
+
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+    
+    df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+
+    return df['ra_nav']
+
+
 def save(gid, xtype, df):
     fmt_columns = ['ra_nav', 'ra_inc']
     fmt_precision = 6
