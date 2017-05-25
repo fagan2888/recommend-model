@@ -35,6 +35,7 @@ from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
 from db import *
+from util.xdebug import dd
 
 import traceback, code
 
@@ -54,6 +55,7 @@ def export(ctx):
 @click.option('--fund', 'optfund', help=u'fund to export (e.g. 20001,2002)')
 @click.option('--pool', 'optpool', help=u'fund pool to export (e.g. 921001:0,92101:11)')
 @click.option('--online', 'optonline', help=u'online model')
+@click.option('--portfolio', 'optportfolio', help=u'portfolio to export(e.g. 80052400:0:8)')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--start-date', 'optstartdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'optenddate', help=u'end date to calc')
@@ -61,7 +63,7 @@ def export(ctx):
 @click.option('--datetype', 'optdatetype', type=click.Choice(['t', 'n']), default='t', help=u'date type(t: trade date; n: nature date)')
 @click.option('--output', '-o', type=click.Path(), help=u'output file')
 @click.pass_context
-def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, optenddate, optlist, optdatetype, optonline, output):
+def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, optenddate, optlist, optdatetype, optonline, optportfolio, output):
     '''run constant risk model
     '''    
     if not optenddate:
@@ -111,6 +113,13 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, op
         for e in allocs:
             (alloc, xtype) = [s.strip() for s in e.split(':')]
             data["online:%s" % (e)] = database.asset_risk_asset_allocation_nav_load_series(
+                alloc, xtype, reindex=dates, begin_date=optstartdate, end_date=optenddate)
+
+    if optportfolio is not None:
+        allocs = [s.strip() for s in optportfolio.split(',')]
+        for e in allocs:
+            (alloc, xtype) = [s.strip() for s in e.split(':')]
+            data[e] = asset_ra_portfolio_nav.load_series(
                 alloc, xtype, reindex=dates, begin_date=optstartdate, end_date=optenddate)
 
     df_result = pd.concat(data, axis=1)
