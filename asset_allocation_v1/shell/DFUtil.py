@@ -236,6 +236,78 @@ def filter_by_turnover(df, turnover):
                 pass
     return pd.DataFrame(result).T
 
+def filter_by_rule(df, turnover):
+
+
+    high_pool_ids = [11110100, 11110200, 11120200, 11120500, 11400100, 11310101]
+    low_pool_ids = [11210100, 11210200, 11310100]
+    pool_ids = high_pool_ids + low_pool_ids
+
+    origin_df = df
+    df = df['ra_fund_ratio']
+
+    data1 = {}
+    data2 = {}
+    for k, v in df.groupby(level = 0):
+
+        fund_ids_str = ','.join([str(fund_id) for fund_id in v.index.get_level_values(2).unique().sort_values()])
+
+        high_v = v[v.index.get_level_values(1).isin(high_pool_ids)]
+        low_v = v[v.index.get_level_values(1).isin(low_pool_ids)]
+        high_ratio = high_v.fillna(0.0).sum()
+
+        v1 = v.groupby(level = 1).sum()
+        v1 = v1.reindex(pool_ids).fillna(0.0)
+
+        data1[k] = v1
+        data2[k] = {'high_ratio' : high_ratio, 'fund': fund_ids_str}
+
+    new_df1 = pd.DataFrame(data1).T
+    new_df2 = pd.DataFrame(data2).T
+
+    tmp_df = pd.concat([new_df1, new_df2], axis = 1)
+
+    result_dates = []
+    sr_last=None
+    for k, v in tmp_df.iterrows():
+        vv = v.fillna(0)
+        if sr_last is None:
+            result_dates.append(k)
+            sr_last = vv
+        else:
+            if abs(vv['high_ratio'] - sr_last['high_ratio']) > 0.01:
+                result_dates.append(k)
+                sr_last = vv
+            else:
+                high_pos = vv.loc[high_pool_ids]
+                last_high_pos = sr_last.loc[high_pool_ids]
+                low_pos = vv.loc[low_pool_ids]
+                last_low_pos = sr_last.loc[low_pool_ids]
+
+                if high_pos.sum() > 0.0002:
+                    high_pos = high_pos / high_pos.sum()
+                if last_high_pos.sum() > 0.0002:
+                    last_high_pos = last_high_pos / last_high_pos.sum()
+                if low_pos.sum() > 0.0002:
+                    low_pos = low_pos / low_pos.sum()
+                if last_low_pos.sum() > 0.0002:
+                    last_low_pos = last_low_pos / last_low_pos.sum()
+
+                high_pos_change_ratio = abs(high_pos - last_high_pos).sum()
+                low_pos_change_ratio = abs(low_pos - last_low_pos).sum()
+
+                if high_pos_change_ratio >= turnover or low_pos_change_ratio >= turnover:
+                    result_dates.append(k)
+                    sr_last = vv
+                elif last_high_pos[high_pos <= 0.01].max() >= 0.05 or last_low_pos[low_pos <= 0.01].max() >= 0.05:
+                    result_dates.append(k)
+                    sr_last = vv
+
+
+    df = origin_df.loc[result_dates]
+    return df
+
+
 def portfolio_import(df):
     pass;
 
