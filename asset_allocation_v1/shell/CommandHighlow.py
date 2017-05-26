@@ -278,9 +278,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
         # print df.head()
         df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
-        # df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
-        # if turnover >= 0.01:
-        #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
+        #df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
+        #turnover = 0.2
+        #if turnover >= 0.01:
+        #    df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
 
         df.index.name = 'mz_date'
         df.columns.name='mz_asset_id'
@@ -319,9 +320,18 @@ def load_riskmgr(assets, reindex=None):
             riskmgr_asset_id = 120000010
         elif asset_id == 19220122:
             riskmgr_asset_id = 120000011
+        elif asset_id == 120000029:
+            riskmgr_asset_id = 120000029
+        elif asset_id == 120000037:
+            riskmgr_asset_id = 120000037
+        elif asset_id == 120000038:
+            riskmgr_asset_id = 120000038
+        elif asset_id == 120000010:
+            riskmgr_asset_id = 120000010
         else:
-            riskmgr_asset_id = asset_id
-            
+            #riskmgr_asset_id = asset_id
+            riskmgr_asset_id = 120000001
+
         df_riskmgr = asset_rm_riskmgr.where_asset_id(riskmgr_asset_id)
         if df_riskmgr.empty:
             sr = pd.Series(1.0, index=reindex)

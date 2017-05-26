@@ -14,6 +14,7 @@ import cvxopt
 from cvxopt import matrix, solvers
 from numpy import isnan
 from scipy import linalg
+import statsmodels.api as sm
 #import pylab
 #import matplotlib.pyplot as plt
 
@@ -278,10 +279,12 @@ def efficient_frontier_fund(return_rate):
 #计算下方差
 def semivariance(portfolio):
     mean       =        np.mean(portfolio)
+    mean       = 0
     var        =        0.0
     n          =        0
+
     for d in portfolio:
-        if d <= mean:
+        if d < mean:
             n   = n + 1
             var = var + (d - mean) ** 2
     var        =    var / n
@@ -316,16 +319,14 @@ def jensen(portfolio, market, rf):
     p = np.array(p)
     m = np.array(m)
 
-    clf       = linear_model.LinearRegression()
-    clf.fit(m.reshape(len(m),1), p.reshape(len(p), 1))
-    #clf.fit(m, p)
-    alpha = clf.intercept_[0]
-    beta  = clf.coef_[0]
+    X = m
+    y = p
+    X = sm.add_constant(X)
+    model = sm.OLS(y, X)
+    results = model.fit()
+    #print results.params
 
-    #if np.isnan(alpha) or np.isinf(alpha):
-    #    alpha = 0.0
-
-    return alpha
+    return results.params[0]
 
 def treynor(portfolio, market, rf):
 
@@ -339,20 +340,30 @@ def treynor(portfolio, market, rf):
     p = np.array(p)
     m = np.array(m)
 
-    clf       = linear_model.LinearRegression()
-    clf.fit(m.reshape(len(m),1), p.reshape(len(p), 1))
+    #clf       = linear_model.LinearRegression()
+    #clf.fit(m.reshape(len(m),1), p.reshape(len(p), 1))
     #clf.fit(m, p)
-    alpha = clf.intercept_[0]
-    beta  = clf.coef_[0]
+    #alpha = clf.intercept_[0]
+    #beta  = clf.coef_[0]
 
-    annual_return = (np.mean(p) - rf) * 250
+    #annual_return = (np.mean(p) - rf) * 250
     #if np.isnan(alpha) or np.isinf(alpha):
     #    alpha = 0.0
+
+    X = m
+    y = p
+    X = sm.add_constant(X)
+    model = sm.OLS(y, X)
+    results = model.fit()
+    beta = results.params[1]
+    alpha = results.params[0]
+
+    annual_return = (np.mean(portfolio) - rf) * 365
 
     return annual_return / beta
 
 
-def ir(portfolio, market, rf):
+def ir(portfolio, market):
 
     p = []
     m = []
