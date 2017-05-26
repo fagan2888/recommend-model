@@ -17,6 +17,7 @@ import itertools
 from db import asset_vw_view as ass_view
 from db import caihui_tq_qt_index as load_index
 from db import asset_trade_dates as load_td
+from db import asset_vw_view_svm as ass_view_svm
 from cal_tech_indic import CalTechIndic as CalTec
 
 class svm_relative_veiw(object):
@@ -62,6 +63,8 @@ class svm_relative_veiw(object):
         if result[0] == 2:
             return result
 
+        result = self.get_view_newest_date()
+
         result = self.get_index_origin_data()
         if result[0] == 3:
             return result
@@ -73,6 +76,7 @@ class svm_relative_veiw(object):
         result = self.cal_indictor()
         if result[0] == 5:
             return result
+
     # get trade_dates
     def get_trade_dates(self):
         self.trade_dates = load_td.load_trade_dates()
@@ -92,21 +96,50 @@ class svm_relative_veiw(object):
         self.ori_data2.dropna(inplace=True)
         return (0, 'get data sucess')
     # training
-    def svm_train(data1, data2, c, g):
+    def svm_predict(data1, data2, c, g):
         svc = SVC(C = c, gamma = g, probability = True)
         svc.fit(x_train, y_train)
         pre_state = svc.predict(x_test)[0]
         return pre_state
     # get relative view
     def get_relative_view(self, c, g):
-        pct_chg_1 = self.ori_data1[:250]['pct_chg']
-        pct_chg_2 = self.ori_data2[:250]['pct_chg']
+        all_dates1 = self.ori_data1.index
+        all_dates2 = self.ori_data2.index
 
-        predict_start_date = max(self.ori_data1.index[250],
-            self.ori_data2.index[250])
+        pct_chg_1 = self.ori_data1['pct_chg']
+        pct_chg_2 = self.ori_data2['pct_chg']
 
-        feature 
-        print predict_start_date
+        data_num_1 = len(all_dates1)
+        data_num_2 = len(all_dates2)
+        #当两个资产数据起始时间不同时向起始时间晚的对齐
+        predict_start_date = max(self.ori_data1.index[self.train_num-1],
+            self.ori_data2.index[self.train_num-1])
+        last_date_1 = all_dates1[-1]
+        last_date_2 = all_dates1[-1]
+        if self.view_newest_date == None:
+            p_start_1 = np.argwhere(all_dates1 == predict_start_date)[0,0]
+            p_start_2 = np.argwhere(all_dates2 == predict_start_date)[0,0]
+            p_in_date = predict_start_date
+        else:
+            if self.view_newest_date == last_date_1 or \
+                self.view_newest_date == last_date_2:
+                return (0, "newest view in database, no need to update")
+            p_start_1 = \
+                np.argwhere(all_dates1 == self.view_newest_date)[0,0] + 1
+            p_start_2 = \
+                np.argwhere(all_dates2 == self.view_newest_date)[0,0] + 1
+            p_in_date = self.view_newest_date
+        while p_in_date <= last_date_1 and p_in_date <= last_date_2:
+            feature1 = pct_chg_1[s_date:p_in_date]
+        print self.view_newest_date
+
+    # 得到数据库中此观点最新一个观点的日期
+    def get_view_newest_date(self):
+        ass_vw_svm_df = ass_view_svm.get_newest_relative_view(self.view_id)
+        self.view_newest_date = None
+        if not ass_vw_svm_df.empty:
+            if ass_vw_svm_df['newest_date'][0] != None:
+                self.view_newest_date = pd.Timestamp(ass_vw_svm_df['newest_date'][0])
     # 从财汇得到原始数据
     def get_index_origin_data(self):
         secode1 = self.assets[self.ass1_id]
