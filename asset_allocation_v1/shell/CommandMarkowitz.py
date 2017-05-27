@@ -558,9 +558,42 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
-        end_date = df_inc.index[-1]
-        print end_date
 
+        threshold = 0.05
+        for i in range(0, len(ws)):
+            w = ws[i]
+            b = bound[i]
+            b['upper'] = w + threshold
+            b['lower'] = w - threshold
+            b['sum1'] = 0
+            b['sum2'] = 0
+
+        df_inc = df_inc.iloc[ len(df_inc) / 2 : ]
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+
+        '''
+        end_date = df_inc.index[-1]
+
+        threshold = 0.06
+        df = pd.read_csv('./data/sum_view.csv', index_col = ['date'], parse_dates = ['date'])
+        df.columns = df.columns.astype(int)
+        df = df.shift(-1).dropna()
+
+        try:
+            view = df.loc[end_date]
+            view = view.loc[df_inc.columns]
+            for i in range(0, len(view)):
+                v = view.iloc[i]
+                ws[i] = ws[i] + (threshold / 4 * v)
+
+            ws = ws / (ws * (ws > 0)).sum()
+            ws = ws * (ws > 0)
+
+        except:
+            print end_date, 'exception'
+            pass
+        #sys.exit()
+        '''
         '''
         weq = []
         for i in range(0, len(df_inc.columns)):
