@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 @click.option('--high', 'opthigh', type=int, default=0, help=u'high asset id')
 @click.option('--low', 'optlow', type=int, default=0, help=u'low asset id')
 @click.option('--riskmgr', 'optriskmgr', default='*', help=u'with riskmgr')
+@click.option('--riskmgr/--no-riskmgr', 'optriskmgr', default=True, help=u'with riskmgr or not')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.pass_context
 def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk):
@@ -140,11 +141,14 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     #
     dt_riskmgr = {}
     for k, v in df_asset.iterrows():
-        df_tmp = asset_rm_riskmgr.where_asset_id(k)
-        if df_tmp.empty:
+        if optriskmgr == False:
             dt_riskmgr[k] = 0
         else:
-            dt_riskmgr[k] = df_tmp.ix[0, 'globalid']
+            df_tmp = asset_rm_riskmgr.where_asset_id(k)
+            if df_tmp.empty:
+                dt_riskmgr[k] = 0
+            else:
+                dt_riskmgr[k] = df_tmp.ix[0, 'globalid']
     df_asset['mz_riskmgr_id'] = pd.Series(dt_riskmgr)
     #
     # 加载资产池
