@@ -55,6 +55,7 @@ def export(ctx):
 @click.option('--fund', 'optfund', help=u'fund to export (e.g. 20001,2002)')
 @click.option('--pool', 'optpool', help=u'fund pool to export (e.g. 921001:0,92101:11)')
 @click.option('--online', 'optonline', help=u'online model')
+@click.option('--highlow', 'opthighlow', help=u'highlow to export(e.g. 70052400,70052401)')
 @click.option('--portfolio', 'optportfolio', help=u'portfolio to export(e.g. 80052400:9)')
 @click.option('--timing', 'opttiming', help=u'timing to export(e.g. 21400501:8)')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
@@ -64,7 +65,7 @@ def export(ctx):
 @click.option('--datetype', 'optdatetype', type=click.Choice(['t', 'n']), default='t', help=u'date type(t: trade date; n: nature date)')
 @click.option('--output', '-o', type=click.Path(), help=u'output file')
 @click.pass_context
-def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, optenddate, optlist, optdatetype, optonline, optportfolio, opttiming, output):
+def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, optenddate, optlist, optdatetype, optonline, optportfolio, opttiming, opthighlow, output):
     '''run constant risk model
     '''    
     if not optenddate:
@@ -127,6 +128,12 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, op
         allocs = [s.strip() for s in opttiming.split(',')]
         for e in allocs:
             data[e] = asset_tc_timing_nav.load_series(
+                e, reindex=dates, begin_date=optstartdate, end_date=optenddate)
+
+    if opthighlow is not None:
+        allocs = [s.strip() for s in opthighlow.split(',')]
+        for e in allocs:
+            data[e] = asset_mz_highlow_nav.load_series(
                 e, reindex=dates, begin_date=optstartdate, end_date=optenddate)
 
     df_result = pd.concat(data, axis=1)

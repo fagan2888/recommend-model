@@ -77,7 +77,6 @@ def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, 
 def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk):
     '''calc high low allocate
     '''
-
     if opthigh == 0 and 'markowitz.high' in ctx.obj:
         opthigh = ctx.obj['markowitz.high']
     if optlow == 0 and 'markowitz.low' in ctx.obj:
@@ -86,6 +85,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     if opthigh == 0 and optlow == 0:
         click.echo(click.style("ether --high or --low shoud be given, aborted!", fg="red"))
         return 0
+
     #
     # 处理id参数
     #
@@ -206,7 +206,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         optrisk = '1'
     else:
         df_high = asset_mz_markowitz_pos.load_raw(opthigh)
-        df_high_riskmgr = load_riskmgr(df_high.columns, df_high.index)
+        df_high_riskmgr = load_riskmgr(df_high.columns, df_high.index, optriskmgr)
         index = df_high.index.union(df_high_riskmgr.index)
     #
     # 加载低风险资产仓位
@@ -215,7 +215,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         optrisk = '10'
     else:
         df_low  = asset_mz_markowitz_pos.load_raw(optlow)
-        df_low_riskmgr = load_riskmgr(df_low.columns, df_low.index)
+        df_low_riskmgr = load_riskmgr(df_low.columns, df_low.index, optriskmgr)
         if index is None:
             index = df_low.index.union(df_low_riskmgr.index)
         else:
@@ -312,7 +312,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     click.echo(click.style("highlow allocation complement! instance id [%s]" % (optid), fg='green'))
 
 
-def load_riskmgr(assets, reindex=None):
+def load_riskmgr(assets, reindex=None, enable=True):
     data = {}
     index = reindex.copy()
     for asset_id in assets:
@@ -325,15 +325,19 @@ def load_riskmgr(assets, reindex=None):
             riskmgr_asset_id = 120000011
         else:
             riskmgr_asset_id = asset_id
-            
-        df_riskmgr = asset_rm_riskmgr.where_asset_id(riskmgr_asset_id)
-        if df_riskmgr.empty:
+
+        if enable == False:
             sr = pd.Series(1.0, index=reindex)
             sr.index.name = 'mz_date'
         else:
-            gid = df_riskmgr.ix[0, 'globalid']
-            sr = asset_rm_riskmgr_signal.load_series(gid)
-            index = index.union(sr.index)
+            df_riskmgr = asset_rm_riskmgr.where_asset_id(riskmgr_asset_id)
+            if df_riskmgr.empty:
+                sr = pd.Series(1.0, index=reindex)
+                sr.index.name = 'mz_date'
+            else:
+                gid = df_riskmgr.ix[0, 'globalid']
+                sr = asset_rm_riskmgr_signal.load_series(gid)
+                index = index.union(sr.index)
         data[asset_id] = sr
 
     df = pd.DataFrame(data, index=index).fillna(method='pad')
