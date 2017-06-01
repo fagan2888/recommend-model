@@ -113,10 +113,14 @@ def test(ctx):
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
 @click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
+@click.option('--high', 'opthigh', type=int, help=u'specify markowitz high id when --no-markowitz')
+@click.option('--low', 'optlow', type=int, help=u'specify markowitz low id when --no-markowitz specified')
+@click.option('--ratio', 'optratio', type=int, help=u'specify highlow when --no-highlow specified ')
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance for timing and riskmgr')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace existed instance')
+@click.option('--riskctrl/--no-riskctrl', 'optriskctrl', default=True, help=u'no riskmgr for highlow')
 @click.pass_context
-def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate,  optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, optonline, optreplace):
+def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate,  optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, opthigh, optlow, optratio, optonline, optreplace, optriskctrl):
     '''run all command in batch
     '''
     if optpool:
@@ -135,13 +139,27 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
     if optmarkowtiz:
         ctx.invoke(CommandMarkowitz.markowitz, short_cut='high', startdate=startdate, optturnover=optturnoverm, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optreplace=optreplace)
         ctx.invoke(CommandMarkowitz.markowitz, short_cut='low', startdate=startdate, optturnover=optturnoverm, optbootstrap=False, optbootcount=optbootcount, optcpu=optcpu)
+    else:
+        if opthigh is None:
+            click.echo(click.style("--high required when --no-markowitz specified!", fg="red"))
+            return 
+        else:
+            ctx.obj['markowitz.high'] = opthigh
+        if optlow is None:
+            click.echo(click.style("--low required when --no-markowitz specified!", fg="red"))
+        else:
+            ctx.obj['markowitz.low'] = optlow
 
     if opthighlow:
-        ctx.invoke(CommandHighlow.highlow, optreplace=optreplace)
+        ctx.invoke(CommandHighlow.highlow, optreplace=optreplace, optriskmgr=optriskctrl)
+    else:
+        if optratio is None:
+            click.echo(click.style("--ratio required when --no-highlow specified!", fg="red"))
+        else:
+            ctx.obj['highlow'] = optratio
 
     if optportfolio:
         ctx.invoke(CommandPortfolio.portfolio, optreplace=optreplace, optturnover=optturnoverp)
-    
 
 if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
