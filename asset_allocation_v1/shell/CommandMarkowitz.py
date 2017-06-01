@@ -16,6 +16,7 @@ import DFUtil
 import DBData
 import util_numpy as npu
 import Portfolio as PF
+import copy
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -23,9 +24,10 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_vw_view, asset_vw_view_inc
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_vw_view, asset_vw_view_inc, asset_tc_timing_signal
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav
 from util import xdict
+#from util.xdebug import dd
 
 import traceback, code
 
@@ -559,17 +561,58 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
+        '''
+        timing_asset_dict = {120000001:49101, 120000002:49102, 120000013:49201, 120000014:49301, 120000015:49401}
+
+        timings = []
+        for col in df_inc.columns:
+            tc_id = timing_asset_dict[col]
+            tc_df = asset_tc_timing_signal.load_series(tc_id)
+            timings.append(tc_df)
+        timing_df = pd.concat(timings, axis = 1)
+        timing_df.columns = df_inc.columns
+
+        end_date = df_inc.index[-1]
+        t = timing_df.loc[end_date]
+
+        ratio = 0.05
+        #reduce_ratio = ratio * (t < 0).sum()
+        #if (t > 0).sum() == 0:
+            #print 'hehe'
+            #print ws,
+            #ws = ws - ratio
+            #ws[ ws > 0] = ws[ws > 0] + ws[ ws < 0 ].sum() / len(ws[ws > 0])
+            #ws[ ws < 0] = 0
+            #print ws, ws.sum()
+        #elif reduce_ratio > 0:
+            #everyone_add_ratio = reduce_ratio / (t > 0).sum()
+            #print t
+            #print '-------------', reduce_ratio, everyone_add_ratio
+            #ws[ t < 0 ] = ws[ t < 0] - ratio
+            #ws[ t > 0 ] = ws[ t > 0] + everyone_add_ratio
+            #print 'haha'
+            #print ws,
+            #ws[ ws > 0] = ws[ws > 0] + ws[ ws < 0 ].sum() / len(ws[ws > 0])
+            #ws[ ws < 0] = 0
+            #print ws, ws.sum()
+        ws[ t < 0 ] = ws[ t < 0 ] - ratio
+        ws[ ws < 0 ] = 0
+        print ws, ws.sum()
+        '''
+
+
+        tmp_bound = copy.deepcopy(bound)
         threshold = 0.05
         for i in range(0, len(ws)):
             w = ws[i]
-            b = bound[i]
+            b = tmp_bound[i]
             b['upper'] = w + threshold
             b['lower'] = w - threshold
             b['sum1'] = 0
             b['sum2'] = 0
 
-        df_inc = df_inc.iloc[ len(df_inc) / 2 : ]
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+        #print ws
 
         '''
         end_date = df_inc.index[-1]

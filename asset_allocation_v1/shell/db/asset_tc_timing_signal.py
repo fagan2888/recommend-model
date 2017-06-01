@@ -54,3 +54,7 @@ def load_series(timing_id):
 
     return df['tc_signal']
 
+
+
+
+
