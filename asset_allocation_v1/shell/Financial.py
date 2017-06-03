@@ -14,6 +14,10 @@ import cvxopt
 from cvxopt import matrix, solvers
 from numpy import isnan
 from scipy import linalg
+import statsmodels.api as sm
+import os
+import multiprocessing
+import random
 #import pylab
 #import matplotlib.pyplot as plt
 
@@ -327,6 +331,79 @@ def jensen(portfolio, market, rf):
 
     return alpha
 
+
+def m_jensen(queue, random_index, p, m):
+
+    for index in random_index:
+        tmp_p = p.copy()
+        tmp_m = m.copy()
+        tmp_p = tmp_p[index]
+        tmp_m = tmp_m[index]
+        tmp_m = sm.add_constant(tmp_m)
+        model = sm.OLS(tmp_p, tmp_m)
+        result = model.fit()
+        queue.put(result.params[0])
+
+
+def jensen_bootstrap(portfolio, market, rf):
+
+    p = []
+    m = []
+    for i in range(0, len(portfolio)):
+        #print portfolio[i], market[i]
+        p.append(portfolio[i] - rf)
+        m.append(market[i] - rf)
+    portfolio = np.array(p)
+    market = np.array(m)
+
+    os.environ['OMP_NUM_THREADS'] = '1'
+
+    count = multiprocessing.cpu_count() / 2
+    cpu_count = count if count > 0 else 1
+    bootstrap_count = 0
+
+    look_back = len(p)
+    if bootstrap_count <= 0:
+        loop_num = look_back * 4
+    elif bootstrap_count % 2:
+        loop_num = bootstrap_count + 1
+    else:
+        loop_num = bootstrap_count
+
+    # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
+
+    process_indexs = [[] for i in range(0, cpu_count)]
+
+    #print process_indexs
+    #loop_num = 20
+    rep_num = loop_num * (look_back / 2) / look_back
+    day_indexs = range(0, look_back) * rep_num
+    random.shuffle(day_indexs)
+    #print day_indexs
+    day_indexs = np.array(day_indexs)
+
+    day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
+    for m in range(0, len(day_indexs)):
+        indexs = day_indexs[m]
+        mod = m % cpu_count
+        process_indexs[mod].append(list(indexs))
+
+
+    q = multiprocessing.Queue()
+    processes = []
+    for indexs in process_indexs:
+        p = multiprocessing.Process(target = m_jensen, args = (q, indexs, portfolio, market,))
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
+
+    jensens = []
+    for m in range(0, q.qsize()):
+        jensens.append(q.get(m))
+
+    return np.mean(jensens)
 
 
 #sharp

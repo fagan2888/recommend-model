@@ -68,7 +68,8 @@ def jensenmeasure(funddf, indexdf, rf):
                 p.append(rs[i])
                 m.append(indexrs[i])
 
-        jensen[col] = fin.jensen(p, m, rf)
+        #jensen[col] = fin.jensen(p, m, rf)
+        jensen[col] = fin.jensen_bootstrap(p, m, rf)
 
     return jensen
 
