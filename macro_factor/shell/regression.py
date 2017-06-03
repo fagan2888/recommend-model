@@ -33,6 +33,8 @@ if __name__ == '__main__':
 	index_col = '000852.SH'
 	zz1000 = df[index_col].fillna(method = 'pad').dropna()
 
+    X = []
+
 	for col in cols:
 		tmp_factor = df[col].copy()
 		tmp_zz1000 = zz1000.copy()
