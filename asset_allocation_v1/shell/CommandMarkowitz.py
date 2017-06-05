@@ -600,7 +600,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         print ws, ws.sum()
         '''
 
-
+        '''
         tmp_bound = copy.deepcopy(bound)
         threshold = 0.05
         for i in range(0, len(ws)):
@@ -613,6 +613,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
 
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
         #print ws
+        '''
 
         '''
         end_date = df_inc.index[-1]
@@ -637,7 +638,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
             pass
         #sys.exit()
         '''
-        '''
+
         weq = []
         for i in range(0, len(df_inc.columns)):
             weq.append(ws[i])
@@ -645,13 +646,13 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         P = np.eye(len(df_inc.columns))
         Q = []
 
+        view_asset_dict = {120000001:42110102, 120000002:42110202, 120000013:42120201, 120000014:42400102, 120000015:42120502}
 
         for indexid in df_inc.columns:
-            viewid = asset_vw_view.get_viewid_by_indexid(indexid).values[0][0]
+            viewid = view_asset_dict[indexid]
             views = asset_vw_view_inc.get_asset_day_view(viewid, day).values[0][0]
             Q.append([views])
         risk, returns, ws, sharpe = PF.black_litterman(weq, df_inc, P, Q)
-        '''
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
