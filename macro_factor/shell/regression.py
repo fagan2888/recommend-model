@@ -16,16 +16,15 @@ def factor_delay_index_ahead_process(factor, index_price, factor_delay):
 	index = index_price.index & factor.index
 	factor = factor.loc[index]
 	index_price = index_price.loc[index]
-	
-	return factor, index_price
 
+	return factor, index_price
 
 
 if __name__ == '__main__':
 
 	df = pd.read_csv('./data/macro_factor_index.csv', index_col = ['date'], parse_dates = ['date'])
 	delay = indicator_delay.delay
-	#print 
+	#print
 	cols = df.columns[0: -9]
 	#cols = df.columns[2: 3]
 	#cols = df.columns[4: 5]
