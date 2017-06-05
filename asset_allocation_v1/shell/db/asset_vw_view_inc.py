@@ -67,9 +67,6 @@ def get_asset_day_view(viewid, day):
         t.c.vw_inc.label('inc')
     ]
     s = select(columns).where(t.c.vw_view_id == viewid).where(t.c.vw_date == day)
-    print s
-    print viewid
-    print day
     df = pd.read_sql(s, db)
     return df
 if __name__ == "__main__":
