@@ -10,7 +10,8 @@ def macro_factor_delay(df):
 
     delay = indicator_delay.delay
     for factor_name in delay.keys():
-        print factor_name
+        factor_delay = delay[factor_name]
+        df[factor_name] = df[factor_name].shift(factor_delay)
 
     return df
 
@@ -41,7 +42,9 @@ if __name__ == '__main__':
     df = df.resample('M').last()
 
     #处理数据delay情况
+    #df.to_csv('origin.csv')
     df = macro_factor_delay(df)
+    #df.to_csv('delay.csv')
 
 
     #处理季度累计数据
