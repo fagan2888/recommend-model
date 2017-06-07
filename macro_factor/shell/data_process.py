@@ -41,11 +41,6 @@ if __name__ == '__main__':
     #按月resample
     df = df.resample('M').last()
 
-    #处理数据delay情况
-    #df.to_csv('origin.csv')
-    df = macro_factor_delay(df)
-    #df.to_csv('delay.csv')
-
 
     #处理季度累计数据
     tmp_df = df['urban_income'].copy()
@@ -62,13 +57,17 @@ if __name__ == '__main__':
     df['gdp_yoy'] = df['gdp_yoy'].interpolate()
     df['payment_balance_budget'] = df['payment_balance_budget'].interpolate()
 
-
     #更改同比计数方式
     df['cgpi_yoy'] = df['cgpi_yoy'] - 100
 
     #更改数据类型
     df.astype({'industrial_value_added_yoy' : float, 'payment_balance_budget' : float})
 
+    print df
+    #处理数据delay情况
+    #df.to_csv('origin.csv')
+    df = macro_factor_delay(df)
+    #df.to_csv('delay.csv')
 
     '''
     计算延迟期数

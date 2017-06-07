@@ -21,7 +21,7 @@ delay = {
 	'1ytbr': 0,
 	'10ytbr': 0,
 	'2ytbr': 0,
-	'shibor': 1,
+	'shibor': 0,
 	'10ytbr_3mtbr': 0,
 	'10ytbr_2ytbr': 0,
 	'cpi_yoy': 1,
