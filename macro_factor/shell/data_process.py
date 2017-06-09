@@ -24,9 +24,10 @@ if __name__ == '__main__':
     macro_interestrate_df = pd.read_csv('./data/macro_interestrate.csv', index_col = ['date'], parse_dates = ['date'])
     monetrary_supply_df = pd.read_csv('./data/monetrary_supply.csv', index_col = ['date'], parse_dates = ['date'])
     monetrary_foreign_df = pd.read_csv('./data/monetrary_foreign.csv', index_col = ['date'], parse_dates = ['date'])
+    pe_df = pd.read_csv('./data/pe.csv', index_col = ['date'], parse_dates = ['date'])
     macro_index_df = pd.read_csv('./data/macro_index.csv', index_col = ['date'], parse_dates = ['date'])
 
-    dates = macro_economic_df.index | fiscal_policy_df.index | macro_inflation_df.index | macro_interestrate_df.index | monetrary_supply_df.index | monetrary_foreign_df.index | macro_index_df.index
+    dates = macro_economic_df.index | fiscal_policy_df.index | macro_inflation_df.index | macro_interestrate_df.index | monetrary_supply_df.index | monetrary_foreign_df.index | macro_index_df.index | pe_df.index
 
 
     #交易日变成自然日
@@ -36,8 +37,9 @@ if __name__ == '__main__':
 
 
     #数据合并
-    df = pd.concat([macro_economic_df, macro_interestrate_df, macro_inflation_df, monetrary_supply_df, monetrary_foreign_df, fiscal_policy_df, macro_index_df], axis = 1, join_axes = [dates])
+    df = pd.concat([macro_economic_df, macro_interestrate_df, macro_inflation_df, monetrary_supply_df, monetrary_foreign_df, fiscal_policy_df, pe_df, macro_index_df], axis = 1, join_axes = [dates])
 
+    print df.columns
     #按月resample
     df = df.resample('M').last()
 
@@ -63,7 +65,7 @@ if __name__ == '__main__':
     #更改数据类型
     df.astype({'industrial_value_added_yoy' : float, 'payment_balance_budget' : float})
 
-    print df
+    #print df
     #处理数据delay情况
     #df.to_csv('origin.csv')
     df = macro_factor_delay(df)
