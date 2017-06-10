@@ -49,7 +49,7 @@ def online(ctx, optid, opttype):
 @online.command()
 @click.option('--id', 'optid', help=u'ids of online to update')
 @click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
-@click.option('--type', 'opttype', default='9', help=u'type type(8:with fee; 9:without fee')
+@click.option('--type', 'opttype', default='9,8', help=u'type type(8:with fee; 9:without fee')
 @click.option('--fee/--no-fee', 'optfee', default=True, help=u'specify with/without fee for type 8')
 @click.option('--t0/--no-t0', 'optt0', default=False, help=u'specify use t+0 or not for type 8')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
