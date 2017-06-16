@@ -30,7 +30,18 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
     return df
 
 if __name__ == "__main__":
-    load_index_daily_data('2070006540', '20170101', '20170331')
+    assets = {
+            '120000001':'2070000060', #沪深300
+            '120000002':'2070000187', #中证500
+            '120000013':'2070006545', #标普500指数
+            '120000014':'2070000626', #黄金指数
+            '120000015':'2070000076', #恒生指数
+            '120000028':'2070006521', #南华商品指数
+            '120000029':'2070006789', #标普高盛原油商品指数收益率
+    }
+    for key, value in assets.items():
+        df = load_index_daily_data(value, '20050101', '20170531')
+        df.to_csv(key+"_ori_day_data.csv")
 
 
 
