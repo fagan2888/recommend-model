@@ -125,9 +125,9 @@ class svm_relative_veiw(object):
                 self.view_newest_date == last_date_2:
                 return (0, "newest view in database, no need to update")
             p_start_1 = \
-                np.argwhere(all_dates1 == self.view_newest_date)[0,0] + 1
+                np.argwhere(all_dates1 == self.view_newest_date)[0, 0] + 1
             p_start_2 = \
-                np.argwhere(all_dates2 == self.view_newest_date)[0,0] + 1
+                np.argwhere(all_dates2 == self.view_newest_date)[0, 0] + 1
             p_in_date = self.view_newest_date
         while p_in_date <= last_date_1 and p_in_date <= last_date_2:
             feature1 = pct_chg_1[s_date:p_in_date]

@@ -45,5 +45,5 @@ def insert_predict_pct(view_df):
         result = (0, "Insert into vw_veiw_svm success")
         df = test_df.to_sql("vw_view_svm", db, if_exists='append', index=False)
     except Exception, e:
-        result = (1, "Insert into vw_veiw_inc fail: " + e.message)
+        result = (1, "Insert into vw_veiw_svm fail: " + e.message)
     return result
