@@ -62,7 +62,7 @@ def get_specific_month_data(s_date, e_date, t_type):
                                             t.c.ds_trade_date <= e_date, \
                                             t.c.ds_trade_type == t_type)
     return rst.all()
-def get_specific_month_first_buy_num(s_date, e_date, t_type, uids):
+def get_specific_month_num(s_date, e_date, t_type, uids):
     """
     获取某个时间段内ds_trade_type=t_type的且uid在uids内的用户数
     :param s_date: string, 开始日期
