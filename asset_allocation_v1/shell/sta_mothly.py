@@ -28,15 +28,19 @@ class MothlySta(object):
         cursor_year = self.min_year
         cursor_month = self.min_month
         end_com = str(end_year) + str(end_month)
+        past_year = dict()
         while str(cursor_year) + str(cursor_month) <= end_com:
             start_date = datetime.date(cursor_year, cursor_month, 1)
             month_days = calendar.monthrange(cursor_year, cursor_month)[1]
             end_date = datetime.date(cursor_year, cursor_month, month_days)
             monthly_order_data = ds_order.get_monthly_data(start_date, end_date)
-            clear_num = \
-                len(set(monthly_order_data[ \
-                    monthly_order_data['ds_trade_type'] == 31]['ds_uid'] \
-                ))
+            clear_uids = set(monthly_order_data[ \
+                monthly_order_data['ds_trade_type'] == 31]['ds_uid'] \
+            )
+            # clear_num = \
+            #     len(set(monthly_order_data[ \
+            #         monthly_order_data['ds_trade_type'] == 31]['ds_uid'] \
+            #     ))
             if cursor_month == 12:
                 cursor_month = 1
                 cursor_year += 1
