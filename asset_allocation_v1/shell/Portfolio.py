@@ -228,6 +228,7 @@ def markowitz_r_spe(funddfr, bounds):
 
     return final_risk, final_return, final_ws, final_sharp
 
+
 def m_markowitz(queue, random_index, df_inc, bound):
     for index in random_index:
         tmp_df_inc = df_inc.iloc[index]
@@ -655,6 +656,77 @@ def black_litterman(weq, df_inc, P, Q):
     #print risks
     #print np.dot(er, w)
     #return [er, w, lmbda]
+
+
+def m_blacklitterman(queue, random_index, weq, df_inc, P, Q):
+    for index in random_index:
+        tmp_df_inc = df_inc.iloc[index]
+        risk, returns, ws, sharpe = black_litterman(weq, tmp_df_inc, P, Q)
+        queue.put((risk, returns, ws, sharpe))
+
+
+def black_litterman_bootstrape(weq, df_inc, P, Q, cpu_count = 0, bootstrap_count = 0):
+
+    os.environ['OMP_NUM_THREADS'] = '1'
+
+    if cpu_count == 0:
+        count = multiprocessing.cpu_count()
+        cpu_count = count if count > 0 else 1
+
+    look_back = len(df_inc)
+    if bootstrap_count <= 0:
+        loop_num = look_back * 4
+    elif bootstrap_count % 2:
+        loop_num = bootstrap_count + 1
+    else:
+        loop_num = bootstrap_count
+
+    # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
+        
+    process_indexs = [[] for i in range(0, cpu_count)]
+
+    #print process_indexs
+    #loop_num = 20
+    rep_num = loop_num * (look_back / 2) / look_back
+    day_indexs = range(0, look_back) * rep_num
+    random.shuffle(day_indexs)
+    #print day_indexs
+    day_indexs = np.array(day_indexs)
+
+    day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
+    for m in range(0, len(day_indexs)):
+        indexs = day_indexs[m]
+        mod = m % cpu_count
+        process_indexs[mod].append(list(indexs))
+
+
+    q = multiprocessing.Queue()
+    processes = []
+    for indexs in process_indexs:
+        p = multiprocessing.Process(target = m_blacklitterman, args = (q, indexs, weq, df_inc, P, Q,))
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
+
+    wss = np.zeros(len(df_inc.columns))
+    risks = []
+    returns = []
+    sharpes = []
+    for m in range(0, q.qsize()):
+        record = q.get(m)
+        ws = record[2]
+        for n in range(0, len(ws)):
+            w = ws[n]
+            wss[n] = wss[n] + w
+        risks.append(record[0])
+        returns.append(record[1])
+        sharpes.append(record[3])
+
+
+    ws = wss / loop_num
+    return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
 
 
 def risk_parity(dfr):

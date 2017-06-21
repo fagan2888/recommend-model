@@ -24,7 +24,7 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_vw_view, asset_vw_view_inc, asset_tc_timing_signal
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_vw_view, asset_vw_view_inc, asset_tc_timing_signal, asset_trade_dates
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav
 from util import xdict
 #from util.xdebug import dd
@@ -646,13 +646,35 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         P = np.eye(len(df_inc.columns))
         Q = []
 
+
+        '''
+        print P, Q
         view_asset_dict = {120000001:42110102, 120000002:42110202, 120000013:42120201, 120000014:42400102, 120000015:42120502}
 
         for indexid in df_inc.columns:
             viewid = view_asset_dict[indexid]
+            print viewid
             views = asset_vw_view_inc.get_asset_day_view(viewid, day).values[0][0]
+            print views
             Q.append([views])
-        risk, returns, ws, sharpe = PF.black_litterman(weq, df_inc, P, Q)
+        '''
+
+        trade_dates = asset_trade_dates.load_trade_dates()
+        trade_dates = trade_dates[trade_dates['trade_type'] & 0b010 == 2]
+        trade_dates = trade_dates.index
+        trade_dates = trade_dates[trade_dates > day]
+        start_date = day
+        end_date = trade_dates[0]
+        index = DBData.trade_date_index(start_date, end_date=end_date)
+        data = {}
+        for asset in df_inc.columns:
+            data[asset] = load_nav_series(asset, index, start_date, end_date)
+        df_nav = pd.DataFrame(data).fillna(method='pad')
+        tmp_df_inc  = df_nav.pct_change().fillna(0.0)
+        inc = tmp_df_inc.iloc[-1]
+        for col in df_inc.columns:
+            Q.append([inc[col]])
+        risk, returns, ws, sharpe = PF.black_litterman_bootstrape(weq, df_inc, P, Q)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),

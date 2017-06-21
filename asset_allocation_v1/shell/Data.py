@@ -312,4 +312,3 @@ if __name__ == '__main__':
     df.to_csv(datapath('index.csv'))
     #print df['000300.SH','000905.SH']
     #buysell()
-
