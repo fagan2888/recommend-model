@@ -35,6 +35,7 @@ def get_min_date():
     Session = sessionmaker(bind=db)
     session = Session()
     rst = session.query(t).order_by(asc(t.c.ds_trade_date)).first()
+    session.close()
     return rst.ds_trade_date
 
 def get_max_date():
@@ -44,6 +45,7 @@ def get_max_date():
     Session = sessionmaker(bind=db)
     session = Session()
     rst = session.query(t).order_by(desc(t.c.ds_trade_date)).first()
+    session.close()
     return rst.ds_trade_date
 def get_specific_month_data(s_date, e_date, t_type):
     """
@@ -61,6 +63,7 @@ def get_specific_month_data(s_date, e_date, t_type):
     rst = session.query(t.c.ds_uid).filter(t.c.ds_trade_date >= s_date, \
                                             t.c.ds_trade_date <= e_date, \
                                             t.c.ds_trade_type == t_type)
+    session.close()
     return rst.all()
 def get_specific_month_num(s_date, e_date, t_type, uids):
     """
@@ -81,6 +84,47 @@ def get_specific_month_num(s_date, e_date, t_type, uids):
                                         t.c.ds_trade_date <= e_date, \
                                         t.c.ds_trade_type == t_type, \
                                         t.c.ds_uid.in_(uids))
+    session.close()
+    return rst.all()
+
+def get_specific_month_amount(s_date, e_date, t_type, uids):
+    """
+    获取某个时间段内ds_trade_type=t_type的复购总金额
+    :param s_date: string, 开始日期
+    :param e_date: string, 结束日期
+    :param t_type: int, 交易类型
+    :return: list
+    """
+    db = database.connection('portfolio_sta')
+    metadata = MetaData(bind=db)
+    t = Table('ds_order', metadata, autoload=True)
+    Session = sessionmaker(bind=db)
+    session = Session()
+    rst = session.query(func.SUM(t.c.ds_amount)).filter( \
+                                        t.c.ds_trade_date >= s_date, \
+                                        t.c.ds_trade_date <= e_date, \
+                                        t.c.ds_trade_type == t_type, \
+                                        t.c.ds_uid.in_(uids))
+    session.close()
+    return rst.all()
+def get_specific_month_uids(s_date, e_date, t_type):
+    """
+    获取某个时间段内ds_trade_type=t_type的用户id
+    :param s_date: string, 开始日期
+    :param e_date: string, 结束日期
+    :param t_type: int, 交易类型
+    :return: list
+    """
+    db = database.connection('portfolio_sta')
+    metadata = MetaData(bind=db)
+    t = Table('ds_order', metadata, autoload=True)
+    Session = sessionmaker(bind=db)
+    session = Session()
+    rst = session.query(func.DISTINCT(t.c.ds_uid)).filter( \
+                                        t.c.ds_trade_date >= s_date, \
+                                        t.c.ds_trade_date <= e_date, \
+                                        t.c.ds_trade_type == t_type)
+    session.close()
     return rst.all()
 
 if __name__ == "__main__":
