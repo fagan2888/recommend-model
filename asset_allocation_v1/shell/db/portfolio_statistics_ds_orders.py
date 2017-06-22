@@ -11,9 +11,13 @@ import numpy as np
 from dateutil.parser import parse
 logger = logging.getLogger(__name__)
 
+db = database.connection('portfolio_sta')
+metadata = MetaData(bind=db)
+Session = sessionmaker(bind=db)
+session = Session()
 def get_monthly_data(m_start, m_end):
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_order', metadata, autoload=True)
     columns = [
         #func.max(t.c.ds_trade_date).label('newest_date')
@@ -29,23 +33,21 @@ def get_monthly_data(m_start, m_end):
     return df
 
 def get_min_date():
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_order', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
+    # Session = sessionmaker(bind=db)
+    # session = Session()
     rst = session.query(t).order_by(asc(t.c.ds_trade_date)).first()
-    session.close()
     return rst.ds_trade_date
 
 def get_max_date():
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_order', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
+    # Session = sessionmaker(bind=db)
+    # session = Session()
     rst = session.query(t).order_by(desc(t.c.ds_trade_date)).first()
-    session.close()
     return rst.ds_trade_date
 def get_specific_month_data(s_date, e_date, t_type):
     """
@@ -55,15 +57,14 @@ def get_specific_month_data(s_date, e_date, t_type):
     :param t_type: 交易类型
     :return: array(uid1, uid2)
     """
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_order', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
+    # Session = sessionmaker(bind=db)
+    # session = Session()
     rst = session.query(t.c.ds_uid).filter(t.c.ds_trade_date >= s_date, \
                                             t.c.ds_trade_date <= e_date, \
                                             t.c.ds_trade_type == t_type)
-    session.close()
     return rst.all()
 def get_specific_month_num(s_date, e_date, t_type, uids):
     """
@@ -74,17 +75,16 @@ def get_specific_month_num(s_date, e_date, t_type, uids):
     :param uids: array like,  用户uid
     :return: int
     """
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_order', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
+    # Session = sessionmaker(bind=db)
+    # session = Session()
     rst = session.query(func.COUNT(func.DISTINCT(t.c.ds_uid))).filter( \
                                         t.c.ds_trade_date >= s_date, \
                                         t.c.ds_trade_date <= e_date, \
                                         t.c.ds_trade_type == t_type, \
                                         t.c.ds_uid.in_(uids))
-    session.close()
     return rst.all()
 
 def get_specific_month_amount(s_date, e_date, t_type, uids):
@@ -92,20 +92,20 @@ def get_specific_month_amount(s_date, e_date, t_type, uids):
     获取某个时间段内ds_trade_type=t_type的复购总金额
     :param s_date: string, 开始日期
     :param e_date: string, 结束日期
-    :param t_type: int, 交易类型
+    :param t_type: list, 交易类型
     :return: list
     """
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_order', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
+    # Session = sessionmaker(bind=db)
+    # session = Session()
     rst = session.query(func.SUM(t.c.ds_amount)).filter( \
                                         t.c.ds_trade_date >= s_date, \
                                         t.c.ds_trade_date <= e_date, \
-                                        t.c.ds_trade_type == t_type, \
+                                        t.c.ds_trade_type.in_(t_type), \
                                         t.c.ds_uid.in_(uids))
-    session.close()
+    # session.close()
     return rst.all()
 def get_specific_month_uids(s_date, e_date, t_type):
     """
@@ -115,17 +115,18 @@ def get_specific_month_uids(s_date, e_date, t_type):
     :param t_type: int, 交易类型
     :return: list
     """
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_order', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
+    #Session = sessionmaker(bind=db)
+    # session = Session()
     rst = session.query(func.DISTINCT(t.c.ds_uid)).filter( \
                                         t.c.ds_trade_date >= s_date, \
                                         t.c.ds_trade_date <= e_date, \
                                         t.c.ds_trade_type == t_type)
-    session.close()
+    #session.close()
     return rst.all()
+session.close()
 
 if __name__ == "__main__":
     # get_mothly_data('2017-01-01', '2017-01-31')

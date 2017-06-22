@@ -10,31 +10,35 @@ import os
 import numpy as np
 from dateutil.parser import parse
 logger = logging.getLogger(__name__)
-
-def get_specific_date_amount(hold_date, uid):
+db = database.connection('portfolio_sta')
+metadata = MetaData(bind=db)
+Session = sessionmaker(bind=db)
+session = Session()
+def get_specific_date_amount(hold_date, uids):
     """
-    获取某一天ds_uid=uid的用户持仓金额
+    获取某一天ds_uid in uids的用户持仓金额
     :param hold_date:持仓日期
+    :param uids:用户id 列表
     :return: list
     """
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_share', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
+    # Session = sessionmaker(bind=db)
+    # session = Session()
     rst = session.query(func.SUM(t.c.ds_amount)).filter(t.c.ds_date >= hold_date, \
-                                            t.c.ds_uid == uid)
+                                            t.c.ds_uid.in_(uids))
     return rst.all()
 def get_specific_month_amount(hold_date):
     """
     获取某天用户总持仓金额
     :return: list
     """
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_share', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
+    # Session = sessionmaker(bind=db)
+    # session = Session()
     rst = session.query(func.SUM(t.c.ds_amount)).filter( \
                                     t.c.ds_date == hold_date)
     return rst.all()
@@ -44,16 +48,16 @@ def get_specific_month_hold_users(hold_date):
     获取某天有持仓用户
     :return: list
     """
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
     t = Table('ds_share', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
+    # Session = sessionmaker(bind=db)
+    # session = Session()
     rst = session.query(func.DISTINCT(t.c.ds_uid)).filter( \
                                     t.c.ds_date == hold_date,
                                     t.c.ds_amount > 0)
-    session.close()
     return rst.all()
+session.close()
 
 if __name__ == "__main__":
     # get_mothly_data('2017-01-01', '2017-01-31')
