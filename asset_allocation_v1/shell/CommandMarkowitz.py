@@ -931,4 +931,3 @@ def perform_delete(markowitz):
 #     if (y / abs(max_drawdown)) > 2:
 #         return 1
 #     return 0
-    
