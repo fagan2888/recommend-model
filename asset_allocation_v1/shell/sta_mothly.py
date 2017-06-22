@@ -30,11 +30,13 @@ class MothlySta(object):
     def get_month_range(self, cur_year, cur_month):
         cursor_year = self.min_year
         cursor_month = self.min_month
-        end_com = str(cur_year) + str(cur_month)
+        end_com = datetime.date(cur_year, cur_month, 1)
+        end_com_str = str(cur_year) + str(cur_month)
         past_year_month = []
-        while str(cursor_year) + str(cursor_month) <= end_com:
+        while datetime.date(cursor_year, cursor_month, 1) <= end_com:
             month_days = calendar.monthrange(cursor_year, cursor_month)[1]
-            if str(self.max_year) + str(self.max_month) == end_com:
+            if str(cursor_year) + str(cursor_month) == end_com_str and \
+                str(self.max_year) + str(self.max_month) == end_com_str: \
                 past_year_month.append((cursor_year, cursor_month, \
                     month_days, self.last_day))
             else:
@@ -98,6 +100,10 @@ class MothlySta(object):
             new_df = self.deal_data(last_year_num, last_month_num)
         # new_df.sort_index(inplace=True)
         # old_df.sort_index(inplace=True)
+        print len(old_df), len(new_df) 
+        print old_df.head(1)
+        print "#########"
+        print new_df.head(1)
         rpt_srrc_apportion.batch(new_df, old_df)
     def insert_db(self):
         old_df = self.get_old_data()
@@ -108,7 +114,8 @@ class MothlySta(object):
         end_month = self.max_month
         cursor_year = min_year
         cursor_month = min_month
-        end_com = str(end_year) + str(end_month)
+        end_com_str = str(end_year) + str(end_month)
+        end_com = datetime.date(end_year, end_month, 1)
         past_year_month = []
         rp_tag_id = []
         rp_date = []
@@ -119,10 +126,11 @@ class MothlySta(object):
         rp_amount_resub = []
         rp_amount_redeem = []
         rp_amount_aum = []
-        while str(cursor_year) + str(cursor_month) <= end_com:
+        while datetime.date(cursor_year, cursor_month, 1) <= end_com:
             start_date = datetime.date(cursor_year, cursor_month, 1)
             month_days = calendar.monthrange(cursor_year, cursor_month)[1]
             past_year_month = self.get_month_range(cursor_year, cursor_month)
+            print past_year_month
             end_date_rp = datetime.date(cursor_year, cursor_month, month_days)
             end_date = datetime.date(cursor_year, cursor_month, \
                     past_year_month[-1][3])
@@ -138,7 +146,6 @@ class MothlySta(object):
                 retain_uids = np.array( \
                     retain_uids).reshape(1,len(retain_uids))[0]
             # 处理清仓用户数
-            print cursor_year, cursor_month
             for date_tube in past_year_month:
                 rp_tag_id.append(0)
                 s_date = datetime.date(date_tube[0], date_tube[1], 1)
@@ -198,6 +205,7 @@ class MothlySta(object):
         new_dict['rp_amount_resub'] = rp_amount_resub
         new_dict['rp_amount_redeem'] = rp_amount_redeem
         new_dict['rp_amount_aum'] = rp_amount_aum
+        print len(rp_amount_aum)
         new_df = pd.DataFrame(new_dict).set_index([ \
                 'rp_date', 'rp_date_apportion'])
         new_df = new_df.ix[:, ['rp_tag_id',  \
