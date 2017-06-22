@@ -10,42 +10,48 @@ import os
 import numpy as np
 from dateutil.parser import parse
 logger = logging.getLogger(__name__)
-
+db = database.connection('portfolio_sta')
+metadata = MetaData(bind=db)
+Session = sessionmaker(bind=db)
+session = Session()
 def get_min_date():
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
     t = Table('rpt_srrc_apportion', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
     #rst = session.query(t).order_by(asc(t.c.ds_trade_date)).first()
     #return rst.ds_trade_date
 
 def get_max_date():
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
-    t = Table('ds_order', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
-    rst = session.query(t).order_by(desc(t.c.ds_trade_date)).first()
-    return rst.ds_trade_date
-def get_specific_month_data(s_date, e_date, t_type):
     """
-    获取某个时间段内ds_trade_type=t_type的用户uid
-    :param s_date: 开始日期
-    :param e_date: 结束日期
-    :param t_type: 交易类型
-    :return: array(uid1, uid2)
+    为了增量更新获取当前所属月份（最新）
     """
-    db = database.connection('portfolio_sta')
-    metadata = MetaData(bind=db)
-    t = Table('ds_order', metadata, autoload=True)
-    Session = sessionmaker(bind=db)
-    session = Session()
-    rst = session.query(t.c.ds_uid).filter(t.c.ds_trade_date >= s_date, \
-                                            t.c.ds_trade_date <= e_date, \
-                                            t.c.ds_trade_type == t_type)
+    t = Table('rpt_srrc_apportion', metadata, autoload=True)
+    rst = session.query(t).order_by(desc(t.c.rp_date)).first()
+    return rst
+def get_old_data(dates):
+    """
+    得到所属月份数据
+    :param dates: list, 所属月份列表
+    :return: df
+    """
+    t = Table('rpt_srrc_apportion', metadata, autoload=True)
+    columns = [
+        #func.max(t.c.ds_trade_date).label('newest_date')
+        t.c.rp_tag_id,
+        t.c.rp_date,
+        t.c.rp_date_apportion,
+        t.c.rp_user_resub,
+        t.c.rp_user_clear,
+        t.c.rp_user_retain,
+        t.c.rp_amount_resub,
+        t.c.rp_amount_redeem,
+        t.c.rp_amount_aum,
+    ]
+    rst = session.query(t).filter(t.c.rp_date.in_(dates))
     return rst.all()
+def batch(df_new, df_old):
+    t = Table('rpt_srrc_apportion', metadata, autoload=True)
+    database.batch(db, t, df_new, df_old)
+session.close()
 
 if __name__ == "__main__":
     # get_mothly_data('2017-01-01', '2017-01-31')
-    print 'main'
+    print get_max_date()
