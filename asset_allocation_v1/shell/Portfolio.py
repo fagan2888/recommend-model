@@ -19,6 +19,8 @@ import cvxopt
 import math
 import scipy
 import scipy.optimize
+from cvxopt.solvers import *
+from cvxopt.blas import dot
 
 from Const import datapath
 
@@ -539,7 +541,7 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
     return fund_codes, ws
 
 
-def black_litterman(weq, df_inc, P, Q):
+def black_litterman(weq, df_inc, P, Q, bound, sum1 = 0.65, sum2 = 0.45):
 
     tau = 0.05
     delta = 2.5
@@ -579,6 +581,7 @@ def black_litterman(weq, df_inc, P, Q):
     # just because it is less to type, and we've already computed w*.
     lmbda = np.dot(linalg.pinv(P).T,(w.T * (1 + tau) - weq).T)
 
+    '''
     solvers.options['show_progress'] = False
     n_asset = len(df_inc.columns)
     S          =     matrix(posteriorSigma)
@@ -598,25 +601,11 @@ def black_litterman(weq, df_inc, P, Q):
         G[n_asset + i, i] = -1
         h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 1.0)
 
-        '''
-        if i == 4:
-            h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.20)
-        else:
-            h[1 * n_asset + i, 0] =  -1.0 * (weq[i] - 0.10)
-        '''
-        #h[n_asset + i, 0] = 0
 
         G[2 * n_asset + i, i] = 1
         h[2 * n_asset + i, 0] = weq[i] + 1.0
 
 
-        '''
-        if i == 4:
-            h[2 * n_asset + i, 0] =  weq[i] + 0.20
-        else:
-            h[2 * n_asset + i, 0] =  weq[i] + 0.10
-        '''
-        #h[2 * n_asset + i, 0] =  1.0
 
     #print h
 
@@ -626,6 +615,73 @@ def black_litterman(weq, df_inc, P, Q):
     portfolios = [ solvers.qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
     returns = [ cvxopt.blas.dot(pbar,x) for x in portfolios ]
     risks = [ math.sqrt(cvxopt.blas.dot(x, S*x)) for x in portfolios ]
+    '''
+
+    solvers.options['show_progress'] = False
+
+    n_asset = len(df_inc.columns)
+    S          =     matrix(posteriorSigma)
+    pbar       =     matrix(np.mean(return_rate, axis = 1))
+
+    l2 = matrix(S * np.eye(n_asset))
+    l2 = l2 * 2
+    S = S + l2
+    #S = l2
+
+    #
+    # 设置限制条件, 闲置条件的意思
+    #    GW <= H
+    # 其中:
+    #    G 是掩码矩阵, 其元素只有0,1,
+    #    W 是每个资产的权重,
+    #    H 是一个值
+    # 对于i行的意思是 sum(Gij * Wi | j=0..n_asset-1) <= Hi
+    #
+    # 具体地, 本函数有4类闲置条件:
+    #    1: Wi >= 0, 由G的0..(n_asset-1) 行控制
+    #    2: Wi下限, 由G的n_asset..(2*n_asset-1)行控制
+    #    3: Wi的上限,由G的2*n_asset..(3*n_asset-1)行控制
+    #    4: 某类资产之和的上限, 由G的3*n_asset 行控制
+    #
+
+    G = matrix(0.0, (3 * n_asset + 2,  n_asset))
+    h = matrix(0.0, (3 * n_asset + 2, 1) )
+
+    h[3* n_asset, 0] = sum1
+    h[3* n_asset + 1, 0] = sum2
+    for i in range(0, n_asset):
+        #
+        # Wi >= 0
+        #
+        # h[i, 0] = 0
+        G[i, i] = -1
+        #
+        # Wi的下限
+        #
+        G[n_asset + i, i ]     = -1
+        h[n_asset + i, 0] = -1.0 * bound[i]['lower']
+        #
+        # Wi的上限
+        #
+        G[2 * n_asset + i, i ] = 1
+        h[2 * n_asset + i, 0] = bound[i]['upper']
+        #
+        # 某类资产之和的上限
+        #
+        if bound[i]['sum1'] == True or bound[i]['sum1'] == 1:
+            G[3 * n_asset, i] = 1
+
+        if bound[i]['sum2'] == True or bound[i]['sum2'] == 1:
+            G[3 * n_asset + 1, i] = 1
+
+    A          =  matrix(1.0, (1, n_asset))
+    b          =  matrix(1.0)
+
+    N          = 200
+    mus        = [ 10**(5.0*t/N-1.0) for t in range(N) ]
+    portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
+    returns    = [ dot(pbar,x) for x in portfolios ]
+    risks      = [ sqrt(dot(x, S*x)) for x in portfolios ]
 
     rf = Const.rf
 
@@ -658,14 +714,14 @@ def black_litterman(weq, df_inc, P, Q):
     #return [er, w, lmbda]
 
 
-def m_blacklitterman(queue, random_index, weq, df_inc, P, Q):
+def m_blacklitterman(queue, random_index, weq, df_inc, P, Q, bound):
     for index in random_index:
         tmp_df_inc = df_inc.iloc[index]
-        risk, returns, ws, sharpe = black_litterman(weq, tmp_df_inc, P, Q)
+        risk, returns, ws, sharpe = black_litterman(weq, tmp_df_inc, P, Q, bound)
         queue.put((risk, returns, ws, sharpe))
 
 
-def black_litterman_bootstrape(weq, df_inc, P, Q, cpu_count = 0, bootstrap_count = 0):
+def black_litterman_bootstrape(weq, df_inc, P, Q, bound, cpu_count = 0, bootstrap_count = 0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -703,7 +759,7 @@ def black_litterman_bootstrape(weq, df_inc, P, Q, cpu_count = 0, bootstrap_count
     q = multiprocessing.Queue()
     processes = []
     for indexs in process_indexs:
-        p = multiprocessing.Process(target = m_blacklitterman, args = (q, indexs, weq, df_inc, P, Q,))
+        p = multiprocessing.Process(target = m_blacklitterman, args = (q, indexs, weq, df_inc, P, Q, bound,))
         processes.append(p)
         p.start()
 

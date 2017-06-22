@@ -559,7 +559,9 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     if bootstrap is None:
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
-        #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        #print '-----------------'
+        #print ws
 
         '''
         timing_asset_dict = {120000001:49101, 120000002:49102, 120000013:49201, 120000014:49301, 120000015:49401}
@@ -641,10 +643,13 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
 
         weq = []
         for i in range(0, len(df_inc.columns)):
-            weq.append(1.0 / len(df_inc.columns))
+            #weq.append(1.0 / len(df_inc.columns))
+            weq.append(ws[i])
         day = df_inc.index[-1]
-        P = np.eye(len(df_inc.columns))
-        Q = []
+        #P = np.eye(len(df_inc.columns))
+        #Q = []
+        P = [[1, -1, 0, 0, 0]]
+        Q = [[0.0000001]]
 
 
         '''
@@ -672,9 +677,11 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         df_nav = pd.DataFrame(data).fillna(method='pad')
         tmp_df_inc  = df_nav.pct_change().fillna(0.0)
         inc = tmp_df_inc.iloc[-1]
-        for col in df_inc.columns:
-            Q.append([inc[col]])
-        risk, returns, ws, sharpe = PF.black_litterman_bootstrape(weq, df_inc, P, Q)
+        #for col in df_inc.columns:
+        #    Q.append([inc[col]])
+        risk, returns, ws, sharpe = PF.black_litterman_bootstrape(weq, df_inc, P, Q, bound)
+
+        print ws
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
