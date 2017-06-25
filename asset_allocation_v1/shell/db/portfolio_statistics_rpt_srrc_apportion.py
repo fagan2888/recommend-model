@@ -49,6 +49,10 @@ def get_old_data(dates):
     return rst.all()
 def batch(df_new, df_old):
     t = Table('rpt_srrc_apportion', metadata, autoload=True)
+    print df_new
+    print "new and old ############"
+    print df_old
+    print "batch#########"
     database.batch(db, t, df_new, df_old)
 session.close()
 

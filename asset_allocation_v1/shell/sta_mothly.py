@@ -89,7 +89,7 @@ class MothlySta(object):
         old_df = self.get_old_data()
         if newest_month == None:
             new_df = self.deal_data(self.min_year, self.min_month)
-            rpt_srrc_apportion.batch(new_df, old_df)
+            #rpt_srrc_apportion.batch(new_df, old_df)
         else:
             newest_month = newest_month[1]
             last_year_num = newest_month.year if newest_month.month != 1 \
