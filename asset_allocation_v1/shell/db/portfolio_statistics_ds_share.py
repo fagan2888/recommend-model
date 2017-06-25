@@ -26,7 +26,7 @@ def get_specific_date_amount(hold_date, uids):
     t = Table('ds_share', metadata, autoload=True)
     # Session = sessionmaker(bind=db)
     # session = Session()
-    rst = session.query(func.SUM(t.c.ds_amount)).filter(t.c.ds_date >= hold_date, \
+    rst = session.query(func.SUM(t.c.ds_amount)).filter(t.c.ds_date == hold_date, \
                                             t.c.ds_uid.in_(uids))
     return rst.all()
 def get_specific_month_amount(hold_date):

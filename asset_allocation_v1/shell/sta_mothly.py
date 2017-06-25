@@ -100,10 +100,6 @@ class MothlySta(object):
             new_df = self.deal_data(last_year_num, last_month_num)
         # new_df.sort_index(inplace=True)
         # old_df.sort_index(inplace=True)
-        print len(old_df), len(new_df) 
-        print old_df.head(1)
-        print "#########"
-        print new_df.head(1)
         rpt_srrc_apportion.batch(new_df, old_df)
     def insert_db(self):
         old_df = self.get_old_data()
@@ -184,6 +180,9 @@ class MothlySta(object):
                                         [20, 21, 30, 31], first_buy_uids)
                     rp_amount_redeem.append(redeem_monthly_amount[0][0])
                     # 在管资产
+                    print "#######"
+                    print end_date
+                    print "######"
                     hold_monthly_amount = ds_share.get_specific_date_amount(end_date, first_buy_uids)
                     rp_amount_aum.append(hold_monthly_amount[0][0])
                 else:
