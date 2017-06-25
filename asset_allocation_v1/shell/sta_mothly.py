@@ -126,7 +126,6 @@ class MothlySta(object):
             start_date = datetime.date(cursor_year, cursor_month, 1)
             month_days = calendar.monthrange(cursor_year, cursor_month)[1]
             past_year_month = self.get_month_range(cursor_year, cursor_month)
-            print past_year_month
             end_date_rp = datetime.date(cursor_year, cursor_month, month_days)
             end_date = datetime.date(cursor_year, cursor_month, \
                     past_year_month[-1][3])
@@ -180,9 +179,6 @@ class MothlySta(object):
                                         [20, 21, 30, 31], first_buy_uids)
                     rp_amount_redeem.append(redeem_monthly_amount[0][0])
                     # 在管资产
-                    print "#######"
-                    print end_date
-                    print "######"
                     hold_monthly_amount = ds_share.get_specific_date_amount(end_date, first_buy_uids)
                     rp_amount_aum.append(hold_monthly_amount[0][0])
                 else:
@@ -204,14 +200,12 @@ class MothlySta(object):
         new_dict['rp_amount_resub'] = rp_amount_resub
         new_dict['rp_amount_redeem'] = rp_amount_redeem
         new_dict['rp_amount_aum'] = rp_amount_aum
-        print len(rp_amount_aum)
         new_df = pd.DataFrame(new_dict).set_index([ \
                 'rp_date', 'rp_date_apportion'])
         new_df = new_df.ix[:, ['rp_tag_id',  \
                     'rp_user_resub', 'rp_user_clear', 'rp_user_retain', \
                     'rp_amount_resub', 'rp_amount_redeem', 'rp_amount_aum']]
         new_df.fillna(0, inplace=True)
-        print len(new_df)
         return new_df
 
 
