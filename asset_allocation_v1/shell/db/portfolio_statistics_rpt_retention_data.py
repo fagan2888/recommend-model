@@ -15,7 +15,7 @@ metadata = MetaData(bind=db)
 Session = sessionmaker(bind=db)
 session = Session()
 def get_min_date():
-    t = Table('rpt_srrc_apportion', metadata, autoload=True)
+    t = Table('rpt_retention_data', metadata, autoload=True)
     #rst = session.query(t).order_by(asc(t.c.ds_trade_date)).first()
     #return rst.ds_trade_date
 
@@ -23,7 +23,7 @@ def get_max_date():
     """
     为了增量更新获取当前所属月份（最新）
     """
-    t = Table('rpt_srrc_apportion', metadata, autoload=True)
+    t = Table('rpt_retention_data', metadata, autoload=True)
     rst = session.query(t).order_by(desc(t.c.rp_date)).first()
     return rst
 def get_old_data(dates):
@@ -32,7 +32,7 @@ def get_old_data(dates):
     :param dates: list, 所属月份列表
     :return: df
     """
-    t = Table('rpt_srrc_apportion', metadata, autoload=True)
+    t = Table('rpt_retention_data', metadata, autoload=True)
     columns = [
         #func.max(t.c.ds_trade_date).label('newest_date')
         t.c.rp_tag_id,
@@ -48,7 +48,7 @@ def get_old_data(dates):
     rst = session.query(t).filter(t.c.rp_date.in_(dates))
     return rst.all()
 def batch(df_new, df_old):
-    t = Table('rpt_srrc_apportion', metadata, autoload=True)
+    t = Table('rpt_retention_data', metadata, autoload=True)
     database.batch(db, t, df_new, df_old)
 session.close()
 
