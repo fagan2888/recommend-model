@@ -14,11 +14,46 @@ import os
 from db import portfolio_statistics_ds_orders as ds_order
 from db import portfolio_statistics_ds_share as ds_share
 from db import portfolio_statistics_rpt_srrc_apportion as rpt_srrc_apportion
+from db import portfolio_statistics_rpt_retention_data as rpt_retention_data
 
 def hprint(con):
     print con
     os._exit(0)
-class MothlySta(object):
+def getBetweenMonth(s_date, e_date):
+    """
+    给出时间区间(s_date, e_date)内年月列表
+    :param s_date: 起始时间(0000-00-00)
+    :param e_date: 结束时间(0000-00-00)
+    :return: list[(year, month, month days, true days),......]
+    current days只对起始时间和结果时间有用，例如结束时间是2017-06-26, month days
+    为30，true days为26
+    """
+    first_days = s_date.day
+    end_days = e_date.day
+    cursor_year = s_date.year
+    cursor_month = s_date.month
+    start_date_com_str = str(s_date.year) + str(s_date.month)
+    end_date_com_str = str(e_date.year) + str(e_date.month)
+    month_list = []
+    while str(cursor_year) + str(cursor_month) <= end_date_com_str:
+        month_days = calendar.monthrange(cursor_year, cursor_month)[1]
+        # if str(cursor_year) + str(cursor_month) == start_date_com_str:
+        #     month_list.append((cursor_year, cursor_month, month_days, \
+        #         first_days))
+        if str(cursor_year) + str(cursor_month) == end_date_com_str:
+            month_list.append((cursor_year, cursor_month, month_days, \
+                end_days))
+        else:
+            month_list.append((cursor_year, cursor_month, month_days, \
+                month_days))
+        if cursor_month == 12:
+            cursor_month = 1
+            cursor_year += 1
+        else:
+            cursor_month += 1
+    return month_list
+
+class MonthlyStaApportion(object):
     def __init__(self):
         self.min_date = ds_order.get_min_date()
         self.max_date = ds_order.get_max_date()
@@ -208,7 +243,143 @@ class MothlySta(object):
         new_df.fillna(0, inplace=True)
         return new_df
 
+class MonthlyStaRetention(object):
+    """
+    统计rpt_retention_data里的数据
+    """
+    def __init__(self):
+        self.retention_type = {100:0, 101:1, 102:2, 103:3, 104:4, 105:5, \
+                                106:6, 107:7, 108:8, 109:9, 110:10, 111:11, \
+                                112:12}
+        # 开始有交易的时间
+        self.start_date = ds_order.get_min_date()
+        # 当前交易时间
+        self.end_date = ds_order.get_max_date()
+
+    def handle(self):
+        """
+        取出所有交易月份，按月处理
+        """
+        month_list = getBetweenMonth(self.start_date, self.end_date)
+        # 为得到old_df
+        dates_list = []
+        if len(month_list) >= 14:
+            month_list = month_list[-14:]
+        for month_tube in month_list:
+            m_index = month_list.index(month_tube)
+            cur_date = datetime.date(month_tube[0], month_tube[1], month_tube[2])
+            old_df = self.get_old_data([cur_date])
+            new_df = self.process_by_month(month_tube, month_list[m_index:])
+            self.insert_db(old_df, new_df)
+    def insert_db(self, old_df, new_df):
+        rpt_retention_data.batch(new_df, old_df)
+    def get_old_data(self, month_dates):
+        old_data = rpt_retention_data.get_old_data(month_dates)
+        if len(old_data) == 0:
+            old_dict = {}
+            old_dict['rp_tag_id'] = []
+            old_dict['rp_date'] = []
+            old_dict['rp_retention_type'] = []
+            old_dict['rp_user_resub'] = []
+            old_dict['rp_user_hold'] = []
+            old_dict['rp_amount_resub'] = []
+            old_dict['rp_amount_redeem'] = []
+            old_dict['rp_amount_aum'] = []
+            old_df = pd.DataFrame(old_dict).set_index([ \
+                    'rp_date', 'rp_retention_type'])
+        else:
+            old_df = pd.DataFrame(old_data)
+            old_df = old_df.iloc[:, :-2]
+            old_df = old_df.set_index(['rp_tag_id', 'rp_date', 'rp_retention_type'])
+        return old_df
+    def process_by_month(self, cur_month, cur_month_list):
+        # 当前月开始时间和结束时间
+        s_date = datetime.date(cur_month[0], cur_month[1], 1)
+        e_date = datetime.date(cur_month[0], cur_month[1], cur_month[2])
+        # 当前月新购买用户
+        first_buy_uids = ds_order.get_specific_month_uids(s_date, e_date, 10)
+        if len(first_buy_uids) > 0:
+            first_buy_uids = np.array( \
+                        first_buy_uids).reshape(1, len(first_buy_uids))[0]
+        else:
+            return
+        rp_tag_id = []
+        rp_date = []
+        rp_retention_type = []
+        rp_user_resub = []
+        rp_user_hold = []
+        rp_amount_resub = []
+        rp_amount_redeem = []
+        rp_amount_aum = []
+        for re_type, re_value in self.retention_type.iteritems():
+            # 没有对应留存类型的数据
+            if re_value > len(cur_month_list) - 1:
+                break;
+            # 留存类型对应日期
+            retype_date_tube = cur_month_list[re_value]
+            end_date = datetime.date(retype_date_tube[0], \
+                    retype_date_tube[1], retype_date_tube[2])
+            end_date_rp = datetime.date(retype_date_tube[0], \
+                    retype_date_tube[1], retype_date_tube[3])
+            rp_tag_id.append(0)
+            rp_date.append(e_date)
+            rp_retention_type.append(re_type)
+            # 复购用户uid
+            resub_uids = ds_order.get_specific_month_in_uids(s_date, end_date, \
+                        [11], first_buy_uids)
+            if len(resub_uids) > 0:
+                resub_uids = np.array( \
+                        resub_uids).reshape(1, len(resub_uids))[0]
+            # 赎回用户uid
+            redeem_uids = ds_order.get_specific_month_in_uids(s_date, end_date, \
+                        [20, 21, 30, 31], first_buy_uids)
+            if len(redeem_uids) > 0:
+                redeem_uids = np.array( \
+                        redeem_uids).reshape(1, len(redeem_uids))[0]
+            # 留存用户uid
+            retain_uids = ds_share.get_hold_users_date_uids(end_date_rp, \
+                        first_buy_uids)
+            if len(retain_uids) > 0:
+                retain_uids = np.array( \
+                        retain_uids).reshape(1, len(retain_uids))[0]
+
+            resub_num = len(resub_uids)
+            redeem_num = len(redeem_uids)
+            retain_num = len(retain_uids)
+            # 复购用户数
+            rp_user_resub.append(resub_num)
+            # 留存用户数
+            rp_user_hold.append(retain_num)
+
+            # 复购金额
+            resub_amount = ds_order.get_specific_month_amount(s_date, end_date, [11], resub_uids)
+            rp_amount_resub.append(resub_amount[0][0])
+            # 赎回金额
+            redeem_amount = ds_order.get_specific_month_amount(s_date, end_date, \
+                                [20, 21, 30, 31], redeem_uids)
+            rp_amount_redeem.append(redeem_amount[0][0])
+            # 在管资产
+            hold_amount = ds_share.get_specific_date_amount(end_date_rp, retain_uids)
+            rp_amount_aum.append(hold_amount[0][0])
+        new_dict = {}
+        new_dict['rp_tag_id'] = rp_tag_id
+        new_dict['rp_date'] = rp_date
+        new_dict['rp_retention_type'] = rp_retention_type
+        new_dict['rp_user_resub'] = rp_user_resub
+        new_dict['rp_user_hold'] = rp_user_hold
+        new_dict['rp_amount_resub'] = rp_amount_resub
+        new_dict['rp_amount_redeem'] = rp_amount_redeem
+        new_dict['rp_amount_aum'] = rp_amount_aum
+        new_df = pd.DataFrame(new_dict).set_index([ \
+                'rp_tag_id', 'rp_date', 'rp_retention_type'])
+        new_df = new_df.ix[:, [ \
+                    'rp_user_resub', 'rp_user_hold', \
+                    'rp_amount_resub', 'rp_amount_redeem', 'rp_amount_aum']]
+        new_df.fillna(0, inplace=True)
+        return new_df
 
 if __name__ == "__main__":
-    obj = MothlySta()
-    obj.incremental_update()
+    # obj = MonthlyStaApportion()
+    # obj.incremental_update()
+    obj_reten = MonthlyStaRetention()
+    obj_reten.handle()
