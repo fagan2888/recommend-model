@@ -15,6 +15,7 @@ from db import portfolio_statistics_ds_orders as ds_order
 from db import portfolio_statistics_ds_share as ds_share
 from db import portfolio_statistics_rpt_srrc_apportion as rpt_srrc_apportion
 from db import portfolio_statistics_rpt_retention_data as rpt_retention_data
+from db import portfolio_statistics_rpt_srrc_rolling as rpt_srrc_rolling
 
 def hprint(con):
     print con
@@ -377,6 +378,13 @@ class MonthlyStaRetention(object):
                     'rp_amount_resub', 'rp_amount_redeem', 'rp_amount_aum']]
         new_df.fillna(0, inplace=True)
         return new_df
+
+class MonthlyStaRolling(object):
+    def __init__(self):
+        self.start_date = None
+        self.end_date = None
+    def handle(self):
+        pass
 
 if __name__ == "__main__":
     # obj = MonthlyStaApportion()
