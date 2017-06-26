@@ -37,10 +37,9 @@ def get_old_data(dates):
         #func.max(t.c.ds_trade_date).label('newest_date')
         t.c.rp_tag_id,
         t.c.rp_date,
-        t.c.rp_date_apportion,
+        t.c.rp_retention_type,
         t.c.rp_user_resub,
-        t.c.rp_user_clear,
-        t.c.rp_user_retain,
+        t.c.rp_user_hold,
         t.c.rp_amount_resub,
         t.c.rp_amount_redeem,
         t.c.rp_amount_aum,

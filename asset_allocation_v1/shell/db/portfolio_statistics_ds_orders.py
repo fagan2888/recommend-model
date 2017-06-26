@@ -87,6 +87,27 @@ def get_specific_month_num(s_date, e_date, t_type, uids):
                                         t.c.ds_uid.in_(uids))
     return rst.all()
 
+def get_specific_month_in_uids(s_date, e_date, t_type, uids):
+    """
+    获取某个时间段内ds_trade_type=t_type的且uid在uids内的用户uid
+    :param s_date: string, 开始日期
+    :param e_date: string, 结束日期
+    :param t_type: list, 交易类型
+    :param uids: array like,  用户uid
+    :return: int
+    """
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
+    t = Table('ds_order', metadata, autoload=True)
+    # Session = sessionmaker(bind=db)
+    # session = Session()
+    rst = session.query(func.DISTINCT(t.c.ds_uid)).filter( \
+                                        t.c.ds_trade_date >= s_date, \
+                                        t.c.ds_trade_date <= e_date, \
+                                        t.c.ds_trade_type.in_(t_type), \
+                                        t.c.ds_uid.in_(uids))
+    return rst.all()
+
 def get_specific_month_amount(s_date, e_date, t_type, uids):
     """
     获取某个时间段内ds_trade_type=t_type的复购总金额
