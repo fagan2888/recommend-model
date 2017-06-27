@@ -16,6 +16,7 @@ import DFUtil
 import DBData
 import util_numpy as npu
 import Portfolio as PF
+import copy
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -555,7 +556,18 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     if bootstrap is None:
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+
+        #tmp_bound = copy.deepcopy(bound)
+        view = [0.005, 0, 0, 0, 0]
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, tmp_bound, None, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        #for i in range(0, len(ws)):
+        #    tmp_bound[i]['sum1'] = 0
+        #    tmp_bound[i]['sum2'] = 0
+        #    tmp_bound[i]['upper'] = ws[i] + 0.1 if ws[i] + 0.1 <= 1 else 1
+        #    tmp_bound[i]['lower'] = ws[i] - 0.1 if ws[i] - 0.1 >= 0 else 0
+
+        #df_inc = df_inc.iloc[len(df_inc) / 2 : ]
+        #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, tmp_bound, None, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),

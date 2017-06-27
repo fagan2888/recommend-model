@@ -18,13 +18,15 @@ from scipy import linalg
 #import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
+def efficient_frontier_spe(return_rate, bound, view, sum1 = 0.65, sum2 = 0.45):
 
     solvers.options['show_progress'] = False
 
     n_asset    =     len(return_rate)
 
     asset_mean = np.mean(return_rate, axis = 1)
+    if view is not None:
+       asset_mean = asset_mean + view
     #print asset_mean
     l = len(asset_mean)
 

@@ -191,7 +191,7 @@ def markowitz_r(funddfr, bounds):
     return final_risk, final_return, final_ws, final_sharp
 
 
-def markowitz_r_spe(funddfr, bounds):
+def markowitz_r_spe(funddfr, bounds, view):
 
     rf = Const.rf
 
@@ -211,7 +211,7 @@ def markowitz_r_spe(funddfr, bounds):
         return_rate.append(funddfr[code].values)
 
 
-    risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds)
+    risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds, view)
 
     for j in range(0, len(risks)):
         sharp = (returns[j] - rf) / risks[j]
@@ -223,14 +223,14 @@ def markowitz_r_spe(funddfr, bounds):
 
     return final_risk, final_return, final_ws, final_sharp
 
-def m_markowitz(queue, random_index, df_inc, bound):
+def m_markowitz(queue, random_index, df_inc, bound, view):
     for index in random_index:
         tmp_df_inc = df_inc.iloc[index]
-        risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound)
+        risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound, view)
         queue.put((risk, returns, ws, sharpe))
 
 
-def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
+def markowitz_bootstrape(df_inc, bound, view = None, cpu_count = 0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -268,7 +268,7 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
     q = multiprocessing.Queue()
     processes = []
     for indexs in process_indexs:
-        p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound,))
+        p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound, view,))
         processes.append(p)
         p.start()
 
