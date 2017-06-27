@@ -271,7 +271,8 @@ class MonthlyStaRetention(object):
             cur_date = datetime.date(month_tube[0], month_tube[1], month_tube[2])
             old_df = self.get_old_data([cur_date])
             new_df = self.process_by_month(month_tube, month_list[m_index:])
-            self.insert_db(old_df, new_df)
+            if new_df != None:
+                self.insert_db(old_df, new_df)
     def insert_db(self, old_df, new_df):
         rpt_retention_data.batch(new_df, old_df)
     def get_old_data(self, month_dates):
@@ -303,7 +304,7 @@ class MonthlyStaRetention(object):
             first_buy_uids = np.array( \
                         first_buy_uids).reshape(1, len(first_buy_uids))[0]
         else:
-            return
+            return None
         rp_tag_id = []
         rp_date = []
         rp_retention_type = []
@@ -381,13 +382,70 @@ class MonthlyStaRetention(object):
 
 class MonthlyStaRolling(object):
     def __init__(self):
-        self.start_date = None
-        self.end_date = None
+        # 开始有交易的时间
+        self.start_date = ds_order.get_min_date()
+        # 当前交易时间
+        self.end_date = ds_order.get_max_date()
+        # 统计类型
+        self.rolling_types = {100:30, 101:60, 102:90, 103:120, 104:150, \
+                                105:180, 106:210, 107:240, 108:270, 109:300, \
+                                110:330, 111:360}#, 112:390}
     def handle(self):
-        pass
+        """
+        从有交易日期开始按自然日处理
+        """
+        cursor_day = datetime.date(2017, 6, 25)#self.start_date
+        end_date = self.end_date
+        
+        while cursor_day <= end_date:
+            new_df = self.process_by_day(cursor_day)
+            # old_df = self.get_old_data(cursor_day)
+            # self.insert_db(new_df, old_df)
+            print new_df
+            os._exit(0)
+    def insert_db(self, new_df, old_df):
+        portfolio_statistics_rpt_srrc_rolling.batch(new_df, old_df)
+    def process_by_day(self, cur_date):
+        rp_tag_id = []
+        rp_date = []
+        rp_retention_type = []
+        rp_user_redeem_ratio = []
+        rp_user_resub_ratio = []
+        rp_amount_redeem_ratio = []
+        rp_amount_resub_ratio = []
+        for rType, day_num in self.rolling_types.iteritems():
+            rp_tag_id.append(0)
+            rp_date.append(cur_date)
+            rp_retention_type.append(rType)
+            pre_date = cur_date - datetime.timedelta(days=day_num) 
+            first_buy_uids = ds_order.get_specific_month_uids( \
+                            pre_date, pre_date, 10)
+            if len(first_buy_uids) > 0:
+                first_buy_uids = np.array( \
+                            first_buy_uids).reshape(1, len(first_buy_uids))[0]
+            # 留存用户uid
+            retain_uids = ds_share.get_hold_users_date_uids(cur_date, \
+                        first_buy_uids)
+            if len(retain_uids) > 0:
+                retain_uids = np.array( \
+                        retain_uids).reshape(1, len(retain_uids))[0]
+            # 赎回用户uid
+            redeem_uids = ds_order.get_specific_month_in_uids( \
+                        pre_date, cur_date, [20, 21, 30, 31], first_buy_uids)
+            if len(redeem_uids) > 0:
+                redeem_uids = np.array( \
+                        redeem_uids).reshape(1, len(redeem_uids))[0]
+            # 复购用户uid
+            resub_uids = ds_order.get_specific_month_in_uids( \
+                        pre_date, cur_date, [11], first_buy_uids) 
+            if len(resub_uids) > 0:
+                resub_uids = np.array( \
+                        resub_uids).reshape(1, len(resub_uids))[0]
 
 if __name__ == "__main__":
     # obj = MonthlyStaApportion()
     # obj.incremental_update()
-    obj_reten = MonthlyStaRetention()
-    obj_reten.handle()
+    # obj_reten = MonthlyStaRetention()
+    # obj_reten.handle()
+    obj_rolling = MonthlyStaRolling()
+    obj_rolling.handle()
