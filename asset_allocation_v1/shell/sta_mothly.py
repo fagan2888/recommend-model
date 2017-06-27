@@ -288,7 +288,7 @@ class MonthlyStaRetention(object):
             old_dict['rp_amount_redeem'] = []
             old_dict['rp_amount_aum'] = []
             old_df = pd.DataFrame(old_dict).set_index([ \
-                    'rp_date', 'rp_retention_type'])
+                    'rp_tag_id', 'rp_date', 'rp_retention_type'])
         else:
             old_df = pd.DataFrame(old_data)
             old_df = old_df.iloc[:, :-2]
@@ -394,17 +394,35 @@ class MonthlyStaRolling(object):
         """
         从有交易日期开始按自然日处理
         """
-        cursor_day = datetime.date(2017, 6, 25)#self.start_date
+        cursor_date = self.start_date
         end_date = self.end_date
-        
-        while cursor_day <= end_date:
-            new_df = self.process_by_day(cursor_day)
-            # old_df = self.get_old_data(cursor_day)
-            # self.insert_db(new_df, old_df)
-            print new_df
-            os._exit(0)
+        if cursor_date < (end_date - datetime.timedelta(390)):
+            cursor_date = end_date - datetime.timedelta(390)
+        while cursor_date <= end_date:
+            new_df = self.process_by_day(cursor_date)
+            old_df = self.get_old_data([cursor_date])
+            self.insert_db(new_df, old_df)
+            cursor_date = cursor_date + datetime.timedelta(1)
+    def get_old_data(self, cur_date):
+        old_data = rpt_srrc_rolling.get_old_data(cur_date) 
+        if len(old_data) == 0:
+            old_dict = {}
+            old_dict['rp_tag_id'] = []
+            old_dict['rp_date'] = []
+            old_dict['rp_retention_type'] = []
+            old_dict['rp_user_redeem_ratio'] = []
+            old_dict['rp_user_resub_ratio'] = []
+            old_dict['rp_amount_redeem_ratio'] = []
+            old_dict['rp_amount_resub_ratio'] = []
+            old_df = pd.DataFrame(old_dict).set_index([ \
+                    'rp_tag_id', 'rp_date', 'rp_retention_type'])
+        else:
+            old_df = pd.DataFrame(old_data)
+            old_df = old_df.iloc[:, :-2]
+            old_df = old_df.set_index(['rp_tag_id', 'rp_date', 'rp_retention_type'])
+        return old_df
     def insert_db(self, new_df, old_df):
-        portfolio_statistics_rpt_srrc_rolling.batch(new_df, old_df)
+        rpt_srrc_rolling.batch(new_df, old_df)
     def process_by_day(self, cur_date):
         rp_tag_id = []
         rp_date = []
@@ -417,31 +435,82 @@ class MonthlyStaRolling(object):
             rp_tag_id.append(0)
             rp_date.append(cur_date)
             rp_retention_type.append(rType)
-            pre_date = cur_date - datetime.timedelta(days=day_num) 
+            pre_date = cur_date - datetime.timedelta(days=day_num)
             first_buy_uids = ds_order.get_specific_month_uids( \
                             pre_date, pre_date, 10)
-            if len(first_buy_uids) > 0:
+            first_buy_num = len(first_buy_uids)
+            if first_buy_num > 0:
                 first_buy_uids = np.array( \
                             first_buy_uids).reshape(1, len(first_buy_uids))[0]
+
             # 留存用户uid
             retain_uids = ds_share.get_hold_users_date_uids(cur_date, \
                         first_buy_uids)
-            if len(retain_uids) > 0:
+            retain_num = len(retain_uids)
+            if retain_num > 0:
                 retain_uids = np.array( \
                         retain_uids).reshape(1, len(retain_uids))[0]
             # 赎回用户uid
             redeem_uids = ds_order.get_specific_month_in_uids( \
                         pre_date, cur_date, [20, 21, 30, 31], first_buy_uids)
-            if len(redeem_uids) > 0:
+            redeem_num = len(redeem_uids)
+            if redeem_num > 0:
                 redeem_uids = np.array( \
                         redeem_uids).reshape(1, len(redeem_uids))[0]
             # 复购用户uid
             resub_uids = ds_order.get_specific_month_in_uids( \
-                        pre_date, cur_date, [11], first_buy_uids) 
-            if len(resub_uids) > 0:
+                        pre_date, cur_date, [11], first_buy_uids)
+            resub_num = len(resub_uids)
+            if resub_num > 0:
                 resub_uids = np.array( \
                         resub_uids).reshape(1, len(resub_uids))[0]
-
+            # 统计各种赎回、复购率
+            retain_ratio = 0
+            redeem_ratio = 0
+            resub_ratio = 0
+            if first_buy_num > 0:
+                retain_ratio = float(retain_num) / first_buy_num
+                redeem_ratio = float(redeem_num) / first_buy_num
+                resub_ratio = float(resub_num) / first_buy_num
+            rp_user_redeem_ratio.append(redeem_ratio)
+            rp_user_resub_ratio.append(resub_ratio)
+            # 首次购买金额
+            first_buy_amount = ds_order.get_specific_month_amount(pre_date, \
+                                pre_date, [10], first_buy_uids)
+            first_buy_amount = first_buy_amount[0][0]
+            # 赎回金额
+            redeem_amount = ds_order.get_specific_month_amount(pre_date, cur_date, \
+                                [20, 21, 30, 31], first_buy_uids)
+            redeem_amount = redeem_amount[0][0]
+            # 复购金额
+            resub_amount = ds_order.get_specific_month_amount(pre_date, \
+                                cur_date, [11], first_buy_uids)
+            resub_amount = resub_amount[0][0]
+            # 统计各种赎回、复购金额率
+            redeem_amount_ratio = 0
+            resub_amount_ratio = 0
+            if first_buy_amount > 0:
+                if redeem_amount != None:
+                    redeem_amount_ratio = redeem_amount / first_buy_amount
+                if resub_amount != None:
+                    resub_amount_ratio = resub_amount / first_buy_amount
+            rp_amount_redeem_ratio.append(redeem_amount_ratio)
+            rp_amount_resub_ratio.append(resub_amount_ratio)
+        new_dict = {}
+        new_dict['rp_tag_id'] = rp_tag_id
+        new_dict['rp_date'] = rp_date
+        new_dict['rp_retention_type'] = rp_retention_type
+        new_dict['rp_user_resub_ratio'] = rp_user_resub_ratio
+        new_dict['rp_user_redeem_ratio'] = rp_user_redeem_ratio
+        new_dict['rp_amount_resub_ratio'] = rp_amount_resub_ratio
+        new_dict['rp_amount_redeem_ratio'] = rp_amount_redeem_ratio
+        new_df = pd.DataFrame(new_dict).set_index([ \
+                'rp_tag_id', 'rp_date', 'rp_retention_type'])
+        new_df = new_df.ix[:, [ \
+                    'rp_user_redeem_ratio', 'rp_user_resub_ratio', \
+                    'rp_amount_redeem_ratio', 'rp_amount_resub_ratio']]
+        new_df.fillna(0, inplace=True)
+        return new_df
 if __name__ == "__main__":
     # obj = MonthlyStaApportion()
     # obj.incremental_update()
