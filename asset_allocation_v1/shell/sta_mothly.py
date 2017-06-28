@@ -436,6 +436,9 @@ class MonthlyStaRolling(object):
             rp_date.append(cur_date)
             rp_retention_type.append(rType)
             pre_date = cur_date - datetime.timedelta(days=day_num)
+            # 如果起始时间小于有交易时间则把开始时间作为起始时间
+            if pre_date < self.start_date:
+                pre_date = self.start_date
             first_buy_uids = ds_order.get_specific_month_uids( \
                             pre_date, pre_date, 10)
             first_buy_num = len(first_buy_uids)
@@ -489,6 +492,13 @@ class MonthlyStaRolling(object):
             # 统计各种赎回、复购金额率
             redeem_amount_ratio = 0
             resub_amount_ratio = 0
+            # if cur_date == datetime.date(2016, 9, 21):
+            #     print "###########"
+            #     print cur_date, pre_date
+            #     print first_buy_num
+            #     print first_buy_amount, resub_amount
+            #     print "###########"
+            #     os._exit(0)
             if first_buy_amount > 0:
                 if redeem_amount != None:
                     redeem_amount_ratio = redeem_amount / first_buy_amount
