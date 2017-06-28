@@ -3,6 +3,7 @@ from __future__ import division
 import pandas as pd
 import numpy as np
 import warnings
+import json
 
 #from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import SelectFromModel
@@ -30,15 +31,6 @@ from sklearn.preprocessing import StandardScaler
 #from sklearn.preprocessing import MinMaxScaler
 
 warnings.filterwarnings('ignore')
-
-'''
-best_params = {'hsi': [{'svc__gamma': 15.848931924611271, 'svc__C': 12.589254117941044, 'lda__n_components': 5}, [u'macd', u'atr', u'cci', u'rsi', u'mtm', u'slowkd', u'pct_chg_f',u'priceosc', u'dummy', u'high_lag1', u'low_lag1', u'open_lag1',u'atr_lag1', u'rsi_lag1', u'roc_lag1', u'pct_chg_f_lag1', u'bias_lag1',u'dummy_lag1']],
-               'sh300': [{'svc__gamma': 25.118864315096026, 'svc__C': 0.19952623149688095, 'lda__n_components': 5}, [u'low', u'cci', u'mtm', u'slowkd', u'pct_chg_f', u'priceosc', u'bias',u'dpo', u'cci_lag1', u'mtm_lag1', u'roc_lag1', u'slowkd_lag1',u'pct_chg_f_lag1', u'priceosc_lag1', u'bias_lag1', u'dpo_lag1']],
-               'nhsp': [{'svc__gamma': 50.118723362727764, 'svc__C': 0.050118723362725714, 'lda__n_components': 5}, [u'high', u'volume', u'cci', u'rsi', u'sobv', u'mtm', u'roc', u'bias',u'vstd', u'dummy', u'high_lag1', u'volume_lag1', u'atr_lag1',u'sobv_lag1', u'mtm_lag1', u'slowkd_lag1', u'bias_lag1', u'vstd_lag1']],
-               'au': [{'svc__gamma': 5011.8723362727969, 'svc__C': 25.118864315094488, 'lda__n_components': 5}, [u'macd', u'cci', u'rsi', u'sobv', u'mtm', u'roc', u'pct_chg_f', u'pvt',u'wvad', u'vstd', u'macd_lag1', u'rsi_lag1', u'sobv_lag1', u'mtm_lag1',u'roc_lag1', u'pct_chg_f_lag1','pvt_lag1', u'wvad_lag1',u'dummy_lag1']],
-               'zz500': [{'svc__gamma': 2511.886431509613, 'svc__C': 0.39810717055348227, 'lda__n_components': 5}, [u'low', u'volume', u'roc', u'wvad', u'priceosc', u'vstd', u'dummy',u'close_lag1', u'volume_lag1', u'macd_lag1', u'atr_lag1', u'rsi_lag1',u'mtm_lag1', u'roc_lag1',u'slowkd_lag1', u'pct_chg_f_lag1',u'wvad_lag1', u'priceosc_lag1', u'vstd_lag1', u'dpo_lag1']],
-               'sp500': [{'svc__gamma': 39810.717055350346, 'svc__C': 0.50118723362725304, 'lda__n_components': 5}, [u'cci', u'rsi', u'mtm', u'roc', u'pvt', u'wvad', u'bias', u'vstd',u'dummy', u'atr_lag1', u'rsi_lag1', u'roc_lag1', u'pct_chg_f_lag1',u'wvad_lag1', u'vstd_lag1']]}
-'''
 
 best_params = {}
 
@@ -106,7 +98,7 @@ class LR(LogisticRegression):
 class Svm(object):
     def __init__(self, asset, test_num):
         #数据文件路径
-        self.path = '../assets/' + asset + '.csv'
+        self.path = './assets/' + asset + '.csv'
 
         #资产名字
         self.asset = asset
@@ -117,6 +109,9 @@ class Svm(object):
         #用于测试的样本数目
         self.test_num = test_num
 
+        #排除在训练样本之外的数目
+        self.predict_num = 100
+
         # 用上周、上上周数据作为特征
         self.lag = 1
 
@@ -125,6 +120,11 @@ class Svm(object):
 
         # cpu数目
         self.threads_num = 35
+
+        #最佳参数字典
+        #self.best_params = {}
+        self.best_params = \
+                json.load(file('./output_params/best_params1.json', 'r'))
 
         # self.window = len(self.data) - test_num - 10
         # 测试时的训练窗口长度
@@ -139,13 +139,13 @@ class Svm(object):
         self.threshold = self.get_threshold(self.test_num)
         print 'threshold: ', self.threshold
 
-        if best_params:
+        if self.best_params:
             print 'existing params'
-            self.params, self.feature_selected = best_params[asset]
+            self.params, self.feature_selected = self.best_params[self.asset]
         else:
             print 'non-existing params'
             self.params, self.feature_selected = \
-                    self.training(self.test_num, \
+                    self.training(self.predict_num, \
                     threads_num = self.threads_num, feature = self.feature,\
                     cv = self.cv, lag = self.lag)
 
@@ -153,7 +153,7 @@ class Svm(object):
                 self.window, self.params, self.feature, self.feature_selected)
         print 'win ratio: ', self.win_ratio
 
-        self.validate_scores = self.cross_validate(self.test_num, self.params, \
+        self.validate_scores = self.cross_validate(self.predict_num, self.params, \
                 self.feature, self.feature_selected)
         print 'validate_scores:', np.mean(self.validate_scores)
         up_ratio = (1 + svm.result_df['pre_states'].sum()/test_num)/2
@@ -167,6 +167,7 @@ class Svm(object):
 
         print 'invest value: ', self.invest_value
         print
+
 
     # 数据预处理
     def preprocessing(self):
@@ -209,7 +210,14 @@ class Svm(object):
         :usage: get proper params using gridSearch
         :param test_num: 用于predict，从训练集中去除的样本数
         :param threads_num: 训练用的线程数
-        :feature: 用于训练的数据,格式为SVM.preprocessing的输出
+
+        :feature: 用于训练的数据
+            types:DataFrame
+            format:index name = date
+                   column name = 'feature_1' feature_2' ... 'feature_n'
+                   'feature_1_lag1' 'feature_2_lag1' ... 'feature_n_lag1'
+            用Svm.preprocessing可以得到这种形式的输出
+
         :cv: GridSearchCV的参数
         :lag: lag=0表示只用上周的数据作为特征，
               lag=1表示中上周和上上周的数据作为特征，以此类推
@@ -230,8 +238,9 @@ class Svm(object):
         '''
         #selectkbest using f_classif, f_regression, mutual_info_classif, chi2
         select_method = mutual_info_classif
-        y = self.feature['label']
-        cv = self.cv
+
+        x = x[:-test_num]
+        y = y[:-test_num]
 
         scaler = StandardScaler()
         selectkbest = SelectKBest(select_method, k = 10)
@@ -259,8 +268,11 @@ class Svm(object):
 
         '''
         #rfe using GBDT
-        y = self.feature['label']
-        cv = self.cv
+
+        y = feature['label']
+
+        x = x[:-test_num]
+        y = y[:-test_num]
 
         rfe = RFE(estimator = GradientBoostingClassifier())
         svc = SVC()
@@ -283,7 +295,6 @@ class Svm(object):
 
         #SelectFromModel using logisticRegression(binding L1 & L2)
         y = feature['label']
-        cv = cv
 
         x = x[:-test_num]
         y = y[:-test_num]
@@ -328,7 +339,7 @@ class Svm(object):
          'svm__gamma': Svm模型的gamma参数,
          'lda__n_components': 用lda降维后的维度
         }
-        :feature: 输入数据，格式为Svm.preprocessing的输出
+        :feature: 输入数据，格式通training的feature参数
         :feature_selected: 特征字符串组成的列表
         '''
         window = window
@@ -454,13 +465,19 @@ class Svm(object):
 
 if __name__ == '__main__':
 
-    test_num = 100
+    test_num = 250
     assets = ['sh300', 'zz500', 'hsi', 'nhsp', 'sp500', 'au']
     best_params_dict = {}
 
     for asset in assets:
         svm = Svm(asset, test_num)
         svm.handle()
+        print 'signal_num: ', svm.get_signal_num()
+        print 'max_drawdown: ', svm.get_max_drawdown()
+        print 'trans_pos_cycle: ', svm.get_trans_pos_cycle()
+        print 'annual_ret: ', svm.get_annual_ret()
+        print 'ret_to_md: ', svm.get_ret_to_md()
+        print
 
         '''
         print 'asset: ', asset
@@ -473,16 +490,11 @@ if __name__ == '__main__':
         print 'features: ', svm.feature_selected
         print 'threshold_value: ', svm.threshold_value
         print 'total_ret: ', svm.invest_value - 1
-        print 'signal_num: ', svm.get_signal_num()
-        print 'max_drawdown: ', svm.get_max_drawdown()
-        print 'trans_pos_cycle: ', svm.get_trans_pos_cycle()
-        print 'annual_ret: ', svm.get_annual_ret()
-        print 'ret_to_md: ', svm.get_ret_to_md()
         print
         '''
 
         best_params_dict[asset] = [svm.params, list(svm.feature_selected)]
         result_df = svm.result_df.loc[:, ['pct_chg', 'pre_states', 'distances']]
-        result_df.to_csv('./svm_absolute_view/' + asset + '.csv', index_label = 'date')
+        result_df.to_csv('./output_data/' + asset + '.csv', index_label = 'date')
 
-    print best_params_dict
+    json.dump(best_params_dict, file('output_params/best_params1.json', 'w'))
