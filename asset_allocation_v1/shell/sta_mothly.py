@@ -436,9 +436,9 @@ class MonthlyStaRolling(object):
             rp_date.append(cur_date)
             rp_retention_type.append(rType)
             pre_date = cur_date - datetime.timedelta(days=day_num)
-            # 如果起始时间小于有交易时间则把开始时间作为起始时间
-            if pre_date < self.start_date:
-                pre_date = self.start_date
+            # # 如果起始时间小于有交易时间则把开始时间作为起始时间
+            # if pre_date < self.start_date:
+            #     pre_date = self.start_date
             first_buy_uids = ds_order.get_specific_month_uids( \
                             pre_date, pre_date, 10)
             first_buy_num = len(first_buy_uids)
