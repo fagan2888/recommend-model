@@ -13,5 +13,6 @@ config.py
 *.log
 .DS_Store
 logging.json
-/feature_selection/output/
+/feature_selection/output_params/svm_absolute_view/
+/feature_selection/output_data/
 /feature_selection/relative_version/
