@@ -13,3 +13,5 @@ config.py
 *.log
 .DS_Store
 logging.json
+/feature_selection/output/
+/feature_selection/relative_version/
