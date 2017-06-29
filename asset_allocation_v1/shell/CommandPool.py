@@ -205,7 +205,7 @@ def load_pools(pools, pool_type=None):
         ra_pool.c.ra_name,
     ]
 
-    s = select(columns)
+    s = select(columns).where(ra_pool.c.ra_type != -1)
     if pools is not None:
         s = s.where(ra_pool.c.id.in_(pools))
     if pool_type is not None:

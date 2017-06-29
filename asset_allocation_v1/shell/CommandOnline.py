@@ -119,7 +119,7 @@ def nav_update(alloc, xtype, debug, optfee, optt0):
         sr_contrib = pd.concat(tn.contrib)
     else:
         xtype = 9
-        sr_nav_online = DFUtil.online_nav2(df_pos, end_date=max_date)
+        sr_nav_online = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
         sr_contrib = pd.Series()
 
     df_result = sr_nav_online.to_frame('on_nav')
@@ -184,7 +184,7 @@ def turnover_update_alloc(online):
 def turnover_update(online):
     online_id = online['globalid']
     # 加载仓位信息
-    df = asset_on_online_pos.load_fund_pos(online_id)
+    df = asset_on_online_fund.load_fund_pos(online_id)
     df = df.unstack()
 
 
