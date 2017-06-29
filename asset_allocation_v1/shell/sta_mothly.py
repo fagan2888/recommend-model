@@ -272,7 +272,7 @@ class MonthlyStaRetention(object):
             cur_date = datetime.date(month_tube[0], month_tube[1], month_tube[2])
             old_df = self.get_old_data([cur_date])
             new_df = self.process_by_month(month_tube, month_list[m_index:])
-            if new_df != None:
+            if new_df is not None:
                 self.insert_db(old_df, new_df)
     def insert_db(self, old_df, new_df):
         rpt_retention_data.batch(new_df, old_df)
@@ -410,24 +410,25 @@ class MonthlyStaRolling(object):
             old_dict = {}
             old_dict['rp_tag_id'] = []
             old_dict['rp_date'] = []
-            old_dict['rp_retention_type'] = []
+            old_dict['rp_rolling_window'] = []
             old_dict['rp_user_redeem_ratio'] = []
             old_dict['rp_user_resub_ratio'] = []
             old_dict['rp_amount_redeem_ratio'] = []
             old_dict['rp_amount_resub_ratio'] = []
             old_df = pd.DataFrame(old_dict).set_index([ \
-                    'rp_tag_id', 'rp_date', 'rp_retention_type'])
+                    'rp_tag_id', 'rp_date', 'rp_rolling_window'])
         else:
             old_df = pd.DataFrame(old_data)
             old_df = old_df.iloc[:, :-2]
-            old_df = old_df.set_index(['rp_tag_id', 'rp_date', 'rp_retention_type'])
+            old_df = old_df.set_index(['rp_tag_id', 'rp_date', 'rp_rolling_window'])
         return old_df
     def insert_db(self, new_df, old_df):
         rpt_srrc_rolling.batch(new_df, old_df)
+
     def process_by_day(self, cur_date):
         rp_tag_id = []
         rp_date = []
-        rp_retention_type = []
+        rp_rolling_window = []
         rp_user_redeem_ratio = []
         rp_user_resub_ratio = []
         rp_amount_redeem_ratio = []
@@ -435,7 +436,7 @@ class MonthlyStaRolling(object):
         for rType, day_num in self.rolling_types.iteritems():
             rp_tag_id.append(0)
             rp_date.append(cur_date)
-            rp_retention_type.append(rType)
+            rp_rolling_window.append(day_num)
             pre_date = cur_date - datetime.timedelta(days=day_num)
             # # 如果起始时间小于有交易时间则把开始时间作为起始时间
             # if pre_date < self.start_date:
@@ -510,22 +511,22 @@ class MonthlyStaRolling(object):
         new_dict = {}
         new_dict['rp_tag_id'] = rp_tag_id
         new_dict['rp_date'] = rp_date
-        new_dict['rp_retention_type'] = rp_retention_type
+        new_dict['rp_rolling_window'] = rp_rolling_window
         new_dict['rp_user_resub_ratio'] = rp_user_resub_ratio
         new_dict['rp_user_redeem_ratio'] = rp_user_redeem_ratio
         new_dict['rp_amount_resub_ratio'] = rp_amount_resub_ratio
         new_dict['rp_amount_redeem_ratio'] = rp_amount_redeem_ratio
         new_df = pd.DataFrame(new_dict).set_index([ \
-                'rp_tag_id', 'rp_date', 'rp_retention_type'])
+                'rp_tag_id', 'rp_date', 'rp_rolling_window'])
         new_df = new_df.ix[:, [ \
                     'rp_user_redeem_ratio', 'rp_user_resub_ratio', \
                     'rp_amount_redeem_ratio', 'rp_amount_resub_ratio']]
         new_df.fillna(0, inplace=True)
         return new_df
 if __name__ == "__main__":
-    # obj = MonthlyStaApportion()
-    # obj.incremental_update()
-    # obj_reten = MonthlyStaRetention()
-    # obj_reten.handle()
+    obj = MonthlyStaApportion()
+    obj.incremental_update()
+    obj_reten = MonthlyStaRetention()
+    obj_reten.handle()
     obj_rolling = MonthlyStaRolling()
     obj_rolling.handle()
