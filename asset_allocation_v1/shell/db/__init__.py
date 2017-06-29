@@ -14,8 +14,10 @@ import asset_mz_markowitz_pos
 import asset_mz_markowitz_sharpe
 import asset_on_online
 import asset_on_online_alloc
+import asset_on_online_criteria
 import asset_on_online_fund
 import asset_on_online_nav
+import asset_on_online_pos
 import asset_on_online_contrib
 import asset_ra_pool
 import asset_ra_pool_fund
