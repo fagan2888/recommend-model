@@ -310,8 +310,8 @@ class Svm(object):
 
         params = dict(
                 lda__n_components = [5],
-                svc__C = 10.0**np.arange(-5, 4, 0.1),
-                svc__gamma = 10.0**np.arange(-3, 5, 0.1)
+                svc__C = 10.0**np.arange(-5, 4),
+                svc__gamma = 10.0**np.arange(-3, 5)
                 )
 
         estimator = GridSearchCV(pipe, param_grid = params, cv = cv, \
@@ -455,7 +455,7 @@ class Svm(object):
 
     # 年化收益
     def get_annual_ret(self):
-        return np.exp(np.log(self.invest_value)/5) - 1
+        return np.exp(np.log(self.invest_value)/(self.test_num//50)) - 1
 
     # 收益/最大回撤
     def get_ret_to_md(self):
@@ -465,7 +465,7 @@ class Svm(object):
 
 if __name__ == '__main__':
 
-    test_num = 250
+    test_num = 100
     assets = ['sh300', 'zz500', 'hsi', 'nhsp', 'sp500', 'au']
     best_params_dict = {}
 
@@ -495,6 +495,7 @@ if __name__ == '__main__':
 
         best_params_dict[asset] = [svm.params, list(svm.feature_selected)]
         result_df = svm.result_df.loc[:, ['pct_chg', 'pre_states', 'distances']]
-        result_df.to_csv('./output_data/' + asset + '.csv', index_label = 'date')
+        result_df.to_csv('./output_data/' + asset + '_weekly' + '.csv', \
+                index_label = 'date')
 
-    json.dump(best_params_dict, file('output_params/best_params1.json', 'w'))
+    #json.dump(best_params_dict, file('output_params/best_params2.json', 'w'))
