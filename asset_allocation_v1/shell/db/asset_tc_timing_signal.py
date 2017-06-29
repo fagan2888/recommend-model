@@ -39,6 +39,32 @@ logger = logging.getLogger(__name__)
 #     df = pd.read_sql(s, db)
 
 #     return df
+def load(timings):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('tc_timing_signal', metadata, autoload=True)
+
+    columns = [
+        t1.c.tc_timing_id,
+        t1.c.tc_date,
+        t1.c.tc_signal,
+    ]
+
+    s = select(columns)
+
+    if timings is not None:
+        if hasattr(timings, "__iter__") and not isinstance(timings, str):
+            s = s.where(t1.c.tc_timing_id.in_(timings))
+        else:
+            s = s.where(t1.c.tc_timing_id == timings)
+    
+    df = pd.read_sql(s, db, index_col = ['tc_date', 'tc_timing_id'], parse_dates=['tc_date'])
+
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
+
 
 def load_series(timing_id):
     # 加载基金列表
