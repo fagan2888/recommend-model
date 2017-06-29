@@ -20,6 +20,7 @@ from db import portfolio_statistics_rpt_srrc_rolling as rpt_srrc_rolling
 def hprint(con):
     print con
     os._exit(0)
+
 def getBetweenMonth(s_date, e_date):
     """
     给出时间区间(s_date, e_date)内年月列表
