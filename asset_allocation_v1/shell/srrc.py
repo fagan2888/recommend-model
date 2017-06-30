@@ -20,7 +20,7 @@ conn = MySQLdb.connect(**db_portfolio_sta)
 cur = conn.cursor(MySQLdb.cursors.DictCursor)
 conn.autocommit(True)
 
-sql ="SELECT date_format(ds_reg_date,'%Y-%m-01') as rp_date,COUNT(DISTINCT ds_uid) as rp_user_new FROM ds_user WHERE ds_reg_date>'2016-08-01' group by date_format(ds_reg_date,'%Y-%m-01')"
+sql ="SELECT date_format(ds_placed_date, '%Y-%m-01') AS rp_date, COUNT(DISTINCT ds_uid) as rp_user_newsub FROM `ds_order_pdate` WHERE `ds_trade_type` = 10 GROUP BY rp_date"
 ds_user = pd.read_sql(sql, conn)
 ds_user['rp_tag_id']=0
 
