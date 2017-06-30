@@ -404,8 +404,7 @@ class MonthlyStaRolling(object):
             cursor_date = end_date - datetime.timedelta(390)
         while cursor_date <= end_date:
             new_df = self.process_by_day(cursor_date)
-            old_df = self.get_old_data([datetime.date(cursor_date.year, \
-                cursor_date.month, 1)])
+            old_df = self.get_old_data([cursor_date])
             self.insert_db(new_df, old_df)
             cursor_date = cursor_date + datetime.timedelta(1)
     def get_old_data(self, cur_date):
@@ -440,7 +439,7 @@ class MonthlyStaRolling(object):
         rp_amount_resub_ratio = []
         for rType, day_num in self.rolling_types.iteritems():
             rp_tag_id.append(0)
-            rp_date.append(cur_date_db)
+            rp_date.append(cur_date)
             rp_rolling_window.append(day_num)
             pre_date = cur_date - datetime.timedelta(days=day_num)
             # # 如果起始时间小于有交易时间则把开始时间作为起始时间
@@ -529,9 +528,9 @@ class MonthlyStaRolling(object):
         new_df.fillna(0, inplace=True)
         return new_df
 if __name__ == "__main__":
-    obj = MonthlyStaApportion()
-    obj.incremental_update()
-    obj_reten = MonthlyStaRetention()
-    obj_reten.handle()
+    # obj = MonthlyStaApportion()
+    # obj.incremental_update()
+    # obj_reten = MonthlyStaRetention()
+    # obj_reten.handle()
     obj_rolling = MonthlyStaRolling()
     obj_rolling.handle()

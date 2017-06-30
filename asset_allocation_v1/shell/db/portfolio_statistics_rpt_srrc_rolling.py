@@ -48,6 +48,13 @@ def get_old_data(dates):
 
 def batch(df_new, df_old):
     t = Table('rpt_srrc_rolling', metadata, autoload=True)
+    fmt_columns = ['rp_user_redeem_ratio', 'rp_user_resub_ratio', \
+                'rp_amount_redeem_ratio', 'rp_amount_resub_ratio']
+    fmt_precision = 4
+    if not df_new.empty:
+        df_new = database.number_format(df_new, fmt_columns, fmt_precision)
+    if not df_old.empty:
+        df_old = database.number_format(df_old, fmt_columns, fmt_precision)
     database.batch(db, t, df_new, df_old)
 
 # def save(gid, xtype, df):
