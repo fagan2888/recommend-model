@@ -24,18 +24,18 @@ sql ="SELECT date_format(ds_placed_date, '%Y-%m-01') AS rp_date, COUNT(DISTINCT 
 ds_user = pd.read_sql(sql, conn)
 ds_user['rp_tag_id']=0
 
-sql1="select date_format(ds_date,'%Y-%m-01') as rp_date,count(distinct ds_uid) as rp_user_hold from ds_share where ds_amount>0 and ds_date>'2016-08-01'group by date_format(ds_date,'%Y-%m-01')"
+sql1="select date_format(ds_date,'%Y-%m-01') as rp_date,count(distinct ds_uid) as rp_user_hold from ds_share where ds_amount>0 and ds_date>'2016-08-01'group by rp_date"
 #count=ds_order.groupby([ds_order['ds_trade_date'].apply(lamda x: x.month),ds_order['ds_trade_type'])['ds_uid'].count()
 
-sql2="SELECT date_Format(ds_trade_date,'%Y-%m-01') as rp_date , count(DISTINCT ds_uid) as rp_user_resub , sum(ds_amount) as rp_amount_resub from ds_order WHERE ds_trade_date>'2016-08-01' and ds_trade_type=11 group by date_Format(ds_trade_date,'%Y-%m-01')"
+sql2="SELECT date_Format(ds_placed_date,'%Y-%m-01') as rp_date , count(DISTINCT ds_uid) as rp_user_resub , sum(ds_amount) as rp_amount_resub from ds_order_pdate WHERE ds_placed_date>'2016-08-01' and ds_trade_type=11 group by rp_date"
 
-sql3="SELECT date_Format(ds_trade_date,'%Y-%m-01') as rp_date , count(DISTINCT ds_uid) as rp_user_clear from ds_order where ds_trade_date>'2016-08-01' and ds_trade_type in (30,31) group by date_Format(ds_trade_date,'%Y-%m-01')"
+sql3="SELECT date_Format(ds_placed_date,'%Y-%m-01') as rp_date , count(DISTINCT ds_uid) as rp_user_clear from ds_order_pdate where ds_placed_date>'2016-08-01' and ds_trade_type in (30,31) group by rp_date"
 
-sql4="SELECT date_Format(ds_trade_date,'%Y-%m-01') as rp_date , sum(ds_amount) as rp_amount_firstsub from ds_order where ds_trade_date>'2016-08-01' and ds_trade_type=10 group by date_Format(ds_trade_date,'%Y-%m-01')"
+sql4="SELECT date_Format(ds_placed_date,'%Y-%m-01') as rp_date , sum(ds_amount) as rp_amount_firstsub from ds_order_pdate where ds_placed_date>'2016-08-01' and ds_trade_type=10 group by rp_date"
 
-sql5="SELECT date_Format(ds_trade_date,'%Y-%m-01') as rp_date , sum(ds_amount) as rp_amount_redeem from ds_order where ds_trade_date>'2016-08-01' and ds_trade_type in (20,21,30,31) group by date_Format(ds_trade_date,'%Y-%m-01')"
+sql5="SELECT date_Format(ds_placed_date,'%Y-%m-01') as rp_date , sum(ds_amount) as rp_amount_redeem from ds_order_pdate where ds_placed_date>'2016-08-01' and ds_trade_type in (20,21,30,31) group by rp_date"
 
-sql6="select date_format(ds_date,'%Y-%m-01') as rp_date,sum(ds_amount) as rp_amount_aum from ds_share where ds_date>'2016-08-01' and ds_date in (select max_date from (select max(ds_date) as max_date from ds_share group by date_format(ds_date,'%Y-%m')) as aaa) group by date_format(ds_date,'%Y-%m-01')"
+sql6="select date_format(ds_date,'%Y-%m-01') as rp_date,sum(ds_amount) as rp_amount_aum from ds_share where ds_date>'2016-08-01' and ds_date in (select max_date from (select max(ds_date) as max_date from ds_share group by date_format(ds_date,'%Y-%m')) as aaa) group by rp_date"
 
 hold=pd.read_sql(sql1,conn)
 ds_user=pd.merge(ds_user,hold,how='outer',on=['rp_date'])
