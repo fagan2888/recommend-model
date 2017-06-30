@@ -92,7 +92,7 @@ class MonthlyStaApportion(object):
         """
         # 数据库中最新所属月份
         cur_month = rpt_srrc_apportion.get_max_date()
-        if cur_month == None:
+        if cur_month is None:
             old_dict = {}
             old_dict['rp_tag_id'] = []
             old_dict['rp_date'] = []
@@ -104,18 +104,18 @@ class MonthlyStaApportion(object):
             old_dict['rp_amount_redeem'] = []
             old_dict['rp_amount_aum'] = []
             old_df = pd.DataFrame(old_dict).set_index([ \
-                    'rp_date', 'rp_date_apportion'])
+                    'rp_tag_id', 'rp_date', 'rp_date_apportion'])
         else:
             cur_month = cur_month[1]
             last_year_num = cur_month.year if cur_month.month != 1 \
                 else cur_month.year - 1
             last_month_num = cur_month.month - 1 if cur_month.month != 1 else 12
-            last_month = datetime.date(last_year_num, last_month_num, \
-                    calendar.monthrange(last_year_num, last_month_num)[1])
+            last_month = datetime.date(last_year_num, last_month_num, 1)
+            #        calendar.monthrange(last_year_num, last_month_num)[1])
             old_df = rpt_srrc_apportion.get_old_data([last_month, cur_month])
             old_df = pd.DataFrame(old_df)
             old_df = old_df.iloc[:, :-2]
-            old_df = old_df.set_index(['rp_date', 'rp_date_apportion'])
+            old_df = old_df.set_index(['rp_tag_id', 'rp_date', 'rp_date_apportion'])
         return old_df
     def incremental_update(self):
         """
@@ -124,7 +124,7 @@ class MonthlyStaApportion(object):
         # 数据库中最新所属月份
         newest_month = rpt_srrc_apportion.get_max_date()
         old_df = self.get_old_data()
-        if newest_month == None:
+        if newest_month is None:
             new_df = self.deal_data(self.min_year, self.min_month)
             #rpt_srrc_apportion.batch(new_df, old_df)
         else:
@@ -164,6 +164,7 @@ class MonthlyStaApportion(object):
             month_days = calendar.monthrange(cursor_year, cursor_month)[1]
             past_year_month = self.get_month_range(cursor_year, cursor_month)
             end_date_rp = datetime.date(cursor_year, cursor_month, month_days)
+            end_date_db = datetime.date(cursor_year, cursor_month, 1)
             end_date = datetime.date(cursor_year, cursor_month, \
                     past_year_month[-1][3])
             monthly_order_data = ds_order.get_monthly_data(start_date, end_date)
@@ -183,8 +184,9 @@ class MonthlyStaApportion(object):
                 s_date = datetime.date(date_tube[0], date_tube[1], 1)
                 e_date = datetime.date(date_tube[0], date_tube[1], date_tube[3])
                 e_date_rp = datetime.date(date_tube[0], date_tube[1], date_tube[2])
-                rp_date.append(end_date_rp)
-                rp_date_apportion.append(e_date_rp)
+                e_date_db = datetime.date(date_tube[0], date_tube[1], 1)
+                rp_date.append(end_date_db)
+                rp_date_apportion.append(e_date_db)
                 if len(clear_uids) > 0:
                     clear_monthly_num = np.array(ds_order.get_specific_month_num( \
                         s_date, e_date, 10, clear_uids))
@@ -238,8 +240,8 @@ class MonthlyStaApportion(object):
         new_dict['rp_amount_redeem'] = rp_amount_redeem
         new_dict['rp_amount_aum'] = rp_amount_aum
         new_df = pd.DataFrame(new_dict).set_index([ \
-                'rp_date', 'rp_date_apportion'])
-        new_df = new_df.ix[:, ['rp_tag_id',  \
+                'rp_tag_id', 'rp_date', 'rp_date_apportion'])
+        new_df = new_df.ix[:, [ \
                     'rp_user_resub', 'rp_user_clear', 'rp_user_retain', \
                     'rp_amount_resub', 'rp_amount_redeem', 'rp_amount_aum']]
         new_df.fillna(0, inplace=True)
@@ -269,7 +271,7 @@ class MonthlyStaRetention(object):
             month_list = month_list[-14:]
         for month_tube in month_list:
             m_index = month_list.index(month_tube)
-            cur_date = datetime.date(month_tube[0], month_tube[1], month_tube[2])
+            cur_date = datetime.date(month_tube[0], month_tube[1], 1)
             old_df = self.get_old_data([cur_date])
             new_df = self.process_by_month(month_tube, month_list[m_index:])
             if new_df is not None:
@@ -299,6 +301,7 @@ class MonthlyStaRetention(object):
         # 当前月开始时间和结束时间
         s_date = datetime.date(cur_month[0], cur_month[1], 1)
         e_date = datetime.date(cur_month[0], cur_month[1], cur_month[2])
+        e_date_db = datetime.date(cur_month[0], cur_month[1], 1)
         # 当前月新购买用户
         first_buy_uids = ds_order.get_specific_month_uids(s_date, e_date, 10)
         if len(first_buy_uids) > 0:
@@ -325,7 +328,7 @@ class MonthlyStaRetention(object):
             end_date_rp = datetime.date(retype_date_tube[0], \
                     retype_date_tube[1], retype_date_tube[3])
             rp_tag_id.append(0)
-            rp_date.append(e_date)
+            rp_date.append(e_date_db)
             rp_retention_type.append(re_type)
             # 复购用户uid
             resub_uids = ds_order.get_specific_month_in_uids(s_date, end_date, \
@@ -401,11 +404,12 @@ class MonthlyStaRolling(object):
             cursor_date = end_date - datetime.timedelta(390)
         while cursor_date <= end_date:
             new_df = self.process_by_day(cursor_date)
-            old_df = self.get_old_data([cursor_date])
+            old_df = self.get_old_data([datetime.date(cursor_date.year, \
+                cursor_date.month, 1)])
             self.insert_db(new_df, old_df)
             cursor_date = cursor_date + datetime.timedelta(1)
     def get_old_data(self, cur_date):
-        old_data = rpt_srrc_rolling.get_old_data(cur_date) 
+        old_data = rpt_srrc_rolling.get_old_data(cur_date)
         if len(old_data) == 0:
             old_dict = {}
             old_dict['rp_tag_id'] = []
@@ -426,6 +430,7 @@ class MonthlyStaRolling(object):
         rpt_srrc_rolling.batch(new_df, old_df)
 
     def process_by_day(self, cur_date):
+        cur_date_db = datetime.date(cur_date.year, cur_date.month, 1)
         rp_tag_id = []
         rp_date = []
         rp_rolling_window = []
@@ -435,7 +440,7 @@ class MonthlyStaRolling(object):
         rp_amount_resub_ratio = []
         for rType, day_num in self.rolling_types.iteritems():
             rp_tag_id.append(0)
-            rp_date.append(cur_date)
+            rp_date.append(cur_date_db)
             rp_rolling_window.append(day_num)
             pre_date = cur_date - datetime.timedelta(days=day_num)
             # # 如果起始时间小于有交易时间则把开始时间作为起始时间
@@ -502,9 +507,9 @@ class MonthlyStaRolling(object):
             #     print "###########"
             #     os._exit(0)
             if first_buy_amount > 0:
-                if redeem_amount != None:
+                if redeem_amount is not None:
                     redeem_amount_ratio = redeem_amount / first_buy_amount
-                if resub_amount != None:
+                if resub_amount is not None:
                     resub_amount_ratio = resub_amount / first_buy_amount
             rp_amount_redeem_ratio.append(redeem_amount_ratio)
             rp_amount_resub_ratio.append(resub_amount_ratio)
