@@ -24,7 +24,7 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_trade_dates
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates
 from util import xdict
 
@@ -557,19 +557,42 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
 
+
+        views = np.mean(df_inc)
+        try:
+            day = df_inc.index[-1]
+            trade_dates = asset_trade_dates.load_trade_dates()
+            trade_dates = trade_dates[trade_dates['trade_type'] & 0b010 == 2]
+            trade_dates = trade_dates.index
+            trade_dates = trade_dates[trade_dates > day]
+            start_date = day
+            end_date = trade_dates[0]
+            index = DBData.trade_date_index(start_date, end_date=end_date)
+            data = {}
+            for asset in df_inc.columns:
+                data[asset] = load_nav_series(asset, index, start_date, end_date)
+            df_nav = pd.DataFrame(data).fillna(method='pad')
+            tmp_df_inc  = df_nav.pct_change().fillna(0.0)
+            inc = tmp_df_inc.iloc[-1]
+            inc = inc - np.mean(df_inc)
+            views = inc.values
+        except:
+            pass
+
         tmp_bound = copy.deepcopy(bound)
-        #view = [0.005, 0, 0, 0, 0]
-        #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, tmp_bound, None, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, tmp_bound, None, cpu_count=cpu_count, bootstrap_count=bootstrap)
+
         for i in range(0, len(df_inc.columns)):
             tmp_bound[i]['sum1'] = 0
             tmp_bound[i]['sum2'] = 0
-            #tmp_bound[i]['upper'] = ws[i] + 0.1 if ws[i] + 0.1 <= 1 else 1
-            #tmp_bound[i]['lower'] = ws[i] - 0.1 if ws[i] - 0.1 >= 0 else 0
-            tmp_bound[i]['upper'] = 1
-            tmp_bound[i]['lower'] = 0
+            tmp_bound[i]['upper'] = ws[i] + 0.1 if ws[i] + 0.1 <= 1 else 1
+            tmp_bound[i]['lower'] = ws[i] - 0.1 if ws[i] - 0.1 >= 0 else 0
+            #tmp_bound[i]['upper'] = 1
+            #tmp_bound[i]['lower'] = 0
 
-        #df_inc = df_inc.iloc[len(df_inc) / 2 : ]
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound, None)
+        df_inc = df_inc.iloc[len(df_inc) / 2 : ]
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound, views)
+
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
