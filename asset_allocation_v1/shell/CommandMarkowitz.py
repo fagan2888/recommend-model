@@ -24,7 +24,7 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_trade_dates
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_trade_dates, asset_vw_view, asset_vw_view_inc
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates
 from util import xdict
 
@@ -558,6 +558,8 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     else:
 
 
+        '''
+        god view
         views = np.mean(df_inc)
         try:
             day = df_inc.index[-1]
@@ -577,7 +579,9 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
             inc = inc - np.mean(df_inc)
             views = inc.values
         except:
+            views = np.mean(df_inc)
             pass
+        '''
 
         tmp_bound = copy.deepcopy(bound)
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, tmp_bound, None, cpu_count=cpu_count, bootstrap_count=bootstrap)
@@ -590,7 +594,21 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
             #tmp_bound[i]['upper'] = 1
             #tmp_bound[i]['lower'] = 0
 
+
         df_inc = df_inc.iloc[len(df_inc) / 2 : ]
+        view_asset_dict = {120000001:42110102, 120000002:42110202, 120000013:42120201, 120000014:42400102, 120000015:42120502}
+        views = np.mean(df_inc)
+        #try:
+        for i in range(0, len(df_inc.columns)):
+            indexid = df_inc.columns[i]
+            viewid = view_asset_dict[indexid]
+            print asset_vw_view_inc.get_asset_day_view(viewid, day)
+            asset_view = asset_vw_view_inc.get_asset_day_view(viewid, day).values[0][0]
+            print asset_view
+        #except:
+        #    views = np.mean(df_inc)
+        #    pass
+
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound, views)
 
 
