@@ -35,10 +35,10 @@ recommend = {
 
 
 portfolio_statistics = {
-    "host": "127.0.0.1",
+    "host": "rdsf4ji381o0nt6n2954.mysql.rds.aliyuncs.com",
     "port": 3306,
-    "user": "root",
-    "passwd": "Mofang123",
+    "user": "jiaoyang",
+    "passwd": "wgOdGq9SWruwATrVWGwi",
     "db":"portfolio_statistics",
     "charset": "utf8"
 }
@@ -54,7 +54,7 @@ asset_allocation = {
 
 if __name__ == '__main__':
 
-
+    '''
     conn  = MySQLdb.connect(**trade)
     conn.autocommit(True)
 
@@ -122,10 +122,11 @@ if __name__ == '__main__':
     df.to_csv('investor_portfolio_holding_actuals.csv')
 
 
-
+    '''
     conn  = MySQLdb.connect(**portfolio_statistics)
     conn.autocommit(True)
 
     sql = 'select * from st_trade_statistics'
     df = pd.read_sql(sql, conn, index_col = ['st_uid'])
-    df.to_csv('st_trade_statistics.csv', encoding='gbk')
+    del df['st_name']
+    df.to_csv('st_trade_statistics.csv', encoding='utf8')
