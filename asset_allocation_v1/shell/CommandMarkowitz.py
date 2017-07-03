@@ -557,9 +557,8 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
 
-
         '''
-        god view
+        #god view
         views = np.mean(df_inc)
         try:
             day = df_inc.index[-1]
@@ -579,6 +578,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
             inc = inc - np.mean(df_inc)
             views = inc.values
         except:
+            print day, 'no view'
             views = np.mean(df_inc)
             pass
         '''
@@ -594,22 +594,23 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
             #tmp_bound[i]['upper'] = 1
             #tmp_bound[i]['lower'] = 0
 
-
         df_inc = df_inc.iloc[len(df_inc) / 2 : ]
         view_asset_dict = {120000001:42110102, 120000002:42110202, 120000013:42120201, 120000014:42400102, 120000015:42120502}
         views = np.mean(df_inc)
-        #try:
-        for i in range(0, len(df_inc.columns)):
-            indexid = df_inc.columns[i]
-            viewid = view_asset_dict[indexid]
-            print asset_vw_view_inc.get_asset_day_view(viewid, day)
-            asset_view = asset_vw_view_inc.get_asset_day_view(viewid, day).values[0][0]
-            print asset_view
-        #except:
-        #    views = np.mean(df_inc)
-        #    pass
+        day = df_inc.index[-1]
+        try:
+            for i in range(0, len(df_inc.columns)):
+                indexid = df_inc.columns[i]
+                viewid = view_asset_dict[indexid]
+                #print day, indexid, viewid, asset_vw_view_inc.get_asset_day_view(viewid, day)
+                asset_view = asset_vw_view_inc.get_asset_day_view(viewid, day).values[0][0]
+                views[indexid] = asset_view - views[indexid]
+        except:
+            views = np.mean(df_inc)
+            print day, 'no view'
+            pass
 
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound, views)
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, tmp_bound, views)
 
 
     sr_result = pd.concat([
