@@ -26,7 +26,7 @@ def get_max_date():
     t = Table('rpt_srrc', metadata, autoload=True)
     rst = session.query(t).order_by(desc(t.c.rp_date)).first()
     return rst
-def get_old_data(dates):
+def get_old_data():
     """
     得到所属月份数据
     :param dates: list, 所属月份列表
@@ -46,7 +46,7 @@ def get_old_data(dates):
         t.c.rp_amount_redeem,
         t.c.rp_amount_aum,
     ]
-    rst = session.query(t).filter(t.c.rp_date.in_(dates))
+    rst = session.query(t)
     return rst.all()
 
 def batch(df_new, df_old):

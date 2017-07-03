@@ -16,6 +16,7 @@ from db import portfolio_statistics_ds_share as ds_share
 from db import portfolio_statistics_rpt_srrc_apportion as rpt_srrc_apportion
 from db import portfolio_statistics_rpt_retention_data as rpt_retention_data
 from db import portfolio_statistics_rpt_srrc_rolling as rpt_srrc_rolling
+from db import portfolio_statistics_rpt_srrc as rpt_srrc
 
 def hprint(con):
     print con
@@ -527,6 +528,135 @@ class MonthlyStaRolling(object):
                     'rp_amount_redeem_ratio', 'rp_amount_resub_ratio']]
         new_df.fillna(0, inplace=True)
         return new_df
+class MonthlyStaSrrc(object):
+    def __init__(self):
+        # 开始有交易的时间
+        self.start_date = ds_order.get_min_date()
+        # 当前交易时间
+        self.end_date = ds_order.get_max_date()
+    def handle(self):
+        old_df = self.get_old_data()
+        new_df = self.latest_sta()
+        self.update_db(new_df, old_df)
+    def update_db(self, new_df, old_df):
+        rpt_srrc.batch(new_df, old_df)
+    def get_old_data(self):
+        old_data = rpt_srrc.get_old_data()
+        if len(old_data) == 0:
+            old_dict = {}
+            old_dict['rp_tag_id'] = []
+            old_dict['rp_date'] = []
+            old_dict['rp_user_newsub'] = []
+            old_dict['rp_user_resub'] = []
+            old_dict['rp_user_clear'] = []
+            old_dict['rp_user_hold'] = []
+            old_dict['rp_amount_firstsub'] = []
+            old_dict['rp_amount_resub'] = []
+            old_dict['rp_amount_redeem'] = []
+            old_dict['rp_amount_aum'] = []
+            old_df = pd.DataFrame(old_dict).set_index([ \
+                    'rp_tag_id', 'rp_date'])
+        else:
+            old_df = pd.DataFrame(old_data)
+            old_df = old_df.iloc[:, :-2]
+            old_df = old_df.set_index(['rp_tag_id', 'rp_date'])
+        return old_df
+    def latest_sta(self):
+        """
+        从有交易日期开始按自然日处理
+        """
+        date_range = getBetweenMonth(self.start_date, self.end_date)
+        rp_tag_id = []
+        rp_date = []
+        rp_user_newsub = []
+        rp_user_resub = []
+        rp_user_clear = []
+        rp_user_hold = []
+        rp_amount_firstsub = []
+        rp_amount_resub = []
+        rp_amount_redeem = []
+        rp_amount_aum = []
+        for date_tube in date_range:
+            s_date = datetime.date(date_tube[0], date_tube[1], 1)
+            e_date = datetime.date(date_tube[0], date_tube[1], date_tube[3])
+            newsub_num = 0
+            resub_num = 0
+            clear_num = 0
+            print s_date, e_date
+            rp_tag_id.append(0)
+            rp_date.append(s_date)
+            # 新购用户数
+            newsub_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
+                [10])
+            newsub_num = len(newsub_uids)
+            if newsub_num > 0:
+                newsub_uids = np.array( \
+                        newsub_uids).reshape(1, len(newsub_uids))[0]
+            # 复购用户数
+            resub_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
+                [11])
+            resub_num = len(resub_uids)
+            if resub_num > 0:
+                resub_uids = np.array( \
+                        resub_uids).reshape(1, len(resub_uids))[0]
+            # 清仓用户数
+            clear_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
+                [30, 31])
+            clear_num = len(clear_uids)
+            if clear_num > 0:
+                clear_uids = np.array( \
+                        clear_uids).reshape(1, len(clear_uids))[0]
+
+            # 持仓用户数
+            hold_amount = ds_share.get_specific_month_hold_count(e_date)[0][0]
+            # 首购金额
+            amount_firstsub = ds_order.get_specific_month_amount(s_date, \
+                e_date, [10], newsub_uids)[0][0]
+            # 复购总金额
+            amount_resub = ds_order.get_specific_month_amount(s_date, \
+                e_date, [10], resub_uids)[0][0]
+            # 赎回总金额
+            redeem_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
+                [20, 21, 30, 31])
+            redeem_num = len(redeem_uids)
+            if redeem_num > 0:
+                redeem_uids = np.array( \
+                        redeem_uids).reshape(1, len(redeem_uids))[0]
+            amount_redeem = ds_order.get_specific_month_amount(s_date, \
+                e_date, [20, 21, 30, 31], redeem_uids)[0][0]
+            # 在管资产
+            amount_aum = ds_share.get_specific_month_amount(e_date)[0][0]
+
+            rp_user_newsub.append(newsub_num)
+            rp_user_resub.append(resub_num)
+            rp_user_clear.append(clear_num)
+            rp_user_hold.append(hold_amount)
+            rp_amount_firstsub.append(amount_firstsub)
+            rp_amount_resub.append(amount_resub)
+            rp_amount_redeem.append(amount_redeem)
+            rp_amount_aum.append(amount_aum)
+        new_dict = {}
+        new_dict['rp_tag_id'] = rp_tag_id
+        new_dict['rp_date'] = rp_date
+        new_dict['rp_user_newsub'] = rp_user_newsub
+        new_dict['rp_user_resub'] = rp_user_resub
+        new_dict['rp_user_clear'] = rp_user_clear
+        new_dict['rp_user_hold'] = rp_user_hold
+        new_dict['rp_amount_firstsub'] = rp_amount_firstsub
+        new_dict['rp_amount_resub'] = rp_amount_resub
+        new_dict['rp_amount_redeem'] = rp_amount_redeem
+        new_dict['rp_amount_aum'] = rp_amount_aum
+        new_df = pd.DataFrame(new_dict).set_index([ \
+                'rp_tag_id', 'rp_date'])
+        new_df = new_df.ix[:, [ \
+                    'rp_user_newsub', 'rp_user_resub', \
+                    'rp_user_clear', 'rp_user_hold', 'rp_amount_firstsub', \
+                    'rp_amount_resub', 'rp_amount_redeem', \
+                    'rp_amount_aum']]
+        new_df.fillna(0, inplace=True)
+        return new_df
+
+
 if __name__ == "__main__":
     obj = MonthlyStaApportion()
     obj.incremental_update()
@@ -534,3 +664,5 @@ if __name__ == "__main__":
     obj_reten.handle()
     obj_rolling = MonthlyStaRolling()
     obj_rolling.handle()
+    obj_srrc = MonthlyStaSrrc()
+    obj_srrc.handle()
