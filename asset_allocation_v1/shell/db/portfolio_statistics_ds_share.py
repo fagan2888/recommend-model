@@ -58,6 +58,21 @@ def get_specific_month_hold_users(hold_date):
                                     t.c.ds_amount > 0)
     return rst.all()
 
+def get_specific_month_hold_count(hold_date):
+    """
+    获取某天有持仓用户
+    :return: list
+    """
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
+    t = Table('ds_share', metadata, autoload=True)
+    # Session = sessionmaker(bind=db)
+    # session = Session()
+    rst = session.query(func.COUNT(func.DISTINCT(t.c.ds_uid))).filter( \
+                                    t.c.ds_date == hold_date,
+                                    t.c.ds_amount > 0)
+    return rst.all()
+
 def get_hold_users_date_uids(hold_date, uids):
     """
     获取某天有持仓用户且用户id在uids里

@@ -87,6 +87,25 @@ def get_specific_month_num(s_date, e_date, t_type, uids):
                                         t.c.ds_uid.in_(uids))
     return rst.all()
 
+def get_specific_month_num_naive(s_date, e_date, t_type):
+    """
+    获取某个时间段内ds_trade_type=t_type的且uid在uids内的用户数
+    :param s_date: string, 开始日期
+    :param e_date: string, 结束日期
+    :param t_type: array, 交易类型
+    :return: int
+    """
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
+    t = Table('ds_order_pdate', metadata, autoload=True)
+    # Session = sessionmaker(bind=db)
+    # session = Session()
+    rst = session.query(func.COUNT(func.DISTINCT(t.c.ds_uid))).filter( \
+                                        t.c.ds_placed_date >= s_date, \
+                                        t.c.ds_placed_date <= e_date, \
+                                        t.c.ds_trade_type.in_(t_type))
+    return rst.all()
+
 def get_specific_month_in_uids(s_date, e_date, t_type, uids):
     """
     获取某个时间段内ds_trade_type=t_type的且uid在uids内的用户uid
@@ -145,6 +164,26 @@ def get_specific_month_uids(s_date, e_date, t_type):
                                         t.c.ds_placed_date >= s_date, \
                                         t.c.ds_placed_date <= e_date, \
                                         t.c.ds_trade_type == t_type)
+    #session.close()
+    return rst.all()
+
+def get_specific_month_uids_in(s_date, e_date, t_type):
+    """
+    获取某个时间段内ds_trade_type=t_type的用户id
+    :param s_date: string, 开始日期
+    :param e_date: string, 结束日期
+    :param t_type: list, 交易类型
+    :return: list
+    """
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
+    t = Table('ds_order_pdate', metadata, autoload=True)
+    #Session = sessionmaker(bind=db)
+    # session = Session()
+    rst = session.query(func.DISTINCT(t.c.ds_uid)).filter( \
+                                        t.c.ds_placed_date >= s_date, \
+                                        t.c.ds_placed_date <= e_date, \
+                                        t.c.ds_trade_type.in_(t_type))
     #session.close()
     return rst.all()
 session.close()
