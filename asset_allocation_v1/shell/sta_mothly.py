@@ -169,12 +169,16 @@ class MonthlyStaApportion(object):
             end_date = datetime.date(cursor_year, cursor_month, \
                     past_year_month[-1][3])
             monthly_order_data = ds_order.get_monthly_data(start_date, end_date)
-            clear_uids = set(monthly_order_data[ \
-                monthly_order_data['ds_trade_type'] == 30]['ds_uid'] \
-            )
-            resub_uids = set(monthly_order_data[ \
-                monthly_order_data['ds_trade_type'] == 11]['ds_uid'] \
-            )
+            clear_uids = ds_order.get_specific_month_uids_in(start_date, \
+                end_date, [30, 31])
+            if len(clear_uids) > 0:
+                clear_uids = np.array( \
+                    clear_uids).reshape(1,len(clear_uids))[0]
+            resub_uids = ds_order.get_specific_month_uids_in(start_date, \
+                end_date, [11])
+            if len(resub_uids) > 0:
+                resub_uids = np.array( \
+                    resub_uids).reshape(1,len(resub_uids))[0]
             retain_uids = ds_share.get_specific_month_hold_users(end_date)
             if len(retain_uids) > 0:
                 retain_uids = np.array( \
