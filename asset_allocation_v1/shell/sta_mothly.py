@@ -170,7 +170,7 @@ class MonthlyStaApportion(object):
                     past_year_month[-1][3])
             monthly_order_data = ds_order.get_monthly_data(start_date, end_date)
             clear_uids = ds_order.get_specific_month_uids_in(start_date, \
-                end_date, [30, 31])
+                end_date, [30])
             if len(clear_uids) > 0:
                 clear_uids = np.array( \
                     clear_uids).reshape(1,len(clear_uids))[0]
@@ -439,6 +439,7 @@ class MonthlyStaRolling(object):
         rp_date = []
         rp_rolling_window = []
         rp_user_redeem_ratio = []
+        rp_user_retain_ratio = []
         rp_user_resub_ratio = []
         rp_amount_redeem_ratio = []
         rp_amount_resub_ratio = []
@@ -487,6 +488,7 @@ class MonthlyStaRolling(object):
                 redeem_ratio = float(redeem_num) / first_buy_num
                 resub_ratio = float(resub_num) / first_buy_num
             rp_user_redeem_ratio.append(redeem_ratio)
+            rp_user_retain_ratio.append(retain_ratio)
             rp_user_resub_ratio.append(resub_ratio)
             # 首次购买金额
             first_buy_amount = ds_order.get_specific_month_amount(pre_date, \
@@ -522,13 +524,14 @@ class MonthlyStaRolling(object):
         new_dict['rp_date'] = rp_date
         new_dict['rp_rolling_window'] = rp_rolling_window
         new_dict['rp_user_resub_ratio'] = rp_user_resub_ratio
-        new_dict['rp_user_redeem_ratio'] = rp_user_redeem_ratio
+        # 把赎回率改成留存率
+        new_dict['rp_user_redeem_ratio'] = rp_user_retain_ratio
         new_dict['rp_amount_resub_ratio'] = rp_amount_resub_ratio
         new_dict['rp_amount_redeem_ratio'] = rp_amount_redeem_ratio
         new_df = pd.DataFrame(new_dict).set_index([ \
                 'rp_tag_id', 'rp_date', 'rp_rolling_window'])
         new_df = new_df.ix[:, [ \
-                    'rp_user_redeem_ratio', 'rp_user_resub_ratio', \
+                    'rp_user_retain_ratio', 'rp_user_resub_ratio', \
                     'rp_amount_redeem_ratio', 'rp_amount_resub_ratio']]
         new_df.fillna(0, inplace=True)
         return new_df
@@ -586,7 +589,6 @@ class MonthlyStaSrrc(object):
             newsub_num = 0
             resub_num = 0
             clear_num = 0
-            print s_date, e_date
             rp_tag_id.append(0)
             rp_date.append(s_date)
             # 新购用户数
@@ -605,7 +607,7 @@ class MonthlyStaSrrc(object):
                         resub_uids).reshape(1, len(resub_uids))[0]
             # 清仓用户数
             clear_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
-                [30, 31])
+                [30])
             clear_num = len(clear_uids)
             if clear_num > 0:
                 clear_uids = np.array( \
