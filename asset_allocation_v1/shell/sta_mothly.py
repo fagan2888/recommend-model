@@ -170,7 +170,7 @@ class MonthlyStaApportion(object):
                     past_year_month[-1][3])
             monthly_order_data = ds_order.get_monthly_data(start_date, end_date)
             clear_uids = ds_order.get_specific_month_uids_in(start_date, \
-                end_date, [30])
+                end_date, [30, 31])
             if len(clear_uids) > 0:
                 clear_uids = np.array( \
                     clear_uids).reshape(1,len(clear_uids))[0]
@@ -194,9 +194,10 @@ class MonthlyStaApportion(object):
                 rp_date_apportion.append(e_date_db)
                 if len(clear_uids) > 0:
                     clear_monthly_num = np.array(ds_order.get_specific_month_num( \
-                        s_date, e_date, 10, clear_uids))
-                    rp_user_clear.append(clear_monthly_num[0][0])
+                        s_date, e_date, 10, clear_uids))[0][0]
+                    rp_user_clear.append(clear_monthly_num)
                 else:
+                    clear_monthly_num = 0
                     rp_user_clear.append(0)
                 if len(resub_uids) > 0:
                     resub_monthly_num = np.array(ds_order.get_specific_month_num( \
@@ -204,15 +205,16 @@ class MonthlyStaApportion(object):
                     rp_user_resub.append(resub_monthly_num[0][0])
                 else:
                     rp_user_resub.append(0)
-
-                if len(retain_uids) > 0:
-                    retain_monthly_num = np.array(ds_order.get_specific_month_num( \
-                        s_date, e_date, 10, retain_uids))
-                    rp_user_retain.append(retain_monthly_num[0][0])
-                else:
-                    rp_user_retain.append(0)
                 first_buy_uids = ds_order.get_specific_month_uids(s_date, e_date, 10)
-                if len(first_buy_uids) > 0:
+                first_buy_num = len(first_buy_uids)
+                rp_user_retain.append(first_buy_num - clear_monthly_num)
+                # if len(retain_uids) > 0:
+                #     retain_monthly_num = np.array(ds_order.get_specific_month_num( \
+                #         s_date, e_date, 10, retain_uids))
+                #     rp_user_retain.append(retain_monthly_num[0][0])
+                # else:
+                #     rp_user_retain.append(0)
+                if first_buy_num > 0:
                     first_buy_uids = np.array( \
                         first_buy_uids).reshape(1,len(first_buy_uids))[0]
                     # 复购金额
@@ -606,12 +608,19 @@ class MonthlyStaSrrc(object):
                 resub_uids = np.array( \
                         resub_uids).reshape(1, len(resub_uids))[0]
             # 清仓用户数
+            ## 第一次清仓
+            # clear_uids_first =ds_order.get_specific_month_uids_in(s_date, e_date, \
+            #     [30])
             clear_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
-                [30])
+                [30, 31])
+            # clear_num_first = len(clear_uids_first)
             clear_num = len(clear_uids)
             if clear_num > 0:
                 clear_uids = np.array( \
                         clear_uids).reshape(1, len(clear_uids))[0]
+            # if clear_num_first> 0:
+            #     clear_uids_first = np.array( \
+            #             clear_uids).reshape(1, len(clear_uids))[0]
 
             # 持仓用户数
             hold_amount = ds_share.get_specific_month_hold_count(e_date)[0][0]
