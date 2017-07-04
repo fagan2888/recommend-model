@@ -170,7 +170,7 @@ class MonthlyStaApportion(object):
                     past_year_month[-1][3])
             monthly_order_data = ds_order.get_monthly_data(start_date, end_date)
             clear_uids = ds_order.get_specific_month_uids_in(start_date, \
-                end_date, [30, 31])
+                end_date, [30])
             if len(clear_uids) > 0:
                 clear_uids = np.array( \
                     clear_uids).reshape(1,len(clear_uids))[0]
@@ -533,7 +533,7 @@ class MonthlyStaRolling(object):
         new_df = pd.DataFrame(new_dict).set_index([ \
                 'rp_tag_id', 'rp_date', 'rp_rolling_window'])
         new_df = new_df.ix[:, [ \
-                    'rp_user_retain_ratio', 'rp_user_resub_ratio', \
+                    'rp_user_redeem_ratio', 'rp_user_resub_ratio', \
                     'rp_amount_redeem_ratio', 'rp_amount_resub_ratio']]
         new_df.fillna(0, inplace=True)
         return new_df
@@ -612,7 +612,7 @@ class MonthlyStaSrrc(object):
             # clear_uids_first =ds_order.get_specific_month_uids_in(s_date, e_date, \
             #     [30])
             clear_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
-                [30, 31])
+                [30])
             # clear_num_first = len(clear_uids_first)
             clear_num = len(clear_uids)
             if clear_num > 0:
