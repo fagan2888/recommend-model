@@ -191,7 +191,7 @@ def markowitz_r(funddfr, bounds):
     return final_risk, final_return, final_ws, final_sharp
 
 
-def markowitz_r_spe(funddfr, bounds, view):
+def markowitz_r_spe(df_inc, bounds):
 
     rf = Const.rf
 
@@ -202,16 +202,15 @@ def markowitz_r_spe(funddfr, bounds, view):
     final_codes = []
 
 
-    codes = funddfr.columns
-
+    codes = df_inc.columns
 
     return_rate = []
 
     for code in codes:
-        return_rate.append(funddfr[code].values)
+        return_rate.append(df_inc[code].values)
 
 
-    risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds, view)
+    risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds)
 
     for j in range(0, len(risks)):
         sharp = (returns[j] - rf) / risks[j]
@@ -223,14 +222,14 @@ def markowitz_r_spe(funddfr, bounds, view):
 
     return final_risk, final_return, final_ws, final_sharp
 
-def m_markowitz(queue, random_index, df_inc, bound, view):
+def m_markowitz(queue, random_index, df_inc, bound):
     for index in random_index:
         tmp_df_inc = df_inc.iloc[index]
-        risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound, view)
+        risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound)
         queue.put((risk, returns, ws, sharpe))
 
 
-def markowitz_bootstrape(df_inc, bound, view = None, cpu_count = 0, bootstrap_count=0):
+def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -268,7 +267,7 @@ def markowitz_bootstrape(df_inc, bound, view = None, cpu_count = 0, bootstrap_co
     q = multiprocessing.Queue()
     processes = []
     for indexs in process_indexs:
-        p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound, view,))
+        p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound,))
         processes.append(p)
         p.start()
 
@@ -292,6 +291,15 @@ def markowitz_bootstrape(df_inc, bound, view = None, cpu_count = 0, bootstrap_co
 
     ws = wss / loop_num
     return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
+
+
+def view_inc(df_inc, view):
+
+    df_inc = df_inc.copy()
+    df_mean = np.mean(df_inc)
+    for col in df_inc.columns:
+        df_inc[col] = df_inc[col] + (view[col] - df_mean[col])
+    return df_inc
 
 
 #利用blacklitterman做战略资产配置
