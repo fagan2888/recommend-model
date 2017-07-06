@@ -8,22 +8,25 @@ import sys
 sys.path.append('./shell')
 import datetime
 import numpy as np
-import pylab as pl
-from matplotlib.dates import YearLocator, MonthLocator, DateFormatter
-from hmmlearn.hmm import GaussianHMM, MultinomialHMM
+#import pylab as pl
+#from matplotlib.dates import YearLocator, MonthLocator, DateFormatter
+#from hmmlearn.hmm import MultinomialHMM
+from hmmlearn.hmm import GaussianHMM
 import pandas as pd
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 # from pykalman import KalmanFilter
-from scipy.stats import boxcox
+#from scipy.stats import boxcox
 from scipy import stats
 import os
-from utils import sigmoid
-from sklearn.preprocessing import normalize
-from db import caihui_tq_qt_index as load_index
+#from utils import sigmoid
+#from sklearn.preprocessing import normalize
+#from db import caihui_tq_qt_index as load_index
 from db import asset_trade_dates as load_td
 from db import asset_vw_view as ass_view
 from db import asset_vw_view_inc as ass_view_inc
 from cal_tech_indic import CalTechIndic as CalTec
+import warnings
+warnings.filterwarnings('ignore')
 
 class HmmNesc(object):
 
@@ -178,9 +181,9 @@ class HmmNesc(object):
         :param thres: 过滤state阈值
         :return: 当天持仓否
         """
-        dates = data.index
-        close = list(data["close"])
-        pct_change = list(data["pct_chg"])
+        #dates = data.index
+        #close = list(data["close"])
+        #pct_change = list(data["pct_chg"])
         # state_num = len(states)
         # result = {}
         #union_data = {}
@@ -222,7 +225,7 @@ class HmmNesc(object):
         # means = ratios.mean()
         # stds = ratios.std(ddof=1)
         means_arr = []
-        stds_arr = []
+        #stds_arr = []
         for ite in range(state_num):
             state = (states == ite)
             idx = np.append([], state)
@@ -258,7 +261,7 @@ class HmmNesc(object):
         ratios = ratios / 100.0
         mean_ratio = np.mean(ratios)
         anal_ratio = mean_ratio * 252
-        return_std = np.std(ratios) * np.sqrt(252)
+        #return_std = np.std(ratios) * np.sqrt(252)
         # thres 为sharpe
         # sharpe = anal_ratio / return_std
         # if sharpe >= thres:
@@ -423,15 +426,15 @@ class HmmNesc(object):
         return states
     @staticmethod
     def cal_stats_pro(model, states, ratio):
-        state_today = states[-1]
+        #state_today = states[-1]
         trans_mat_today = model.transmat_[states[-1]]
-        mean_today = model.means_[state_today, 1]
-        mean_rank_today = sum(model.means_[:, 1] < mean_today)
+        #mean_today = model.means_[state_today, 1]
+        #mean_rank_today = sum(model.means_[:, 1] < mean_today)
 
         next_day_state = np.argmax(trans_mat_today)
-        next_day_pro = trans_mat_today[next_day_state]
+        #next_day_pro = trans_mat_today[next_day_state]
         next_day_mean = model.means_[next_day_state, 1]
-        next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
+        #next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
         return next_day_mean
     @staticmethod
     def statistic_win_ratio(ratios, means_arr, stds_arr):
@@ -493,7 +496,7 @@ class HmmNesc(object):
         union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
         #result = ass_view_inc.insert_predict_pct(union_data_tmp)
-        return result
+        return union_data_tmp
 
     @staticmethod
     def cal_nav_maxdrawdown(return_lsit):
