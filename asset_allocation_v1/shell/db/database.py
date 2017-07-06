@@ -38,7 +38,6 @@ uris = {
     'asset': config.db_asset_uri,
     'base': config.db_base_uri,
     'caihui': config.db_caihui_uri,
-    'portfolio_sta': config.db_portfolio_sta_uri,
 }
 
 connections = {}

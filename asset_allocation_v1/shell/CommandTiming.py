@@ -178,6 +178,7 @@ def nav(ctx, optid, optlist):
         timings = None
 
     df_timing = asset_tc_timing.load(timings)
+
     if optlist:
 
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
@@ -192,8 +193,7 @@ def nav(ctx, optid, optlist):
 def nav_update(timing):
     timing_id = timing['globalid']
     # 加载择时信号
-    # df_position = database.asset_tc_timing_scratch_load_signal(timing_id)
-    df_position = asset_tc_timing_signal.load(timing_id)
+    df_position = database.asset_tc_timing_scratch_load_signal(timing_id)
     # 构建仓位
     df_position.loc[df_position[timing_id] < 1, timing_id] = 0
     

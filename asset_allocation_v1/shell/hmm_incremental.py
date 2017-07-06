@@ -116,8 +116,9 @@ class HmmNesc(object):
             if ass_vw_inc_df['newest_date'][0] != None:
                 self.view_newest_date = pd.Timestamp(ass_vw_inc_df['newest_date'][0])
     def get_index_origin_data(self):
-        self.ori_data = load_index.load_index_daily_data(self.secode, \
-                        self.start_date, self.end_date)
+        self.ori_data = self.load_offline_data(self.ass_id)
+        # load_index.load_index_daily_data(self.secode, \
+        #                 self.start_date, self.end_date)
         if self.ori_data.empty:
             return (3, 'has no data for secode:' + self.secode)
         for col in self.ori_data.columns:
@@ -491,8 +492,8 @@ class HmmNesc(object):
         union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
-        # result = ass_view_inc.insert_predict_pct(union_data_tmp)
-        return 0
+        #result = ass_view_inc.insert_predict_pct(union_data_tmp)
+        return result
 
     @staticmethod
     def cal_nav_maxdrawdown(return_lsit):
@@ -619,9 +620,14 @@ class HmmNesc(object):
                 break
 
         return date
+    def load_offline_data(self, ass_id):
+        df = pd.read_csv(ass_id + "_ori_day_data.csv", index_col=['date'], \
+            parse_dates=['date'])
+        return df
 if __name__ == "__main__":
     view_ass = ['120000001', '120000002', '120000013', '120000014', \
                 '120000015', '120000029']
+    view_ass = ['120000001']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')

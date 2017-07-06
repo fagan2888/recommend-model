@@ -49,7 +49,7 @@ def online(ctx, optid, opttype):
 @online.command()
 @click.option('--id', 'optid', help=u'ids of online to update')
 @click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
-@click.option('--type', 'opttype', default='9,8', help=u'type type(8:with fee; 9:without fee')
+@click.option('--type', 'opttype', default='9', help=u'type type(8:with fee; 9:without fee')
 @click.option('--fee/--no-fee', 'optfee', default=True, help=u'specify with/without fee for type 8')
 @click.option('--t0/--no-t0', 'optt0', default=False, help=u'specify use t+0 or not for type 8')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
@@ -119,7 +119,7 @@ def nav_update(alloc, xtype, debug, optfee, optt0):
         sr_contrib = pd.concat(tn.contrib)
     else:
         xtype = 9
-        sr_nav_online = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
+        sr_nav_online = DFUtil.online_nav2(df_pos, end_date=max_date)
         sr_contrib = pd.Series()
 
     df_result = sr_nav_online.to_frame('on_nav')
@@ -184,7 +184,7 @@ def turnover_update_alloc(online):
 def turnover_update(online):
     online_id = online['globalid']
     # 加载仓位信息
-    df = asset_on_online_fund.load_fund_pos(online_id)
+    df = asset_on_online_pos.load_fund_pos(online_id)
     df = df.unstack()
 
 
