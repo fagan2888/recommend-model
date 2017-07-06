@@ -426,7 +426,7 @@ class HmmNesc(object):
         trans_mat_today = model.transmat_[states[-1]]
         mean_today = model.means_[state_today, 1]
         mean_rank_today = sum(model.means_[:, 1] < mean_today)
-        
+
         next_day_state = np.argmax(trans_mat_today)
         next_day_pro = trans_mat_today[next_day_state]
         next_day_mean = model.means_[next_day_state, 1]
@@ -491,8 +491,8 @@ class HmmNesc(object):
         union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
-        result = ass_view_inc.insert_predict_pct(union_data_tmp)
-        return result
+        # result = ass_view_inc.insert_predict_pct(union_data_tmp)
+        return 0
 
     @staticmethod
     def cal_nav_maxdrawdown(return_lsit):
