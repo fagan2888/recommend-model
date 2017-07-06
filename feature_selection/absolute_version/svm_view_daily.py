@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import warnings
 import json
+from datetime import datetime
 
 #from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import SelectFromModel
@@ -98,7 +99,7 @@ class LR(LogisticRegression):
 class Svm(object):
     def __init__(self, asset, test_num):
         #数据文件路径
-        self.path = './assets/' + asset + '.csv'
+        self.path = './assets/' + asset + '_indicator_day_data' + '.csv'
 
         #资产名字
         self.asset = asset
@@ -110,10 +111,10 @@ class Svm(object):
         self.test_num = test_num
 
         #排除在训练样本之外的数目
-        self.predict_num = 100
+        self.predict_num = 500
 
         # 用上周、上上周数据作为特征
-        self.lag = 1
+        self.lag = 3
 
         # cross validate的数目
         self.cv = 6
@@ -124,11 +125,11 @@ class Svm(object):
         #最佳参数字典
         self.best_params = {}
         #self.best_params = \
-        #        json.load(file('./output_params/best_params1.json', 'r'))
+        #    json.load(file('./output_params/best_params_daily_sh300.json', 'r'))
 
         # self.window = len(self.data) - test_num - 10
         # 测试时的训练窗口长度
-        self.window = 1500
+        self.window = 1000
         if self.window + test_num > len(self.data):
             self.window = 500
 
@@ -172,7 +173,9 @@ class Svm(object):
     # 数据预处理
     def preprocessing(self):
         feature = self.data
-        feature['dummy'] = np.sign(feature['pct_chg'])
+        if feature.index[0] < datetime(2008, 1, 1):
+            feature = feature['2008':]
+        feature['dummy'] = np.sign(feature['pct_chg'] - 0.000000001)
         pct_chg = feature['pct_chg']
         feature.rename(columns = {'pct_chg': 'pct_chg_f'}, inplace = True)
 
@@ -189,7 +192,7 @@ class Svm(object):
                 feature_lag3], axis = 1)
 
         feature['pct_chg'] = pct_chg
-        feature['label'] = feature['dummy'].shift(-1)
+        feature['label'] = feature['dummy'].shift(-2)
         feature.dropna(inplace = True)
 
         return feature
@@ -205,7 +208,7 @@ class Svm(object):
 
 
     @staticmethod
-    def training(test_num, threads_num, feature, cv, lag = 1):
+    def training(test_num, threads_num, feature, cv, lag = 3):
         '''
         :usage: get proper params using gridSearch
         :param test_num: 用于predict，从训练集中去除的样本数
@@ -294,6 +297,11 @@ class Svm(object):
         '''
 
         #SelectFromModel using logisticRegression(binding L1 & L2)
+        '''
+        feature_selected = ['pct_chg_f', 'pct_chg_f_lag1', 'pct_chg_f_lag2', \
+                'pct_chg_f_lag3', 'volume', 'volume_lag1', 'volume_lag2', \
+                'volume_lag3']
+                '''
         y = feature['label']
 
         x = x[:-test_num]
@@ -339,7 +347,7 @@ class Svm(object):
          'svm__gamma': Svm模型的gamma参数,
          'lda__n_components': 用lda降维后的维度
         }
-        :feature: 输入数据，格式通training的feature参数
+        :feature: 输入数据，格式同training的feature参数
         :feature_selected: 特征字符串组成的列表
         '''
         window = window
@@ -356,7 +364,7 @@ class Svm(object):
         svc = SVC(C = c, gamma = g, probability = False)
 
         pre_states = []
-        distances = []
+        #distances = []
         for i in np.arange(test_num):
             x_train, x_test = x[-test_num - window + i: -test_num + i], \
                     x[-test_num + i: ]
@@ -367,12 +375,12 @@ class Svm(object):
             pipe.fit(x_train, y_train)
             pre_state = pipe.predict(x_test)[0]
             pre_states.append(pre_state)
-            distance = np.abs(pipe.decision_function(x_test)[0])
-            distances.append(distance)
+            #distance = np.abs(pipe.decision_function(x_test)[0])
+            #distances.append(distance)
 
         result_df = feature[-test_num: ]
         result_df.loc[:, 'pre_states'] = pre_states
-        result_df.loc[:, 'distance'] = distances
+        #result_df.loc[:, 'distance'] = distances
 
         correct_num = (result_df['pre_states'] == \
                 result_df['label']).values.sum()
@@ -386,16 +394,16 @@ class Svm(object):
     def cross_validate(test_num, params, feature, feature_selected):
         c = params['svc__C']
         g = params['svc__gamma']
-        n = params['lda__n_components']
+        #n = params['lda__n_components']
         #n = self.params['pca__n_components']
         x = feature.loc[:, feature_selected][:-test_num]
         y = feature['label'][:-test_num]
 
         scaler = StandardScaler()
-        lda = LDA(n_components = n)
+        #lda = LDA(n_components = n)
         #pca = PCA(n_components = n)
         svc = SVC(C = c, gamma = g)
-        pipe = Pipeline(steps = [('scaler', scaler), ('lda', lda), ('svc', svc)])
+        pipe = Pipeline(steps = [('scaler', scaler), ('svc', svc)])
         validate_scores = cross_val_score(pipe, x, y, cv=10)
 
         return validate_scores
@@ -407,19 +415,19 @@ class Svm(object):
         test_num = self.test_num
         dates = self.result_df.index
         return_list = []
-        threshold_value = 1.0
+#        threshold_value = 1.0
         invest_value = 1.0
 
-        for i in range(test_num - 1):
-            if self.result_df.loc[dates[i], 'pct_chg'] > 0:
-                threshold_value *= (1 + self.result_df.loc[dates[i+1], \
-                        'pct_chg']/100)
+        for i in range(test_num - 2):
+#            if self.result_df.loc[dates[i], 'pct_chg'] > 0:
+#                threshold_value *= (1 + self.result_df.loc[dates[i+2], \
+#                        'pct_chg']/100)
 #            else:
 #                threshold_value *= (1 - self.result_df.loc[dates[i+1], \
 #        'pct_chg']/100)
 
             if self.result_df.loc[dates[i], 'pre_states'] > 0:
-                invest_value *= (1 + self.result_df.loc[dates[i+1], \
+                invest_value *= (1 + self.result_df.loc[dates[i+2], \
                         'pct_chg']/100)
                 return_list.append(invest_value)
 #            else:
@@ -451,7 +459,7 @@ class Svm(object):
 
     # 投资周期
     def get_trans_pos_cycle(self):
-        return self.test_num/self.get_signal_num()
+        return self.test_num/(self.get_signal_num()+1)
 
     # 年化收益
     def get_annual_ret(self):
@@ -461,13 +469,35 @@ class Svm(object):
     def get_ret_to_md(self):
         return self.get_annual_ret()/self.get_max_drawdown()
 
+    def get_signal_win_ratio(self):
+        win_num = 0
+        total_num = 0
+        signal_nav = 1
+
+        for i in range(len(self.result_df['pre_states'])-2):
+            current = self.result_df['pre_states'][i]
+            next_ = self.result_df['pre_states'][i+1]
+
+            if current == next_:
+                signal_nav *= (1 + self.result_df['pct_chg'][i+2]/100)
+            elif current != next_:
+                signal_nav *= (1 + self.result_df['pct_chg'][i+2]/100)
+                if (signal_nav-1)*current >= 0:
+                    win_num += 1
+                total_num += 1
+                signal_nav = 1
+
+        win_ratio = win_num/total_num
+        return win_ratio
 
 
 if __name__ == '__main__':
 
-    test_num = 500
+    test_num = 1250
     #assets = ['sh300', 'zz500', 'hsi', 'nhsp', 'sp500', 'au']
-    assets = ['120000001', '120000002']
+    assets = ['120000001', '120000002', '120000013', '120000014', '120000015', \
+            '120000029']
+    #assets = ['120000013']
     best_params_dict = {}
 
     for asset in assets:
@@ -478,6 +508,7 @@ if __name__ == '__main__':
         print 'trans_pos_cycle: ', svm.get_trans_pos_cycle()
         print 'annual_ret: ', svm.get_annual_ret()
         print 'ret_to_md: ', svm.get_ret_to_md()
+        print 'signal_win_ratio: ', svm.get_signal_win_ratio()
         print
 
         '''
@@ -495,7 +526,7 @@ if __name__ == '__main__':
         '''
 
         best_params_dict[asset] = [svm.params, list(svm.feature_selected)]
-        #result_df = svm.result_df.loc[:, ['pct_chg', 'pre_states', 'distances']]
-        #result_df.to_csv('./output_data/' + asset + '.csv', index_label = 'date')
+        result_df = svm.result_df.loc[:, ['pct_chg', 'pre_states', 'distances']]
+        result_df.to_csv('./output_data/' + asset + '_daily' + '.csv', index_label = 'date')
 
-    json.dump(best_params_dict, file('output_params/best_params3.json', 'w'))
+    json.dump(best_params_dict, file('output_params/best_params_daily.json', 'w'))

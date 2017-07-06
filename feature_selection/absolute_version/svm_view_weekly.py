@@ -98,10 +98,19 @@ class LR(LogisticRegression):
 class Svm(object):
     def __init__(self, asset, test_num):
         #数据文件路径
-        self.path = './assets/' + asset + '.csv'
+        self.path = './assets/' + asset + '_indicator_week_data' + '.csv'
+
+        self.asset_name_dict = {'120000001': 'sh300',
+                          '120000002': 'zz500',
+                          '120000013': 'sp500',
+                          '120000014': 'au',
+                          '120000015': 'hsi',
+                          '120000029': 'nhsp'
+                          }
 
         #资产名字
         self.asset = asset
+        self.asset_name = self.asset_name_dict[asset]
 
         #原始数据
         self.data = pd.read_csv(self.path, index_col = 0, parse_dates = True)
@@ -134,7 +143,7 @@ class Svm(object):
 
 
     def handle(self):
-        print 'asset: ', self.asset
+        print 'asset: ', self.asset_name
         self.feature = self.preprocessing()
         self.threshold = self.get_threshold(self.test_num)
         print 'threshold: ', self.threshold
@@ -407,13 +416,13 @@ class Svm(object):
         test_num = self.test_num
         dates = self.result_df.index
         return_list = []
-        threshold_value = 1.0
+#        threshold_value = 1.0
         invest_value = 1.0
 
         for i in range(test_num - 1):
-            if self.result_df.loc[dates[i], 'pct_chg'] > 0:
-                threshold_value *= (1 + self.result_df.loc[dates[i+1], \
-                        'pct_chg']/100)
+#            if self.result_df.loc[dates[i], 'pct_chg'] > 0:
+#                threshold_value *= (1 + self.result_df.loc[dates[i+1], \
+#                        'pct_chg']/100)
 #            else:
 #                threshold_value *= (1 - self.result_df.loc[dates[i+1], \
 #        'pct_chg']/100)
@@ -438,6 +447,28 @@ class Svm(object):
         signal_num = sig_trans_list.count(-1.0)
 
         return signal_num
+
+
+    def get_signal_win_ratio(self):
+        win_num = 0
+        total_num = 0
+        signal_nav = 1
+
+        for i in range(len(self.result_df['pre_states'])-1):
+            current = self.result_df['pre_states'][i]
+            next_ = self.result_df['pre_states'][i+1]
+
+            if current == next_:
+                signal_nav *= (1 + self.result_df['pct_chg'][i+1]/100)
+            elif current != next_:
+                signal_nav *= (1 + self.result_df['pct_chg'][i+1]/100)
+                if (signal_nav-1)*current >= 0:
+                    win_num += 1
+                total_num += 1
+                signal_nav = 1
+
+        win_ratio = win_num/total_num
+        return win_ratio
 
     # 最大回撤
     def get_max_drawdown(self):
@@ -465,8 +496,9 @@ class Svm(object):
 
 if __name__ == '__main__':
 
-    test_num = 100
-    assets = ['sh300', 'zz500', 'hsi', 'nhsp', 'sp500', 'au']
+    test_num = 250
+    assets = ['120000001', '120000002', '120000013', '120000014', '120000015', \
+            '120000029']
     best_params_dict = {}
 
     for asset in assets:
@@ -477,6 +509,7 @@ if __name__ == '__main__':
         print 'trans_pos_cycle: ', svm.get_trans_pos_cycle()
         print 'annual_ret: ', svm.get_annual_ret()
         print 'ret_to_md: ', svm.get_ret_to_md()
+        print 'signal_win_ratio: ', svm.get_signal_win_ratio()
         print
 
         '''
@@ -494,7 +527,7 @@ if __name__ == '__main__':
         '''
 
         best_params_dict[asset] = [svm.params, list(svm.feature_selected)]
-        result_df = svm.result_df.loc[:, ['pct_chg', 'pre_states', 'distances']]
+        result_df = svm.result_df.loc[:, ['pct_chg', 'pre_states']]
         result_df.to_csv('./output_data/' + asset + '_weekly' + '.csv', \
                 index_label = 'date')
 
