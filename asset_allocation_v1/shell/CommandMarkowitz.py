@@ -637,7 +637,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
 
         tmp_bound = copy.deepcopy(bound)
         df_view_inc = PF.view_inc(df_inc, jy_views)
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_view_inc, tmp_bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, tmp_bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
         for i in range(0, len(df_inc.columns)):
             tmp_bound[i]['sum1'] = 0
@@ -649,7 +649,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
 
         df_inc = df_inc.iloc[len(df_inc) / 2 : ]
         df_view_inc = PF.view_inc(df_inc, lcmf_views)
-        #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_view_inc, tmp_bound)
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, tmp_bound)
 
 
     sr_result = pd.concat([

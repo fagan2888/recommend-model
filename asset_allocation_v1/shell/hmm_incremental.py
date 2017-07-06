@@ -80,6 +80,7 @@ class HmmNesc(object):
         self.eva_indic = [0, 3]
         # 选取指标中排名前几的特征，2代表选取某一指标中排名前2的特征作为最终使用的特征
         self.rank_num = 2
+
     def init_data(self):
         result = self.get_secode()
         if result[0] > 0:
@@ -96,12 +97,14 @@ class HmmNesc(object):
             return result
         result = self.cal_indictor()
         return result
+
     def get_secode(self):
         if self.assets.has_key(self.ass_id):
             self.secode = self.assets[self.ass_id]
             return (0, 'get data sucess')
         else:
             return (1, "asset id is not in dict:" + self.ass_id)
+
     def get_view_id(self):
         ass_vw_df = ass_view.get_viewid_by_indexid(self.ass_id)
         if ass_vw_df.empty:
