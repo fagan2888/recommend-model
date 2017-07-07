@@ -207,13 +207,13 @@ class MonthlyStaApportion(object):
                     rp_user_resub.append(0)
                 first_buy_uids = ds_order.get_specific_month_uids(s_date, e_date, 10)
                 first_buy_num = len(first_buy_uids)
-                rp_user_retain.append(first_buy_num - clear_monthly_num)
-                # if len(retain_uids) > 0:
-                #     retain_monthly_num = np.array(ds_order.get_specific_month_num( \
-                #         s_date, e_date, 10, retain_uids))
-                #     rp_user_retain.append(retain_monthly_num[0][0])
-                # else:
-                #     rp_user_retain.append(0)
+                # rp_user_retain.append(first_buy_num - clear_monthly_num)
+                if len(retain_uids) > 0:
+                    retain_monthly_num = np.array(ds_order.get_specific_month_num( \
+                        s_date, e_date, 10, retain_uids))
+                    rp_user_retain.append(retain_monthly_num[0][0])
+                else:
+                    rp_user_retain.append(0)
                 if first_buy_num > 0:
                     first_buy_uids = np.array( \
                         first_buy_uids).reshape(1,len(first_buy_uids))[0]
