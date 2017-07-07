@@ -41,8 +41,8 @@ class HmmNesc(object):
             '120000013':'2070006545', #标普500指数
             '120000014':'2070000626', #黄金指数
             '120000015':'2070000076', #恒生指数
-            '120000028':'2070006521', #南华商品指数
-            '120000029':'2070006789', #标普高盛原油商品指数收益率
+            '120000028':'2070006521', #标普高盛原油商品指数收益率
+            '120000029':'2070006789', #南华商品指数
         }
         self.feature_selected = {
             '120000001':['bias', 'pct_chg', 'priceosc', 'roc'],
@@ -306,7 +306,7 @@ class HmmNesc(object):
             result[i] = {}
             state = (states == i)
             # 发出信号为t日，从t+2日开始算收益(与原始算法不同，原始算法为以t+1日开盘价买入）,这里更偏向操作基金
-            idx = np.append([0, 0], state[:-2])
+            idx = np.append([0], state[:-1])
             ratios = np.where(idx == 1, data["pct_chg"], 0)
             nav_list, max_drawdonw_list = HmmNesc.cal_nav_maxdrawdown(ratios)
             union_data_tmp["signal"] = idx
@@ -380,7 +380,7 @@ class HmmNesc(object):
         #     print model.means_weight
         # # print model.covars_
         #     os._exit(0)
-        states = model.predict(X)
+        states = np.array(model.predict(X))
         # print "Transition matrix"
         # print np.mat(model.transmat_)
         # print np.shape(model.transmat_)
@@ -429,7 +429,7 @@ class HmmNesc(object):
 
         return states
     @staticmethod
-    def cal_stats_pro(p_data, model, states, ratio, state_num):
+    def cal_stats_pro(train_data, model, states, ratio, state_num):
         #state_today = states[-1]
         transmat = model.dense_transition_matrix()[:state_num, :state_num]
         trans_mat_today = transmat[states[-1]]
@@ -437,9 +437,9 @@ class HmmNesc(object):
         #mean_rank_today = sum(model.means_[:, 1] < mean_today)
         next_day_state = np.argmax(trans_mat_today)
         #next_day_pro = trans_mat_today[next_day_state]
-        next_day_mean = np.mean(p_data.pct_chg[states == next_day_state])
+        next_day_mean = np.mean(train_data.pct_chg[states == next_day_state])
         #next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
-        return next_day_mean
+        return next_day_mean, next_day_state
     @staticmethod
     def statistic_win_ratio(ratios, means_arr, stds_arr):
         ratio_num = len(ratios)
@@ -449,9 +449,6 @@ class HmmNesc(object):
             if ratios[ite] >= min(interval_95) and ratios[ite] <= max(interval_95):
                 win_num += 1.0
         print "win ratio:", win_num / ratio_num
-
-    def fs(self):
-        HmmNesc.feature_select(self.ori_data, self.features, self.state_num, self.sharpe_ratio)
 
     def handle(self):
         """
@@ -477,6 +474,7 @@ class HmmNesc(object):
             p_s_num = newest_date_pos - self.train_num
             p_in_num = newest_date_pos + 1
         means_arr = []
+        states_arr = []
         all_data = self.ori_data[p_in_date:]
         while p_in_date <= p_e_date:
             p_s_num += 1
@@ -490,13 +488,15 @@ class HmmNesc(object):
                 return (1, "hmm training fail")
             #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
-            means = HmmNesc.cal_stats_pro(p_data, model, states, ratios, self.state_num)
+            means, state = HmmNesc.cal_stats_pro(p_data, model, states, ratios, self.state_num)
             means_arr.append(means)
+            states_arr.append(state)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]
                 p_in_date = all_dates[p_in_num]
             else:
                 p_in_date += datetime.timedelta(days=1)
+        states_arr = np.array(states_arr)
         ####### state statistic
         union_data_tmp = {}
         union_data_tmp["means"] = np.array(means_arr) / 100.0
@@ -505,6 +505,7 @@ class HmmNesc(object):
         union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
+        #print self.rating(self.ori_data.loc[all_data.index,:], self.state_num, states_arr, 0.0)
         #result = ass_view_inc.insert_predict_pct(union_data_tmp)
         return union_data_tmp
 
@@ -650,4 +651,3 @@ if __name__ == "__main__":
             print result_handle
         else:
             print result
-            #nesc_hmm.fs()
