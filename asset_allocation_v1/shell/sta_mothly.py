@@ -168,6 +168,11 @@ class MonthlyStaApportion(object):
             end_date_db = datetime.date(cursor_year, cursor_month, 1)
             end_date = datetime.date(cursor_year, cursor_month, \
                     past_year_month[-1][3])
+            # 为了处理订单同步慢问题持仓时期往前推一天
+            if datetime.date(cursor_year, cursor_month, 1) == end_com and \
+                past_year_month[-1][3] != 1:
+                end_date = datetime.date(cursor_year, cursor_month, \
+                    past_year_month[-1][3] -1)
             monthly_order_data = ds_order.get_monthly_data(start_date, end_date)
             clear_uids = ds_order.get_specific_month_uids_in(start_date, \
                 end_date, [30])
@@ -588,6 +593,11 @@ class MonthlyStaSrrc(object):
         for date_tube in date_range:
             s_date = datetime.date(date_tube[0], date_tube[1], 1)
             e_date = datetime.date(date_tube[0], date_tube[1], date_tube[3])
+            # 为了处理订单同步慢问题持仓时期往前推一天
+            if datetime.date(date_range[-1][0], date_range[-1][1], \
+                date_range[-1][3]) == e_date and  date_tube[3] != 1:
+                e_date = datetime.date(date_tube[0], date_tube[1], \
+                    date_tube[3] - 1)
             newsub_num = 0
             resub_num = 0
             clear_num = 0
