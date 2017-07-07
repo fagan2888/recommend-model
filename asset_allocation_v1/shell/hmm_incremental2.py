@@ -11,7 +11,8 @@ import numpy as np
 #import pylab as pl
 #from matplotlib.dates import YearLocator, MonthLocator, DateFormatter
 #from hmmlearn.hmm import MultinomialHMM
-from hmmlearn.hmm import GaussianHMM
+#from hmmlearn.hmm import GaussianHMM
+from pomegranate import HiddenMarkovModel, NormalDistribution
 import pandas as pd
 #from matplotlib import pyplot as plt
 # from pykalman import KalmanFilter
@@ -364,11 +365,14 @@ class HmmNesc(object):
         # X = sigmoid(normalize(X, axis=0))
         # print X
         # X = boxcox(X)
-        model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000) #, params="st", init_params="st")
+        #model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000) #, params="st", init_params="st")
+        model = HiddenMarkovModel()
         # X = np.nan_to_num(0.0)
         # print X.shape
         # os._exit(0)
-        model = model.fit(X)
+        #model = model.fit(X)
+        model = model.from_samples(NormalDistribution, state_num, X, \
+                algorithm = 'viterbi')
         # print model.transmat_
         # print model.startprob_
         # if len(features) > 1:
@@ -425,15 +429,15 @@ class HmmNesc(object):
 
         return states
     @staticmethod
-    def cal_stats_pro(model, states, ratio):
+    def cal_stats_pro(p_data, model, states, ratio, state_num):
         #state_today = states[-1]
-        trans_mat_today = model.transmat_[states[-1]]
+        transmat = model.dense_transition_matrix()[:state_num, :state_num]
+        trans_mat_today = transmat[states[-1]]
         #mean_today = model.means_[state_today, 1]
         #mean_rank_today = sum(model.means_[:, 1] < mean_today)
-
         next_day_state = np.argmax(trans_mat_today)
         #next_day_pro = trans_mat_today[next_day_state]
-        next_day_mean = model.means_[next_day_state, 1]
+        next_day_mean = np.mean(p_data.pct_chg[states == next_day_state])
         #next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
         return next_day_mean
     @staticmethod
@@ -486,7 +490,7 @@ class HmmNesc(object):
                 return (1, "hmm training fail")
             #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
-            means = HmmNesc.cal_stats_pro(model, states, ratios)
+            means = HmmNesc.cal_stats_pro(p_data, model, states, ratios, self.state_num)
             means_arr.append(means)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]
