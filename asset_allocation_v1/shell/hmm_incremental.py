@@ -44,13 +44,13 @@ class HmmNesc(object):
             '120000029':'2070006789', #标普高盛原油商品指数收益率
         }
         self.feature_selected = {
-            '120000001':set(['bias', 'pct_chg', 'priceosc', 'roc']),
-            '120000002':set(['sobv', 'pct_chg', 'bias', 'pvt']),
-            '120000013':set(['sobv', 'pct_chg', 'vstd', 'macd']),
-            '120000014':set(['vstd', 'pct_chg', 'roc', 'wvad']),
-            '120000015':set(['priceosc', 'pct_chg', 'bias', 'roc']),
-            '120000028':set(['macd', 'pct_chg', 'atr']),
-            '120000029':set(['priceosc', 'pct_chg', 'bias', 'roc']),
+            '120000001':['bias', 'pct_chg', 'priceosc', 'roc'],
+            '120000002':['sobv', 'pct_chg', 'bias', 'pvt'],
+            '120000013':['sobv', 'pct_chg', 'vstd', 'macd'],
+            '120000014':['vstd', 'pct_chg', 'roc', 'wvad'],
+            '120000015':['priceosc', 'pct_chg', 'bias', 'roc'],
+            '120000028':['macd', 'pct_chg', 'atr'],
+            '120000029':['priceosc', 'pct_chg', 'bias', 'roc'],
         }
         # 隐形状态数目
         self.state_num = 5
@@ -452,6 +452,7 @@ class HmmNesc(object):
         """
         feature_predict = self.feature_selected[self.ass_id]
         all_dates = self.ori_data.index
+        self.view_newest_date = None
         if self.view_newest_date == None:
             p_s_date = all_dates[0]
             p_in_date = all_dates[self.train_num]
@@ -489,7 +490,7 @@ class HmmNesc(object):
                 p_in_date += datetime.timedelta(days=1)
         ####### state statistic
         union_data_tmp = {}
-        union_data_tmp["means"] = means_arr
+        union_data_tmp["means"] = np.array(means_arr) / 100.0
         union_data_tmp["dates"] = all_data.index
         union_data_tmp["ids"] = np.repeat(self.viewid, len(means_arr))
         union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
@@ -630,7 +631,7 @@ class HmmNesc(object):
 if __name__ == "__main__":
     view_ass = ['120000001', '120000002', '120000013', '120000014', \
                 '120000015', '120000029']
-    view_ass = ['120000001']
+    view_ass = ['120000014']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
