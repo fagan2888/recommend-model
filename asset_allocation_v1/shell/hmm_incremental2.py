@@ -172,6 +172,7 @@ class HmmNesc(object):
         os._exit(0)
         return feature_selected
 
+
     @staticmethod
     def proceed_choose(data, state_num, states, thres):
         """
@@ -306,7 +307,7 @@ class HmmNesc(object):
             result[i] = {}
             state = (states == i)
             # 发出信号为t日，从t+2日开始算收益(与原始算法不同，原始算法为以t+1日开盘价买入）,这里更偏向操作基金
-            idx = np.append([0], state[:-1])
+            idx = np.append([0,0], state[:-2])
             ratios = np.where(idx == 1, data["pct_chg"], 0)
             nav_list, max_drawdonw_list = HmmNesc.cal_nav_maxdrawdown(ratios)
             union_data_tmp["signal"] = idx
@@ -429,7 +430,7 @@ class HmmNesc(object):
 
         return states
     @staticmethod
-    def cal_stats_pro(train_data, model, states, ratio, state_num):
+    def cal_stats_pro(t_data, model, states, ratio, state_num):
         #state_today = states[-1]
         transmat = model.dense_transition_matrix()[:state_num, :state_num]
         trans_mat_today = transmat[states[-1]]
@@ -437,7 +438,7 @@ class HmmNesc(object):
         #mean_rank_today = sum(model.means_[:, 1] < mean_today)
         next_day_state = np.argmax(trans_mat_today)
         #next_day_pro = trans_mat_today[next_day_state]
-        next_day_mean = np.mean(train_data.pct_chg[states == next_day_state])
+        next_day_mean = np.mean(t_data.pct_chg[states == next_day_state])
         #next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
         return next_day_mean, next_day_state
     @staticmethod
