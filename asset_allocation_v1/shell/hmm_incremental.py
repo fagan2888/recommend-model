@@ -446,9 +446,6 @@ class HmmNesc(object):
                 win_num += 1.0
         print "win ratio:", win_num / ratio_num
 
-    def fs(self):
-        HmmNesc.feature_select(self.ori_data, self.features, self.state_num, self.sharpe_ratio)
-
     def handle(self):
         """
         :usage: 执行程序
@@ -646,4 +643,3 @@ if __name__ == "__main__":
             print result_handle
         else:
             print result
-            #nesc_hmm.fs()
