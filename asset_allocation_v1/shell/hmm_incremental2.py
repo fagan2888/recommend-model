@@ -172,6 +172,35 @@ class HmmNesc(object):
         os._exit(0)
         return feature_selected
 
+    @staticmethod
+    def feature_select_cv(t_data, features, state_num, thres, feature_eva=[[0,1], 2]):
+        eva_indic, rank_num = feature_eva
+        dates = t_data.index
+        result = {}
+        for feature in features:
+            result[feature] = [0]*4
+        while True:
+            start_date = dates[0]
+            end_date = dates[99]
+            for feature in features:
+                [model, states] = HmmNesc.training(t_data[start_date:end_date], [feature], state_num)
+                evaluations = HmmNesc.rating(t_data[start_date:end_date], state_num, states, thres)
+                for i in range(4):
+                    result[feature][i] += evaluations[i]
+                print result
+            start_date = HmmNesc.get_move_day(dates, start_date, 180, previous = False)
+            end_date = HmmNesc.get_move_day(dates, end_date, 180, previous = False)
+            if end_date > dates[-1]:
+                break
+
+        feature_selected = set()
+        for indx in eva_indic:
+            sorted_result = sorted(result.iteritems(), key=lambda item: item[1][indx], reverse=True)
+            for ite in range(rank_num):
+                feature_selected.add(sorted_result[ite][0])
+        print feature_selected
+        os._exit(0)
+        return feature_selected
 
     @staticmethod
     def proceed_choose(data, state_num, states, thres):
@@ -456,6 +485,8 @@ class HmmNesc(object):
         :usage: 执行程序
         :return: None
         """
+        self.feature_select_cv(self.ori_data[self.t_start:self.t_end], \
+                self.features, self.state_num, thres = 0)
         feature_predict = self.feature_selected[self.ass_id]
         all_dates = self.ori_data.index
         self.view_newest_date = None
