@@ -455,9 +455,14 @@ class MonthlyStaRolling(object):
             rp_date.append(cur_date)
             rp_rolling_window.append(day_num)
             pre_date = cur_date - datetime.timedelta(days=day_num)
-            # # 如果起始时间小于有交易时间则把开始时间作为起始时间
-            # if pre_date < self.start_date:
-            #     pre_date = self.start_date
+            # 如果起始时间小于有交易时间则把开始时间作为起始时间
+            if pre_date < self.start_date:
+                #pre_date = self.start_date
+                rp_user_retain_ratio.append(-1)
+                rp_user_resub_ratio.append(-1)
+                rp_amount_redeem_ratio.append(-1)
+                rp_amount_resub_ratio.append(-1)
+                continue
             first_buy_uids = ds_order.get_specific_month_uids( \
                             pre_date, pre_date, 10)
             first_buy_num = len(first_buy_uids)
