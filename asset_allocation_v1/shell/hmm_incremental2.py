@@ -44,6 +44,7 @@ class HmmNesc(object):
             '120000028':'2070006521', #标普高盛原油商品指数收益率
             '120000029':'2070006789', #南华商品指数
         }
+        '''
         self.feature_selected = {
             '120000001':['bias', 'pct_chg', 'priceosc', 'roc'],
             '120000002':['sobv', 'pct_chg', 'bias', 'pvt'],
@@ -53,17 +54,37 @@ class HmmNesc(object):
             '120000028':['macd', 'pct_chg', 'atr'],
             '120000029':['priceosc', 'pct_chg', 'bias', 'roc'],
         }
+        '''
+        self.feature_selected = {
+            '120000001':['slowkd', 'sobv', 'cci', 'vma', 'pct_chg'],
+            '120000002':['slowkd', 'wvad', 'macd', 'vma', 'pct_chg'],
+            '120000013':['slowkd', 'priceosc', 'sobv', 'cci', 'pct_chg'],
+            '120000014':['dpo', 'sobv', 'atr', 'vma', 'pct_chg'],
+            '120000015':['slowkd', 'dpo', 'cci', 'vma', 'pct_chg'],
+            '120000028':['macd', 'pct_chg', 'atr'],
+            '120000029':['pct_chg', 'bias', 'vstd', 'rsi', 'vma'],
+        }
         # 隐形状态数目
         self.state_num = 5
         self.features = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', \
                         'slowkd', 'pct_chg', 'pvt', 'wvad', 'priceosc', \
                         'bias', 'vma', 'vstd', 'dpo']
-        # 模型训练用到的样本数, 149加1即为这个样本数
-        self.train_num = 249
-        # 训练开始时间
-        self.t_start = datetime.datetime(2005, 8, 1)
-        # 训练结束时间
-        self.t_end = datetime.datetime(2010, 8, 1)
+
+        if self.ass_id == '120000014':
+            # 模型训练用到的样本数, 149加1即为这个样本数
+            self.train_num = 121
+            # 训练开始时间
+            self.t_start = datetime.datetime(2009, 8, 1)
+            # 训练结束时间
+            self.t_end = datetime.datetime(2012, 8, 1)
+
+        else:
+            # 模型训练用到的样本数, 149加1即为这个样本数
+            self.train_num = 349
+            # 训练开始时间
+            self.t_start = datetime.datetime(2005, 8, 1)
+            # 训练结束时间
+            self.t_end = datetime.datetime(2012, 8, 1)
 
         # 验证开始时间
         self.v_start = datetime.datetime(2003, 1, 1)
@@ -173,33 +194,44 @@ class HmmNesc(object):
         return feature_selected
 
     @staticmethod
-    def feature_select_cv(t_data, features, state_num, thres, feature_eva=[[0,1], 2]):
+    def feature_select_cv(t_data, features, state_num, thres, feature_eva=[[0,4], 2]):
         eva_indic, rank_num = feature_eva
         dates = t_data.index
         result = {}
+        start_date = dates[0]
+        end_date = dates[99]
+        validate_num = 100
         for feature in features:
-            result[feature] = [0]*4
+            result[feature] = [0]*5
         while True:
-            start_date = dates[0]
-            end_date = dates[99]
+        # 计算每个特征的每个评价指标值
             for feature in features:
-                [model, states] = HmmNesc.training(t_data[start_date:end_date], [feature], state_num)
-                evaluations = HmmNesc.rating(t_data[start_date:end_date], state_num, states, thres)
+                cv_data = t_data[start_date:end_date]
+                val_data = t_data[-validate_num: ]
+                [model, states] = HmmNesc.training(cv_data, [feature], state_num)
+                val_states = np.array(model.predict(val_data.loc[:, feature]))
+                evaluations = HmmNesc.rating(val_data, state_num, val_states, thres)
+                means = [0]*state_num
+                for i in range(state_num):
+                    means[i] += (val_data.pct_chg[val_states == i]).mean()
+                means_arr = np.array([means[i] for i in val_states])
+                sig_wr = HmmNesc.cal_sig_wr(val_data, means_arr)
                 for i in range(4):
                     result[feature][i] += evaluations[i]
-                print result
+                result[feature][4] += sig_wr
             start_date = HmmNesc.get_move_day(dates, start_date, 180, previous = False)
             end_date = HmmNesc.get_move_day(dates, end_date, 180, previous = False)
-            if end_date > dates[-1]:
+            if end_date > dates[-100]:
                 break
 
+        # 最终选择的特征
         feature_selected = set()
         for indx in eva_indic:
             sorted_result = sorted(result.iteritems(), key=lambda item: item[1][indx], reverse=True)
             for ite in range(rank_num):
                 feature_selected.add(sorted_result[ite][0])
         print feature_selected
-        os._exit(0)
+        feature_selected.add('pct_chg')
         return feature_selected
 
     @staticmethod
@@ -459,7 +491,7 @@ class HmmNesc(object):
 
         return states
     @staticmethod
-    def cal_stats_pro(t_data, model, states, ratio, state_num):
+    def cal_stats_pro(t_data, model, states, state_num):
         #state_today = states[-1]
         transmat = model.dense_transition_matrix()[:state_num, :state_num]
         trans_mat_today = transmat[states[-1]]
@@ -485,10 +517,12 @@ class HmmNesc(object):
         :usage: 执行程序
         :return: None
         """
-        self.feature_select_cv(self.ori_data[self.t_start:self.t_end], \
-                self.features, self.state_num, thres = 0)
+        #feature_predict = self.feature_select_cv(self.ori_data[self.t_start:self.t_end], \
+        #        self.features, self.state_num, thres = 0)
+
         feature_predict = self.feature_selected[self.ass_id]
         all_dates = self.ori_data.index
+        print feature_predict
         self.view_newest_date = None
         if self.view_newest_date == None:
             p_s_date = all_dates[0]
@@ -512,7 +546,7 @@ class HmmNesc(object):
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
-            ratios = np.array(p_data['pct_chg'])
+            #ratios = np.array(p_data['pct_chg'])
             try:
                 [model, states] = self.training(p_data, list(feature_predict), self.state_num)
             except Exception, e:
@@ -520,7 +554,7 @@ class HmmNesc(object):
                 return (1, "hmm training fail")
             #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
-            means, state = HmmNesc.cal_stats_pro(p_data, model, states, ratios, self.state_num)
+            means, state = HmmNesc.cal_stats_pro(p_data, model, states, self.state_num)
             means_arr.append(means)
             states_arr.append(state)
             if p_in_date != p_e_date:
@@ -537,7 +571,8 @@ class HmmNesc(object):
         union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
-        #print self.rating(self.ori_data.loc[all_data.index,:], self.state_num, states_arr, 0.0)
+        (union_data_tmp.loc[:, ['dates', 'means']]).to_csv('./hmm_view/'+self.ass_id+'_hmm.csv')
+        print self.cal_sig_wr(self.ori_data.loc[all_data.index,:], means_arr, show_num = True)
         #result = ass_view_inc.insert_predict_pct(union_data_tmp)
         return union_data_tmp
 
@@ -670,16 +705,46 @@ class HmmNesc(object):
         df = pd.read_csv(ass_id + "_ori_day_data.csv", index_col=['date'], \
             parse_dates=['date'])
         return df
+
+    @staticmethod
+    def cal_sig_wr(ori_data, means, show_num = False):
+        signal = np.sign(means)
+        win_num = 0.0
+        total_num = 0.0
+        signal_nav = 1.0
+
+        for i in range(len(means)-1):
+            current = signal[i]
+            next_ = signal[i+1]
+            signal_nav *= (1.0 + ori_data['pct_chg'][i+1]/100)
+
+            if current != next_:
+                #print signal_nav, current
+                if (signal_nav - 1.0)*current >= 0:
+                    win_num += 1.0
+                total_num += 1.0
+                signal_nav = 1.0
+
+        if total_num == 0:
+            if (signal_nav - 1.0)*current >= 0:
+                return 1
+            else:
+                return 0
+        if show_num:
+            print 'win_num: ', win_num
+            print 'total_num: ', total_num
+        win_ratio = win_num / total_num
+        return win_ratio
+
 if __name__ == "__main__":
     view_ass = ['120000001', '120000002', '120000013', '120000014', \
                 '120000015', '120000029']
-    #view_ass = ['120000014']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
         result = nesc_hmm.init_data()
         if result[0] == 0:
             result_handle = nesc_hmm.handle()
-            print result_handle
+            #print result_handle
         else:
             print result
