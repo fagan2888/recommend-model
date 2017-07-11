@@ -607,7 +607,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
                     views[indexid] = views[indexid] - abs(views[indexid])
         except:
             views = np.mean(df_inc)
-            print day, 'no view'
+            print day, 'short no view'
             pass
         lcmf_views = views
 
@@ -630,7 +630,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
                     views[indexid] = views[indexid] - abs(views[indexid]) * 0.5
         except:
             views = np.mean(df_inc)
-            print day, 'no view'
+            print day, 'long no view'
             pass
         jy_views = views
         #print day, jy_views
@@ -649,7 +649,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
 
         df_inc = df_inc.iloc[len(df_inc) / 2 : ]
         df_view_inc = PF.view_inc(df_inc, lcmf_views)
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, tmp_bound)
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_view_inc, tmp_bound)
 
 
     sr_result = pd.concat([
