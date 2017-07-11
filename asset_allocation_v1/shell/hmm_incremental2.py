@@ -195,13 +195,13 @@ class HmmNesc(object):
         return feature_selected
 
     @staticmethod
-    def feature_select_cv(t_data, features, state_num, thres, feature_eva=[[0,4], 2]):
+    def feature_select_cv(t_data, features, state_num, thres, \
+            window = 100, validate_num = 100, feature_eva=[[0,4], 2]):
         eva_indic, rank_num = feature_eva
         dates = t_data.index
         result = {}
         start_date = dates[0]
-        end_date = dates[99]
-        validate_num = 100
+        end_date = dates[window-1]
         val_data = t_data[-validate_num: ]
         for feature in features:
             result[feature] = [0]*5
@@ -222,7 +222,7 @@ class HmmNesc(object):
                 result[feature][4] += sig_wr
             start_date = HmmNesc.get_move_day(dates, start_date, 90, previous = False)
             end_date = HmmNesc.get_move_day(dates, end_date, 90, previous = False)
-            if end_date > dates[-100]:
+            if end_date > dates[-validate_num]:
                 break
 
         # 最终选择的特征
@@ -605,7 +605,7 @@ class HmmNesc(object):
         union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
-        (union_data_tmp.loc[:, ['dates', 'means']]).to_csv('./hmm_view/'+self.ass_id+'_hmm.csv')
+        #(union_data_tmp.loc[:, ['dates', 'means']]).to_csv('./hmm_view/'+self.ass_id+'_hmm.csv')
         print self.cal_sig_wr(self.ori_data.loc[all_data.index,:], means_arr, show_num = True)
         #print self.rating(self.ori_data.loc[all_data.index,:], self.state_num, states_arr, 0.0)
         #result = ass_view_inc.insert_predict_pct(union_data_tmp)
