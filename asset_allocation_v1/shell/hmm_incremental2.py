@@ -18,6 +18,7 @@ import pandas as pd
 # from pykalman import KalmanFilter
 #from scipy.stats import boxcox
 from scipy import stats
+from sklearn.preprocessing import scale
 import os
 #from utils import sigmoid
 #from sklearn.preprocessing import normalize
@@ -56,15 +57,15 @@ class HmmNesc(object):
         }
         '''
         self.feature_selected = {
-            '120000001':['slowkd', 'sobv', 'cci', 'vma', 'pct_chg'],
-            '120000002':['slowkd', 'wvad', 'macd', 'vma', 'pct_chg'],
-            '120000013':['slowkd', 'priceosc', 'sobv', 'cci', 'pct_chg'],
-            '120000014':['dpo', 'sobv', 'atr', 'vma', 'pct_chg'],
-            '120000015':['slowkd', 'dpo', 'cci', 'vma', 'pct_chg'],
+            '120000001':['wvad', 'sobv', 'macd', 'pct_chg'],
+            '120000002':['slowkd', 'wvad', 'sobv', 'macd', 'pct_chg'],
+            '120000013':['slowkd', 'priceosc', 'pct_chg', 'cci', 'atr'],
+            '120000014':['pct_chg', 'dpo', 'sobv', 'atr', 'vma'],
+            '120000015':['dpo', 'pct_chg', 'roc', 'cci', 'vma'],
             '120000028':['macd', 'pct_chg', 'atr'],
-            '120000029':['pct_chg', 'bias', 'vstd', 'rsi', 'vma'],
+            '120000029':['priceosc', 'macd', 'bias', 'pct_chg'],
         }
-        # 隐形状态数目
+       # 隐形状态数目
         self.state_num = 5
         self.features = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', \
                         'slowkd', 'pct_chg', 'pvt', 'wvad', 'priceosc', \
@@ -201,15 +202,15 @@ class HmmNesc(object):
         start_date = dates[0]
         end_date = dates[99]
         validate_num = 100
+        val_data = t_data[-validate_num: ]
         for feature in features:
             result[feature] = [0]*5
         while True:
         # 计算每个特征的每个评价指标值
             for feature in features:
                 cv_data = t_data[start_date:end_date]
-                val_data = t_data[-validate_num: ]
                 [model, states] = HmmNesc.training(cv_data, [feature], state_num)
-                val_states = np.array(model.predict(val_data.loc[:, feature]))
+                val_states = np.array(model.predict(val_data.apply(scale).loc[:, feature]))
                 evaluations = HmmNesc.rating(val_data, state_num, val_states, thres)
                 means = [0]*state_num
                 for i in range(state_num):
@@ -219,8 +220,8 @@ class HmmNesc(object):
                 for i in range(4):
                     result[feature][i] += evaluations[i]
                 result[feature][4] += sig_wr
-            start_date = HmmNesc.get_move_day(dates, start_date, 180, previous = False)
-            end_date = HmmNesc.get_move_day(dates, end_date, 180, previous = False)
+            start_date = HmmNesc.get_move_day(dates, start_date, 90, previous = False)
+            end_date = HmmNesc.get_move_day(dates, end_date, 90, previous = False)
             if end_date > dates[-100]:
                 break
 
@@ -233,6 +234,24 @@ class HmmNesc(object):
         print feature_selected
         feature_selected.add('pct_chg')
         return feature_selected
+
+    @staticmethod
+    def state_select(t_data, features):
+        result = {}
+        for state_num in range(3, 11):
+            [model, states] = HmmNesc.training(t_data, features, state_num)
+            means = [0]*state_num
+            for i in range(state_num):
+                means[i] += (t_data.pct_chg[states == i]).mean()
+            means = np.nan_to_num(means)
+            means_arr = np.array([means[i] for i in states])
+            sig_wr = HmmNesc.cal_sig_wr(t_data, means_arr)
+            result[state_num] = sig_wr
+        sorted_result = sorted(result.iteritems(), key = lambda item: item[1], \
+                reverse = True)
+        best_state_num = sorted_result[0][0]
+
+        return best_state_num
 
     @staticmethod
     def proceed_choose(data, state_num, states, thres):
@@ -417,6 +436,7 @@ class HmmNesc(object):
         :return: [transit matrix, [mean, variance]], mean and variance 是正态分布的
         """
         # 特征数据
+        t_data = t_data.apply(scale)
         fea_data = []
         for feature in features:
             fea_data.append(t_data[feature])
@@ -433,7 +453,7 @@ class HmmNesc(object):
         # print X.shape
         # os._exit(0)
         #model = model.fit(X)
-        model = model.from_samples(NormalDistribution, state_num, X, \
+        model = model.from_samples(NormalDistribution, state_num, X.transpose(),\
                 algorithm = 'viterbi')
         # print model.transmat_
         # print model.startprob_
@@ -493,13 +513,22 @@ class HmmNesc(object):
     @staticmethod
     def cal_stats_pro(t_data, model, states, state_num):
         #state_today = states[-1]
+        means = [0]*state_num
         transmat = model.dense_transition_matrix()[:state_num, :state_num]
         trans_mat_today = transmat[states[-1]]
         #mean_today = model.means_[state_today, 1]
         #mean_rank_today = sum(model.means_[:, 1] < mean_today)
         next_day_state = np.argmax(trans_mat_today)
         #next_day_pro = trans_mat_today[next_day_state]
-        next_day_mean = np.mean(t_data.pct_chg[states == next_day_state])
+        #print states
+        for i in range(state_num):
+            means[i] += (t_data.pct_chg.dropna()[states == i]).mean()
+        means = np.nan_to_num(means)
+        trans_mat_today = np.nan_to_num(trans_mat_today)
+        next_day_mean = (np.array(means)*trans_mat_today).sum()
+        #print next_day_mean
+        #print transmat
+        #print states[-1], t_data.pct_chg[-1], next_day_state, next_day_mean, means
         #next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
         return next_day_mean, next_day_state
     @staticmethod
@@ -519,10 +548,12 @@ class HmmNesc(object):
         """
         #feature_predict = self.feature_select_cv(self.ori_data[self.t_start:self.t_end], \
         #        self.features, self.state_num, thres = 0)
-
         feature_predict = self.feature_selected[self.ass_id]
-        all_dates = self.ori_data.index
         print feature_predict
+        #self.state_num = self.state_select(self.ori_data[self.t_start:self.t_end], \
+        #        feature_predict)
+        #print self.state_num
+        all_dates = self.ori_data.index
         self.view_newest_date = None
         if self.view_newest_date == None:
             p_s_date = all_dates[0]
@@ -546,15 +577,18 @@ class HmmNesc(object):
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
+            if (p_s_num % 12) == 0:
+                self.state_num = self.state_select(p_data, feature_predict)
             #ratios = np.array(p_data['pct_chg'])
             try:
-                [model, states] = self.training(p_data, list(feature_predict), self.state_num)
+                [model, states] = self.training(p_data, feature_predict, self.state_num)
             except Exception, e:
                 print e
                 return (1, "hmm training fail")
             #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
             means, state = HmmNesc.cal_stats_pro(p_data, model, states, self.state_num)
+            #print means, self.state_num
             means_arr.append(means)
             states_arr.append(state)
             if p_in_date != p_e_date:
@@ -573,6 +607,7 @@ class HmmNesc(object):
         union_data_tmp = pd.DataFrame(union_data_tmp)
         (union_data_tmp.loc[:, ['dates', 'means']]).to_csv('./hmm_view/'+self.ass_id+'_hmm.csv')
         print self.cal_sig_wr(self.ori_data.loc[all_data.index,:], means_arr, show_num = True)
+        #print self.rating(self.ori_data.loc[all_data.index,:], self.state_num, states_arr, 0.0)
         #result = ass_view_inc.insert_predict_pct(union_data_tmp)
         return union_data_tmp
 
@@ -739,6 +774,7 @@ class HmmNesc(object):
 if __name__ == "__main__":
     view_ass = ['120000001', '120000002', '120000013', '120000014', \
                 '120000015', '120000029']
+    #view_ass = ['120000014']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
