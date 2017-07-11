@@ -54,7 +54,6 @@ asset_allocation = {
 
 if __name__ == '__main__':
 
-    '''
     conn  = MySQLdb.connect(**trade)
     conn.autocommit(True)
 
@@ -122,7 +121,6 @@ if __name__ == '__main__':
     df.to_csv('investor_portfolio_holding_actuals.csv')
 
 
-    '''
     conn  = MySQLdb.connect(**portfolio_statistics)
     conn.autocommit(True)
 
