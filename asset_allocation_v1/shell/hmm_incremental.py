@@ -42,13 +42,13 @@ class HmmNesc(object):
 
         }
         self.feature_selected = {
-            '120000001':set(['bias', 'pct_chg', 'priceosc', 'roc']),
-            '120000002':set(['sobv', 'pct_chg', 'bias', 'pvt']),
-            '120000013':set(['sobv', 'pct_chg', 'vstd', 'macd']),
-            '120000014':set(['vstd', 'pct_chg', 'roc', 'wvad']),
-            '120000015':set(['priceosc', 'pct_chg', 'bias', 'roc']),
-            '120000028':set(['macd', 'pct_chg', 'atr']),
-            '120000029':set(['priceosc', 'pct_chg', 'bias', 'roc']),
+            '120000001':list(['bias', 'pct_chg', 'priceosc', 'roc']),
+            '120000002':list(['sobv', 'pct_chg', 'bias', 'pvt']),
+            '120000013':list(['sobv', 'pct_chg', 'vstd', 'macd']),
+            '120000014':list(['vstd', 'pct_chg', 'roc', 'wvad']),
+            '120000015':list(['priceosc', 'pct_chg', 'bias', 'roc']),
+            '120000028':list(['macd', 'pct_chg', 'atr']),
+            '120000029':list(['priceosc', 'pct_chg', 'bias', 'roc']),
         }
         # 隐形状态数目
         self.state_num = 5
