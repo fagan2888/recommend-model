@@ -65,8 +65,17 @@ class HmmNesc(object):
             '120000028':['macd', 'pct_chg', 'atr'],
             '120000029':['priceosc', 'macd', 'bias', 'pct_chg'],
         }
+        self.feature_selected = {
+            '120000001':['pct_chg'],
+            '120000002':['pct_chg'],
+            '120000013':['pct_chg'],
+            '120000014':['pct_chg'],
+            '120000015':['pct_chg'],
+            '120000028':['pct_chg'],
+            '120000029':['pct_chg'],
+        }
        # 隐形状态数目
-        self.state_num = 5
+        self.state_num = 3
         self.features = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', \
                         'slowkd', 'pct_chg', 'pvt', 'wvad', 'priceosc', \
                         'bias', 'vma', 'vstd', 'dpo']
@@ -387,7 +396,7 @@ class HmmNesc(object):
             result[i] = {}
             state = (states == i)
             # 发出信号为t日，从t+2日开始算收益(与原始算法不同，原始算法为以t+1日开盘价买入）,这里更偏向操作基金
-            idx = np.append([0,0], state[:-2])
+            idx = np.append([0], state[:-1])
             ratios = np.where(idx == 1, data["pct_chg"], 0)
             nav_list, max_drawdonw_list = HmmNesc.cal_nav_maxdrawdown(ratios)
             union_data_tmp["signal"] = idx
@@ -454,7 +463,7 @@ class HmmNesc(object):
         # os._exit(0)
         #model = model.fit(X)
         model = model.from_samples(NormalDistribution, state_num, X.transpose(),\
-                algorithm = 'viterbi')
+                stop_threshold = 1e-30, max_iterations = 1e30, algorithm = 'baum-welch')
         # print model.transmat_
         # print model.startprob_
         # if len(features) > 1:
@@ -526,10 +535,16 @@ class HmmNesc(object):
         means = np.nan_to_num(means)
         trans_mat_today = np.nan_to_num(trans_mat_today)
         next_day_mean = (np.array(means)*trans_mat_today).sum()
+
+        sorted_means = np.sort(means)
+        print sorted_means.tolist().index(means[states[-1]]), sorted_means.round(2),\
+                next_day_mean
+        #print np.sign(next_day_mean)
         #print next_day_mean
         #print transmat
         #print states[-1], t_data.pct_chg[-1], next_day_state, next_day_mean, means
         #next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
+        #print states, means
         return next_day_mean, next_day_state
     @staticmethod
     def statistic_win_ratio(ratios, means_arr, stds_arr):
@@ -576,9 +591,9 @@ class HmmNesc(object):
         while p_in_date <= p_e_date:
             p_s_num += 1
             p_in_num += 1
-            p_data = self.ori_data[p_s_date:p_in_date]
-            if (p_s_num % 12) == 0:
-                self.state_num = self.state_select(p_data, feature_predict)
+            p_data = self.ori_data[:p_in_date]
+            #if (p_s_num % 12) == 0:
+            #    self.state_num = self.state_select(p_data, feature_predict)
             #ratios = np.array(p_data['pct_chg'])
             try:
                 [model, states] = self.training(p_data, feature_predict, self.state_num)
@@ -773,8 +788,8 @@ class HmmNesc(object):
 
 if __name__ == "__main__":
     view_ass = ['120000001', '120000002', '120000013', '120000014', \
-                '120000015', '120000029']
-    #view_ass = ['120000014']
+            '120000015', '120000029']
+    #view_ass = ['120000001']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
