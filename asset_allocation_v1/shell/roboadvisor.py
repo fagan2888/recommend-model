@@ -159,6 +159,7 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
             ctx.obj['highlow'] = optratio
 
     if optportfolio:
+        #ctx.invoke(CommandPortfolio.portfolio, optreplace=optreplace, optturnover=optturnoverp, opttype=[9])
         ctx.invoke(CommandPortfolio.portfolio, optreplace=optreplace, optturnover=optturnoverp)
 
 if __name__=='__main__':
