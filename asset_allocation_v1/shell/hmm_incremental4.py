@@ -64,13 +64,13 @@ class MulGauHmm(object):
             self.states = np.array(model.predict(self.X[0], algorithm = 'viterbi'))[1:]
             for i in range(self.state_num):
                 idx = (self.states == i)
-                state_mean = (self.ori_data[self.states == idx]).mean(0)
+                state_mean = (self.ori_data[idx]).mean(0)
                 if i == 0:
                     self.means_ = state_mean
                 else:
                     self.means_ = np.vstack([self.means_, state_mean])
 
-            print self.means_
+            #print self.means_
             self.transmat_ = self.model.dense_transition_matrix()[:self.state_num, :self.state_num]
 
             sorted_means = np.sort(self.means_[:,1])
@@ -644,20 +644,18 @@ class HmmNesc(object):
             p_data = self.ori_data[p_s_date:p_in_date]
             #ratios = np.array(p_data['pct_chg'])
             #print p_data.pct_chg[-1]
-            '''
             try:
                 [model, states] = self.training(p_data, list(feature_predict), self.state_num)
             except Exception, e:
                 print e
                 return (1, "hmm training fail")
             '''
-            '''
-            if p_s_num <= 2:
+            if p_s_num % 3 == 0 or p_s_num <= 2:
                 [model, states] = self.training(p_data, list(feature_predict), self.state_num)
             else:
                 [model, states] = self.update_model(p_data, list(feature_predict), model)
             '''
-            [model, states] = self.training(p_data, list(feature_predict), self.state_num)
+            #[model, states] = self.training(p_data, list(feature_predict), self.state_num)
             means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
             #means = HmmNesc.cal_stats_pro(model, states, ratios)
