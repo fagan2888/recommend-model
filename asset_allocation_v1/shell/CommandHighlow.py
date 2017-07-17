@@ -319,12 +319,29 @@ def load_riskmgr(assets, reindex=None, enable=True):
         #
         # 这里打个小补丁，为了兼容先容0424的历史
         #
+        #if asset_id == 19220121:
+        #    riskmgr_asset_id = 120000010
+        #elif asset_id == 19220122:
+        #    riskmgr_asset_id = 120000011
+        #else:
+        #    riskmgr_asset_id = asset_id
+
         if asset_id == 19220121:
             riskmgr_asset_id = 120000010
         elif asset_id == 19220122:
             riskmgr_asset_id = 120000011
+        elif asset_id == 120000029:
+            riskmgr_asset_id = 120000029
+        elif asset_id == 120000037:
+            riskmgr_asset_id = 120000037
+        elif asset_id == 120000038:
+            riskmgr_asset_id = 120000038
+        elif asset_id == 120000010:
+            riskmgr_asset_id = 120000010
         else:
-            riskmgr_asset_id = asset_id
+            #riskmgr_asset_id = asset_id
+            riskmgr_asset_id = 120000001
+
 
         if enable == False:
             sr = pd.Series(1.0, index=reindex)
