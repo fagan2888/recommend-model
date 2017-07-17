@@ -644,7 +644,7 @@ class MonthlyStaSrrc(object):
                 e_date, [10], newsub_uids)[0][0]
             # 复购总金额
             amount_resub = ds_order.get_specific_month_amount(s_date, \
-                e_date, [10], resub_uids)[0][0]
+                e_date, [11], resub_uids)[0][0]
             # 赎回总金额
             redeem_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
                 [20, 21, 30, 31])
