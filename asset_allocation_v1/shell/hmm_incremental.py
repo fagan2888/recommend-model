@@ -120,7 +120,7 @@ class HmmNesc(object):
                 self.view_newest_date = pd.Timestamp(ass_vw_inc_df['newest_date'][0])
     def get_index_origin_data(self):
         self.ori_data = self.load_offline_data(self.ass_id)
-        # load_index.load_index_daily_data(self.secode, \
+        #self.ori_data = load_index.load_index_daily_data(self.secode, \
         #                 self.start_date, self.end_date)
         if self.ori_data.empty:
             return (3, 'has no data for secode:' + self.secode)
@@ -240,6 +240,7 @@ class HmmNesc(object):
         trans_mat = model.transmat_[cur_state]
         used_trans = np.where( trans_mat > 0.0, trans_mat, 0.0)
         means = np.dot(used_trans, means_arr)
+        print means
         return means
     @staticmethod
     def market_states(data, state_num, states, thres):
@@ -476,15 +477,15 @@ class HmmNesc(object):
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
-            ratios = np.array(p_data['pct_chg'])
+            #ratios = np.array(p_data['pct_chg'])
             try:
                 [model, states] = self.training(p_data, list(feature_predict), self.state_num)
             except Exception, e:
                 print e
                 return (1, "hmm training fail")
-            #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
-            means = HmmNesc.cal_stats_pro(model, states, ratios)
+            #means = HmmNesc.cal_stats_pro(model, states, ratios)
             means_arr.append(means)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]
@@ -634,7 +635,7 @@ class HmmNesc(object):
 if __name__ == "__main__":
     view_ass = ['120000001', '120000002', '120000013', '120000014', \
                 '120000015', '120000029']
-    #view_ass = ['120000014']
+    view_ass = ['120000015']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')

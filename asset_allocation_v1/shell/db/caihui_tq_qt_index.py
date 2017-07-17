@@ -17,7 +17,7 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
         t.c.TCLOSE.label('close'),
         t.c.THIGH.label('high'),
         t.c.TLOW.label('low'),
-        t.c.VOL.label('volume'),
+        t.c.VOL.label('volume') if secode !='2070006521' else t.c.AMOUNT.label('volume'),
         t.c.TOPEN.label('open'),
     ]
     s = select(columns).where(t.c.SECODE == secode)

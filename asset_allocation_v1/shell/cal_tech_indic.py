@@ -142,6 +142,7 @@ class CalTechIndic(object):
         a = close - popen
         b = high - low
         c = a / b * volume
+        c = np.nan_to_num(c)
         wvad = np.add.accumulate(c)
         return wvad
     @staticmethod

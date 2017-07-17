@@ -16,7 +16,7 @@ from pomegranate import MultivariateGaussianDistribution, NormalDistribution, \
         HiddenMarkovModel
 #from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-#from sklearn.covariance import EllipticEnvelope
+from sklearn.covariance import EllipticEnvelope
 import pandas as pd
 #from matplotlib import pyplot as plt
 # from pykalman import KalmanFilter
@@ -39,20 +39,38 @@ class MulGauHmm(object):
         self.ori_data = ori_data
         self.scaler = StandardScaler()
         self.t_data = self.scaler.fit_transform(self.ori_data)
+        #np.save('tmp.npy', self.t_data)
         self.state_num = n_components
         self.X = [[tuple(self.t_data[i]) for i in range(len(self.t_data))]]
+
+    @staticmethod
+    def reject_outliers(ori_data):
+        clf = EllipticEnvelope(contamination = 0.10)
+        try:
+            clf.fit(ori_data)
+        except ValueError, e:
+            print e.message+", so we don't clean data"
+            return ori_data
+        outlier_sample = clf.predict(ori_data)
+        cleaned_data = ori_data[outlier_sample == 1]
+
+        return cleaned_data
 
     def fit(self):
         if self.ori_data.shape[1] > 1:
             model = HiddenMarkovModel.from_samples(MultivariateGaussianDistribution, \
                     self.state_num, self.X)
             self.model = model
-            self.states = np.array(model.predict(self.X[0]))
-            self.means_ = np.zeros([self.state_num, self.ori_data.shape[1]])
+            self.states = np.array(model.predict(self.X[0], algorithm = 'viterbi'))[1:]
             for i in range(self.state_num):
-                for j in range(self.ori_data.shape[1]):
-                    self.means_[i][j] += model.states[i].distribution.parameters[0][j]
-            self.means_ = self.scaler.inverse_transform(self.means_)
+                idx = (self.states == i)
+                state_mean = (self.ori_data[self.states == idx]).mean(0)
+                if i == 0:
+                    self.means_ = state_mean
+                else:
+                    self.means_ = np.vstack([self.means_, state_mean])
+
+            print self.means_
             self.transmat_ = self.model.dense_transition_matrix()[:self.state_num, :self.state_num]
 
             sorted_means = np.sort(self.means_[:,1])
@@ -61,6 +79,7 @@ class MulGauHmm(object):
                 sorted_states_dict[i] = sorted_means.tolist().index(self.means_[i, 1])
             sorted_states = [sorted_states_dict[i] for i in self.states]
 
+            #print sorted_means
             self.sorted_means = sorted_means
             self.sorted_states = np.array(sorted_states)
 
@@ -68,7 +87,7 @@ class MulGauHmm(object):
             model = HiddenMarkovModel.from_samples(NormalDistribution,\
                     self.state_num, self.X)
             self.model = model
-            self.states = np.array(model.predict(self.X[0]))
+            self.states = np.array(model.predict(self.X[0], algorithm = 'viterbi'))[1:]
             self.means_ = np.zeros([self.state_num, 1])
             for i in range(self.state_num):
                 self.means_[i][0] += model.states[i].distribution.parameters[0]
@@ -90,6 +109,43 @@ class MulGauHmm(object):
         pre_states = self.model.predict(p_data[0])
         return pre_states
 
+    def update(self, new_data):
+        self.ori_data = new_data
+        self.scaler = StandardScaler()
+        self.t_data = self.scaler.fit_transform(self.ori_data)
+        self.cleaned_data = self.reject_outliers(self.t_data)
+        self.X = [[tuple(self.t_data[i]) for i in range(len(self.t_data))]]
+        self.cleaned_X = [[tuple(self.cleaned_data[i]) for i in range(len(self.cleaned_data))]]
+
+        dists = []
+        starts = np.zeros(self.state_num)
+        for i in range(self.state_num):
+            dist_mean = self.model.states[i].distribution.parameters[0]
+            dist_cor = self.model.states[i].distribution.parameters[1]
+            dist = MultivariateGaussianDistribution(dist_mean, dist_cor)
+            dists.append(dist)
+        trans_mat = self.model.dense_transition_matrix()
+        starts[self.states[-1]] = 1.0
+        model = HiddenMarkovModel.from_matrix(trans_mat, dists, starts)
+        model.bake()
+        model.fit(self.cleaned_X)
+        self.model = model
+        self.states = np.array(model.predict(self.X[0], algorithm = 'viterbi'))[1:]
+        self.means_ = np.zeros([self.state_num, self.ori_data.shape[1]])
+        for i in range(self.state_num):
+            for j in range(self.ori_data.shape[1]):
+                self.means_[i][j] += model.states[i].distribution.parameters[0][j]
+        self.means_ = self.scaler.inverse_transform(self.means_)
+        self.transmat_ = self.model.dense_transition_matrix()[:self.state_num, :self.state_num]
+
+        sorted_means = np.sort(self.means_[:,1])
+        sorted_states_dict = {}
+        for i in range(self.state_num):
+            sorted_states_dict[i] = sorted_means.tolist().index(self.means_[i, 1])
+        sorted_states = [sorted_states_dict[i] for i in self.states]
+
+        self.sorted_means = sorted_means
+        self.sorted_states = np.array(sorted_states)
 
 
 class HmmNesc(object):
@@ -107,29 +163,33 @@ class HmmNesc(object):
             '120000028':'2070006521', #标普高盛原油商品指数收益率
             '120000029':'2070006789', #南华商品指数收益率
         }
-        self.feature_selected = {
-            '120000001':['bias', 'pct_chg', 'priceosc', 'roc'],
-            '120000002':['sobv', 'pct_chg', 'bias', 'pvt'],
-            '120000013':['mtm', 'pct_chg', 'vstd', 'macd'],
-            '120000014':['vstd', 'pct_chg', 'roc', 'wvad'],
-            '120000015':['priceosc', 'pct_chg', 'bias', 'roc'],
-            '120000028':['macd', 'pct_chg', 'atr'],
-            '120000029':['priceosc', 'pct_chg', 'bias', 'roc'],
-        }
+        '''
+        #day feature
         self.feature_selected = {
             '120000001':['cci', 'pct_chg', 'roc', 'mtm'],
             '120000002':['vma', 'pct_chg', 'roc', 'atr'],
             '120000013':['cci', 'pct_chg', 'mtm'],
             '120000014':['roc', 'pct_chg', 'atr', 'vma'],
-            '120000015':['roc', 'pct_chg', 'atr', 'mtm'],
+            '120000015':['cci', 'pct_chg', 'vma', 'mtm'],
             '120000028':['mtm', 'pct_chg'],
-            '120000029':['mtm', 'pct_chg'],
+            '120000029':['atr', 'pct_chg', 'roc'],
         }
+        '''
+
+        #week feature
+        self.feature_selected = {
+            '120000001':['dpo', 'pct_chg', 'macd', 'atr', 'vstd'],
+            '120000002':['dpo', 'pct_chg', 'atr', 'vma'],
+            '120000013':['roc', 'pct_chg', 'atr', 'vma'],
+            '120000014':['cci', 'pct_chg', 'atr', 'vstd', 'vma'],
+            '120000015':['cci', 'pct_chg', 'atr', 'vstd', 'vma'],
+            '120000028':['mtm', 'pct_chg'],
+            '120000029':['dpo', 'pct_chg', 'macd', 'vma'],
+        }
+
         # 隐形状态数目
         self.features = ['macd', 'atr', 'cci', 'mtm', 'roc', 'pct_chg', \
                 'vma', 'vstd', 'dpo']
-        self.features = ['macd', 'atr', 'cci', 'mtm', 'roc', 'pct_chg', \
-                'vma', 'dpo']
         self.state_nums = {
             '120000001':5,
             '120000002':5,
@@ -216,7 +276,7 @@ class HmmNesc(object):
             return (4, 'has no data for trade dates')
         return (0, 'get data sucess')
     def cal_indictor(self):
-        cal_tec_obj = CalTec(self.ori_data, self.trade_dates, data_type=1)
+        cal_tec_obj = CalTec(self.ori_data, self.trade_dates, data_type=2)
         try:
             self.ori_data = cal_tec_obj.get_indic()
         except Exception, e:
@@ -241,6 +301,7 @@ class HmmNesc(object):
             # print datetime.datetime.now()
             [model, states] = HmmNesc.training(t_data, [feature], state_num)
             evaluations = HmmNesc.rating(t_data, state_num, states, thres)
+            evaluations += [evaluations[0]*evaluations[3]]
             print evaluations
             # print feature, evaluations
             result[feature] = evaluations
@@ -323,6 +384,8 @@ class HmmNesc(object):
         trans_mat = model.transmat_[cur_state]
         used_trans = np.where( trans_mat > 0.0, trans_mat, 0.0)
         means = np.dot(used_trans, means_arr)
+        #print cur_state, data['pct_chg'][-1], (100*np.sort(means_arr)).round(2), means
+        print means
         return means
     @staticmethod
     def market_states(data, state_num, states, thres):
@@ -475,6 +538,17 @@ class HmmNesc(object):
         #     print ""
         return [model, states]
 
+    @staticmethod
+    def update_model(t_data, features, model):
+        fea_data = []
+        for feature in features:
+            fea_data.append(t_data[feature])
+
+        X = np.column_stack(fea_data)
+        model.update(X)
+        states = model.states
+        return [model, states]
+
     def predict(self, p_data, model, features):
         """
         :usage: 样本外预测
@@ -520,8 +594,10 @@ class HmmNesc(object):
         #next_day_pro = trans_mat_today[next_day_state]
         next_day_mean = model.sorted_means[next_day_state]
         print states[-1], next_day_state, next_day_mean
+        #print model.sorted_means
         #next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
-        return next_day_mean, next_day_state
+        #print next_day_mean
+        return next_day_mean
     @staticmethod
     def statistic_win_ratio(ratios, means_arr, stds_arr):
         ratio_num = len(ratios)
@@ -537,10 +613,11 @@ class HmmNesc(object):
         :usage: 执行程序
         :return: None
         """
-        feature_predict = self.feature_select(self.ori_data[self.t_start:self.t_end], \
-                self.features, self.state_num, thres = 0, feature_eva = [[0,3], 2])
+        #feature_predict = self.feature_select(self.ori_data[self.t_start:self.t_end], \
+        #        self.features, self.state_num, thres = 0, feature_eva = [[4], 4])
 
-        #feature_predict = self.feature_selected[self.ass_id]
+        feature_predict = self.feature_selected[self.ass_id]
+        #feature_predict = self.features
 
         all_dates = self.ori_data.index
         self.view_newest_date = None
@@ -560,13 +637,13 @@ class HmmNesc(object):
             p_s_num = newest_date_pos - self.train_num
             p_in_num = newest_date_pos + 1
         means_arr = []
-        states_arr = []
         all_data = self.ori_data[p_in_date:]
         while p_in_date <= p_e_date:
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
-            ratios = np.array(p_data['pct_chg'])
+            #ratios = np.array(p_data['pct_chg'])
+            #print p_data.pct_chg[-1]
             '''
             try:
                 [model, states] = self.training(p_data, list(feature_predict), self.state_num)
@@ -574,12 +651,17 @@ class HmmNesc(object):
                 print e
                 return (1, "hmm training fail")
             '''
+            '''
+            if p_s_num <= 2:
+                [model, states] = self.training(p_data, list(feature_predict), self.state_num)
+            else:
+                [model, states] = self.update_model(p_data, list(feature_predict), model)
+            '''
             [model, states] = self.training(p_data, list(feature_predict), self.state_num)
-            #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
-            means, pre_state = HmmNesc.cal_stats_pro(model, states, ratios)
+            #means = HmmNesc.cal_stats_pro(model, states, ratios)
             means_arr.append(means)
-            states_arr.append(pre_state)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]
                 p_in_date = all_dates[p_in_num]
@@ -590,13 +672,14 @@ class HmmNesc(object):
         #        list(feature_predict), self.state_num)
                 ####### state statistic
         union_data_tmp = {}
-        union_data_tmp["means"] = np.array(means_arr) / 100.0
+        union_data_tmp["means"] = np.array(means_arr)
         union_data_tmp["dates"] = all_data.index
         union_data_tmp["ids"] = np.repeat(self.viewid, len(means_arr))
         union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
         print self.cal_sig_wr(self.ori_data.loc[all_data.index,:], means_arr, show_num = True)
+        union_data_tmp.loc[:,['dates', 'means']].to_csv('../tmp/tmp_result.csv')
         #result = ass_view_inc.insert_predict_pct(union_data_tmp)
         return union_data_tmp
 
@@ -764,12 +847,10 @@ class HmmNesc(object):
         win_ratio = win_num / total_num
         return win_ratio
 
-
 if __name__ == "__main__":
     view_ass = ['120000001', '120000002', '120000013', '120000014', \
                 '120000015', '120000029']
-    view_ass = ['120000015']
-
+    view_ass = ['120000001']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
