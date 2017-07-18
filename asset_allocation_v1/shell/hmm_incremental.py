@@ -24,6 +24,7 @@ from db import asset_trade_dates as load_td
 from db import asset_vw_view as ass_view
 from db import asset_vw_view_inc as ass_view_inc
 from cal_tech_indic import CalTechIndic as CalTec
+from hmm_pome import HmmModel
 
 class HmmNesc(object):
 
@@ -361,7 +362,8 @@ class HmmNesc(object):
         # X = sigmoid(normalize(X, axis=0))
         # print X
         # X = boxcox(X)
-        model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000) #, params="st", init_params="st")
+        # model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000) #, params="st", init_params="st")
+        model = HmmModel(n_components = state_num, n_iter = 5000)
         # X = np.nan_to_num(0.0)
         # print X.shape
         # os._exit(0)
@@ -476,8 +478,8 @@ class HmmNesc(object):
             except Exception, e:
                 print e
                 return (1, "hmm training fail")
-            #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
-            means = HmmNesc.cal_stats_pro(model, states, ratios)
+            means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            # means = HmmNesc.cal_stats_pro(model, states, ratios)
             means_arr.append(means)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]
@@ -492,6 +494,7 @@ class HmmNesc(object):
         union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
+        #union_data_tmp.to_csv('tmp_hmm_rst.csv', index=['dates'])
         result = ass_view_inc.insert_predict_pct(union_data_tmp)
         return result
 
