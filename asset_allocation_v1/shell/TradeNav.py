@@ -696,7 +696,7 @@ class TradeNav(object):
             
             self.contrib[day] = sr_contrib
 
-            print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
+            #print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
 
             #
             # 删除无用持仓
@@ -1102,7 +1102,7 @@ class TradeNav(object):
         self.dt_today_fee_redeem = {}
         self.dt_today_bonus = {}
 
-        # if dt.strftime("%Y-%m-%d") == '2013-05-16':
+        #i if dt.strftime("%Y-%m-%d") == '2013-05-16':
         #     pdb.set_trace()
         
 
