@@ -1,5 +1,5 @@
 #coding=utf8
-
+#根据用户资金进出结构和净值曲线算用户每天收益
 
 import MySQLdb
 import pandas as pd
