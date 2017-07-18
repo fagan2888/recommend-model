@@ -642,9 +642,8 @@ class HmmNesc(object):
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
-            ratios = np.array(p_data['pct_chg'])
+            #ratios = np.array(p_data['pct_chg'])
             print p_data.pct_chg[-1]
-            '''
             try:
                 [model, states] = self.training(p_data, list(feature_predict), self.state_num)
             except Exception, e:
@@ -656,10 +655,11 @@ class HmmNesc(object):
                 [model, states] = self.training(p_data, list(feature_predict), self.state_num)
             else:
                 [model, states] = self.update_model(p_data, list(feature_predict), model)
+                '''
             #[model, states] = self.training(p_data, list(feature_predict), self.state_num)
-            #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
-            means = HmmNesc.cal_stats_pro(model, states, ratios)
+            #means = HmmNesc.cal_stats_pro(model, states, ratios)
             means_arr.append(means)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]

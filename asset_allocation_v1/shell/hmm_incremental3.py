@@ -594,10 +594,10 @@ class HmmNesc(object):
         :usage: 执行程序
         :return: None
         """
-        feature_predict = self.feature_select(self.ori_data[self.t_start:self.t_end], \
-                self.features, self.state_num, thres = 0, feature_eva = [[0,3], 2])
+        #feature_predict = self.feature_select(self.ori_data[self.t_start:self.t_end], \
+        #        self.features, self.state_num, thres = 0, feature_eva = [[0,3], 2])
 
-        #feature_predict = self.feature_selected[self.ass_id]
+        feature_predict = self.feature_selected[self.ass_id]
 
         all_dates = self.ori_data.index
         self.view_newest_date = None

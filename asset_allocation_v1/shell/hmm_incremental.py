@@ -11,7 +11,7 @@ import numpy as np
 #import pylab as pl
 #from matplotlib.dates import YearLocator, MonthLocator, DateFormatter
 #from hmmlearn.hmm import MultinomialHMM
-from hmmlearn.hmm import GaussianHMM
+#from hmmlearn.hmm import GaussianHMM
 import pandas as pd
 #from matplotlib import pyplot as plt
 # from pykalman import KalmanFilter
@@ -25,6 +25,7 @@ from db import asset_trade_dates as load_td
 from db import asset_vw_view as ass_view
 from db import asset_vw_view_inc as ass_view_inc
 from cal_tech_indic import CalTechIndic as CalTec
+from hmm_pome import HmmModel
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -240,7 +241,7 @@ class HmmNesc(object):
         trans_mat = model.transmat_[cur_state]
         used_trans = np.where( trans_mat > 0.0, trans_mat, 0.0)
         means = np.dot(used_trans, means_arr)
-        print means
+        #print means
         return means
     @staticmethod
     def market_states(data, state_num, states, thres):
@@ -366,7 +367,7 @@ class HmmNesc(object):
         # X = sigmoid(normalize(X, axis=0))
         # print X
         # X = boxcox(X)
-        model = GaussianHMM(n_components=state_num, covariance_type="diag", n_iter=5000) #, params="st", init_params="st")
+        model = HmmModel(X, n_components=state_num, n_iter=5000) #, params="st", init_params="st")
         # X = np.nan_to_num(0.0)
         # print X.shape
         # os._exit(0)
@@ -642,6 +643,6 @@ if __name__ == "__main__":
         result = nesc_hmm.init_data()
         if result[0] == 0:
             result_handle = nesc_hmm.handle()
-            print result_handle
+            #print result_handle
         else:
             print result

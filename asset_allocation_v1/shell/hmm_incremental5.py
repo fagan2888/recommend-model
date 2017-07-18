@@ -75,12 +75,13 @@ class MulGauHmm(object):
                 else:
                     self.means_ = np.vstack([self.means_, state_mean])
 
-            #print self.means_
+            self.means_ = np.nan_to_num(self.means_)
             self.transmat_ = self.model.dense_transition_matrix()[:self.state_num, :self.state_num]
 
             sorted_means = np.sort(self.means_[:,1])
             self.sorted_states_dict = {}
             for i in range(self.state_num):
+                self.means_
                 self.sorted_states_dict[i] = sorted_means.tolist().index(self.means_[i, 1])
             sorted_states = [self.sorted_states_dict[i] for i in self.states]
 
@@ -172,7 +173,6 @@ class HmmNesc(object):
             '120000029':['atr', 'pct_chg', 'roc'],
         }
         '''
-
         '''
         #week feature
         self.feature_selected = {
@@ -185,6 +185,7 @@ class HmmNesc(object):
             '120000029':['macd', 'pct_chg', 'roc', 'vma'],
         }
         '''
+        '''
         self.feature_selected = {
             '120000001':['bias', 'pct_chg', 'priceosc', 'roc'],
             '120000002':['sobv', 'pct_chg', 'bias', 'pvt'],
@@ -194,6 +195,17 @@ class HmmNesc(object):
             '120000028':['macd', 'pct_chg', 'atr'],
             '120000029':['priceosc', 'pct_chg', 'bias', 'roc'],
         }
+        '''
+        self.feature_selected = {
+            '120000001':['atr', 'pct_chg', 'roc', 'vma'],
+            '120000002':['roc', 'pct_chg', 'rsi', 'bias'],
+            '120000013':['macd', 'pct_chg', 'atr'],
+            '120000014':['vma', 'pct_chg'],
+            '120000015':['roc', 'pct_chg'],
+            '120000028':['mtm', 'pct_chg'],
+            '120000029':['atr', 'pct_chg', 'cci'],
+        }
+
         # 隐形状态数目
         self.features = ['macd', 'atr', 'cci', 'mtm', 'roc', 'pct_chg', \
                 'vma', 'vstd', 'dpo']
@@ -208,7 +220,7 @@ class HmmNesc(object):
         }
         self.state_num = self.state_nums[self.ass_id]
         # 模型训练用到的样本数, 149加1即为这个样本数
-        self.train_num = 349
+        self.train_num = 249
         # 训练开始时间
         self.t_start = datetime.datetime(2008, 8, 1)
         # 训练结束时间
@@ -391,7 +403,7 @@ class HmmNesc(object):
         trans_mat = model.transmat_[cur_state]
         used_trans = np.where( trans_mat > 0.0, trans_mat, 0.0)
         means = np.dot(used_trans, means_arr)
-        #print cur_state, data['pct_chg'][-1], (100*np.sort(means_arr)).round(2), means
+        #print sorted(means_arr)
         print means
         return means
     @staticmethod
@@ -649,10 +661,11 @@ class HmmNesc(object):
         means_arr = []
         all_data = self.ori_data[p_in_date:]
         while p_in_date <= p_e_date:
+            #print p_in_date
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
-            ratios = np.array(p_data['pct_chg'])
+            #ratios = np.array(p_data['pct_chg'])
             #print p_data.pct_chg[-1]
             '''
             try:
@@ -669,9 +682,9 @@ class HmmNesc(object):
                 #[model, states] = self.training(p_data, list(feature_predict), \
                 #        self.state_num, freeze = True)
             #[model, states] = self.training(p_data, list(feature_predict), self.state_num)
-            #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
-            means = HmmNesc.cal_stats_pro(model, states, ratios)
+            #means = HmmNesc.cal_stats_pro(model, states, ratios)
             means_arr.append(means)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]
