@@ -79,10 +79,10 @@ class MulGauHmm(object):
             self.transmat_ = self.model.dense_transition_matrix()[:self.state_num, :self.state_num]
 
             sorted_means = np.sort(self.means_[:,1])
-            sorted_states_dict = {}
+            self.sorted_states_dict = {}
             for i in range(self.state_num):
-                sorted_states_dict[i] = sorted_means.tolist().index(self.means_[i, 1])
-            sorted_states = [sorted_states_dict[i] for i in self.states]
+                self.sorted_states_dict[i] = sorted_means.tolist().index(self.means_[i, 1])
+            sorted_states = [self.sorted_states_dict[i] for i in self.states]
 
             #print sorted_means
             self.sorted_means = sorted_means
@@ -100,10 +100,10 @@ class MulGauHmm(object):
             self.transmat_ = self.model.dense_transition_matrix()[:self.state_num, :self.state_num]
 
             sorted_means = np.sort(self.means_[:,0])
-            sorted_states_dict = {}
+            self.sorted_states_dict = {}
             for i in range(self.state_num):
-                sorted_states_dict[i] = sorted_means.tolist().index(self.means_[i, 0])
-            sorted_states = [sorted_states_dict[i] for i in self.states]
+                self.sorted_states_dict[i] = sorted_means.tolist().index(self.means_[i, 0])
+            sorted_states = [self.sorted_states_dict[i] for i in self.states]
 
             self.sorted_means = np.array(sorted_means)
             self.sorted_states = np.array(self.states)
@@ -136,10 +136,10 @@ class MulGauHmm(object):
         self.transmat_ = self.model.dense_transition_matrix()[:self.state_num, :self.state_num]
 
         sorted_means = np.sort(self.means_[:,1])
-        sorted_states_dict = {}
+        self.sorted_states_dict = {}
         for i in range(self.state_num):
-            sorted_states_dict[i] = sorted_means.tolist().index(self.means_[i, 1])
-        sorted_states = [sorted_states_dict[i] for i in self.states]
+            self.sorted_states_dict[i] = sorted_means.tolist().index(self.means_[i, 1])
+        sorted_states = [self.sorted_states_dict[i] for i in self.states]
 
         self.sorted_means = sorted_means
         self.sorted_states = np.array(sorted_states)
@@ -173,6 +173,7 @@ class HmmNesc(object):
         }
         '''
 
+        '''
         #week feature
         self.feature_selected = {
             '120000001':['cci', 'pct_chg', 'rsi', 'bias', 'roc'],
@@ -183,7 +184,16 @@ class HmmNesc(object):
             '120000028':['mtm', 'pct_chg'],
             '120000029':['macd', 'pct_chg', 'roc', 'vma'],
         }
-
+        '''
+        self.feature_selected = {
+            '120000001':['bias', 'pct_chg', 'priceosc', 'roc'],
+            '120000002':['sobv', 'pct_chg', 'bias', 'pvt'],
+            '120000013':['sobv', 'pct_chg', 'vstd', 'macd'],
+            '120000014':['vstd', 'pct_chg', 'roc', 'wvad'],
+            '120000015':['priceosc', 'pct_chg', 'bias', 'roc'],
+            '120000028':['macd', 'pct_chg', 'atr'],
+            '120000029':['priceosc', 'pct_chg', 'bias', 'roc'],
+        }
         # 隐形状态数目
         self.features = ['macd', 'atr', 'cci', 'mtm', 'roc', 'pct_chg', \
                 'vma', 'vstd', 'dpo']
@@ -589,13 +599,13 @@ class HmmNesc(object):
 
         next_day_state = np.argmax(trans_mat_today)
         #next_day_pro = trans_mat_today[next_day_state]
-        next_day_mean = model.sorted_means[next_day_state]
+        #next_day_mean = model.means_[next_day_state,1]
+        sorted_state_today = model.sorted_states_dict[states[-1]]
+        sorted_state_nextday = model.sorted_states_dict[next_day_state]
+        next_day_mean = model.sorted_means[sorted_state_nextday]
+        print sorted_state_today, sorted_state_nextday, next_day_mean
+        #print model.sorted_states[-1]
         #print model.sorted_means
-        #print states[-1]
-        #print model.sorted_means
-        print states[-1], next_day_state, next_day_mean
-        #print model.sorted_means
-        #next_day_mean_rank = sum(model.means_[:, 1] < next_day_mean)
         #print next_day_mean
         return next_day_mean
     @staticmethod
@@ -680,7 +690,7 @@ class HmmNesc(object):
         union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(means_arr))
         union_data_tmp = pd.DataFrame(union_data_tmp)
         print self.cal_sig_wr(self.ori_data.loc[all_data.index,:], means_arr, show_num = True)
-        union_data_tmp.loc[:,['dates', 'means']].to_csv('./hmm_view/'+self.ass_id+'.csv')
+        union_data_tmp.loc[:,['dates', 'means']].to_csv('../tmp/hmm_view/'+self.ass_id+'.csv')
         #result = ass_view_inc.insert_predict_pct(union_data_tmp)
         return union_data_tmp
 
@@ -851,7 +861,7 @@ class HmmNesc(object):
 if __name__ == "__main__":
     #view_ass = ['120000001', '120000002', '120000013', '120000014', \
     #            '120000015', '120000029']
-    view_ass = ['120000001']
+    view_ass = ['120000013']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
