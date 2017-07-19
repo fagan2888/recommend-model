@@ -201,7 +201,7 @@ class HmmNesc(object):
             '120000002':['macd', 'pct_chg', 'mtm', 'dpo'],
             '120000013':['sobv', 'pct_chg', 'vstd', 'macd'],
             '120000014':['dpo', 'pct_chg'],
-            '120000015':['priceosc', 'pct_chg', 'bias', 'roc'],
+            '120000015':['mtm', 'pct_chg'],
             '120000028':['macd', 'pct_chg', 'atr'],
             '120000029':['priceosc', 'pct_chg', 'bias', 'roc'],
         }
@@ -892,7 +892,7 @@ class HmmNesc(object):
 if __name__ == "__main__":
     view_ass = ['120000001', '120000002', '120000013', '120000014', \
                 '120000015', '120000029']
-    view_ass = ['120000014']
+    view_ass = ['120000015']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
