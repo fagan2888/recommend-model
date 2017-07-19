@@ -197,13 +197,13 @@ class HmmNesc(object):
         }
         '''
         self.feature_selected = {
-            '120000001':['atr', 'pct_chg', 'roc', 'vma'],
-            '120000002':['roc', 'pct_chg', 'rsi', 'bias'],
-            '120000013':['macd', 'pct_chg', 'atr'],
-            '120000014':['vma', 'pct_chg'],
-            '120000015':['roc', 'pct_chg'],
-            '120000028':['mtm', 'pct_chg'],
-            '120000029':['atr', 'pct_chg', 'cci'],
+            '120000001':['bias', 'pct_chg', 'priceosc', 'roc'],
+            '120000002':['macd', 'pct_chg', 'mtm', 'dpo'],
+            '120000013':['sobv', 'pct_chg', 'vstd', 'macd'],
+            '120000014':['vstd', 'pct_chg', 'roc', 'wvad'],
+            '120000015':['priceosc', 'pct_chg', 'bias', 'roc'],
+            '120000028':['macd', 'pct_chg', 'atr'],
+            '120000029':['priceosc', 'pct_chg', 'bias', 'roc'],
         }
 
         # 隐形状态数目
@@ -612,13 +612,13 @@ class HmmNesc(object):
         next_day_state = np.argmax(trans_mat_today)
         #next_day_pro = trans_mat_today[next_day_state]
         #next_day_mean = model.means_[next_day_state,1]
-        sorted_state_today = model.sorted_states_dict[states[-1]]
+        #sorted_state_today = model.sorted_states_dict[states[-1]]
         sorted_state_nextday = model.sorted_states_dict[next_day_state]
         next_day_mean = model.sorted_means[sorted_state_nextday]
-        print sorted_state_today, sorted_state_nextday, next_day_mean
+        #print sorted_state_today, sorted_state_nextday, next_day_mean
         #print model.sorted_states[-1]
         #print model.sorted_means
-        #print next_day_mean
+        print next_day_mean / 100.0
         return next_day_mean
     @staticmethod
     def statistic_win_ratio(ratios, means_arr, stds_arr):
@@ -665,7 +665,7 @@ class HmmNesc(object):
             p_s_num += 1
             p_in_num += 1
             p_data = self.ori_data[p_s_date:p_in_date]
-            #ratios = np.array(p_data['pct_chg'])
+            ratios = np.array(p_data['pct_chg'])
             #print p_data.pct_chg[-1]
             '''
             try:
@@ -682,9 +682,12 @@ class HmmNesc(object):
                 #[model, states] = self.training(p_data, list(feature_predict), \
                 #        self.state_num, freeze = True)
             #[model, states] = self.training(p_data, list(feature_predict), self.state_num)
-            means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
             #print self.rating(p_data, self.state_num, states, self.sharpe_ratio)
-            #means = HmmNesc.cal_stats_pro(model, states, ratios)
+
+            #print p_in_date, p_data['pct_chg'][-1]
+            #print model.sorted_states
+            means = HmmNesc.cal_stats_pro(model, states, ratios)
             means_arr.append(means)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]
@@ -705,6 +708,21 @@ class HmmNesc(object):
         print self.cal_sig_wr(self.ori_data.loc[all_data.index,:], means_arr, show_num = True)
         union_data_tmp.loc[:,['dates', 'means']].to_csv('../tmp/hmm_view/'+self.ass_id+'.csv')
         #result = ass_view_inc.insert_predict_pct(union_data_tmp)
+
+        '''
+        df = pd.read_csv('get_all_week_index.csv', index_col = ['date'], parse_dates = ['date'])
+        index = df['20100820':'20150123'].index
+        union_data_tmp = {}
+        union_data_tmp["means"] = np.repeat(0, len(index))
+        union_data_tmp["dates"] = index
+        union_data_tmp["ids"] = np.repeat(self.viewid, len(index))
+        union_data_tmp['create_time'] = np.repeat(datetime.datetime.now(),len(index))
+        union_data_tmp['update_time'] = np.repeat(datetime.datetime.now(),len(index))
+        union_data_tmp = pd.DataFrame(union_data_tmp)
+        result = ass_view_inc.insert_predict_pct(union_data_tmp)
+        '''
+
+
         return union_data_tmp
 
     @staticmethod
@@ -872,9 +890,9 @@ class HmmNesc(object):
         return win_ratio
 
 if __name__ == "__main__":
-    #view_ass = ['120000001', '120000002', '120000013', '120000014', \
-    #            '120000015', '120000029']
-    view_ass = ['120000013']
+    view_ass = ['120000001', '120000002', '120000013', '120000014', \
+                '120000015', '120000029']
+    view_ass = ['120000014']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
