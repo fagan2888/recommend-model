@@ -78,7 +78,7 @@ def number_format(df, columns=[], precision=2, **kwcolumns):
             if v and k in df.columns:
                 df[k] = df[k].map(("{:.%df}" % (v)).format)
     return df
-                
+
 def batch(db, table, df_new, df_old, timestamp=True):
     index_insert = df_new.index.difference(df_old.index)
     index_delete = df_old.index.difference(df_new.index)
@@ -101,7 +101,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
         keys = [table.c.get(c) for c in df_old.index.names]
         for segment in chunks(df_old.index.tolist(), 500):
             table.delete(tuple_(*keys).in_(segment)).execute()
-        
+
         if timestamp:
             df_new['updated_at'] = df_new['created_at'] = datetime.now()
 
@@ -167,7 +167,7 @@ def asset_tc_timing_scratch_load_signal(timings):
             s = s.where(t1.c.tc_timing_id.in_(timings))
         else:
             s = s.where(t1.c.tc_timing_id == timings)
-    
+
     df = pd.read_sql(s, db, index_col = ['tc_date', 'tc_timing_id'], parse_dates=['tc_date'])
 
     df = df.unstack().fillna(method='pad')
@@ -188,20 +188,20 @@ def asset_tc_timing_signal_load(timings, begin_date=None, end_date=None):
     ]
 
     s = select(columns).where(t1.c.tc_timing_id.in_(timings));
-    
+
     if begin_date is not None:
         s = s.where(t1.c.tc_date >= begin_date)
 
     if end_date is not None:
         s = s.where(t1.c.tc_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['tc_date', 'tc_timing_id'], parse_dates=['tc_date'])
 
     df = df.unstack().fillna(method='pad')
     df.columns = df.columns.droplevel(0)
 
     return df
-    
+
 
 def asset_rm_risk_mgr_signal_load(
         riskmgr_id, categories=None, begin_date = None, end_date=None):
@@ -222,20 +222,20 @@ def asset_rm_risk_mgr_signal_load(
             s = s.where(t1.c.rm_category.in_(categories))
         else:
             s = s.where(t1.c.rm_category == categories)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.rm_date >= begin_date)
 
     if end_date is not None:
         s = s.where(t1.c.rm_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['rm_date', 'rm_category'], parse_dates=['rm_date'])
 
     df = df.unstack().fillna(method='pad')
     df.columns = df.columns.droplevel(0)
 
     return df
-    
+
 
 def asset_tc_timing_signal_load(timings, begin_date=None, end_date=None):
     db = connection('asset')
@@ -249,20 +249,20 @@ def asset_tc_timing_signal_load(timings, begin_date=None, end_date=None):
     ]
 
     s = select(columns).where(t1.c.tc_timing_id.in_(timings));
-    
+
     if begin_date is not None:
         s = s.where(t1.c.tc_date >= begin_date)
 
     if end_date is not None:
         s = s.where(t1.c.tc_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['tc_date', 'tc_timing_id'], parse_dates=['tc_date'])
 
     df = df.unstack().fillna(method='pad')
     df.columns = df.columns.droplevel(0)
 
     return df
-    
+
 
 def asset_rm_risk_mgr_signal_load(
         riskmgr_id, categories=None, begin_date = None, end_date=None):
@@ -283,27 +283,27 @@ def asset_rm_risk_mgr_signal_load(
             s = s.where(t1.c.rm_category.in_(categories))
         else:
             s = s.where(t1.c.rm_category == categories)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.rm_date >= begin_date)
 
     if end_date is not None:
         s = s.where(t1.c.rm_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['rm_date', 'rm_category'], parse_dates=['rm_date'])
 
     df = df.unstack().fillna(method='pad')
     df.columns = df.columns.droplevel(0)
 
     return df
-    
 
-    
+
+
     if begin_date is not None:
         s = s.where(t1.c.td_date >= begin_date)
     if end_date is not None:
         s = s.where(t1.c.td_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['td_date'], parse_dates=['td_date'])
 
     return df.index
@@ -367,7 +367,7 @@ def asset_allocation_instance_nav_load(inst, xtype, allocs=None, begin=None, end
         s = s.where(t1.c.ai_date >= begin)
     if end is not None:
         s = s.where(t1.c.ai_date <= end)
-        
+
     df = pd.read_sql(s, db, index_col = ['ai_inst_id', 'ai_date', 'ai_alloc_id'], parse_dates=['ai_date'])
 
     df = df.unstack().fillna(method='pad')
@@ -390,12 +390,12 @@ def asset_allocation_instance_nav_load_series(
         .where(t1.c.ai_inst_id == id_) \
         .where(t1.c.ai_alloc_id == alloc_id) \
         .where(t1.c.ai_type == xtype)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.ai_date >= begin_date)
     if end_date is not None:
         s = s.where(t1.c.ai_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
@@ -419,11 +419,11 @@ def asset_allocation_instance_position_detail_load(id_):
     ]
 
     s = select(columns).where(t1.c.ai_inst_id == id_)
-        
+
     df = pd.read_sql(s, db, index_col = ['ai_alloc_id', 'ai_transfer_date', 'ai_category', 'ai_fund_id'], parse_dates=['ai_transfer_date'])
 
     return df
-    
+
 
 #
 # asset.ra_composite_asset_nav
@@ -439,12 +439,12 @@ def asset_ra_composite_asset_load_series(id_, reindex=None, begin_date=None, end
     ]
 
     s = select(columns).where(t1.c.ra_asset_id == id_)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
         s = s.where(t1.c.ra_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
@@ -457,7 +457,7 @@ def asset_ra_composite_asset_load_series(id_, reindex=None, begin_date=None, end
 #
 def asset_ra_composite_asset_position_load(asset_id):
     db = connection('asset')
-    
+
     # 加载基金列表
     t = Table('ra_composite_asset_position', MetaData(bind=db), autoload=True)
     columns = [
@@ -466,7 +466,7 @@ def asset_ra_composite_asset_position_load(asset_id):
         t.c.ra_fund_ratio,
     ]
     s = select(columns, (t.c.ra_asset_id == asset_id))
-    
+
     df = pd.read_sql(s, db, index_col = ['ra_date', 'ra_fund_code'], parse_dates=['ra_date'])
 
     return df
@@ -488,12 +488,12 @@ def asset_ra_pool_nav_load_series(id_, category, xtype, reindex=None, begin_date
         .where(t1.c.ra_pool == id_) \
         .where(t1.c.ra_category == category) \
         .where(t1.c.ra_type == xtype)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
         s = s.where(t1.c.ra_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
@@ -518,12 +518,12 @@ def asset_risk_asset_allocation_nav_load_series(
     s = select(columns) \
         .where(t1.c.ra_alloc_id == alloc_id) \
         .where(t1.c.ra_type == xtype)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
         s = s.where(t1.c.ra_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
@@ -585,7 +585,7 @@ def load_asset_name_and_type(asset_id):
         category = 1
         fund = base_ra_fund.find(asset_id)
         name = "%s(%s)" % (fund['ra_name'], fund['ra_code'])
-        
+
     elif xtype == 4:
         #
         # 修型资产
@@ -624,7 +624,7 @@ def load_pool_via_asset(asset_id):
             pool = 19240142
         elif '恒生' in name:
             pool = 19240143
-            
+
     else:
         pool = 0
 
@@ -661,7 +661,7 @@ def load_asset_and_pool(gid):
             'mz_pool_id':'pool_id',
         }, inplace=True)
         # df_asset = df_asset.set_index(['asset_id'])
-        
+
     # elif xtype == 12:
     #     #
     #     # 指数资产

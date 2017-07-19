@@ -200,7 +200,7 @@ class HmmNesc(object):
             '120000001':['bias', 'pct_chg', 'priceosc', 'roc'],
             '120000002':['macd', 'pct_chg', 'mtm', 'dpo'],
             '120000013':['sobv', 'pct_chg', 'vstd', 'macd'],
-            '120000014':['vstd', 'pct_chg', 'roc', 'wvad'],
+            '120000014':['dpo', 'pct_chg'],
             '120000015':['priceosc', 'pct_chg', 'bias', 'roc'],
             '120000028':['macd', 'pct_chg', 'atr'],
             '120000029':['priceosc', 'pct_chg', 'bias', 'roc'],
@@ -707,7 +707,7 @@ class HmmNesc(object):
         union_data_tmp = pd.DataFrame(union_data_tmp)
         print self.cal_sig_wr(self.ori_data.loc[all_data.index,:], means_arr, show_num = True)
         union_data_tmp.loc[:,['dates', 'means']].to_csv('../tmp/hmm_view/'+self.ass_id+'.csv')
-        #result = ass_view_inc.insert_predict_pct(union_data_tmp)
+        result = ass_view_inc.insert_predict_pct(union_data_tmp)
 
         '''
         df = pd.read_csv('get_all_week_index.csv', index_col = ['date'], parse_dates = ['date'])
