@@ -514,9 +514,14 @@ class MonthlyStaRolling(object):
             resub_amount = ds_order.get_specific_month_amount(pre_date, \
                                 cur_date, [11], first_buy_uids)
             resub_amount = resub_amount[0][0]
+            # 持仓金额
+            hold_amount_roll = ds_share.get_specific_date_amount(cur_date, \
+                                first_buy_uids)
+            hold_amount_roll = hold_amount_roll[0][0]
             # 统计各种赎回、复购金额率
             redeem_amount_ratio = 0
             resub_amount_ratio = 0
+            hold_amount_ratio = 0
             # if cur_date == datetime.date(2016, 9, 21):
             #     print "###########"
             #     print cur_date, pre_date
@@ -529,8 +534,11 @@ class MonthlyStaRolling(object):
                     redeem_amount_ratio = redeem_amount / first_buy_amount
                 if resub_amount is not None:
                     resub_amount_ratio = resub_amount / first_buy_amount
+                if hold_amount_roll is not None:
+                    hold_amount_ratio = hold_amount_roll / first_buy_amount
             rp_amount_redeem_ratio.append(redeem_amount_ratio)
-            rp_amount_resub_ratio.append(resub_amount_ratio)
+            # 把资产复购率改成留存率
+            rp_amount_resub_ratio.append(hold_amount_ratio)
         new_dict = {}
         new_dict['rp_tag_id'] = rp_tag_id
         new_dict['rp_date'] = rp_date
