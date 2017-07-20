@@ -707,7 +707,7 @@ class HmmNesc(object):
         union_data_tmp = pd.DataFrame(union_data_tmp)
         print self.cal_sig_wr(self.ori_data.loc[all_data.index,:], means_arr, show_num = True)
         union_data_tmp.loc[:,['dates', 'means']].to_csv('../tmp/hmm_view/'+self.ass_id+'.csv')
-        result = ass_view_inc.insert_predict_pct(union_data_tmp)
+        #result = ass_view_inc.insert_predict_pct(union_data_tmp)
 
         '''
         df = pd.read_csv('get_all_week_index.csv', index_col = ['date'], parse_dates = ['date'])
@@ -892,7 +892,7 @@ class HmmNesc(object):
 if __name__ == "__main__":
     view_ass = ['120000001', '120000002', '120000013', '120000014', \
                 '120000015', '120000029']
-    view_ass = ['120000015']
+    #view_ass = ['120000001']
     for v_ass in view_ass:
         print v_ass
         nesc_hmm = HmmNesc(v_ass, '20050101')
