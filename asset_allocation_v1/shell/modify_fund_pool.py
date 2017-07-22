@@ -36,6 +36,7 @@ if __name__ == '__main__':
     if op == 'delete':
         sql = "delete from ra_pool_fund where ra_pool = %d and ra_fund_id = %d" % (int(pool_id), int(gid))
         print sql
+        cur.execute(sql)
     elif op == 'insert':
         sql = 'select ra_date from ra_pool_fund where ra_pool = %d' % (int)(pool_id)
         cur.execute(sql)
@@ -46,4 +47,8 @@ if __name__ == '__main__':
         dates = set(dates)
 
         for d in dates:
-            sql = 'replace into ra_pool_fund (ra_pool, ra_category, ra_date, ra_fund_id, ra_fund_code, ra_fund_type, ra_fund_level, ra_mask, created_at, updated_at) values ()'
+            sql = "replace into ra_pool_fund (ra_pool, ra_category, ra_date, ra_fund_id, ra_fund_code, ra_fund_type, ra_fund_level, ra_mask, created_at, updated_at) values ('%d', 0, '%s', '%d', '%s', 2, 1, 0, '%s', '%s')" % (int(pool_id), d, gid, fund_code, datetime.now(), datetime.now())
+            print sql
+            cur.execute(sql)
+
+    conn.close()
