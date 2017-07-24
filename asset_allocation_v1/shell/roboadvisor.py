@@ -109,6 +109,7 @@ def test(ctx):
 @click.option('--highlow/--no-highlow', 'opthighlow', default=True, help=u'include highlow command group with in batch')
 @click.option('--portfolio/--no-portfolio', 'optportfolio', default=True, help=u'include portfolio command group with in batch')
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
+@click.option('--end-date', 'enddate', default='2017-07-21', help=u'end date to calc')
 @click.option('--turnover-markowitz', 'optturnoverm', type=float, default=0, help=u'fitler portfolio by turnover')
 @click.option('--turnover-portfolio', 'optturnoverp', type=float, default=0.2, help=u'fitler portfolio by turnover')
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
@@ -121,7 +122,7 @@ def test(ctx):
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace existed instance')
 @click.option('--riskctrl/--no-riskctrl', 'optriskctrl', default=True, help=u'no riskmgr for highlow')
 @click.pass_context
-def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate,  optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, opthigh, optlow, optratio, optonline, optreplace, optriskctrl):
+def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, opthigh, optlow, optratio, optonline, optreplace, optriskctrl):
     '''run all command in batch
     '''
     if optpool:

@@ -321,8 +321,9 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 @click.option('--fee', 'optfee', default='9,8', help=u'fee type(8:with fee; 9:without fee')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def nav(ctx, optid, optlist, optrisk, optfee, optdebug):
+def nav(ctx, optid, optlist, optrisk, optfee, optdebug, optenddate):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -345,9 +346,9 @@ def nav(ctx, optid, optlist, optrisk, optfee, optdebug):
 
     for fee in fees:
         for _, portfolio in df_portfolio.iterrows():
-            nav_update_alloc(portfolio, risks, fee, optdebug)
+            nav_update_alloc(portfolio, risks, fee, optdebug, optenddate)
 
-def nav_update_alloc(portfolio, risks, fee, debug):
+def nav_update_alloc(portfolio, risks, fee, debug, enddate):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     df_alloc = df_alloc.loc[(df_alloc['ra_risk'] * 10).astype(int).isin(risks)]
     
@@ -359,17 +360,20 @@ def nav_update_alloc(portfolio, risks, fee, debug):
     # with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
     #     for _, alloc in :
     #         bar.update(1)
-            nav_update(alloc, fee, debug)
+            nav_update(alloc, fee, debug, enddate)
     
-def nav_update(alloc, fee, debug):
+def nav_update(alloc, fee, debug, enddate):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
     if df_pos.empty:
         click.echo(click.style("\nswarning: empty df_pos for alloc %d, skiped!" % (alloc_id), fg='yellow'))
         return
-    
-    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
+    if enddate is not None:
+        max_date = pd.to_datetime(enddate)
+    else:
+        max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
     # 计算复合资产净值
     if fee == 8:

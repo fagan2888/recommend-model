@@ -8,6 +8,7 @@ import calendar
 from sqlalchemy import *
 
 from db import database, Nav
+from util.xdebug import dd
 
 
 def get_date_df(df, start_date, end_date):
@@ -99,11 +100,19 @@ def portfolio_nav2(df_pos, end_date=None) :
         max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
     dates = df_pos.index.get_level_values(0).unique()
+
+    min_date = dates.min()
+    if max_date < min_date:
+        return pd.DataFrame(columns=(['portfolio'] + list(df_inc.columns)))
+    
+    dates = dates[(dates >= min_date) & (dates <= max_date)]
+    
     pairs = zip(dates[0:-1], dates[1:])
     if max_date.strftime("%Y-%m-%d") not in dates:
         pairs.append((dates[-1], max_date))
 
     sr_nav_portfolio = pd.Series([1], index=[dates[0]]);
+
     for sdate, edate in pairs:
         #
         # 加载新仓位
