@@ -71,7 +71,7 @@ def save(gid, xtype, df):
     fmt_columns = ['ra_nav', 'ra_inc']
     fmt_precision = 6
     if not df.empty:
-        df = database.number_format(df, fmt_columns, fmt_precision)
+        df = database.number_format(df + 0.000000001, fmt_columns, fmt_precision)
     #
     # 保存择时结果到数据库
     #

@@ -161,7 +161,7 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
             ctx.obj['highlow'] = optratio
 
     if optportfolio:
-        ctx.invoke(CommandPortfolio.portfolio, optreplace=optreplace, optturnover=optturnoverp)
+        ctx.invoke(CommandPortfolio.portfolio, optreplace=optreplace, optturnover=optturnoverp, optenddate=enddate)
 
 if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
