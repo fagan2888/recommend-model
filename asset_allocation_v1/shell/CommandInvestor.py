@@ -47,18 +47,19 @@ logger = logging.getLogger(__name__)
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
 @click.option('--id', 'optid', help=u'specify investor id')
 @click.option('--type', 'opttype', default='9', help=u'type type(8:with fee; 9:without fee')
+@click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def investor(ctx, optfull, optid, opttype):
+def investor(ctx, optfull, optid, opttype, optenddate):
 
     '''generate final portolio
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optfull is False:
-            ctx.invoke(nav, optid=optid)
+            ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
         else:
-            ctx.invoke(nav, optid=optid)
+            ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
@@ -72,8 +73,9 @@ def investor(ctx, optfull, optid, opttype):
 @click.option('--t0/--no-t0', 'optt0', default=False, help=u'specify use t+0 or not for type 8')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def nav(ctx, optid, optlist, opttype, optdebug, optfee, optt0):
+def nav(ctx, optid, optlist, opttype, optdebug, optfee, optt0, optenddate):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -85,7 +87,12 @@ def nav(ctx, optid, optlist, opttype, optdebug, optfee, optt0):
             investors = None
 
     types = [int(s.strip()) for s in opttype.split(',')]
- 
+
+    if optenddate is not None:
+        enddate = pd.to_datetime(optenddate)
+    else:
+        enddate = None
+        
     df_investor = asset_is_investor.load(investors)
 
     if optlist:
@@ -99,10 +106,10 @@ def nav(ctx, optid, optlist, opttype, optdebug, optfee, optt0):
                 label='update nav',
                 item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
             for _, investor in bar:
-                nav_update(investor, xtype, optdebug, optfee, optt0)
+                nav_update(investor, xtype, optdebug, optfee, optt0, enddate)
      
 # def nav_update(alloc, fee, debug):
-def nav_update(alloc, xtype, debug, optfee, optt0):
+def nav_update(alloc, xtype, debug, optfee, optt0, enddate):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_is_investor_pos.load_fund_pos(alloc_id)
@@ -113,8 +120,10 @@ def nav_update(alloc, xtype, debug, optfee, optt0):
     df_pos.index.names=['ra_date', 'ra_fund_id']
     df_pos = df_pos.rename(columns={'is_fund_ratio': 'ra_fund_ratio'})
 
-    
-    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+    if enddate is not None:
+        max_date = enddate
+    else:
+        max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
     # 计算复合资产净值
     if xtype == 8:
