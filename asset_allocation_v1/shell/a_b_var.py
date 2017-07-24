@@ -50,4 +50,7 @@ if __name__ == '__main__':
     alpha = params[0]
     beta  = params[1]
 
+    print 'alpha' , ':', alpha
+    print 'beta' , ':', beta
 
+    
