@@ -53,8 +53,9 @@ logger = logging.getLogger(__name__)
 @click.option('--pool', 'optpool', default=0, help=u'which pool to use for each asset (eg. 120000001:11110100,120000002:11110100')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--turnover', 'optturnover',  type=float, default=0, help=u'fitler by turnover')
+@click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpool, optrisk, optturnover):
+def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpool, optrisk, optturnover,optenddate):
 
     '''generate final portolio
     '''
@@ -66,10 +67,10 @@ def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpo
             else:
                 tmpid = optid
             ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
-            ctx.invoke(nav, optid=optid)
+            ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
         else:
-            ctx.invoke(nav, optid=optid)
+            ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
