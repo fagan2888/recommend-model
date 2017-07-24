@@ -8,6 +8,8 @@ import config
 import pandas as pd
 import re
 import statsmodels.api as sm
+from scipy.stats import norm
+import numpy as np
 
 
 
@@ -38,8 +40,8 @@ if __name__ == '__main__':
     dates = set(hs300_dfr.index) & set(portfolio_dfr.index)
     dates = list(dates)
     dates.sort()
-    hs300_dfr = hs300_dfr.loc[dates]
-    portfolio_dfr = portfolio_dfr.loc[dates]
+    hs300_dfr = hs300_dfr.loc[dates].resample('w-FRI').last()
+    portfolio_dfr = portfolio_dfr.loc[dates].resample('W-FRI').last()
 
 
     X = hs300_dfr['nav'].values
@@ -53,4 +55,8 @@ if __name__ == '__main__':
     print 'alpha' , ':', alpha
     print 'beta' , ':', beta
 
-    
+    mean = np.mean(portfolio_dfr.values)
+    std = np.std(portfolio_dfr.values)
+    var = norm.ppf(0.05, mean, std)
+
+    print 'value at risk : ', var
