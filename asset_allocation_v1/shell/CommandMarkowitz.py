@@ -196,7 +196,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
 @click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
-@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
+@click.option('--bootstrap-count', 'optbootcount', type=int, default=200, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.option('--short-cut', type=click.Choice(['default', 'high', 'low']))
 @click.option('--algo', 'optalgo', type=click.Choice(['markowitz', 'average']), help=u'which algorithm to use for allocate')
@@ -270,7 +270,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
         elif short_cut == 'low':
             assets = {
-                120000010:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                #120000010:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
                 120000011:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
             }
             if optname is None:
@@ -360,9 +360,19 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # 导入数据: markowitz_pos
     #
     df = df.round(4)             # 四舍五入到万分位
- 
+
     #每四周做平滑
-    df = df.rolling(window = 4, min_periods = 1).mean()
+    smooth = 4
+    if bootstrap <= 100:
+        smooth = 1
+    elif bootstrape > 100 and bootstrape < 200:
+        smooth = 2
+    elif bootstrape >= 200:
+        smooth = 4
+
+    print bootstrap, smooth
+
+    df = df.rolling(window = smooth, min_periods = 1).mean()
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失

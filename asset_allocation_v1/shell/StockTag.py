@@ -525,7 +525,7 @@ def largecapprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_largecapprefer) * ratio))):
-        if (sorted_largecapprefer[i][1]) > 0.92:
+        if (sorted_largecapprefer[i][1]) > 0.90:
             result.append(sorted_largecapprefer[i])
         # result.append(sorted_largecapprefer[i])
 
@@ -569,7 +569,7 @@ def smallcapprefer(funddf, indexdf, ratio):
 
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_smallcapprefer) * ratio))):
-        if (sorted_smallcapprefer[i][1]) > 0.95:
+        if (sorted_smallcapprefer[i][1]) > 0.92:
             result.append(sorted_smallcapprefer[i])
         # result.append(sorted_smallcapprefer[i])
 

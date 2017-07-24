@@ -319,7 +319,7 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
 @click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
-@click.option('--fee', 'optfee', default='9,8', help=u'fee type(8:with fee; 9:without fee')
+@click.option('--fee', 'optfee', default='9', help=u'fee type(8:with fee; 9:without fee')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
