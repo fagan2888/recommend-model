@@ -363,11 +363,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     #每四周做平滑
     smooth = 4
-    if bootstrap <= 100:
+    if bootstrap < 100:
         smooth = 1
-    elif bootstrape > 100 and bootstrape < 200:
+    elif bootstrap >= 100 and bootstrap < 200:
         smooth = 2
-    elif bootstrape >= 200:
+    elif bootstrap >= 200:
         smooth = 4
 
     print bootstrap, smooth
