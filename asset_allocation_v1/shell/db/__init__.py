@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import database
+import asset_is_investor
+import asset_is_investor_nav
+import asset_is_investor_pos
+import asset_is_investor_criteria
 import asset_mz_highlow
 import asset_mz_highlow_alloc
 import asset_mz_highlow_asset
