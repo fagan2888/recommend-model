@@ -41,8 +41,9 @@ logger = logging.getLogger(__name__)
 @click.option('--riskmgr', 'optriskmgr', default='*', help=u'with riskmgr')
 @click.option('--riskmgr/--no-riskmgr', 'optriskmgr', default=True, help=u'with riskmgr or not')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk):
+def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate):
 
     '''markowitz group
     '''
@@ -55,10 +56,10 @@ def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, 
             else:
                 tmpid = optid
             ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
-            ctx.invoke(nav, optid=optid)
+            ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
         else:
-            ctx.invoke(nav, optid=optid)
+            ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
@@ -386,8 +387,9 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def nav(ctx, optid, optlist):
+def nav(ctx, optid, optlist, optenddate):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -398,6 +400,11 @@ def nav(ctx, optid, optlist):
         else:
             highlows = None
 
+    if optenddate is not None:
+        enddate = pd.to_datetime(optenddate)
+    else:
+        enddate = None
+        
     df_highlow = asset_mz_highlow.load(highlows)
 
     if optlist:
@@ -406,17 +413,17 @@ def nav(ctx, optid, optlist):
         return 0
     
     for _, highlow in df_highlow.iterrows():
-        nav_update_alloc(highlow)
+        nav_update_alloc(highlow, enddate)
 
-def nav_update_alloc(highlow):
+def nav_update_alloc(highlow, enddate):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
     
     with click.progressbar(length=len(df_alloc), label='update nav %d' % (highlow['globalid'])) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
-            nav_update(alloc)
+            nav_update(alloc, enddate)
     
-def nav_update(alloc):
+def nav_update(alloc, enddate):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_mz_highlow_pos.load(alloc_id)
@@ -424,7 +431,10 @@ def nav_update(alloc):
     # 加载资产收益率
     min_date = df_pos.index.min()
     #max_date = df_pos.index.max()
-    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+    if enddate is not None:
+        max_date = enddate
+    else:
+        max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
 
     data = {}
