@@ -9,7 +9,7 @@ import numpy as np
 #from sqlalchemy import *
 
 #from db import database
-#from hurst import Hurst
+from hurst import Hurst
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class TimingGFTD_hurst(object):
         self.n3 = n3
         self.n4 = n4 if n4 else n3
 
-    def timing(self, df_nav):
+    def timing(self, df_nav, tp = False):
 
         #
         # step 1: 计算 ud
@@ -142,11 +142,13 @@ class TimingGFTD_hurst(object):
         dict_stop_low = {}
         dict_recording_high = {}
         dict_recording_low = {}
+        #
         #计算反转日期
-        #hurst = Hurst(df_nav, short_mean = 10, long_mean = 30)
-        #tp_dates = hurst.cal_tp_dates()
-        tp_dates = np.load('/home/yaojiahui/recommend_model/asset_allocation_v1/tp_dates.npy')
-        print tp_dates
+        #
+        hurst = Hurst(df_nav, short_mean = 30, long_mean = 60)
+        tp_dates = hurst.cal_tp_dates()
+        #tp_dates = np.load('/home/yaojiahui/recommend_model/asset_allocation_v1/tp_dates.npy')
+        #print tp_dates
 
         for key, row in df_nav.iterrows():
             if  row['tc_buy_start'] + row['tc_buy_signal'] +\
@@ -156,10 +158,11 @@ class TimingGFTD_hurst(object):
             #
             #处理反转
             #
-            if key in tp_dates:
-                if status == 1:
-                    high = max(row['tc_high'], high_recording)
-                    (status, action, high_recording) = (-1, -1, None)
+            if tp:
+                if key in tp_dates:
+                    if status == 1:
+                        high = max(row['tc_high'], high_recording)
+                        (status, action, high_recording) = (-1, -1, None)
 
             #
             # 处理事件
@@ -236,8 +239,42 @@ class TimingGFTD_hurst(object):
 
         # print df_nav.head(5000)
         # print df_nav.tail(60)
-        df_nav.to_csv('../td_husrt_summary.csv')
+        #df_nav.to_csv('../td_husrt_summary.csv')
         return df_nav
+
+    def cal_sta(self, df_nav):
+        df_nav_tp = self.timing(df_nav, tp = True)
+        df_nav_td = self.timing(df_nav, tp = False)
+        df_nav_td = df_nav_td.loc[df_nav_tp.index]
+        nav_tp = 1
+        nav_td = 1
+        tmp_ret = 1
+        win_num = 0
+        total_num = 0
+        for i in range(len(df_nav_tp) - 1):
+            if df_nav_tp.ix[i, 'tc_signal'] == 1:
+                nav_tp *= (1 + df_nav_tp.ix[i+1, 'tc_close'])/(1 + df_nav_tp.ix[i, 'tc_close'])
+            if df_nav_td.ix[i, 'tc_signal'] == 1:
+                nav_td *= (1 + df_nav_td.ix[i+1, 'tc_close'])/(1 + df_nav_td.ix[i, 'tc_close'])
+
+            if df_nav_tp.ix[i, 'tc_signal'] != df_nav_td.ix[i, 'tc_signal']:
+                tmp_ret *= (1 + df_nav_tp.ix[i+1, 'tc_close'])/(1 + df_nav_tp.ix[i, 'tc_close'])
+
+            if (tmp_ret != 1) and (df_nav_tp.ix[i, 'tc_signal'] == df_nav_td.ix[i, 'tc_signal']):
+                total_num += 1
+                if tmp_ret < 1:
+                    win_num += 1
+                tmp_ret = 1
+
+        wr = float(win_num)/total_num
+        print 'win ratio:', wr
+        print 'add turning point:', nav_tp
+        print 'no turning point:', nav_td
+
+
+
+
+
 
 if __name__ == '__main__':
     data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000001_ori_day_data.csv', \
@@ -249,5 +286,5 @@ if __name__ == '__main__':
     #print tp_dates
     #os._exit(0)
     td = TimingGFTD_hurst()
-    result = td.timing(data)
+    result = td.cal_sta(data)
     #print result
