@@ -1,18 +1,20 @@
 #coding=utf8
 
+import os
 import logging
 import pandas as pd
 import numpy as np
-import datetime
-import calendar
-from sqlalchemy import *
+#import datetime
+#import calendar
+#from sqlalchemy import *
 
-from db import database
+#from db import database
+from hurst import Hurst
 
 logger = logging.getLogger(__name__)
 
-class TimingGFTD(object):
-    
+class TimingGFTD_hurst(object):
+
     def __init__(self, n1=4, n2=4, n3=4, n4=None):
         self.n1 = n1
         self.n2 = n2
@@ -20,6 +22,9 @@ class TimingGFTD(object):
         self.n4 = n4 if n4 else n3
 
     def timing(self, df_nav):
+        hurst = Hurst(df_nav[:500])
+        tp_dates = hurst.cal_tp_dates()
+
         #
         # step 1: 计算 ud
         #
@@ -34,7 +39,7 @@ class TimingGFTD(object):
             .rolling(window=2, min_periods=1)\
             .apply(lambda x: 0 if x[0] == x[-1] else 1)
         # df_nav['tc_ud_flip'] = sr_flip
-        
+
         sr_flip_acc = sr_flip.cumsum()
         #df_nav['flip_acc'] = sr_flip_acc
 
@@ -50,7 +55,7 @@ class TimingGFTD(object):
             .rolling(2, 1)\
             .apply(lambda x: 1 if x[-1] <= -self.n2 and (x[0] >= 0 or len(x) == 1) else 0)
         sr_buy_start = sr_buy_start[::-1]
-        
+
         sr_sell_start = ud_acc[::-1]\
             .rolling(2, 1)\
             .apply(lambda x: 1 if x[-1] >= self.n2 and (x[0] <= 0 or len(x) == 1) else 0)
@@ -81,12 +86,12 @@ class TimingGFTD(object):
             sr_kstick_buy[key] = kstick
             sr_count_buy[key] = count if count is not None and kstick == 1 else 0
             sr_signal_buy[key] = signal
-            
+
             row_2 = row_1
             row_1 = row
             if kstick:
                 row_last = row
-                
+
         # df_nav['tc_buy_kstick'] = pd.Series(sr_kstick_buy)
         df_nav['tc_buy_count'] = pd.Series(sr_count_buy)
         df_nav['tc_buy_signal'] = pd.Series(sr_signal_buy)
@@ -95,7 +100,7 @@ class TimingGFTD(object):
         # 卖出计数, 累加, 发出卖出信号
         #
         df_nav['tc_sell_start'] = sr_sell_start
-            
+
         (row_1, row_2, row_last, count) = (None, None, None, None)
         (sr_kstick_sell, sr_count_sell, sr_signal_sell) = ({}, {}, {})
         for key, row in df_nav.iterrows():
@@ -116,12 +121,12 @@ class TimingGFTD(object):
             sr_kstick_sell[key] = kstick
             sr_count_sell[key] = count if count is not None and kstick == 1 else 0
             sr_signal_sell[key] = signal
-            
+
             row_2 = row_1
             row_1 = row
             if kstick:
                 row_last = row
-                
+
         # df_nav['tc_sell_kstick'] = pd.Series(sr_kstick_sell)
         df_nav['tc_sell_count'] = pd.Series(sr_count_sell)
         df_nav['tc_sell_signal'] = pd.Series(sr_signal_sell)
@@ -147,7 +152,7 @@ class TimingGFTD(object):
             #
             # 处理事件
             #
-            action = 0   
+            action = 0
             if row['tc_buy_start'] == 1:
                 # 买入启动
                 (action, low_recording) = (2, row['tc_low'])
@@ -157,7 +162,7 @@ class TimingGFTD(object):
                 (status, action, low_recording) = (1, 1, None)
                 # if low is None:
                 #     print low, low_recording, key, row['tc_low']
-                
+
             if row['tc_sell_start'] == 1:
                 # 卖出启动
                 (action, high_recording) = (-2, row['tc_high'])
@@ -165,7 +170,7 @@ class TimingGFTD(object):
                 # 卖出信号
                 high = max(row['tc_high'], high_recording)
                 (status, action, high_recording) = (-1, -1, None)
-                
+
             #
             # 处理止损
             #
@@ -210,11 +215,25 @@ class TimingGFTD(object):
             'tc_stop_low': dict_stop_low,
             'tc_recording_high': dict_recording_high,
             'tc_recording_low': dict_recording_low,
-        }    
+        }
         df_tmp = pd.DataFrame(tmp, index=df_nav.index)
         df_tmp.loc[df_tmp['tc_stop_high'] == float('inf'), 'tc_stop_high'] = 0
         df_nav = pd.concat([df_nav, df_tmp], axis=1)
-             
+
         # print df_nav.head(5000)
         # print df_nav.tail(60)
+        df_nav.to_csv('../td_husrt_summary.csv')
         return df_nav
+
+if __name__ == '__main__':
+    data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000001_ori_day_data.csv', \
+            index_col = 0, parse_dates = True)
+    data = data.rename(columns = {'close':'tc_close', 'high':'tc_high', \
+            'low':'tc_low'})
+    #hurst = Hurst(data[:500])
+    #tp_dates = hurst.cal_tp_dates()
+    #print tp_dates
+    #os._exit(0)
+    td = TimingGFTD_hurst()
+    result = td.timing(data)
+    print result
