@@ -3,9 +3,8 @@ import pandas as pd
 import numpy as np
 #import os
 
-#from nolds import hurst_rs, logarithmic_n
 #from nolds.measures import rs
-from nolds import hurst_rs
+from nolds import hurst_rs, logarithmic_n
 from sklearn.linear_model import LinearRegression
 
 class Hurst(object):
@@ -17,13 +16,15 @@ class Hurst(object):
         self.data['pct_chg'] = self.data['tc_close'].pct_change()
         self.data = self.data.dropna()
         if window > 200:
-            self.n = np.arange(50, window/2)
+            self.n = logarithmic_n(50, 200, 1.05)
         else:
             self.n = np.arange(2, window/2)
 
     def cal_hurst(self):
         self.data['hurst'] = self.data['pct_chg'].rolling(self.window).apply(hurst_rs, \
                 kwargs = {'nvals':self.n, 'fit':'poly'})
+        #self.data['hurst'] = self.data['pct_chg'].rolling(self.window).apply(hurst_rs, \
+        #        kwargs = {'nvals':self.n})
         self.data['short'] = self.data['hurst'].rolling(self.m1).mean()
         self.data['long'] = self.data['hurst'].rolling(self.m2).mean()
         self.data = self.data.dropna()
@@ -63,6 +64,8 @@ class Hurst(object):
         self.cal_signal()
         #self.cal_expt_hurst()
         tp_dates = self.data.index[self.data.tp == 1]
+        tp_dates = np.array(tp_dates.tolist())
+        np.save('../tp_dates.npy', tp_dates)
         return tp_dates
 
 if __name__ == '__main__':

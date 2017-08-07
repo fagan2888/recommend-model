@@ -1,6 +1,6 @@
 #coding=utf8
 
-import os
+#import os
 import logging
 import pandas as pd
 import numpy as np
@@ -9,7 +9,7 @@ import numpy as np
 #from sqlalchemy import *
 
 #from db import database
-from hurst import Hurst
+#from hurst import Hurst
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +22,6 @@ class TimingGFTD_hurst(object):
         self.n4 = n4 if n4 else n3
 
     def timing(self, df_nav):
-        hurst = Hurst(df_nav[:500])
-        tp_dates = hurst.cal_tp_dates()
 
         #
         # step 1: 计算 ud
@@ -144,11 +142,25 @@ class TimingGFTD_hurst(object):
         dict_stop_low = {}
         dict_recording_high = {}
         dict_recording_low = {}
+        #计算反转日期
+        #hurst = Hurst(df_nav, short_mean = 10, long_mean = 30)
+        #tp_dates = hurst.cal_tp_dates()
+        tp_dates = np.load('/home/yaojiahui/recommend_model/asset_allocation_v1/tp_dates.npy')
+        print tp_dates
+
         for key, row in df_nav.iterrows():
             if  row['tc_buy_start'] + row['tc_buy_signal'] +\
                 row['tc_sell_start'] + row['tc_sell_signal'] >= 2:
                 logger.warn("multiple event occur: %s {'buy_start':%d, 'buy_signal':%d, 'sell_start':%d, 'sell_signal':%d}"\
                     % (key.strftime("%Y-%m-%d"), row['tc_buy_start'], row['tc_buy_signal'], row['tc_sell_start'], row['tc_sell_signal']))
+            #
+            #处理反转
+            #
+            if key in tp_dates:
+                if status == 1:
+                    high = max(row['tc_high'], high_recording)
+                    (status, action, high_recording) = (-1, -1, None)
+
             #
             # 处理事件
             #
@@ -196,6 +208,7 @@ class TimingGFTD_hurst(object):
             if low_recording is not None:
                 low_recording = min(row['tc_low'], low_recording)
 
+
             #stop =  (high if status == -1 else low)
             dict_status[key] = status
             dict_action[key] = action
@@ -207,6 +220,7 @@ class TimingGFTD_hurst(object):
             #     print dict_stop[key]
             dict_recording_high[key] = high_recording if high_recording else 0
             dict_recording_low[key] = low_recording if low_recording else 0
+
 
         tmp = {
             'tc_signal': dict_status,
@@ -236,4 +250,4 @@ if __name__ == '__main__':
     #os._exit(0)
     td = TimingGFTD_hurst()
     result = td.timing(data)
-    print result
+    #print result
