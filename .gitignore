@@ -8,6 +8,8 @@ data/
 *.swp
 *.swo
 *.tar.gz
+*.npy
+*.png
 nohup.out
 config.py
 *.log
