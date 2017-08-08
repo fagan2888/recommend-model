@@ -8,17 +8,16 @@ from nolds import hurst_rs, logarithmic_n
 from sklearn.linear_model import LinearRegression
 
 class Hurst(object):
-    def __init__(self, data, window = 400, short_mean = 10, long_mean = 30):
+    def __init__(self, data, window = 200, short_mean = 10, long_mean = 30, \
+            baseline = -0.03):
         self.data = data
         self.window = window
         self.m1 = short_mean
         self.m2 = long_mean
         self.data['pct_chg'] = self.data['tc_close'].pct_change()
         self.data = self.data.dropna()
-        if window > 200:
-            self.n = logarithmic_n(50, 200, 1.05)
-        else:
-            self.n = np.arange(2, window/2)
+        self.n = logarithmic_n(50, 100, 1.05)
+        self.baseline = baseline
 
     def cal_hurst(self):
         self.data['hurst'] = self.data['pct_chg'].rolling(self.window).apply(hurst_rs, \
@@ -29,18 +28,28 @@ class Hurst(object):
         self.data['long'] = self.data['hurst'].rolling(self.m2).mean()
         self.data = self.data.dropna()
 
-    def cal_signal(self):
-        turning_point = [0]
-        pre = self.data['short'][0] - self.data['long'][0]
-        for i in range(1, len(self.data)):
-            now = self.data.ix[i, 'short'] - self.data.ix[i, 'long']
-            if pre > 0 and now < 0:
-                turning_point.append(1)
-            else:
-                turning_point.append(0)
-            pre = now
+    def cal_signal(self, method = 'mean'):
+        if method == 'mean':
+            turning_point = [0]
+            pre = self.data['short'][0] - self.data['long'][0]
+            for i in range(1, len(self.data)):
+                now = self.data.ix[i, 'short'] - self.data.ix[i, 'long']
+                if pre > 0 and now < 0:
+                    turning_point.append(1)
+                else:
+                    turning_point.append(0)
+                pre = now
 
-        self.data['tp'] = turning_point
+            self.data['tp'] = turning_point
+
+        if method == 'diff':
+            turning_point = [0]
+            dhurst = self.data['hurst'].diff(10)
+            self.data['dhurst'] = dhurst
+            dhurstm = self.data['dhurst'].rolling(30).mean()
+            self.data['dhurstm'] = dhurstm
+            tp_func = lambda x: 1 if (x[0] > self.baseline and x[1] < self.baseline) else 0
+            self.data['tp'] = self.data['dhurstm'].rolling(2).apply(tp_func)
 
     @staticmethod
     def cal_expt_rs(n):
@@ -59,9 +68,9 @@ class Hurst(object):
         expt_hurst = LR.coef_[0]
         self.data['expt_hurst'] = expt_hurst
 
-    def cal_tp_dates(self):
+    def cal_tp_dates(self, method = 'mean'):
         self.cal_hurst()
-        self.cal_signal()
+        self.cal_signal(method = 'diff')
         #self.cal_expt_hurst()
         tp_dates = self.data.index[self.data.tp == 1]
         tp_dates = np.array(tp_dates.tolist())
@@ -73,6 +82,6 @@ if __name__ == '__main__':
             index_col = 0, parse_dates = True)
     data = data.rename(columns = {'close':'tc_close', 'high':'tc_high', \
             'low':'tc_low'})
-    hurst = Hurst(data[:500])
+    hurst = Hurst(data)
     tp_dates = hurst.cal_tp_dates()
     print tp_dates

@@ -2,16 +2,29 @@
 
 #import os
 import logging
+#import logging.config
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('pdf')
+import matplotlib.pyplot as plt
+#import json
 #import datetime
 #import calendar
 #from sqlalchemy import *
 
 #from db import database
 from hurst import Hurst
+import warnings
+warnings.filterwarnings('ignore')
+
 
 logger = logging.getLogger(__name__)
+#logging.config.dictConfig(json.load(file('/home/yaojiahui/recommend_model/\
+#        asset_allocation_v1/shell/logging.json', 'rt')))
+#fh = logging.FileHandler('td.log')
+ch = logging.StreamHandler()
+logger.addHandler(ch)
 
 class TimingGFTD_hurst(object):
 
@@ -21,7 +34,8 @@ class TimingGFTD_hurst(object):
         self.n3 = n3
         self.n4 = n4 if n4 else n3
 
-    def timing(self, df_nav, tp = False):
+    def timing(self, df_nav, tp = False, method = 'mean', m1 = 10, m2 = 30, \
+            baseline = -0.03):
 
         #
         # step 1: 计算 ud
@@ -145,8 +159,8 @@ class TimingGFTD_hurst(object):
         #
         #计算反转日期
         #
-        hurst = Hurst(df_nav, short_mean = 30, long_mean = 60)
-        tp_dates = hurst.cal_tp_dates()
+        hurst = Hurst(df_nav, short_mean = m1, long_mean = m2, baseline = baseline)
+        tp_dates = hurst.cal_tp_dates(method = method)
         #tp_dates = np.load('/home/yaojiahui/recommend_model/asset_allocation_v1/tp_dates.npy')
         #print tp_dates
 
@@ -239,13 +253,20 @@ class TimingGFTD_hurst(object):
 
         # print df_nav.head(5000)
         # print df_nav.tail(60)
-        #df_nav.to_csv('../td_husrt_summary.csv')
+        df_nav.to_csv('../td_husrt_summary.csv')
         return df_nav
 
-    def cal_sta(self, df_nav):
-        df_nav_tp = self.timing(df_nav, tp = True)
+    def cal_sta(self, df_nav, method = 'mean', m1 = 10, m2 = 30, baseline = -0.03):
+        if method == 'mean':
+            df_nav_tp = self.timing(df_nav, tp = True, method = method, m1 = m1, m2 = m2)
+        if method == 'diff':
+            df_nav_tp = self.timing(df_nav, tp = True, method = method, baseline = baseline)
+
         df_nav_td = self.timing(df_nav, tp = False)
         df_nav_td = df_nav_td.loc[df_nav_tp.index]
+
+        df_nav_tp.to_csv('../td_hurst_zz500.csv')
+        df_nav_td.to_csv('../td_zz500.csv')
         nav_tp = 1
         nav_td = 1
         tmp_ret = 1
@@ -267,17 +288,43 @@ class TimingGFTD_hurst(object):
                 tmp_ret = 1
 
         wr = float(win_num)/total_num
+
+        print 'total num', total_num
+        print 'win num', win_num
         print 'win ratio:', wr
         print 'add turning point:', nav_tp
         print 'no turning point:', nav_td
 
+    @staticmethod
+    def plot():
+        data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000001_ori_day_data.csv', \
+                index_col = 0, parse_dates = True)
+        data = data.rename(columns = {'close':'tc_close', 'high':'tc_high', \
+                'low':'tc_low'})
+        #hurst = Hurst(data, baseline = -0.02)
+        hurst = Hurst(data, baseline = -0.08)
+        tp_dates = hurst.cal_tp_dates(method = 'diff')
+        #tp_dates = np.load('/home/yaojiahui/recommend_model/asset_allocation_v1/tp_dates.npy')
+        #print tp_dates
+        #data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000001_ori_day_data.csv', \
+        #index_col = 0, parse_dates = True)
+        data = hurst.data
+        fig = plt.figure(figsize = (30, 20))
+        ax1 = fig.add_subplot(111)
+        ax1.plot(data.index, data.tc_close)
+        tp_data = data.loc[tp_dates]
+        ax1.plot(data.index, data.tc_close)
+        ax1.plot(tp_data.index, tp_data.tc_close, '.', markersize = 24)
 
-
+        ax2 = ax1.twinx()
+        ax2.plot(data.index, data.dhurstm)
+        ax2.plot(data.index, np.repeat(hurst.baseline, len(data)))
+        fig.savefig('../tp%0.2f.png'%hurst.baseline)
 
 
 
 if __name__ == '__main__':
-    data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000001_ori_day_data.csv', \
+    data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000002_ori_day_data.csv', \
             index_col = 0, parse_dates = True)
     data = data.rename(columns = {'close':'tc_close', 'high':'tc_high', \
             'low':'tc_low'})
@@ -286,5 +333,14 @@ if __name__ == '__main__':
     #print tp_dates
     #os._exit(0)
     td = TimingGFTD_hurst()
-    result = td.cal_sta(data)
+    '''
+    for s, l in zip(range(5, 55, 5), range(10, 110, 10)):
+        print '############################################################'
+        print s, l
+        td.cal_sta(data, method = 'mean', s, l)
+        '''
+    #td.cal_sta(data, method = 'diff', baseline = -0.10)
+    #td.timing(data, tp = True, method = 'diff', baseline = -0.02)
+    td.plot()
+    #td.timing(data, True, 30, 90)
     #print result
