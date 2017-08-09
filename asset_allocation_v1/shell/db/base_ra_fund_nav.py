@@ -46,7 +46,7 @@ def load_weekly(begin_date, end_date, fund_ids=None, codes=None):
 
     return df
 
-def load_daily(begin_date, end_date, fund_ids=None, codes=None):
+def load_daily(begin_date, end_date, reindex=None, fund_ids=None, codes=None):
     db = database.connection('base')
     metadata = MetaData(bind=db)
     t1 = Table('ra_fund_nav', metadata, autoload=True)
@@ -73,6 +73,9 @@ def load_daily(begin_date, end_date, fund_ids=None, codes=None):
 
     df = df.unstack().fillna(method='pad')
     df.columns = df.columns.droplevel(0)
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
 
     return df
 
