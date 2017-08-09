@@ -53,6 +53,7 @@ def export(ctx):
 @click.option('--index', 'optindex', help=u'index to export (e.g. 120000001,120000002)')
 @click.option('--composite', 'optcomposite', help=u'composite asset to export (e.g. 20001,2002)')
 @click.option('--fund', 'optfund', help=u'fund to export (e.g. 20001,2002)')
+@click.option('--fund-type', 'optfundtype', default = [1], help=u'fund type to export (e.g. 1)')
 @click.option('--pool', 'optpool', help=u'fund pool to export (e.g. 921001:0,92101:11)')
 @click.option('--online', 'optonline', help=u'online model')
 @click.option('--highlow', 'opthighlow', help=u'highlow to export(e.g. 70052400,70052401)')
@@ -65,7 +66,7 @@ def export(ctx):
 @click.option('--datetype', 'optdatetype', type=click.Choice(['t', 'n']), default='t', help=u'date type(t: trade date; n: nature date)')
 @click.option('--output', '-o', type=click.Path(), help=u'output file')
 @click.pass_context
-def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, optenddate, optlist, optdatetype, optonline, optportfolio, opttiming, opthighlow, output):
+def nav(ctx, optinst, optindex, optcomposite, optfund, optfundtype, optpool, optstartdate, optenddate, optlist, optdatetype, optonline, optportfolio, opttiming, opthighlow, output):
     '''run constant risk model
     '''    
     if not optenddate:
@@ -103,7 +104,19 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optpool, optstartdate, op
         for e in funds:
             data[e] = base_ra_fund_nav.load_series(
                 e, reindex=dates, begin_date=optstartdate, end_date=optenddate)
-        
+
+
+    if optfundtype is not None:
+        fund_types = [s.strip() for s in optfundtype.split(',')]
+        fund_codes = []
+        for fund_type in fund_types:
+            fund_df = base_ra_fund.find_type_fund(fund_type)
+            for code in fund_df['ra_code'].values:
+                fund_codes.append(code)
+        df = base_ra_fund_nav.load_daily(begin_date=optstartdate, end_date=optenddate, reindex=dates, codes = fund_codes)
+        for code in df.columns:
+            data[code] = df[code]
+
     if optpool is not None:
         pools = [s.strip() for s in optpool.split(',')]
         for e in pools:

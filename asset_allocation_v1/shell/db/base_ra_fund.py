@@ -57,3 +57,26 @@ def load(globalids=None, codes=None):
     df = pd.read_sql(s, db)
 
     return df
+
+
+def find_type_fund(ra_type):
+
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    t = Table('ra_fund', metadata, autoload=True)
+
+    columns = [
+        t.c.globalid,
+        t.c.ra_code,
+        t.c.ra_name,
+        t.c.ra_type,
+        t.c.ra_type_calc,
+        t.c.ra_regtime,
+        t.c.ra_volume,
+    ]
+
+    s = select(columns).where(t.c.ra_type == ra_type)
+
+    df = pd.read_sql(s, db)
+
+    return df
