@@ -113,7 +113,7 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optfundtype, optpool, opt
             fund_df = base_ra_fund.find_type_fund(fund_type)
             for code in fund_df['ra_code'].values:
                 fund_codes.append(code)
-        df = base_ra_fund_nav.load_daily(begin_date=optstartdate, end_date=optenddate, reindex=dates, codes = fund_codes)
+        df = base_ra_fund_nav.load_daily(begin_date=optstartdate, end_date=optenddate, codes = fund_codes)
         for code in df.columns:
             data[code] = df[code]
 
