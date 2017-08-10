@@ -22,9 +22,9 @@ warnings.filterwarnings('ignore')
 logger = logging.getLogger(__name__)
 #logging.config.dictConfig(json.load(file('/home/yaojiahui/recommend_model/\
 #        asset_allocation_v1/shell/logging.json', 'rt')))
-#fh = logging.FileHandler('td.log')
-ch = logging.StreamHandler()
-logger.addHandler(ch)
+fh = logging.FileHandler('td.log')
+#ch = logging.StreamHandler()
+logger.addHandler(fh)
 
 class TimingGFTD_hurst(object):
 
@@ -169,6 +169,7 @@ class TimingGFTD_hurst(object):
                 row['tc_sell_start'] + row['tc_sell_signal'] >= 2:
                 logger.warn("multiple event occur: %s {'buy_start':%d, 'buy_signal':%d, 'sell_start':%d, 'sell_signal':%d}"\
                     % (key.strftime("%Y-%m-%d"), row['tc_buy_start'], row['tc_buy_signal'], row['tc_sell_start'], row['tc_sell_signal']))
+            action = 0
             #
             #处理反转
             #
@@ -181,7 +182,6 @@ class TimingGFTD_hurst(object):
             #
             # 处理事件
             #
-            action = 0
             if row['tc_buy_start'] == 1:
                 # 买入启动
                 (action, low_recording) = (2, row['tc_low'])
@@ -253,7 +253,7 @@ class TimingGFTD_hurst(object):
 
         # print df_nav.head(5000)
         # print df_nav.tail(60)
-        df_nav.to_csv('../td_husrt_summary.csv')
+        #df_nav.to_csv('../td_husrt_summary.csv')
         return df_nav
 
     def cal_sta(self, df_nav, method = 'mean', m1 = 10, m2 = 30, baseline = -0.03):
@@ -272,14 +272,14 @@ class TimingGFTD_hurst(object):
         tmp_ret = 1
         win_num = 0
         total_num = 0
-        for i in range(len(df_nav_tp) - 1):
+        for i in range(len(df_nav_tp) - 2):
             if df_nav_tp.ix[i, 'tc_signal'] == 1:
-                nav_tp *= (1 + df_nav_tp.ix[i+1, 'tc_close'])/(1 + df_nav_tp.ix[i, 'tc_close'])
+                nav_tp *= (1 + df_nav_tp.ix[i+2, 'tc_close'])/(1 + df_nav_tp.ix[i+1, 'tc_close'])
             if df_nav_td.ix[i, 'tc_signal'] == 1:
-                nav_td *= (1 + df_nav_td.ix[i+1, 'tc_close'])/(1 + df_nav_td.ix[i, 'tc_close'])
+                nav_td *= (1 + df_nav_td.ix[i+2, 'tc_close'])/(1 + df_nav_td.ix[i+1, 'tc_close'])
 
             if df_nav_tp.ix[i, 'tc_signal'] != df_nav_td.ix[i, 'tc_signal']:
-                tmp_ret *= (1 + df_nav_tp.ix[i+1, 'tc_close'])/(1 + df_nav_tp.ix[i, 'tc_close'])
+                tmp_ret *= (1 + df_nav_tp.ix[i+2, 'tc_close'])/(1 + df_nav_tp.ix[i+1, 'tc_close'])
 
             if (tmp_ret != 1) and (df_nav_tp.ix[i, 'tc_signal'] == df_nav_td.ix[i, 'tc_signal']):
                 total_num += 1
@@ -287,7 +287,7 @@ class TimingGFTD_hurst(object):
                     win_num += 1
                 tmp_ret = 1
 
-        wr = float(win_num)/total_num
+        wr = float(win_num)/total_num if total_num else 0
 
         print 'total num', total_num
         print 'win num', win_num
@@ -301,8 +301,8 @@ class TimingGFTD_hurst(object):
                 index_col = 0, parse_dates = True)
         data = data.rename(columns = {'close':'tc_close', 'high':'tc_high', \
                 'low':'tc_low'})
-        #hurst = Hurst(data, baseline = -0.02)
-        hurst = Hurst(data, baseline = -0.08)
+        hurst = Hurst(data, baseline = -0.03)
+        #hurst = Hurst(data, baseline = -0.105)
         tp_dates = hurst.cal_tp_dates(method = 'diff')
         #tp_dates = np.load('/home/yaojiahui/recommend_model/asset_allocation_v1/tp_dates.npy')
         #print tp_dates
@@ -324,7 +324,7 @@ class TimingGFTD_hurst(object):
 
 
 if __name__ == '__main__':
-    data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000002_ori_day_data.csv', \
+    data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000001_ori_day_data.csv', \
             index_col = 0, parse_dates = True)
     data = data.rename(columns = {'close':'tc_close', 'high':'tc_high', \
             'low':'tc_low'})
@@ -339,8 +339,14 @@ if __name__ == '__main__':
         print s, l
         td.cal_sta(data, method = 'mean', s, l)
         '''
-    #td.cal_sta(data, method = 'diff', baseline = -0.10)
+
+    for base in np.arange(-0.1, 0.0, 0.005):
+        print 'base :', base
+        td.cal_sta(data['2010':], method = 'diff', baseline = base)
+
     #td.timing(data, tp = True, method = 'diff', baseline = -0.02)
-    td.plot()
+    #td.cal_sta(data['2010':], method = 'diff', baseline = -0.105)
+
+    #td.plot()
     #td.timing(data, True, 30, 90)
     #print result

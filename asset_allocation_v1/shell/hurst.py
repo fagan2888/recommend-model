@@ -27,6 +27,7 @@ class Hurst(object):
         self.data['short'] = self.data['hurst'].rolling(self.m1).mean()
         self.data['long'] = self.data['hurst'].rolling(self.m2).mean()
         self.data = self.data.dropna()
+        #self.data.to_csv('hurst_zz500.csv')
 
     def cal_signal(self, method = 'mean'):
         if method == 'mean':
@@ -44,9 +45,9 @@ class Hurst(object):
 
         if method == 'diff':
             turning_point = [0]
-            dhurst = self.data['hurst'].diff(10)
+            dhurst = self.data['hurst'].diff(5)
             self.data['dhurst'] = dhurst
-            dhurstm = self.data['dhurst'].rolling(30).mean()
+            dhurstm = self.data['dhurst'].rolling(20).mean()
             self.data['dhurstm'] = dhurstm
             tp_func = lambda x: 1 if (x[0] > self.baseline and x[1] < self.baseline) else 0
             self.data['tp'] = self.data['dhurstm'].rolling(2).apply(tp_func)
@@ -78,7 +79,7 @@ class Hurst(object):
         return tp_dates
 
 if __name__ == '__main__':
-    data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000001_ori_day_data.csv', \
+    data = pd.read_csv('/home/yaojiahui/recommend_model/asset_allocation_v1/120000002_ori_day_data.csv', \
             index_col = 0, parse_dates = True)
     data = data.rename(columns = {'close':'tc_close', 'high':'tc_high', \
             'low':'tc_low'})
