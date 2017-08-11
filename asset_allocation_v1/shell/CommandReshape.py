@@ -29,7 +29,7 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group(invoke_without_command=True)  
+@click.group(invoke_without_command=True)
 @click.option('--id', 'optid', help=u'reshape id')
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
@@ -73,7 +73,7 @@ def import_command(ctx, csv, opttype, optreplace):
     for column in df_csv.columns:
         if column in [21, 22, 23, 31]:
             continue
-        
+
         optid = "4%s2%d01%d" % (opttype, int(column) // 10, column)
 
         #
@@ -84,7 +84,7 @@ def import_command(ctx, csv, opttype, optreplace):
             rs_reshape_pos.delete(rs_reshape_pos.c.rs_reshape_id == optid).execute()
             rs_reshape_nav.delete(rs_reshape_nav.c.rs_reshape_id == optid).execute()
             df = df_csv[[column]].copy()
-        
+
         df['rs_reshape_id'] = optid
         df = df.reset_index().set_index(['rs_reshape_id', 'rs_date'])
 
@@ -128,7 +128,7 @@ def nav(ctx, optid, optlist):
         df_reshape['rs_name'] = df_reshape['rs_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_reshape, headers='keys', tablefmt='psql')
         return 0
-    
+
     with click.progressbar(length=len(df_reshape), label='update nav') as bar:
         for _, reshape in df_reshape.iterrows():
             bar.update(1)
@@ -139,7 +139,7 @@ def nav_update(reshape):
     # 加载择时信号
     df_position = asset_rs_reshape_pos.load([reshape_id])
     if df_position.empty:
-        return 
+        return
 
     # 加载基金收益率
     min_date = df_position.index.min()
@@ -159,7 +159,7 @@ def nav_update(reshape):
     df_result['rs_inc'] = df_result['rs_nav'].pct_change().fillna(0.0)
     df_result['rs_reshape_id'] = reshape['globalid']
     df_result = df_result.reset_index().set_index(['rs_reshape_id', 'rs_date'])
-    
+
     df_new = database.number_format(df_result, columns=['rs_nav', 'rs_inc'], precision=6)
 
     # 加载旧数据
@@ -203,7 +203,7 @@ def pos(ctx, optid, optlist, optonline):
         df_reshape['rs_name'] = df_reshape['rs_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_reshape, headers='keys', tablefmt='psql')
         return 0
-    
+
     with click.progressbar(length=len(df_reshape), label='update pos') as bar:
         for _, reshape in df_reshape.iterrows():
             bar.update(1)
@@ -211,11 +211,11 @@ def pos(ctx, optid, optlist, optonline):
 
 def pos_update(reshape):
     reshape_id = reshape['globalid']
-    
+
     # 加载择时信号
     sr_timing = asset_tc_timing_signal.load_series(reshape['rs_timing_id'])
     # print sr_timing.head()
-    
+
     # 加载资产收益率
     # min_date = df_position.index.min()
     # max_date = (datetime.now() - timedelta(days=1)) # yesterday
@@ -228,13 +228,13 @@ def pos_update(reshape):
     tdates = base_trade_dates.load_index(sdate)
 
     sr_nav = database.load_nav_series(reshape['rs_asset_id'], reindex=tdates, begin_date=sdate)
-    
+
     # df_inc = df_nav.pct_change().fillna(0.0).to_frame(reshape_id)
     df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing})
 
     df_result = Reshape().reshape(df)
     df_result.drop(['nav', 'timing'], axis=1, inplace=True)
-    
+
     # df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'rs_nav'}).copy()
     df_result.index.name = 'rs_date'
     df_result['rs_reshape_id'] = reshape_id
@@ -245,7 +245,7 @@ def pos_update(reshape):
     df_new = database.number_format(df_new, fmt_columns, 6, rs_ratio=4)
 
     #print df_new.head()
-    
+
 
     # 加载旧数据
     db = database.connection('asset')
@@ -271,4 +271,4 @@ def pos_update(reshape):
 
     # 更新数据库
     database.batch(db, t2, df_new, df_old, timestamp=True)
-    
+
