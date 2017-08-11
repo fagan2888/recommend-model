@@ -237,6 +237,7 @@ class HmmNesc(object):
         used_trans = np.where( trans_mat > 0.0, trans_mat, 0.0)
         means = np.dot(used_trans, means_arr)
         return means
+
     @staticmethod
     def market_states(data, state_num, states, thres):
         """
