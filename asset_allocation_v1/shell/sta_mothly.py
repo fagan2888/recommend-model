@@ -339,6 +339,8 @@ class MonthlyStaRetention(object):
                     retype_date_tube[1], retype_date_tube[2])
             end_date_rp = datetime.date(retype_date_tube[0], \
                     retype_date_tube[1], retype_date_tube[3])
+            start_date_rp = datetime.date(retype_date_tube[0], \
+                    retype_date_tube[1], 1)
             rp_tag_id.append(0)
             rp_date.append(e_date_db)
             rp_retention_type.append(re_type)
@@ -360,6 +362,23 @@ class MonthlyStaRetention(object):
             if len(retain_uids) > 0:
                 retain_uids = np.array( \
                         retain_uids).reshape(1, len(retain_uids))[0]
+            # 当月购买当月清仓
+            if re_value == 0:
+                #hprint(end_date_rp)
+                cur_clear_uids = ds_order.get_specific_month_in_uids(start_date_rp, \
+                    end_date_rp, [30, 31], first_buy_uids)
+                if len(cur_clear_uids) > 0 and cur_clear_uids[0][0] is not None:
+                    cur_clear_uids = np.array( \
+                        cur_clear_uids).reshape(1, len(cur_clear_uids))[0]
+                else:
+                    cur_clear_uids = []
+                retain_uids = list(set(first_buy_uids).difference(set(cur_clear_uids)))
+                # last_day_buy_amount = ds_order.get_specific_day_amount(end_date_rp, [10])[0][0]
+                # if last_day_buy_amount is None:
+                #     last_day_buy_amount = 0
+            last_day_buy_amount = ds_order.get_specific_month_amount(end_date_rp, end_date_rp, [10, 11], retain_uids)[0][0]
+            if last_day_buy_amount is None:
+                    last_day_buy_amount = 0
 
             resub_num = len(resub_uids)
             redeem_num = len(redeem_uids)
@@ -378,7 +397,7 @@ class MonthlyStaRetention(object):
             rp_amount_redeem.append(redeem_amount[0][0])
             # 在管资产
             hold_amount = ds_share.get_specific_date_amount(end_date_rp, retain_uids)
-            rp_amount_aum.append(hold_amount[0][0])
+            rp_amount_aum.append(hold_amount[0][0] + last_day_buy_amount)
         new_dict = {}
         new_dict['rp_tag_id'] = rp_tag_id
         new_dict['rp_date'] = rp_date

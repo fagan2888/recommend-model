@@ -147,6 +147,24 @@ def get_specific_month_amount(s_date, e_date, t_type, uids):
                                         t.c.ds_uid.in_(uids))
     # session.close()
     return rst.all()
+
+def get_specific_day_amount(date, t_type):
+    """
+    获取某个时间段内ds_trade_type=t_type的总金额
+    :param date: string, 日期
+    :param t_type: list, 交易类型
+    :return: list
+    """
+    # db = database.connection('portfolio_sta')
+    # metadata = MetaData(bind=db)
+    t = Table('ds_order_pdate', metadata, autoload=True)
+    # Session = sessionmaker(bind=db)
+    # session = Session()
+    rst = session.query(func.SUM(t.c.ds_amount)).filter( \
+                                        t.c.ds_placed_date == date, \
+                                        t.c.ds_trade_type.in_(t_type))
+    # session.close()
+    return rst.all()
 def get_specific_month_uids(s_date, e_date, t_type):
     """
     获取某个时间段内ds_trade_type=t_type的用户id
