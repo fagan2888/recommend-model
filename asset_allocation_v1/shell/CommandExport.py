@@ -53,7 +53,7 @@ def export(ctx):
 @click.option('--index', 'optindex', help=u'index to export (e.g. 120000001,120000002)')
 @click.option('--composite', 'optcomposite', help=u'composite asset to export (e.g. 20001,2002)')
 @click.option('--fund', 'optfund', help=u'fund to export (e.g. 20001,2002)')
-@click.option('--fund-type', 'optfundtype', default = [1], help=u'fund type to export (e.g. 1)')
+@click.option('--fund-type', 'optfundtype', default = None, help=u'fund type to export (e.g. 1)')
 @click.option('--pool', 'optpool', help=u'fund pool to export (e.g. 921001:0,92101:11)')
 @click.option('--online', 'optonline', help=u'online model')
 @click.option('--online2', 'optonline2', help=u'new online model')
