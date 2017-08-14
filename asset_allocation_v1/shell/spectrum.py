@@ -1,8 +1,11 @@
 from __future__ import division
+#import os
 import pandas as pd
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+#from sklearn.linear_model import LogisticRegression
+
 from cal_spec import cal_indic
-#import os
 
 
 def load_data():
@@ -74,12 +77,63 @@ def res_sta():
     res_df.to_csv('~/recommend_model/asset_allocation_v1/countdf.csv', \
             index = False)
 
+    return 0
+
+'''
+RandomForest:
+    insample: 36 predict, 96.1% win ratio
+    outsample: 6 predict, 66.7% win ratio
+
+BernoulliNB:
+    insample: 43 predict, 53.5% win ratio
+    outsample: 16 predict, 68.75% win ratio
+
+'''
+def training():
+    data = pd.read_csv('~/recommend_model/asset_allocation_v1/dxdf_week.csv',\
+            index_col = 0, parse_dates = True)
+    x = data.loc[:, ['Rf', 'dx', 'df', 'pct_chg']]
+    y = data.indic
+    train_x = x[:100]
+    train_y = y[:100]
+    test_x = x[100:]
+    test_y = y[100:]
+
+    clf = RandomForestClassifier(class_weight = {1:1e7}, \
+            random_state = 0).fit(train_x, train_y)
+    #clf = LogisticRegression(class_weight = {1:0.9}).fit(train_x, train_y)
+    insample_pre = clf.predict(train_x)
+    outsample_pre = clf.predict(test_x)
+
+    insample_wr = cal_sta(insample_pre, train_y)
+    outsample_wr = cal_sta(outsample_pre, test_y)
+
+    print insample_wr
+    print outsample_wr
+
+    return outsample_pre
+
+def cal_sta(pre, rel):
+    total = 0
+    correct = 0
+    for i, j in zip(pre, rel):
+        if i == -1:
+            total += 1
+            if j == -1:
+                correct += 1
+
+    print total
+    if total == 0:
+        return 0
+    return correct/total
+
 
 def handle():
-    data = load_data()
-    data = cal_spectrum(data, dtype = 2)
-    print data
+#    data = load_data()
+#    data = cal_spectrum(data, dtype = 2)
+#    print data
 #    data.to_csv('output/dxdf_day.csv')
+    training()
 
 
 if __name__ == '__main__':
