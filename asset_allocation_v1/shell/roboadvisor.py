@@ -111,7 +111,7 @@ def test(ctx):
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'enddate', default='', help=u'end date to calc')
 @click.option('--turnover-markowitz', 'optturnoverm', type=float, default=0, help=u'fitler portfolio by turnover')
-@click.option('--turnover-portfolio', 'optturnoverp', type=float, default=0.2, help=u'fitler portfolio by turnover')
+@click.option('--turnover-portfolio', 'optturnoverp', type=float, default=0.4, help=u'fitler portfolio by turnover')
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
 @click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
