@@ -108,6 +108,7 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optfundtype, optpool, opt
 
 
     if optfundtype is not None:
+	print optfundtype
         fund_types = [s.strip() for s in optfundtype.split(',')]
         fund_codes = []
         for fund_type in fund_types:
@@ -137,6 +138,14 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optfundtype, optpool, opt
             (alloc, xtype) = [s.strip() for s in e.split(':')]
             data[e] = asset_ra_portfolio_nav.load_series(
                 alloc, xtype, reindex=dates, begin_date=optstartdate, end_date=optenddate)
+
+    if optonline2 is not None:
+        allocs = [s.strip() for s in optonline2.split(',')]
+        for e in allocs:
+            (alloc,xtype) = [s.strip() for s in e.split(':')]
+            data[e] = asset_on_online_nav.load_series(
+                alloc, xtype, reindex=dates, begin_date=optstartdate, end_date=optenddate)
+    
 
     if opttiming is not None:
         allocs = [s.strip() for s in opttiming.split(',')]

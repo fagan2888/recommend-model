@@ -39,6 +39,39 @@ logger = logging.getLogger(__name__)
 #     df = pd.read_sql(s, db)
 
 #     return df
+def load_series(gid, xtype, reindex=None, begin_date=None, end_date=None):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('on_online_nav',metadata,autoload=True)
+    columns = [
+	t1.c.on_date,
+	t1.c.on_nav,
+    ]
+
+    s = select(columns)
+
+    s = s.where(t1.c.on_online_id == gid).where(t1.c.on_type == xtype)
+
+    if begin_date is not None:
+	s = s.where(t1.c.on_date >= begin_date)
+    if end_date is not None:
+	s = s.where(t1.c.on_date <= end_date)
+
+    df = pd.read_sql(s,db,index_col=['on_date'],parse_dates=['on_date'])
+	
+    if reindex is not None:
+	df = df.reindex(reindex,method='pad')
+
+    return df['on_nav']
+
+
+
+
+
+
+
+
+
 
 def save(gid, xtype, df):
     fmt_columns = ['on_nav', 'on_inc']
