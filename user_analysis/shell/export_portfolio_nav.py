@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     dfs = []
     for i in range(0, 10):
-        sql = 'select ra_date as date, ra_nav as nav from ra_portfolio_nav where ra_portfolio_id = 8008120%d and ra_type = 8' % i
+        sql = 'select ra_date as date, ra_nav as nav from ra_portfolio_nav where ra_portfolio_id = 8008140%d and ra_type = 8' % i
         df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
         df.columns = ['risk_' + str(i)]
         dfs.append(df)
