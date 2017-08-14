@@ -56,6 +56,7 @@ def export(ctx):
 @click.option('--fund-type', 'optfundtype', default = [1], help=u'fund type to export (e.g. 1)')
 @click.option('--pool', 'optpool', help=u'fund pool to export (e.g. 921001:0,92101:11)')
 @click.option('--online', 'optonline', help=u'online model')
+@click.option('--online2', 'optonline2', help=u'new online model')
 @click.option('--highlow', 'opthighlow', help=u'highlow to export(e.g. 70052400,70052401)')
 @click.option('--portfolio', 'optportfolio', help=u'portfolio to export(e.g. 80052400:9)')
 @click.option('--timing', 'opttiming', help=u'timing to export(e.g. 21400501:8)')
@@ -66,7 +67,7 @@ def export(ctx):
 @click.option('--datetype', 'optdatetype', type=click.Choice(['t', 'n']), default='t', help=u'date type(t: trade date; n: nature date)')
 @click.option('--output', '-o', type=click.Path(), help=u'output file')
 @click.pass_context
-def nav(ctx, optinst, optindex, optcomposite, optfund, optfundtype, optpool, optstartdate, optenddate, optlist, optdatetype, optonline, optportfolio, opttiming, opthighlow, output):
+def nav(ctx, optinst, optindex, optcomposite, optfund, optfundtype, optpool, optstartdate, optenddate, optlist, optdatetype, optonline, optonline2, optportfolio, opttiming, opthighlow, output):
     '''run constant risk model
     '''    
     if not optenddate:
