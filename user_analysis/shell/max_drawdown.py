@@ -8,16 +8,16 @@ import pandas as pd
 
 if __name__ == '__main__':
 
-    df = pd.read_csv('./tmp/online_nav.csv', index_col = ['date'], parse_dates = ['date'])
+    df = pd.read_csv('./tmp/portfolio_nav.csv', index_col = ['date'], parse_dates = ['date'])
 
     datas = []
     for col in df.columns:
-        #df['cummax'] = df[col].cummax()
-        #df['drawdown'] = 1 - df[col] / df['cummax']
-        #max_drawdown = max(df['drawdown'])
+        df['cummax'] = df[col].cummax()
+        df['drawdown'] = 1 - df[col] / df['cummax']
+        max_drawdown = max(df['drawdown'])
         df = df[df.index >= '2016-07-01']
         df = df[df.index <= '2017-07-31']
-        #print col, max_drawdown
+        print col, max_drawdown
         tmp_df = df.resample('M').last()
         tmp_df.loc[df.index[0]] = df.iloc[0]
         tmp_df = tmp_df.sort_index()
