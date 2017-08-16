@@ -26,4 +26,3 @@ if __name__ == '__main__':
     print df
 
     df.to_csv('user.csv')
-
