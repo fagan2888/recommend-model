@@ -197,6 +197,64 @@ def day_2_week2(data_df, trade_dates):
             encoding='utf8')
     return week_df
 
+def day_2_week_ipo(data_df, trade_dates):
+    """
+    :usage: 把日数据转化成周数据（用于转换IPO原始数据）
+    :param data_df: 输入数据
+        type: DataFrame
+        format:
+                        close_pre   close    open    high     low     volume  \
+            date
+            2005-01-04    1000.00  982.79  994.77  994.77  980.66  7412869.0
+            2005-01-05     982.79  992.56  981.58  997.32  979.88  7119109.0
+            2005-01-06     992.56  983.17  993.33  993.79  980.33  6288029.0
+            2005-01-07     983.17  983.96  983.05  995.71  979.81  7298694.0
+            2005-01-10     983.96  993.88  983.76  993.96  979.79  5791698.0
+    :param trade_dates: 输入数据
+        type: DataFrame
+        format:
+            date,trade_type
+            1997-07-15,0
+            1997-07-16,0
+            1997-07-17,0
+    :return week_df: 返回数据
+        type: DataFrame
+        format: same to input data
+    """
+    ipo_pct_chg = []
+    ipo_turnover = []
+    ipo_pe = []
+    ipo_total = []
+
+    data_index = data_df.index
+    start_date = data_index[0]
+    end_date = data_index[-1]
+
+    used_trade_dates = trade_dates[trade_dates.index.get_level_values(0) <= end_date]
+    used_trade_dates = used_trade_dates[used_trade_dates.index.get_level_values(0) >= start_date]
+    used_trade_dates = used_trade_dates.sort_index()
+
+    week_dates = used_trade_dates[(used_trade_dates['trade_type'] & 2) > 0].index
+    low_date = used_trade_dates.index[0] - datetime.timedelta(days=1)
+    high_date = week_dates[0]
+    data_df.fillna(method='ffill', inplace=True)
+    for date in week_dates:
+        high_date = date
+        tmp_df = data_df[data_df.index.get_level_values(0) > low_date]
+        tmp_df = tmp_df[tmp_df.index.get_level_values(0) <= high_date]
+        ipo_pct_chg.append(tmp_df['pct_chg'].mean())
+        ipo_turnover.append(tmp_df['turnover'].mean())
+        ipo_pe.append(tmp_df['pe'].mean())
+        ipo_total.append(len(tmp_df))
+        low_date = high_date
+    week_df = pd.DataFrame({"ipo_pct_chg":ipo_pct_chg, "ipo_turnover":ipo_turnover, \
+            "ipo_pe":ipo_pe, "ipo_total":ipo_total}, index=week_dates)
+    # week_df.fillna(method='ffil', inplace=True)
+    # week_df.to_csv("W00003_data_week.csv", encoding='utf8')
+    return week_df
+    # week_df.to_csv("000300_data_week.csv", encoding='utf8')
+
+
 def rolling_window(a, window, axis=-1):
   '''Return a windowed array.
 
