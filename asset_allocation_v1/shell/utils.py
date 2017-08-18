@@ -117,6 +117,8 @@ def day_2_week(data_df, trade_dates):
     used_trade_dates = used_trade_dates.sort_index()
 
     week_dates = used_trade_dates[(used_trade_dates['trade_type'] & 2) > 0].index
+    if week_dates[-1].date() < datetime.datetime.now().date():
+        week_dates = week_dates.append(used_trade_dates.index[-1:])
     low_date = used_trade_dates.index[0] - datetime.timedelta(days=1)
     high_date = week_dates[0]
     data_df.fillna(method='ffill', inplace=True)

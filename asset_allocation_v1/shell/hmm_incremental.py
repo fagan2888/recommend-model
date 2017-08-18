@@ -117,8 +117,10 @@ class HmmNesc(object):
             if ass_vw_inc_df['newest_date'][0] != None:
                 self.view_newest_date = pd.Timestamp(ass_vw_inc_df['newest_date'][0])
     def get_index_origin_data(self):
-        self.ori_data = load_index.load_index_daily_data(self.secode, \
-                        self.start_date, self.end_date)
+        self.ori_data = pd.read_csv('%s_ori_day_data.csv'%self.ass_id, \
+                index_col = 0, parse_dates = True)
+        #self.ori_data = load_index.load_index_daily_data(self.secode, \
+        #                self.start_date, self.end_date)
         if self.ori_data.empty:
             return (3, 'has no data for secode:' + self.secode)
         for col in self.ori_data.columns:
@@ -428,7 +430,7 @@ class HmmNesc(object):
         trans_mat_today = model.transmat_[states[-1]]
         mean_today = model.means_[state_today, 1]
         mean_rank_today = sum(model.means_[:, 1] < mean_today)
-        
+
         next_day_state = np.argmax(trans_mat_today)
         next_day_pro = trans_mat_today[next_day_state]
         next_day_mean = model.means_[next_day_state, 1]
