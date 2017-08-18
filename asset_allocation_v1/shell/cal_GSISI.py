@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
+import statsmodels.api as sm
 #import os
 from sklearn.linear_model import LinearRegression
 from scipy.stats import spearmanr
@@ -63,13 +64,14 @@ def cal_signal(threshold):
     #        index_col = 0, parse_dates = True)
 
     df = merge_data()
+    df.dropna(inplace = True)
     positions = []
     turning_points= []
     signal = 0
     position = 0
     tp = 0
-    for indic in df['gsisi']:
-        if indic > threshold:
+    for idx, indic in enumerate(df['gsisi']):
+        if (indic > threshold) and (df['pct_chg'][idx] > 0):
             if position == 0:
                 if signal == -1:
                     signal = 0
@@ -83,7 +85,7 @@ def cal_signal(threshold):
                 if signal == -1:
                     signal = 0
 
-        if indic < -threshold:
+        if (indic < -threshold) and (df['pct_chg'][idx] < 0):
             if position == 1:
                 if signal == 1:
                     signal = 0
@@ -106,13 +108,32 @@ def cal_signal(threshold):
 
     return df
 
-def signal(x):
-    if x[0] > 0.3 and x[1] > 0.3:
-        return 1
-    elif x[0] < -0.3 and x[1] < -0.3:
-        return -1
-    else:
-        return 0
+def cal_signal_fisi(threshold):
+    df = merge_data()
+    signal = []
+    for i in range(len(df)):
+        if (df['gsisi'][i] > threshold) and (df['pct_chg'][i] > 0):
+            signal.append(1)
+        elif (df['gsisi'][i] > threshold) and (df['pct_chg'][i] < 0):
+            signal.append(2)
+        elif (df['gsisi'][i] < threshold) and (df['pct_chg'][i] > 0):
+            signal.append(5)
+        elif (df['gsisi'][i] < threshold) and (df['pct_chg'][i] < 0):
+            signal.append(6)
+        elif df['pct_chg'][i] > 0:
+            signal.append(3)
+        elif df['pct_chg'][i] <= 0:
+            signal.append(4)
+    df['signal'] = signal
+    df['fisi'] = df['signal'].rolling(10).apply(cal_fisi)
+    df = df.dropna()
+    return df
+
+def cal_fisi(x):
+    x = list(x)
+    fisi = (x.count(1) + x.count(5) - x.count(2) - x.count(6))/\
+            float(x.count(1) + x.count(5) + x.count(2) + x.count(6))
+    return fisi
 
 def merge_data():
     gsisi = pd.read_csv(filedir, index_col = 0, parse_dates = True)
@@ -120,27 +141,55 @@ def merge_data():
             index_col = 0, parse_dates = True)
     merged_data = pd.merge(gsisi, sh300, left_index = True, right_index = True, \
             how = 'left')
+    merged_data['pct_chg'] = merged_data.close.pct_change()
+    merged_data.dropna(inplace = True)
     #print merged_data
     return merged_data
 
-def plot():
-    df = cal_signal(threshold = 0.317)
-    fig = plt.figure(figsize = (30, 20))
-    ax1 = fig.add_subplot(111)
-    ax2 = ax1.twinx()
-    ax1.plot(df.index, df.close)
-    tp_up = df[df.signal == 1]
-    ax1.plot(tp_up.index, tp_up.close, '.', markersize = 24, color = 'r')
-    tp_down = df[df.signal == -1]
-    ax1.plot(tp_down.index, tp_down.close, '.', markersize = 24, color = 'g')
-    ax2.bar(df.index, df.gsisi, width = 2.0, color = 'y')
-    fig.savefig('gsisi_tp_100w.png')
+def training(x):
+    model = sm.tsa.VARMAX(x, order = (5,0))
+    result = model.fit(disp = False)
+    #print result.summary()
+    return result.forecast(1)[0, 1]
 
-def cal_sta():
-    df = cal_signal()
+def predict():
+    window = 100
+    df = cal_signal(threshold = 0.317)
+    x = df.loc[:, ['gsisi', 'pct_chg']].values
+    result = [training(x[i: i+window]) for i in range(len(x)-window+1)]
+    df = df[window-1:]
+    df['pre_pct_chg'] = result
+    df.to_csv('gsisi_ts_pre.csv')
     return df
+
+def plot(method = 'gsisi'):
+    if method == 'gsisi':
+        df = cal_signal(threshold = 0.317)
+        fig = plt.figure(figsize = (30, 20))
+        ax1 = fig.add_subplot(111)
+        ax2 = ax1.twinx()
+        ax1.plot(df.index, df.close)
+        #tp_up = df[df.signal == 1]
+        tp_up = df[(df.gsisi > 0.317) & (df.pct_chg > 0)]
+        ax1.plot(tp_up.index, tp_up.close, '.', markersize = 24, color = 'r')
+        #tp_down = df[df.signal == -1]
+        #tp_down = df[(df.signal < 0.317) & (df.pct_chg < 0)]
+        #ax1.plot(tp_down.index, tp_down.close, '.', markersize = 24, color = 'g')
+        ax2.bar(df.index, df.gsisi, width = 2.0, color = 'y')
+        fig.savefig('gsisi_alltp_100w.png')
+
+    if method == 'fisi':
+        df = cal_signal_fisi(threshold = 0.317)
+        fig = plt.figure(figsize = (30, 20))
+        ax1 = fig.add_subplot(111)
+        ax2 = ax1.twinx()
+        ax1.plot(df.index, df.close)
+        ax2.bar(df.index, df.fisi, width = 2.0, color = 'y')
+        fig.savefig('sh300_fisi.png')
+
 
 if __name__ == '__main__':
     #cal_gsisi()
-    plot()
-    #cal_sta()
+    #plot('fisi')
+    #training()
+    predict()
