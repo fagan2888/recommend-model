@@ -98,8 +98,9 @@ def cal_wr(x, y):
             total+=1.0
             if j == -1:
                 correct += 1.0
-    print total
-    print correct/total
+    wr = 0 if total == 0 else correct/total
+    print 'total :', total
+    print 'wr :', wr
 
 def predict():
     data = pd.read_csv('sh300_gmx.csv', index_col = 0, parse_dates = True)
@@ -113,7 +114,7 @@ def predict():
         test_x = data.ix[i: i+window+1, ['c1','c2','c3','c4','c5']]
         test_x = scaler.fit_transform(test_x)
         train_y = data.ix[i: i+window, ['signal']]
-        clf = RandomForestClassifier(class_weight = {1: 1e10}, random_state = 0)
+        clf = RandomForestClassifier(class_weight = {1: 2e7}, random_state = 0)
         clf.fit(train_x, train_y)
         pre_signal = clf.predict(test_x)
         pre_signals.append(pre_signal[-1])
