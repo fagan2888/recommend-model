@@ -4,6 +4,7 @@ from utils import day_2_week_ipo as d2w
 from db import asset_trade_dates as load_td
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from scipy.stats import spearmanr
 
 def load_data():
     sh300_indic = pd.read_csv('sh300_indic.csv', index_col = 0, parse_dates = True)
@@ -39,11 +40,19 @@ def predict():
         pca = PCA(n_components = 5)
         components = pca.fit_transform(tmp_data)
         c1, c2, c3, c4, c5 = components[-1, :]
-        c1_list.append(c1)
-        c2_list.append(c2)
-        c3_list.append(c3)
-        c4_list.append(c4)
-        c5_list.append(c5)
+        if i == 0:
+            c1_list.append(c1)
+            c2_list.append(c2)
+            c3_list.append(c3)
+            c4_list.append(c4)
+            c5_list.append(c5)
+        else:
+            lc1, lc2, lc3, lc4, lc5 = components[-2, :]
+            c1_list.append(c1_list[-1]+c1-lc1)
+            c2_list.append(c2_list[-1]+c2-lc2)
+            c3_list.append(c3_list[-1]+c3-lc3)
+            c4_list.append(c4_list[-1]+c4-lc4)
+            c5_list.append(c5_list[-1]+c5-lc5)
     data = data[window-1:]
     data['c1'] = c1_list
     data['c2'] = c2_list
@@ -53,5 +62,24 @@ def predict():
     data.to_csv('sh300_gmx.csv')
     print data
 
+def res_sta():
+    data = pd.read_csv('sh300_gmx.csv')
+    for i in range(1, 6):
+        corr_close = np.corrcoef(data['c%d'%i], data['close'])[0,1]
+        corr_pct_chg = np.corrcoef(data['c%d'%i], data['pct_chg'])[0,1]
+        corr_pct_chg1 = np.corrcoef(data['c%d'%i], data['pct_chg1'])[0,1]
+        rcorr_close = spearmanr(data['c%d'%i], data['close']).correlation
+        rcorr_pct_chg = spearmanr(data['c%d'%i], data['pct_chg']).correlation
+        rcorr_pct_chg1 = spearmanr(data['c%d'%i], data['pct_chg1']).correlation
+        print '###############################'
+        print 'c%d'%i
+        print corr_close
+        print corr_pct_chg
+        print corr_pct_chg1
+        print rcorr_close
+        print rcorr_pct_chg
+        print rcorr_pct_chg1
+
 if __name__ == '__main__':
-    predict()
+    #predict()
+    res_sta()
