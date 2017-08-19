@@ -28,7 +28,7 @@ if __name__ == '__main__':
     for d in df.values:
         dates.append(d[0].strftime('%Y-%m-%d'))
 
-    sql = 'select ra_code as code from ra_fund where (ra_type = 1 or ra_type = 4) and ra_mask = 0'
+    sql = 'select ra_code as code from ra_fund where ra_type = 1 or ra_type = 2'
     df = pd.read_sql(sql, conn)
     codes = ','.join(["'" + code[0] + "'" for code in df.values])
 
@@ -45,5 +45,7 @@ if __name__ == '__main__':
     #df = df[~df.index.duplicated(keep = 'first')]
     #df = df.unstack()
 
+    df.columns = df.columns.get_level_values(1)
+    df.index.name = 'date'
     print df
-    df.to_csv('./data/nav.csv')
+    df.to_csv('./data/fund_nav.csv')
