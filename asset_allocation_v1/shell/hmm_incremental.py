@@ -117,10 +117,10 @@ class HmmNesc(object):
             if ass_vw_inc_df['newest_date'][0] != None:
                 self.view_newest_date = pd.Timestamp(ass_vw_inc_df['newest_date'][0])
     def get_index_origin_data(self):
-        self.ori_data = pd.read_csv('%s_ori_day_data.csv'%self.ass_id, \
-                index_col = 0, parse_dates = True)
-        #self.ori_data = load_index.load_index_daily_data(self.secode, \
-        #                self.start_date, self.end_date)
+        #self.ori_data = pd.read_csv('%s_ori_day_data.csv'%self.ass_id, \
+        #        index_col = 0, parse_dates = True)
+        self.ori_data = load_index.load_index_daily_data(self.secode, \
+                        self.start_date, self.end_date)
         if self.ori_data.empty:
             return (3, 'has no data for secode:' + self.secode)
         for col in self.ori_data.columns:
@@ -459,6 +459,7 @@ class HmmNesc(object):
             p_s_num = 0
             p_in_num = self.train_num
         else:
+            print all_dates
             newest_date_pos = np.argwhere(all_dates == self.view_newest_date)[0,0]
             if newest_date_pos == len(all_dates) - 1:
                 return (0, "newest view in database, no need to update")
