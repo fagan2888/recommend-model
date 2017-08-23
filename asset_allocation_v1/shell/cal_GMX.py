@@ -1,8 +1,5 @@
 import pandas as pd
 import numpy as np
-import matplotlib
-matplotlib.use('pdf')
-import matplotlib.pyplot as plt
 from utils import day_2_week_ipo as d2w
 from db import asset_trade_dates as load_td
 from sklearn.preprocessing import StandardScaler
@@ -125,19 +122,8 @@ def predict():
     data = data[window:]
     data['pre_signal'] = pre_signals
     print cal_wr(data.pre_signal, data.signal)
-    return data
-
-def plot():
-    data = predict()
-    fig = plt.figure(figsize = (30, 20))
-    ax1 = fig.add_subplot(111)
-    ax1.plot(data.index, data.close)
-    tp = data[data.pre_signal == -1]
-    ax1.plot(tp.index, tp.close, '.', markersize = '24', color = 'r')
-    fig.savefig('pca_rf_tp.png')
 
 if __name__ == '__main__':
     #cal_components()
     #res_sta()
-    #predict()
-    plot()
+    predict()
