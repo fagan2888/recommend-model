@@ -109,7 +109,7 @@ def test(ctx):
 @click.option('--highlow/--no-highlow', 'opthighlow', default=True, help=u'include highlow command group with in batch')
 @click.option('--portfolio/--no-portfolio', 'optportfolio', default=True, help=u'include portfolio command group with in batch')
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
-@click.option('--end-date', 'enddate', default='', help=u'end date to calc')
+@click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--turnover-markowitz', 'optturnoverm', type=float, default=0, help=u'fitler portfolio by turnover')
 @click.option('--turnover-portfolio', 'optturnoverp', type=float, default=0.4, help=u'fitler portfolio by turnover')
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')

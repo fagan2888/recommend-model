@@ -386,6 +386,8 @@ def nav_update(alloc, fee, debug, enddate):
         sr_contrib = pd.concat(tn.contrib)
     else:
         xtype = 9
+        print "df_pos", df_pos
+        print "max_date", max_date
         sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
         sr_contrib = pd.Series()
 
