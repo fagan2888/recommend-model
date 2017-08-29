@@ -10,15 +10,18 @@ logger = logging.getLogger(__name__)
 def load_index_daily_data(secode, start_date=None, end_date=None):
     db = database.connection('caihui')
     metadata = MetaData(bind=db)
-    t = Table('tq_qt_index', metadata, autoload=True)
+    if secode == '2070006886':
+        t = Table('tq_qt_cbdindex', metadata, autoload=True)
+    else:
+        t = Table('tq_qt_index', metadata, autoload=True)
 
     columns = [
         t.c.TRADEDATE.label('date'),
         t.c.TCLOSE.label('close'),
-        t.c.THIGH.label('high'),
-        t.c.TLOW.label('low'),
-        t.c.VOL.label('volume'),
-        t.c.TOPEN.label('open'),
+        #t.c.THIGH.label('high'),
+        #t.c.TLOW.label('low'),
+        #t.c.VOL.label('volume'),
+        #t.c.TOPEN.label('open'),
     ]
     s = select(columns).where(t.c.SECODE == secode)
     if start_date:
