@@ -328,7 +328,7 @@ class Cycle(object):
         self.handle()
         #self.asset_nav = pd.read_csv('tmp/cycle_model_result.csv', index_col = 0, \
         #        parse_dates = True)
-        ori_view = pd.read_csv('data/view_format_example.csv', index_col = 0, \
+        ori_view = pd.read_csv('data/view.csv', index_col = 0, \
                 parse_dates = True)
         new_view = {}
         asset = ori_view.columns
