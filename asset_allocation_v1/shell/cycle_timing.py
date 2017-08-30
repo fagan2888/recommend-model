@@ -20,6 +20,8 @@ class Cycle(object):
                 '120000002': '2070000187',
                 '120000009': '2070006886',
                 '120000013': '2070006545',
+                #'120000014': '2070000626',
+                '120000014': '2070006523',#暂时用标普黄金代替A股黄金
                 '120000015': '2070000076',
                 '120000016': '2070000005',
                 '120000019': '2070009557',
@@ -30,12 +32,13 @@ class Cycle(object):
                 '120000029': '2070006789',
                 '120000039': '2070006913',
                 }
-        self.asset_id = ['120000001','120000002','120000013','120000015','120000009']
-        self.asset_name = ['sh300', 'zz500', 'sp500', 'hsi', 'cnbond']
+        self.asset_id = ['120000001','120000002','120000013','120000015','120000014']
+        self.asset_name = ['sh300', 'zz500', 'sp500', 'au', 'hsi']
+        self.asset_num = len(self.asset_id)
         self.start_date = '19910130'
         self.end_date = None
         self.cycle = np.array([42, 100, 200])
-        self.window = 100
+        self.window = 120
 
     def load_indic(self):
         self.stock_indic = pd.read_csv('tmp/stock_indic.csv', index_col = 0, parse_dates = True)
@@ -52,32 +55,42 @@ class Cycle(object):
         #print self.stock_indic
 
     def cal_cycle_indic(self, cycle = 42, start_date = None, end_date = None):
-        stock_indic = self.stock_indic[start_date:end_date]
-        bond_indic = self.bond_indic[start_date:end_date]
-        commodity_indic = self.commodity_indic[start_date:end_date]
+        stock_indic = self.stock_indic[start_date:end_date].copy()
+        bond_indic = self.bond_indic[start_date:end_date].copy()
+        commodity_indic = self.commodity_indic[start_date:end_date].copy()
+        window = len(stock_indic)
         stock_filtered = pd.DataFrame()
         for column in stock_indic.columns:
             tmp_filtered = gaussian_filter(stock_indic[column], cycle/6)
             stock_filtered[column] = tmp_filtered
-        stock_filtered.index = stock_indic.index
 
         bond_filtered = pd.DataFrame()
         for column in bond_indic.columns:
             tmp_filtered = gaussian_filter(bond_indic[column], cycle/6)
             bond_filtered[column] = tmp_filtered
-        bond_filtered.index = bond_indic.index
 
         commodity_filtered = pd.DataFrame()
         for column in commodity_indic.columns:
             tmp_filtered = gaussian_filter(commodity_indic[column], cycle/6)
             commodity_filtered[column] = tmp_filtered
-        commodity_filtered.index = commodity_indic.index
+
+        fill_zeros = 300
+        for i, filtered in enumerate([stock_filtered, bond_filtered, commodity_filtered]):
+            filtered_fill = pd.DataFrame(np.zeros((fill_zeros, filtered.shape[1])), \
+                    columns = filtered.columns, index = range(len(stock_filtered), \
+                    len(stock_filtered) + fill_zeros))
+            if i == 0:
+                stock_filtered = pd.concat([filtered, filtered_fill])
+            elif i == 1:
+                bond_filtered = pd.concat([filtered, filtered_fill])
+            elif i == 2:
+                commodity_filtered = pd.concat([filtered, filtered_fill])
 
         stock_sumpled = self.sumple(stock_filtered)
         bond_sumpled = self.sumple(bond_filtered)
         commodity_sumpled = self.sumple(commodity_filtered)
         asset_sumpled = np.column_stack([stock_sumpled, bond_sumpled, commodity_sumpled])
-        cycle_indic = self.sumple(asset_sumpled)
+        cycle_indic = self.sumple(asset_sumpled)[:window]
         return cycle_indic
         #print stock_sumpled.shape
 
@@ -87,8 +100,8 @@ class Cycle(object):
         asset_yoy = {}
         stock_list = self.asset_id
         #读取上证指数来补充沪深300和中证500
-        szzz = load_index.load_index_daily_data('2070000005', \
-                start_date = self.start_date)
+        szzz = load_index.load_index_daily_data('2070000005', start_date = \
+                self.start_date)
         szzz = szzz.groupby(szzz.index.strftime('%Y-%m')).last()
         szzz_yoy = szzz.rolling(13).apply(lambda x: (x[-1]/x[0]-1)).dropna()
         szzz_pct_chg = szzz.pct_change()
@@ -131,9 +144,12 @@ class Cycle(object):
 
         self.asset_nav = asset_data
         self.asset_yoy = asset_yoy
+        self.asset_nav.index = self.bond_indic.index
+        self.asset_yoy.index = self.bond_indic.index
+        self.asset_nav.to_csv('tmp/asset_nav.csv', index_label = 'date')
 
     @staticmethod
-    def sumple(X, maxiter = 20):
+    def sumple(X, maxiter = 100):
         ncor, n = X.shape
         X = hilbert(X ,axis = 0)
         X = mat(X)
@@ -161,6 +177,7 @@ class Cycle(object):
         fit_value = []
         #print self.asset_yoy
         #print self.stock_indic
+        count = 0
         for i in range(len(self.asset_yoy) - window + 1):
             x1 = self.cal_cycle_indic(42, i, i+window)
             x2 = self.cal_cycle_indic(100, i, i+window)
@@ -172,6 +189,8 @@ class Cycle(object):
                 lr.fit(x,y)
                 y_fit = lr.predict(x)[-1]
                 fit_value.append(y_fit)
+            count += 1
+            print count
         fit_value = np.array(fit_value).reshape(-1, asset_num)
         self.asset_nav = self.asset_nav[window-1:]
         for idx, asset in enumerate(self.asset_name):
@@ -194,10 +213,12 @@ class Cycle(object):
         #set weight
         ori_value = np.arange(1, asset_num+1)
         #replace_value = np.arange(1.0, asset_num+1)/np.arange(1.0, asset_num+1).sum()
-        replace_value = [0, 0, 0, 0, 0, 1]
+        #非全仓策略
+        #replace_value = [0, 0, 0.1, 0.2, 0.3, 0.4]
         #全仓策略
         #replace_value = [0]*asset_num
         #replace_value[-1] = 1
+        replace_value = [0,0,0,0,0.4,0.6]
         asset_weight = asset_fit_rank.replace(ori_value, replace_value)
 
         #cal nav
@@ -233,6 +254,14 @@ class Cycle(object):
         weight_column.append('cash_weight')
         asset_weight.columns = weight_column
         self.asset_nav = pd.concat([self.asset_nav, asset_weight], 1)
+
+        rank_column = []
+        for asset in self.asset_name:
+            rank_column.append('%s_rank'%asset)
+        rank_column.append('cash_rank')
+        asset_fit_rank.columns = rank_column
+        self.asset_nav = pd.concat([self.asset_nav, asset_fit_rank], 1)
+
         for i in range(5):
             self.asset_nav.iloc[:, i] = self.asset_nav.iloc[:, i]/self.asset_nav.iloc[0, i]
         print self.asset_nav['invest_nav'][-1]
@@ -268,24 +297,18 @@ class Cycle(object):
 
     def handle(self):
         self.load_indic()
+
+        self.cal_asset_nav()
         #self.asset_nav = pd.read_csv('tmp/asset_nav.csv', index_col = 0, \
         #        parse_dates = True)
 
-        #
-        #load asset ori data from caihui database
-        #
-        self.cal_asset_nav()
-        self.asset_nav.index = self.bond_indic.index
-        self.asset_yoy.index = self.bond_indic.index
-        #self.asset_nav.to_csv('tmp/asset_nav.csv', index_label = 'date')
-
-        self.training()
-        #self.asset_nav = pd.read_csv('tmp/asset_nav_fit.csv', index_col = 0, \
-        #        parse_dates = True)
+        #self.training()
+        self.asset_nav = pd.read_csv('tmp/asset_nav_fit.csv', index_col = 0, \
+                parse_dates = True)
 
         self.investing()
         #print self.asset_nav
-        self.asset_nav.to_csv('tmp/cycle_model_result_2.csv', index_label = 'date')
+        self.asset_nav.to_csv('tmp/cycle_model_result.csv', index_label = 'date')
 
     def plot(self):
         self.load_indic()
@@ -298,12 +321,35 @@ class Cycle(object):
         cycle_df['cycle_100'] = cycle_100
         cycle_df['cycle_200'] = cycle_200
         cycle_df.index = index
-        print cycle_df
+        #print cycle_df
         cycle_df.to_csv('tmp/cycle_df.csv')
 
+    def cal_view(self):
+        self.handle()
+        #self.asset_nav = pd.read_csv('tmp/cycle_model_result.csv', index_col = 0, \
+        #        parse_dates = True)
+        ori_view = pd.read_csv('data/view_format_example.csv', index_col = 0, \
+                parse_dates = True)
+        new_view = {}
+        asset = ori_view.columns
+        for columns in asset:
+            new_view[columns] = []
+        for idx in ori_view.index:
+            idx = idx.strftime('%Y-%m')
+            for i,j in enumerate(np.arange(20, 25)):
+                new_view[asset[i]].append(self.asset_nav.ix[idx, j].values[0])
+        new_view = pd.DataFrame(new_view, columns = asset, index = ori_view.index)
+        ori_value = range(1,7)
+        replace_value = [-2, -1, 0, 0, 1, 2]
+        new_view = new_view.replace(ori_value, replace_value)
+        new_view.to_csv('data/view.csv')
 
 if __name__ == '__main__':
     cycle  = Cycle()
     #cycle.handle()
+    #print cycle.wr
+
     #cycle.evaluating()
-    cycle.plot()
+    #cycle.plot()
+
+    cycle.cal_view()
