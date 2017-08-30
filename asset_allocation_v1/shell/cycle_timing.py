@@ -30,12 +30,12 @@ class Cycle(object):
                 '120000029': '2070006789',
                 '120000039': '2070006913',
                 }
-        self.asset_id = ['120000001','120000002','120000013','120000015']
-        self.asset_name = ['sh300', 'zz500', 'sp500', 'hsi']
+        self.asset_id = ['120000001','120000002','120000013','120000015','120000009']
+        self.asset_name = ['sh300', 'zz500', 'sp500', 'hsi', 'cnbond']
         self.start_date = '19910130'
         self.end_date = None
         self.cycle = np.array([42, 100, 200])
-        self.window = 120
+        self.window = 100
 
     def load_indic(self):
         self.stock_indic = pd.read_csv('tmp/stock_indic.csv', index_col = 0, parse_dates = True)
@@ -106,6 +106,17 @@ class Cycle(object):
                 tmp_yoy = pd.concat([szzz_yoy[:fill_num_y], tmp_yoy])
                 tmp_pct_chg = tmp_pct_chg[12:]
                 tmp_asset_data = np.cumprod(1 + tmp_pct_chg.values)
+            elif idx == '120000009':
+                pct_chg_fill = pd.DataFrame()
+                pct_chg_fill['close'] = [0]*308
+                bond_indic_fill = pd.read_csv('tmp/bond_indic_fill.csv', \
+                        index_col = 0, parse_dates = True)
+                bond_indic_fill.columns = ['close']
+                fill_num_p = len(self.bond_indic) - len(tmp_pct_chg)
+                fill_num_y = len(self.bond_indic) - len(tmp_yoy)
+                tmp_pct_chg = pd.concat([pct_chg_fill[:fill_num_p], tmp_pct_chg])
+                tmp_yoy = pd.concat([bond_indic_fill[:fill_num_y], tmp_yoy])
+                tmp_asset_data = np.cumprod(1 + tmp_pct_chg.values)
             else:
                 tmp_pct_chg = tmp_pct_chg[11:]
                 tmp_asset_data = np.cumprod(1 + tmp_pct_chg.values)
@@ -117,6 +128,7 @@ class Cycle(object):
         asset_data = pd.DataFrame(asset_data, index=index, columns = stock_list)
         asset_yoy = pd.DataFrame(asset_yoy, index=index, columns = stock_list)
         asset_data['cash'] = 1
+
         self.asset_nav = asset_data
         self.asset_yoy = asset_yoy
 
@@ -182,8 +194,10 @@ class Cycle(object):
         #set weight
         ori_value = np.arange(1, asset_num+1)
         #replace_value = np.arange(1.0, asset_num+1)/np.arange(1.0, asset_num+1).sum()
-        #replace_value = [0, 0.1, 0.2, 0.3, 0.4]
-        replace_value = [0, 0, 0, 0, 1]
+        replace_value = [0, 0, 0, 0, 0, 1]
+        #全仓策略
+        #replace_value = [0]*asset_num
+        #replace_value[-1] = 1
         asset_weight = asset_fit_rank.replace(ori_value, replace_value)
 
         #cal nav
@@ -265,15 +279,31 @@ class Cycle(object):
         self.asset_yoy.index = self.bond_indic.index
         #self.asset_nav.to_csv('tmp/asset_nav.csv', index_label = 'date')
 
-        #self.training()
-        self.asset_nav = pd.read_csv('tmp/asset_nav_fit.csv', index_col = 0, \
-                parse_dates = True)
+        self.training()
+        #self.asset_nav = pd.read_csv('tmp/asset_nav_fit.csv', index_col = 0, \
+        #        parse_dates = True)
 
         self.investing()
         #print self.asset_nav
         self.asset_nav.to_csv('tmp/cycle_model_result_2.csv', index_label = 'date')
 
+    def plot(self):
+        self.load_indic()
+        cycle_42 = self.cal_cycle_indic(42)
+        cycle_100 = self.cal_cycle_indic(100)
+        cycle_200 = self.cal_cycle_indic(200)
+        cycle_df = pd.DataFrame()
+        index = self.stock_indic.index
+        cycle_df['cycle_42'] = cycle_42
+        cycle_df['cycle_100'] = cycle_100
+        cycle_df['cycle_200'] = cycle_200
+        cycle_df.index = index
+        print cycle_df
+        cycle_df.to_csv('tmp/cycle_df.csv')
+
+
 if __name__ == '__main__':
     cycle  = Cycle()
-    cycle.handle()
+    #cycle.handle()
     #cycle.evaluating()
+    cycle.plot()
