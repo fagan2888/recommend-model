@@ -142,7 +142,7 @@ class MonthlyStaApportion(object):
     def insert_db(self):
         old_df = self.get_old_data()
         new_df = self.deal_data()
-        rpt_srrc_apportion.batch(new_df, old_df)
+        #rpt_srrc_apportion.batch(new_df, old_df)
     def deal_data(self, min_year, min_month):
         end_year = self.max_year
         end_month = self.max_month
@@ -168,17 +168,20 @@ class MonthlyStaApportion(object):
             end_date_db = datetime.date(cursor_year, cursor_month, 1)
             end_date = datetime.date(cursor_year, cursor_month, \
                     past_year_month[-1][3])
-            # 为了处理订单同步慢问题持仓时期往前推一天
-            if datetime.date(cursor_year, cursor_month, 1) == end_com and \
-                past_year_month[-1][3] != 1:
-                end_date = datetime.date(cursor_year, cursor_month, \
-                    past_year_month[-1][3] -1)
-            monthly_order_data = ds_order.get_monthly_data(start_date, end_date)
+            ## 为了处理订单同步慢问题持仓时期往前推一天
+            #if datetime.date(cursor_year, cursor_month, 1) == end_com and \
+            #    past_year_month[-1][3] != 1:
+            #    end_date = datetime.date(cursor_year, cursor_month, \
+            #        past_year_month[-1][3] -1)
+            # monthly_order_data = ds_order.get_monthly_data(start_date, end_date)
+            print start_date, end_date_rp
             clear_uids = ds_order.get_specific_month_uids_in(start_date, \
                 end_date, [30])
+            hprint(self.date_range_clear_uids(start_date, end_date))
             if len(clear_uids) > 0:
                 clear_uids = np.array( \
                     clear_uids).reshape(1,len(clear_uids))[0]
+            hprint(clear_uids)
             resub_uids = ds_order.get_specific_month_uids_in(start_date, \
                 end_date, [11])
             if len(resub_uids) > 0:
@@ -258,7 +261,25 @@ class MonthlyStaApportion(object):
                     'rp_amount_resub', 'rp_amount_redeem', 'rp_amount_aum']]
         new_df.fillna(0, inplace=True)
         return new_df
-
+    def date_range_clear_uids(self, s_date, e_date):
+        """
+        给出时间区间(s_date, e_date)内交易类型为ttype的用户uid
+        :param s_date: 起始时间(0000-00-00)
+        :param e_date: 结束时间(0000-00-00)
+        :param ttype: [10, 11]交易类型(ds_order_pdate里的ds_trade_type)
+        :return: list[1000000001, 1000000002, ... ,]
+        """
+        clear_ever_uids = ds_order.get_specific_month_uids_in(s_date, \
+                e_date, [30, 31])
+        if len(clear_ever_uids) > 0:
+                clear_ever_uids = np.array( \
+                    clear_ever_uids).reshape(1,len(clear_ever_uids))[0]
+        result = []
+        for uid in clear_ever_uids:
+            newest_records = ds_order.get_date_range_head(s_date, e_date, uid)
+            if newest_records.ds_trade_type in [30, 31, 50]:
+                result.append(uid)
+        return result
 class MonthlyStaRetention(object):
     """
     统计rpt_retention_data里的数据
@@ -717,9 +738,9 @@ class MonthlyStaSrrc(object):
 if __name__ == "__main__":
     obj = MonthlyStaApportion()
     obj.incremental_update()
-    obj_reten = MonthlyStaRetention()
-    obj_reten.handle()
-    obj_rolling = MonthlyStaRolling()
-    obj_rolling.handle()
-    obj_srrc = MonthlyStaSrrc()
-    obj_srrc.handle()
+    # obj_reten = MonthlyStaRetention()
+    # obj_reten.handle()
+    # obj_rolling = MonthlyStaRolling()
+    # obj_rolling.handle()
+    # obj_srrc = MonthlyStaSrrc()
+    # obj_srrc.handle()
