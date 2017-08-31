@@ -428,7 +428,7 @@ class HmmNesc(object):
         trans_mat_today = model.transmat_[states[-1]]
         mean_today = model.means_[state_today, 1]
         mean_rank_today = sum(model.means_[:, 1] < mean_today)
-        
+
         next_day_state = np.argmax(trans_mat_today)
         next_day_pro = trans_mat_today[next_day_state]
         next_day_mean = model.means_[next_day_state, 1]
