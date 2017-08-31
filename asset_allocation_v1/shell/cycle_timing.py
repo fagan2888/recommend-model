@@ -16,13 +16,13 @@ class Cycle(object):
 
     def __init__(self):
         self.asset_secode = {
-                '120000001': '2070000060',
-                '120000002': '2070000187',
-                '120000009': '2070006886',
-                '120000013': '2070006545',
-                #'120000014': '2070000626',
+                '120000001': '2070000060',#沪深300
+                '120000002': '2070000187',#中证500
+                '120000009': '2070006886',#中证全债
+                '120000013': '2070006545',#标普400
+                #'120000014': '2070000626',#A股黄金
                 '120000014': '2070006523',#暂时用标普黄金代替A股黄金
-                '120000015': '2070000076',
+                '120000015': '2070000076',#恒生指数
                 '120000016': '2070000005',
                 '120000019': '2070009557',
                 '120000023': '2070009556',
@@ -32,7 +32,7 @@ class Cycle(object):
                 '120000029': '2070006789',
                 '120000039': '2070006913',
                 }
-        self.asset_id = ['120000001','120000002','120000013','120000015','120000014']
+        self.asset_id = ['120000001','120000002','120000013','120000014','120000015']
         self.asset_name = ['sh300', 'zz500', 'sp500', 'au', 'hsi']
         self.asset_num = len(self.asset_id)
         self.start_date = '19910130'
@@ -328,6 +328,7 @@ class Cycle(object):
         self.handle()
         #self.asset_nav = pd.read_csv('tmp/cycle_model_result.csv', index_col = 0, \
         #        parse_dates = True)
+        print self.asset_nav.tail()
         ori_view = pd.read_csv('data/view_frame.csv', index_col = 0, \
                 parse_dates = True)
         new_view = {}
@@ -336,25 +337,26 @@ class Cycle(object):
             new_view[columns] = []
         for idx in ori_view.index:
             idx = idx.strftime('%Y-%m')
-            for i,j in enumerate(np.arange(20, 25)):
+            for i,j in enumerate(np.arange(19, 24)):
                 new_view[asset[i]].append(self.asset_nav.ix[idx, j].values[0])
         new_view = pd.DataFrame(new_view, columns = asset, index = ori_view.index)
         ori_value = range(1,7)
         replace_value = [0, 0, 0, 0, 1, 1]
         new_view = new_view.replace(ori_value, replace_value)
+        print new_view.tail()
 
         new_view['idx'] = new_view.index
         tmp_view = new_view.groupby(new_view.index.strftime('%Y-%m')).last()
         tmp_view.index = tmp_view.idx
         del tmp_view['idx']
         del new_view['idx']
-        new_view = pd.DataFrame(np.zeros(new_view.shape), columns = new_view.columns, \
+        new_view = pd.DataFrame(np.zeros(new_view.shape), columns = ori_view.columns, \
                 index = new_view.index)
         new_view = new_view + tmp_view
         new_view = new_view.fillna(method = 'ffill')
         new_view = new_view.fillna(0)
         new_view = new_view.astype('int')
-        new_view.to_csv('data/view.csv')
+        new_view.to_csv('data/view.csv', index_label = 'date')
 
 if __name__ == '__main__':
     cycle  = Cycle()
