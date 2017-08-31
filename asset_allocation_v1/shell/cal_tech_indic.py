@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
-import pandas as pd
 import numpy as np
-import os
 import talib
-from utils import day_2_week as d2w
 
 class CalTechIndic(object):
-    def __init__(self, data_df, trade_dates, data_type=1):
+    def __init__(self, data_df):
         """
         :param data_df:输入数据
             type:DataFrame
@@ -17,19 +14,8 @@ class CalTechIndic(object):
                 2007-07-23    1534.10  1541.57  1534.06  1547.23  1534.06  3.102700e+09
                 2007-07-24    1541.57  1511.04  1541.57  1541.57  1508.62  4.115830e+09
                 2007-07-25    1511.04  1518.09  1511.03  1524.31  1503.73  4.115830e+09
-        :param trade_dates: 输入数据
-            type: DataFrame
-            format:
-                date,trade_type
-                1997-07-15,0
-                1997-07-16,0
-                1997-07-17,0
-        :param data_type:需要以日数据还是周数据来run模型
-            type:int(1:日数据，2:周数据)
-        """
+       """
         self.data = data_df #pd.read_csv(file_handle, index_col=['date'], parse_dates=['date'])
-        if data_type == 2:
-            self.data = d2w(data_df, trade_dates) #pd.read_csv(file_handle, index_col=['date'], parse_dates=['date'])
         self.data.fillna(method="ffill", inplace=True)
 
         self.close = np.array(self.data['close'])
