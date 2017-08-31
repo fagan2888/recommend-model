@@ -328,7 +328,7 @@ class Cycle(object):
         self.handle()
         #self.asset_nav = pd.read_csv('tmp/cycle_model_result.csv', index_col = 0, \
         #        parse_dates = True)
-        ori_view = pd.read_csv('data/view.csv', index_col = 0, \
+        ori_view = pd.read_csv('data/view_frame.csv', index_col = 0, \
                 parse_dates = True)
         new_view = {}
         asset = ori_view.columns
@@ -340,8 +340,20 @@ class Cycle(object):
                 new_view[asset[i]].append(self.asset_nav.ix[idx, j].values[0])
         new_view = pd.DataFrame(new_view, columns = asset, index = ori_view.index)
         ori_value = range(1,7)
-        replace_value = [-2, -1, 0, 0, 1, 2]
+        replace_value = [0, 0, 0, 0, 1, 1]
         new_view = new_view.replace(ori_value, replace_value)
+
+        new_view['idx'] = new_view.index
+        tmp_view = new_view.groupby(new_view.index.strftime('%Y-%m')).last()
+        tmp_view.index = tmp_view.idx
+        del tmp_view['idx']
+        del new_view['idx']
+        new_view = pd.DataFrame(np.zeros(new_view.shape), columns = new_view.columns, \
+                index = new_view.index)
+        new_view = new_view + tmp_view
+        new_view = new_view.fillna(method = 'ffill')
+        new_view = new_view.fillna(0)
+        new_view = new_view.astype('int')
         new_view.to_csv('data/view.csv')
 
 if __name__ == '__main__':
