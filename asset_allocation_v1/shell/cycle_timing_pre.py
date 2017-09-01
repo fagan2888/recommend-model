@@ -38,7 +38,7 @@ class Cycle(object):
         self.start_date = '19910130'
         self.end_date = None
         self.cycle = np.array([42, 100, 200])
-        self.window = 125
+        self.window = 130
 
     def load_indic(self):
         self.stock_indic = pd.read_csv('tmp/stock_indic.csv', index_col = 0, parse_dates = True)
@@ -213,8 +213,10 @@ class Cycle(object):
         asset_pre = self.asset_nav.iloc[:, asset_num: asset_num*2]
 
         asset_pre_pos = asset_pre.mask(asset_pre < 0, 0)
-        #asset_weight = asset_pre_pos.apply(lambda x: x/sum(x), 1)
-        asset_weight = asset_pre_pos.apply(lambda x: 1 + np.sign(x-max(x)), 1)
+        #以预期涨幅为比例配置,预期下跌的资产则空仓
+        asset_weight = asset_pre_pos.apply(lambda x: x/sum(x), 1)
+        #全仓策略
+        #asset_weight = asset_pre_pos.apply(lambda x: 1 + np.sign(x-max(x)), 1)
         print asset_weight
 
         #cal nav
