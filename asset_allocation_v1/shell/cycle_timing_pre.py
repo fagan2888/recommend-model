@@ -58,7 +58,19 @@ class Cycle(object):
         stock_indic = self.stock_indic[start_date:end_date].copy()
         bond_indic = self.bond_indic[start_date:end_date].copy()
         commodity_indic = self.commodity_indic[start_date:end_date].copy()
-        window = len(stock_indic)
+        fill_zeros = 300
+        for i, indic in enumerate([stock_indic, bond_indic, commodity_indic]):
+            indic_fill = pd.DataFrame(np.zeros((fill_zeros, indic.shape[1])), \
+                    columns = indic.columns, index = range(len(stock_indic), \
+                    len(stock_indic) + fill_zeros))
+            if i == 0:
+                stock_indic = pd.concat([indic, indic_fill])
+            elif i == 1:
+                bond_indic = pd.concat([indic, indic_fill])
+            elif i == 2:
+                commodity_indic = pd.concat([indic, indic_fill])
+
+        window = self.window
         stock_filtered = pd.DataFrame()
         for column in stock_indic.columns:
             tmp_filtered = gaussian_filter(stock_indic[column], cycle/6)
@@ -74,23 +86,11 @@ class Cycle(object):
             tmp_filtered = gaussian_filter(commodity_indic[column], cycle/6)
             commodity_filtered[column] = tmp_filtered
 
-        fill_zeros = 300
-        for i, filtered in enumerate([stock_filtered, bond_filtered, commodity_filtered]):
-            filtered_fill = pd.DataFrame(np.zeros((fill_zeros, filtered.shape[1])), \
-                    columns = filtered.columns, index = range(len(stock_filtered), \
-                    len(stock_filtered) + fill_zeros))
-            if i == 0:
-                stock_filtered = pd.concat([filtered, filtered_fill])
-            elif i == 1:
-                bond_filtered = pd.concat([filtered, filtered_fill])
-            elif i == 2:
-                commodity_filtered = pd.concat([filtered, filtered_fill])
-
         stock_sumpled = self.sumple(stock_filtered)
         bond_sumpled = self.sumple(bond_filtered)
         commodity_sumpled = self.sumple(commodity_filtered)
         asset_sumpled = np.column_stack([stock_sumpled, bond_sumpled, commodity_sumpled])
-        cycle_indic = self.sumple(asset_sumpled)[:window]
+        cycle_indic = self.sumple(asset_sumpled)[:window+1]
         return cycle_indic
         #print stock_sumpled.shape
 
@@ -175,22 +175,32 @@ class Cycle(object):
         window = self.window
         asset_num = len(self.asset_id)
         fit_value = []
+        pre_value = []
         #print self.asset_yoy
         #print self.stock_indic
         for i in range(len(self.asset_yoy) - window + 1):
             x1 = self.cal_cycle_indic(42, i, i+window)
             x2 = self.cal_cycle_indic(100, i, i+window)
             x3 = self.cal_cycle_indic(200, i, i+window)
-            x = np.column_stack([x1, x2, x3])
+            x = np.column_stack([x1[:-1], x2[:-1], x3[:-1]])
+            pre_x = np.column_stack([x1, x2, x3])
             for j in range(asset_num):
                 y = self.asset_yoy.iloc[i:i+window, j]
                 lr = LinearRegression()
                 lr.fit(x,y)
-                y_fit = lr.predict(x)[-1]
-                print 'y: ', y.values[-1], '', 'y_fit: ', y_fit
+                y_fit = lr.predict(pre_x)[-1]
+                y_pre = y_fit - lr.predict(x)[-1]
                 fit_value.append(y_fit)
-        fit_value = np.array(fit_value).reshape(-1, asset_num)
+                pre_value.append(y_pre)
+                #print 'y: ', y.values[-1], '', 'y_fit: ', y_fit
         self.asset_nav = self.asset_nav[window-1:]
+
+        pre_value = np.array(pre_value).reshape(-1, asset_num)
+        for idx, asset in enumerate(self.asset_name):
+            self.asset_nav['%s_pre'%asset] = pre_value[:, idx]
+        self.asset_nav['cash_pre'] = 0.0000000001
+
+        fit_value = np.array(fit_value).reshape(-1, asset_num)
         for idx, asset in enumerate(self.asset_name):
             self.asset_nav['%s_fit'%asset] = fit_value[:, idx]
         self.asset_nav['cash_fit'] = 1
@@ -200,24 +210,11 @@ class Cycle(object):
         #cal rank
         asset_num = len(self.asset_id) + 1
         asset_value = self.asset_nav.iloc[:, :asset_num]
-        asset_value = asset_value[1:]
-        asset_fit = self.asset_nav.iloc[:, asset_num:]
-        asset_fit_diff = asset_fit.diff()
-        asset_fit_diff = asset_fit_diff[1:]
-        #print asset_fit_diff.head()
-        #print asset_fit.diff()
-        asset_fit_rank = asset_fit_diff.apply(self.rank, 1) + 1
+        asset_pre = self.asset_nav.iloc[:, asset_num: asset_num*2]
 
-        #set weight
-        ori_value = np.arange(1, asset_num+1)
-        #replace_value = np.arange(1.0, asset_num+1)/np.arange(1.0, asset_num+1).sum()
-        #非全仓策略
-        #replace_value = [0, 0, 0.1, 0.2, 0.3, 0.4]
-        #全仓策略
-        #replace_value = [0]*asset_num
-        #replace_value[-1] = 1
-        replace_value = [0,0,0,0,0.4,0.6]
-        asset_weight = asset_fit_rank.replace(ori_value, replace_value)
+        asset_pre_pos = asset_pre.mask(asset_pre < 0, 0)
+        asset_weight = asset_pre_pos.apply(lambda x: x/sum(x), 1)
+        print asset_weight
 
         #cal nav
         asset_pct_chg = asset_value.pct_change()
@@ -227,20 +224,9 @@ class Cycle(object):
         #print asset_weight.head()
         invest_nav = (invest_nav.sum(1) + 1).cumprod()
         invest_nav = np.append(1, invest_nav)
-        self.asset_nav = self.asset_nav[1:]
+        self.asset_nav = self.asset_nav
         self.asset_nav['invest_nav'] = invest_nav
 
-        #cal win_ratio
-        total = 0.0
-        correct = 0.0
-        asset_pct_chg_rank = asset_pct_chg.apply(np.argsort, 1) + 1
-        for i in range(len(asset_pct_chg_rank)):
-            for j in range(asset_num):
-                if asset_fit_rank.iloc[i,j] == asset_num:
-                    total += 1
-                    if asset_pct_chg_rank.iloc[i,j] in [asset_num, asset_num-1]:
-                        correct += 1
-        self.wr = correct/total
         #print correct
         #print total
         #print self.wr
@@ -257,8 +243,6 @@ class Cycle(object):
         for asset in self.asset_name:
             rank_column.append('%s_rank'%asset)
         rank_column.append('cash_rank')
-        asset_fit_rank.columns = rank_column
-        self.asset_nav = pd.concat([self.asset_nav, asset_fit_rank], 1)
 
         for i in range(5):
             self.asset_nav.iloc[:, i] = self.asset_nav.iloc[:, i]/self.asset_nav.iloc[0, i]
@@ -300,9 +284,10 @@ class Cycle(object):
         #self.asset_nav = pd.read_csv('tmp/asset_nav.csv', index_col = 0, \
         #        parse_dates = True)
 
-        self.training()
-        #self.asset_nav = pd.read_csv('tmp/asset_nav_fit.csv', index_col = 0, \
-        #        parse_dates = True)
+        #self.training()
+        #print 'train over'
+        self.asset_nav = pd.read_csv('tmp/asset_nav_fit.csv', index_col = 0, \
+                parse_dates = True)
 
         self.investing()
         #print self.asset_nav
@@ -324,8 +309,8 @@ class Cycle(object):
 
     def cal_view(self):
         self.handle()
-        #self.asset_nav = pd.read_csv('tmp/cycle_model_result.csv', index_col = 0, \
-        #        parse_dates = True)
+        self.asset_nav = pd.read_csv('tmp/cycle_model_result.csv', index_col = 0, \
+                parse_dates = True)
         print self.asset_nav.tail()
         ori_view = pd.read_csv('data/view_frame.csv', index_col = 0, \
                 parse_dates = True)
@@ -338,9 +323,7 @@ class Cycle(object):
             for i,j in enumerate(np.arange(19, 24)):
                 new_view[asset[i]].append(self.asset_nav.ix[idx, j].values[0])
         new_view = pd.DataFrame(new_view, columns = asset, index = ori_view.index)
-        ori_value = range(1,7)
-        replace_value = [0, 0, 0, 0, 1, 1]
-        new_view = new_view.replace(ori_value, replace_value)
+        new_view = new_view.mask(new_view > 0, 1)
         print new_view.tail()
 
         new_view['idx'] = new_view.index
@@ -358,10 +341,10 @@ class Cycle(object):
 
 if __name__ == '__main__':
     cycle  = Cycle()
-    cycle.handle()
+    #cycle.handle()
     #print cycle.wr
 
     #cycle.evaluating()
     #cycle.plot()
 
-    #cycle.cal_view()
+    cycle.cal_view()
