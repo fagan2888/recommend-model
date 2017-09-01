@@ -287,10 +287,10 @@ class Cycle(object):
         #self.asset_nav = pd.read_csv('tmp/asset_nav.csv', index_col = 0, \
         #        parse_dates = True)
 
-        self.training()
-        print 'train over'
-        #self.asset_nav = pd.read_csv('tmp/asset_nav_fit.csv', index_col = 0, \
-        #        parse_dates = True)
+        #self.training()
+        #print 'train over'
+        self.asset_nav = pd.read_csv('tmp/asset_nav_fit.csv', index_col = 0, \
+                parse_dates = True)
 
         self.investing()
         #print self.asset_nav
@@ -312,7 +312,7 @@ class Cycle(object):
 
     def cal_view(self):
         self.handle()
-        self.asset_nav = pd.read_csv('tmp/cycle_model_result.csv', index_col = 0, \
+        self.asset_nav = pd.read_csv('tmp/cycle_model_result_130.csv', index_col = 0, \
                 parse_dates = True)
         print self.asset_nav.tail()
         ori_view = pd.read_csv('data/view_frame.csv', index_col = 0, \
@@ -323,10 +323,11 @@ class Cycle(object):
             new_view[columns] = []
         for idx in ori_view.index:
             idx = idx.strftime('%Y-%m')
-            for i,j in enumerate(np.arange(19, 24)):
+            for i,j in enumerate(np.arange(7, 12)):
                 new_view[asset[i]].append(self.asset_nav.ix[idx, j].values[0])
         new_view = pd.DataFrame(new_view, columns = asset, index = ori_view.index)
-        new_view = new_view.mask(new_view > 0, 1)
+        #new_view = new_view.mask(new_view > 0, 1)
+        new_view = new_view.apply(lambda x: 1 + np.sign(x-max(x)), 1)
         print new_view.tail()
 
         new_view['idx'] = new_view.index
