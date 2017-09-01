@@ -16,7 +16,7 @@ import time
 import Const
 import DFUtil
 from TimingGFTD import TimingGFTD
-
+from Double_Avg_Line import Double_Avg_Line
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
@@ -100,7 +100,8 @@ def signal_update(timing):
    
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
-    
+    df_double = Double_Avg_Line(5,20).timing(df_nav)
+    print df_double.head(100)
     df_new['tc_timing_id'] = timing_id
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
 
