@@ -374,8 +374,8 @@ class MonthlyStaRetention(object):
             if new_df is not None:
                 self.insert_db(old_df, new_df)
     def insert_db(self, old_df, new_df):
-        #rpt_retention_data.batch(new_df, old_df)
-        pass
+        rpt_retention_data.batch(new_df, old_df)
+        #pass
     def get_old_data(self, month_dates):
         old_data = rpt_retention_data.get_old_data(month_dates)
         if len(old_data) == 0:
@@ -396,7 +396,7 @@ class MonthlyStaRetention(object):
             old_df = old_df.set_index(['rp_tag_id', 'rp_date', 'rp_retention_type'])
         return old_df
     def process_by_month(self, cur_month, cur_month_list):
-        print cur_month, cur_month_list
+        print cur_month
         # 当前月开始时间和结束时间
         s_date = datetime.date(cur_month[0], cur_month[1], 1)
         e_date = datetime.date(cur_month[0], cur_month[1], cur_month[2])
@@ -438,21 +438,11 @@ class MonthlyStaRetention(object):
             retain_uids = date_holding_uids_in(end_date_rp, \
                         first_buy_uids)
             # 当月购买当月清仓
-            if re_value == 0:
-                cur_clear_uids = ds_order.get_specific_month_in_uids(start_date_rp, \
-                    end_date_rp, [30, 31], first_buy_uids)
-                if len(cur_clear_uids) > 0 and cur_clear_uids[0][0] is not None:
-                    cur_clear_uids = np.array( \
-                        cur_clear_uids).reshape(1, len(cur_clear_uids))[0]
-                else:
-                    cur_clear_uids = []
-                retain_uids = list(set(first_buy_uids).difference(set(cur_clear_uids)))
-                # last_day_buy_amount = ds_order.get_specific_day_amount(end_date_rp, [10])[0][0]
-                # if last_day_buy_amount is None:
-                #     last_day_buy_amount = 0
-            last_day_buy_amount = ds_order.get_specific_month_amount(end_date_rp, end_date_rp, [10, 11], retain_uids)[0][0]
-            if last_day_buy_amount is None:
-                    last_day_buy_amount = 0
+            # if re_value == 0:
+            #     cur_clear_uids = date_range_clear_uids(start_date_rp, \
+            #         end_date_rp)
+            #     cur_clear_uids = np.intersect1d(cur_clear_uids, first_buy_uids)
+            #     retain_uids = list(set(first_buy_uids).difference(set(cur_clear_uids)))
 
             resub_num = len(resub_uids)
             redeem_num = len(redeem_uids)
@@ -461,17 +451,18 @@ class MonthlyStaRetention(object):
             rp_user_resub.append(resub_num)
             # 留存用户数
             rp_user_hold.append(retain_num)
-
             # 复购金额
-            resub_amount = ds_order.get_specific_month_amount(s_date, end_date, [11], resub_uids)
+            resub_amount = ds_order.get_specific_month_amount(s_date, \
+                end_date, [11], resub_uids)
             rp_amount_resub.append(resub_amount[0][0])
             # 赎回金额
-            redeem_amount = ds_order.get_specific_month_amount(s_date, end_date, \
-                                [20, 21, 30, 31], redeem_uids)
+            redeem_amount = ds_order.get_specific_month_amount(s_date, \
+                end_date, [20, 21, 30, 31], redeem_uids)
             rp_amount_redeem.append(redeem_amount[0][0])
             # 在管资产
+            #hold_amount = ds_share.get_specific_date_amount(end_date_rp, retain_uids)
             hold_amount = ds_share.get_specific_date_amount(end_date_rp, retain_uids)
-            rp_amount_aum.append(hold_amount[0][0] + last_day_buy_amount)
+            rp_amount_aum.append(hold_amount[0][0])
         new_dict = {}
         new_dict['rp_tag_id'] = rp_tag_id
         new_dict['rp_date'] = rp_date
@@ -556,34 +547,20 @@ class MonthlyStaRolling(object):
                 rp_amount_redeem_ratio.append(-1)
                 rp_amount_resub_ratio.append(-1)
                 continue
-            first_buy_uids = ds_order.get_specific_month_uids( \
-                            pre_date, pre_date, 10)
+            first_buy_uids = trade_type_uids(pre_date, pre_date, [10])
             first_buy_num = len(first_buy_uids)
-            if first_buy_num > 0:
-                first_buy_uids = np.array( \
-                            first_buy_uids).reshape(1, len(first_buy_uids))[0]
 
             # 留存用户uid
-            retain_uids = ds_share.get_hold_users_date_uids(cur_date, \
-                        first_buy_uids)
+            retain_uids = date_holding_uids_in(cur_date, first_buy_uids)
             retain_num = len(retain_uids)
-            if retain_num > 0:
-                retain_uids = np.array( \
-                        retain_uids).reshape(1, len(retain_uids))[0]
             # 赎回用户uid
-            redeem_uids = ds_order.get_specific_month_in_uids( \
-                        pre_date, cur_date, [20, 21, 30, 31], first_buy_uids)
+            redeem_uids = trade_type_uids_in(pre_date, cur_date, \
+                [20, 21, 30, 31], first_buy_uids)
             redeem_num = len(redeem_uids)
-            if redeem_num > 0:
-                redeem_uids = np.array( \
-                        redeem_uids).reshape(1, len(redeem_uids))[0]
             # 复购用户uid
-            resub_uids = ds_order.get_specific_month_in_uids( \
-                        pre_date, cur_date, [11], first_buy_uids)
+            resub_uids = trade_type_uids_in(pre_date, cur_date, \
+                [11], first_buy_uids)
             resub_num = len(resub_uids)
-            if resub_num > 0:
-                resub_uids = np.array( \
-                        resub_uids).reshape(1, len(resub_uids))[0]
             # 统计各种赎回、复购率
             retain_ratio = 0
             redeem_ratio = 0
@@ -710,49 +687,31 @@ class MonthlyStaSrrc(object):
             rp_tag_id.append(0)
             rp_date.append(s_date)
             # 新购用户数
-            newsub_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
-                [10])
+            newsub_uids = trade_type_uids(s_date, e_date, [10])
             newsub_num = len(newsub_uids)
-            if newsub_num > 0:
-                newsub_uids = np.array( \
-                        newsub_uids).reshape(1, len(newsub_uids))[0]
             # 复购用户数
-            resub_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
-                [11])
+            resub_uids = trade_type_uids(s_date, e_date, [11])
             resub_num = len(resub_uids)
-            if resub_num > 0:
-                resub_uids = np.array( \
-                        resub_uids).reshape(1, len(resub_uids))[0]
             # 清仓用户数
             ## 第一次清仓
             # clear_uids_first =ds_order.get_specific_month_uids_in(s_date, e_date, \
             #     [30])
-            clear_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
-                [30])
-            # clear_num_first = len(clear_uids_first)
+            clear_uids = date_range_clear_uids(s_date, e_date)
             clear_num = len(clear_uids)
-            if clear_num > 0:
-                clear_uids = np.array( \
-                        clear_uids).reshape(1, len(clear_uids))[0]
-            # if clear_num_first> 0:
-            #     clear_uids_first = np.array( \
-            #             clear_uids).reshape(1, len(clear_uids))[0]
 
             # 持仓用户数
-            hold_amount = ds_share.get_specific_month_hold_count(e_date)[0][0]
+            # hold_amount = ds_share.get_specific_month_hold_count(e_date)[0][0]
+            hold_amount = len(date_holding_uids(e_date))
             # 首购金额
             amount_firstsub = ds_order.get_specific_month_amount(s_date, \
                 e_date, [10], newsub_uids)[0][0]
             # 复购总金额
             amount_resub = ds_order.get_specific_month_amount(s_date, \
                 e_date, [11], resub_uids)[0][0]
-            # 赎回总金额
-            redeem_uids =ds_order.get_specific_month_uids_in(s_date, e_date, \
-                [20, 21, 30, 31])
+            # 赎回用户数
+            redeem_uids = trade_type_uids(s_date, e_date, [20, 21, 30, 31])
             redeem_num = len(redeem_uids)
-            if redeem_num > 0:
-                redeem_uids = np.array( \
-                        redeem_uids).reshape(1, len(redeem_uids))[0]
+            # 赎回总金额
             amount_redeem = ds_order.get_specific_month_amount(s_date, \
                 e_date, [20, 21, 30, 31], redeem_uids)[0][0]
             # 在管资产
@@ -789,11 +748,11 @@ class MonthlyStaSrrc(object):
 
 
 if __name__ == "__main__":
-    # obj = MonthlyStaApportion()
-    # obj.incremental_update()
+    obj = MonthlyStaApportion()
+    obj.incremental_update()
     obj_reten = MonthlyStaRetention()
     obj_reten.handle()
-    # obj_rolling = MonthlyStaRolling()
-    # obj_rolling.handle()
-    # obj_srrc = MonthlyStaSrrc()
-    # obj_srrc.handle()
+    obj_rolling = MonthlyStaRolling()
+    obj_rolling.handle()
+    obj_srrc = MonthlyStaSrrc()
+    obj_srrc.handle()
