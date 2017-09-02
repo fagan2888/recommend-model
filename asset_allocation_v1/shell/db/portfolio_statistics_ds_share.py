@@ -28,6 +28,7 @@ def get_specific_date_amount(hold_date, uids):
     # session = Session()
     rst = session.query(func.SUM(t.c.ds_amount)).filter(t.c.ds_date == hold_date, \
                                             t.c.ds_uid.in_(uids))
+
     return rst.all()
 def get_specific_month_amount(hold_date):
     """
@@ -53,9 +54,9 @@ def get_specific_month_hold_users(hold_date):
     t = Table('ds_share', metadata, autoload=True)
     # Session = sessionmaker(bind=db)
     # session = Session()
-    rst = session.query(func.DISTINCT(t.c.ds_uid)).filter( \
-                                    t.c.ds_date == hold_date,
-                                    t.c.ds_amount > 0)
+    rst = session.query(t.c.ds_uid, func.sum(t.c.ds_amount)).filter( \
+                                    t.c.ds_date == hold_date) \
+                                    .group_by(t.c.ds_uid)
     return rst.all()
 
 def get_specific_month_hold_count(hold_date):
@@ -83,10 +84,14 @@ def get_hold_users_date_uids(hold_date, uids):
     t = Table('ds_share', metadata, autoload=True)
     # Session = sessionmaker(bind=db)
     # session = Session()
-    rst = session.query(func.DISTINCT(t.c.ds_uid)).filter( \
-                                    t.c.ds_date == hold_date,
-                                    t.c.ds_amount > 0,
-                                    t.c.ds_uid.in_(uids))
+    rst = session.query(t.c.ds_uid, func.sum(t.c.ds_amount)).filter( \
+                                    t.c.ds_date == hold_date, \
+                                    t.c.ds_uid.in_(uids)) \
+                                    .group_by(t.c.ds_uid)
+    # rst = session.query(func.DISTINCT(t.c.ds_uid)).filter( \
+    #                                 t.c.ds_date == hold_date,
+    #                                 t.c.ds_amount > 0,
+    #                                 t.c.ds_uid.in_(uids))
     return rst.all()
 session.close()
 

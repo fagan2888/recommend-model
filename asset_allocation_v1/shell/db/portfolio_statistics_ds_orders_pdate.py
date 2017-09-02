@@ -31,15 +31,44 @@ def get_monthly_data(m_start, m_end):
                         .where(t.c.ds_placed_date <= m_end)
     df = pd.read_sql(s, db)
     return df
-
+def get_date_range_head(s_date, e_date, uid = None, htype = 1):
+    """
+    获取时间区间内最新或者最老一条记录
+    :param s_date:处理记录开始时间
+    :param e_date:处理记录结束时间
+    :param uid:用户id
+    :param htype: 0:最老记录，1:最新记录
+    :return: sqlalchemy result
+    """
+    t = Table('ds_order_pdate', metadata, autoload=True)
+    if htype == 0:
+        rst = session.query(t).filter(t.c.ds_uid == uid, \
+            t.c.ds_placed_date >= s_date, \
+            t.c.ds_placed_date <= e_date) \
+            .order_by(asc(t.c.ds_placed_date)) \
+            .order_by(asc(t.c.ds_placed_time)) \
+            .first()
+    elif htype == 1:
+        rst = session.query(t).filter(t.c.ds_uid == uid, \
+            t.c.ds_placed_date >= s_date, \
+            t.c.ds_placed_date <= e_date) \
+            .order_by(desc(t.c.ds_placed_date)) \
+            .order_by(desc(t.c.ds_placed_time)) \
+            .first()
+    else:
+        return None
+    return rst
 def get_min_date():
     # db = database.connection('portfolio_sta')
     # metadata = MetaData(bind=db)
     t = Table('ds_order_pdate', metadata, autoload=True)
     # Session = sessionmaker(bind=db)
     # session = Session()
-    rst = session.query(t).order_by(asc(t.c.ds_placed_date)).first()
-    return rst.ds_placed_date
+    rst = session.query(t).order_by(asc(t.c.ds_placed_date)).order_by(asc(t.c.ds_placed_time)).first()
+    min_date = rst.ds_placed_date
+    if min_date is None:
+        min_date = '2016-08-17'
+    return min_date
 
 def get_max_date():
     # db = database.connection('portfolio_sta')
@@ -48,6 +77,9 @@ def get_max_date():
     # Session = sessionmaker(bind=db)
     # session = Session()
     rst = session.query(t).order_by(desc(t.c.ds_placed_date)).first()
+    max_date = rst.ds_placed_date
+    if max_date is None:
+        max_date = datetime.datetime.now().strftime('%Y-%m-%d')
     return rst.ds_placed_date
 def get_specific_month_data(s_date, e_date, t_type):
     """
