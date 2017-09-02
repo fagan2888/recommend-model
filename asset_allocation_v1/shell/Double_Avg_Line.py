@@ -58,7 +58,6 @@ class Double_Avg_Line(object):
 		Lsma = self.smaCal(df_nav,self.choose_Lsma)
 		SLSingnal = self.choose_Line_Timing(Ssma,Lsma)
 		df = pd.DataFrame({'tc_close':df_nav.tc_close,'5_date_avg':Ssma.values,'20_date_avg':Lsma.values,'Singnal':SLSingnal.values}, index = SLSingnal.index)
-		df.to_csv('~/test.csv')
 		return df
 
 
