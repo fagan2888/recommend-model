@@ -113,6 +113,22 @@ def date_range_clear_uids(s_date, e_date):
         if newest_records.ds_trade_type in [30, 31, 50]:
             result.append(uid)
     return result
+
+def date_range_clear_uids_in(s_date, e_date, uids):
+    """
+    给出时间区间(s_date, e_date)内清仓的用户uid
+    :param s_date: 起始时间(0000-00-00)
+    :param e_date: 结束时间(0000-00-00)
+    :param uids: list[1000000001, 1000000002, ... ,]
+    :return: list[1000000001, 1000000002, ... ,]
+    """
+    clear_ever_uids = trade_type_uids_in(s_date, e_date, [30, 31], uids)
+    result = []
+    for uid in clear_ever_uids:
+        newest_records = ds_order.get_date_range_head(s_date, e_date, uid)
+        if newest_records.ds_trade_type in [30, 31, 50]:
+            result.append(uid)
+    return result
 def trade_type_uids(s_date, e_date, ttype):
     """
     给出时间区间(s_date, e_date)内交易类型为ttype的用户uid
@@ -396,13 +412,14 @@ class MonthlyStaRetention(object):
             old_df = old_df.set_index(['rp_tag_id', 'rp_date', 'rp_retention_type'])
         return old_df
     def process_by_month(self, cur_month, cur_month_list):
-        print cur_month
+        #print cur_month
         # 当前月开始时间和结束时间
         s_date = datetime.date(cur_month[0], cur_month[1], 1)
         e_date = datetime.date(cur_month[0], cur_month[1], cur_month[2])
         e_date_db = datetime.date(cur_month[0], cur_month[1], 1)
         # 当前月新购买用户
         first_buy_uids = trade_type_uids(s_date, e_date, [10])
+        print s_date, e_date
         if len(first_buy_uids) == 0:
             return None
         rp_tag_id = []
@@ -434,9 +451,18 @@ class MonthlyStaRetention(object):
             # 赎回用户uid
             redeem_uids = trade_type_uids_in(s_date, end_date, \
                         [20, 21, 30, 31], first_buy_uids)
-            # 留存用户uid
-            retain_uids = date_holding_uids_in(end_date_rp, \
-                        first_buy_uids)
+            # 留存用户uid,不能用持仓
+            # retain_uids = date_holding_uids_in(end_date_rp, \
+            #             first_buy_uids)
+            # print '    ', s_date, end_date_rp
+            clear_uids_tmp = date_range_clear_uids_in(s_date, end_date_rp, \
+                first_buy_uids)
+            retain_uids = list(set(first_buy_uids) - set(clear_uids_tmp))
+            #print '    ', len(first_buy_uids), len(retain_uids)
+            # if s_date == datetime.date(2017, 9, 1):
+            #     print end_date_rp
+            #     print len(first_buy_uids), len(retain_uids)
+            #     hprint(set(first_buy_uids) - set(retain_uids))
             # 当月购买当月清仓
             # if re_value == 0:
             #     cur_clear_uids = date_range_clear_uids(start_date_rp, \
@@ -677,10 +703,10 @@ class MonthlyStaSrrc(object):
             s_date = datetime.date(date_tube[0], date_tube[1], 1)
             e_date = datetime.date(date_tube[0], date_tube[1], date_tube[3])
             # 为了处理订单同步慢问题持仓时期往前推一天
-            if datetime.date(date_range[-1][0], date_range[-1][1], \
-                date_range[-1][3]) == e_date and  date_tube[3] != 1:
-                e_date = datetime.date(date_tube[0], date_tube[1], \
-                    date_tube[3] - 1)
+            # if datetime.date(date_range[-1][0], date_range[-1][1], \
+            #     date_range[-1][3]) == e_date and  date_tube[3] != 1:
+            #     e_date = datetime.date(date_tube[0], date_tube[1], \
+            #         date_tube[3] - 1)
             newsub_num = 0
             resub_num = 0
             clear_num = 0
@@ -688,6 +714,8 @@ class MonthlyStaSrrc(object):
             rp_date.append(s_date)
             # 新购用户数
             newsub_uids = trade_type_uids(s_date, e_date, [10])
+            # print s_date, e_date
+            # print len(newsub_uids)
             newsub_num = len(newsub_uids)
             # 复购用户数
             resub_uids = trade_type_uids(s_date, e_date, [11])
