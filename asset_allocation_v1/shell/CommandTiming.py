@@ -15,6 +15,7 @@ import os
 import time
 import Const
 import DFUtil
+from MACD_strategy import MACD_strategy
 from TimingGFTD import TimingGFTD
 from LLTStrategy import LLTStrategy
 from datetime import datetime, timedelta
@@ -101,6 +102,8 @@ def signal_update(timing):
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
     df_llt = LLTStrategy(0.065).timing(df_nav)
+    df_MACD = MACD_strategy().timing(df_nav)
+    print df_MACD.head(1000)
     #print df_llt.head(100)  
     df_new['tc_timing_id'] = timing_id
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
