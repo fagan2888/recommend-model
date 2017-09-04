@@ -6,8 +6,8 @@ import numpy as np
 
 class Double_Avg_Line(object):
 	#设置choose_Ssma为短期均线，choose_Lsma为长期均线
-
-		self.choose_Lsma =choose_Lsma
+		self.choose_Ssma = choose_Ssma
+		self.choose_Lsma = choose_Lsma
 
 
 	#简单移动平均计算收盘价均值
