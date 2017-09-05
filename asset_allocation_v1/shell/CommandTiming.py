@@ -15,9 +15,12 @@ import os
 import time
 import Const
 import DFUtil
+
+from KDJ_strategy import KDJ_strategy
 from MACD_strategy import MACD_strategy
 from TimingGFTD import TimingGFTD
 from LLTStrategy import LLTStrategy
+from Double_Avg_Line import Double_Avg_Line
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
@@ -101,9 +104,12 @@ def signal_update(timing):
    
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
-    df_llt = LLTStrategy(0.065).timing(df_nav)
-    df_MACD = MACD_strategy().timing(df_nav)
-    print df_MACD.head(1000)
+    df_double = Double_Avg_Line(5,20).timing(df_nav)
+    df_kdj = KDJ_strategy().timing(df_nav,9)
+    #print df_kdj.head(100)
+    #df_llt = LLTStrategy(0.065).timing(df_nav)
+    #df_MACD = MACD_strategy().timing(df_nav)
+    #print df_MACD.head(1000)
     #print df_llt.head(100)  
     df_new['tc_timing_id'] = timing_id
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
