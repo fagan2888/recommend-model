@@ -378,6 +378,7 @@ class Simple_cycle(object):
         new_view = new_view.fillna(method = 'ffill')
         new_view = new_view.fillna(0)
         new_view = new_view.astype('int')
+        new_view['AU9999.SGE'] = 0
         new_view.to_csv('data/view.csv', index_label = 'date')
 
 
