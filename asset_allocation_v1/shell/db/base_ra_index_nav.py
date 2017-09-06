@@ -43,7 +43,20 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     if reindex is not None:
         df = df.reindex(reindex, method='pad')
 
-    return df['nav']
+    sr = df['nav']
+
+    if id_ == 120000013:
+        exchange_rate_df = pd.read_csv('./data/exchange_rate.csv', index_col = ['date'], parse_dates = ['date'])
+        exchange_rate_df = exchange_rate_df.loc[sr.index]
+        exchange_rate_sr = exchange_rate_df['USDCNY.EX']
+        sr = sr * exchange_rate_sr
+    elif id_ == 120000015:
+        exchange_rate_df = pd.read_csv('./data/exchange_rate.csv', index_col = ['date'], parse_dates = ['date'])
+        exchange_rate_df = exchange_rate_df.loc[sr.index]
+        exchange_rate_sr = exchange_rate_df['HKDCNY.EX']
+        sr = sr * exchange_rate_sr
+
+    return sr
 
 def load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     db = database.connection('base')
