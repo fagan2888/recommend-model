@@ -33,7 +33,7 @@ class Simple_cycle(object):
                 }
         self.asset_id = ['120000001','120000002','120000013','120000014','120000015']
         self.asset_name = ['sh300', 'zz500', 'sp500', 'au', 'hsi']
-        self.retrace_pnts = dict(zip(self.asset_id, [0.4, 0.4, 0.3, 0.25, 0.45]))
+        self.retrace_pnts = dict(zip(self.asset_id, [0.4, 0.4, 0.3, 0.3, 0.45]))
         self.asset_num = len(self.asset_id)
         self.start_date = '19930130'
         self.end_date = None
@@ -353,8 +353,21 @@ class Simple_cycle(object):
 
     @staticmethod
     def cal_view():
-        asset_view = pd.read_csv('data/view_year.csv', index_col = 0, \
-                parse_dates = True)
+        asset_view_1 = pd.read_csv('/home/ipython/yaojiahui/cycle_sh300_result.csv',\
+                index_col = 0, parse_dates = True).pre_changes
+        asset_view_2 = pd.read_csv('/home/ipython/yaojiahui/cycle_zz500_result.csv',\
+                index_col = 0, parse_dates = True).pre_changes
+        asset_view_3 = pd.read_csv('/home/ipython/yaojiahui/cycle_sp500_result.csv',\
+                index_col = 0, parse_dates = True).pre_changes
+        asset_view_4 = pd.read_csv('/home/ipython/yaojiahui/cycle_au_result.csv',\
+                index_col = 0, parse_dates = True).pre_changes
+        asset_view_5 = pd.read_csv('/home/ipython/yaojiahui/cycle_hsi_result.csv',\
+                index_col = 0, parse_dates = True).pre_changes
+
+        asset_view = pd.DataFrame(np.column_stack([asset_view_1,asset_view_2,\
+            asset_view_3,asset_view_4,asset_view_5,]), asset_view_1.index, \
+            ['sh300', 'zz500', 'sp500', 'au', 'hsi'])
+        asset_view = np.sign(asset_view)
         ori_view = pd.read_csv('data/view_frame.csv', index_col = 0, \
                 parse_dates = True)
         new_view = {}
@@ -378,13 +391,13 @@ class Simple_cycle(object):
         new_view = new_view.fillna(method = 'ffill')
         new_view = new_view.fillna(0)
         new_view = new_view.astype('int')
-        new_view['AU9999.SGE'] = -1
+        #new_view['AU9999.SGE'] = -1
         new_view.to_csv('data/view.csv', index_label = 'date')
 
 
 
 if __name__ == '__main__':
     st = Simple_cycle()
-    st.handle()
-    st.invest()
-    #st.cal_view()
+    #st.handle()
+    #st.invest()
+    st.cal_view()
