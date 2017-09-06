@@ -18,7 +18,7 @@ class Simple_cycle(object):
                 '120000001': '2070000060',#沪深300
                 '120000002': '2070000187',#中证500
                 '120000009': '2070006886',#中证全债
-                '120000013': '2070006545',#标普400
+                '120000013': '2070006545',#标普500
                 #'120000014': '2070000626',#A股黄金
                 '120000014': '2070006523',#暂时用标普黄金代替A股黄金
                 '120000015': '2070000076',#恒生指数
@@ -37,9 +37,9 @@ class Simple_cycle(object):
         self.asset_num = len(self.asset_id)
         self.start_date = '19930130'
         self.end_date = None
-        self.window = 72
+        self.window = 84
         #self.cycle = np.array([42, 100, 200])
-        self.cycle = np.array([23, 34.5, 69])
+        #self.cycle = np.array([23, 34.5, 69])
 
     def cal_asset_nav(self):
         index = []
@@ -102,6 +102,7 @@ class Simple_cycle(object):
 
     def cal_asset_prob(self, start, end, asset_column):
         yoy = self.asset_yoy.iloc[: end, asset_column].values
+
         tp_x, tp_y = self.eff(yoy, self.retrace_pnts[self.asset_id[asset_column]])
         if tp_y[1] < tp_y[0]:
             tp_y[::2] = 1
@@ -310,9 +311,8 @@ class Simple_cycle(object):
         self.cal_asset_nav()
         #self.cal_asset_prob()
         window = self.window
-        window = 84
         #0:sh300, 1:zz500, 2:sp500, 3:au, 4:hsi
-        asset_column = 0
+        asset_column = 3
         dates = []
         pre_changes = []
         pre_probs = []
@@ -385,6 +385,6 @@ class Simple_cycle(object):
 
 if __name__ == '__main__':
     st = Simple_cycle()
-    #st.handle()
-    #st.invest()
-    st.cal_view()
+    st.handle()
+    st.invest()
+    #st.cal_view()
