@@ -33,7 +33,7 @@ class Simple_cycle(object):
                 }
         self.asset_id = ['120000001','120000002','120000013','120000014','120000015']
         self.asset_name = ['sh300', 'zz500', 'sp500', 'au', 'hsi']
-        self.retrace_pnts = dict(zip(self.asset_id, [0.4, 0.4, 0.3, 0.3, 0.45]))
+        self.retrace_pnts = dict(zip(self.asset_id, [0.4, 0.4, 0.3, 0.15, 0.45]))
         self.asset_num = len(self.asset_id)
         self.start_date = '19930130'
         self.end_date = None
@@ -307,12 +307,12 @@ class Simple_cycle(object):
         print t1, t2, t3
         return t1, t2, t3
 
-    def handle(self):
+    def handle(self, asset_column):
         self.cal_asset_nav()
         #self.cal_asset_prob()
         window = self.window
         #0:sh300, 1:zz500, 2:sp500, 3:au, 4:hsi
-        asset_column = 3
+        #asset_column = 3
         dates = []
         pre_changes = []
         pre_probs = []
@@ -398,6 +398,7 @@ class Simple_cycle(object):
 
 if __name__ == '__main__':
     st = Simple_cycle()
-    #st.handle()
+    for i in range(5):
+        st.handle(i)
     #st.invest()
     st.cal_view()
