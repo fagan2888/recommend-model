@@ -16,6 +16,7 @@ import time
 import Const
 import DFUtil
 from TimingGFTD import TimingGFTD
+from TimingHmm import TimingHmm
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -64,15 +65,111 @@ def signal(ctx, optid, optlist, optonline):
     if optlist:
 
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
-        print tabulate(df_timing, headers='keys', tablefmt='psql')
         return 0
     
     with click.progressbar(length=len(df_timing), label='update signal') as bar:
         for _, timing in df_timing.iterrows():
             bar.update(1)
-            signal_update(timing)
+            if df_timing['tc_method'].values == 1:
+                signal_update_gftd(timing)
+            elif df_timing['tc_method'].values == 3:
+                signal_update_hmm(timing)
 
-def signal_update(timing):
+
+
+def signal_update_hmm(timing):
+    '''calc timing signal for singe timing instance
+    '''
+    #
+    # 加载OHLC数据
+    #
+    timing_id = timing['globalid']
+    yesterday = (datetime.now() - timedelta(days=1));
+
+    sdate = timing['tc_begin_date'].strftime("%Y-%m-%d")
+    edate = yesterday.strftime("%Y-%m-%d")
+
+    df_nav = base_ra_index_nav.load_ohlcav(
+        timing['tc_index_id'], end_date=edate, mask=[0, 1, 2])
+
+    tdates = base_trade_dates.load_index(begin_date = df_nav.index[0])
+    df_nav = df_nav.loc[tdates].dropna()
+
+    df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close', 'ra_volume':'tc_volume', 'ra_amount':'tc_amount'}, inplace=True)
+    df_nav.index.name='tc_date'
+
+    # risk_mgr = RiskManagement.RiskManagement()
+    trade_dates = base_trade_dates.load_trade_dates()
+    df_new = TimingHmm(ori_data = df_nav, timing = timing, trade_dates = trade_dates).timing()
+    print df_new
+
+    df_new['tc_timing_id'] = timing_id
+    df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
+
+    # print df_new[df_new['tc_stop'].isnull()].head()
+    num_signal = df_new['tc_signal'].rolling(2, 1).apply(lambda x: 1 if x[-1] != x[0] else 0).sum()
+    
+    formaters = ['tc_close', 'tc_open', 'tc_high', 'tc_low', 'tc_recording_high', 'tc_recording_low', 'tc_stop_high', 'tc_stop_low']
+
+    if not df_new.empty:
+        df_new = database.number_format(df_new, columns=formaters, precision=4)
+
+    #
+    # 保存择时结果到数据库
+    #
+    db = database.connection('asset')
+    t2 = Table('tc_timing_scratch', MetaData(bind=db), autoload=True)
+    columns2 = [
+        t2.c.tc_timing_id,
+        t2.c.tc_date,
+        t2.c.tc_open,
+        t2.c.tc_high,
+        t2.c.tc_low,
+        t2.c.tc_close,
+        t2.c.tc_ud,
+        # t2.c.tc_ud_flip,
+        t2.c.tc_ud_acc,
+        t2.c.tc_buy_start,
+        # t2.c.tc_buy_kstick,
+        t2.c.tc_buy_count,
+        t2.c.tc_buy_signal,
+        t2.c.tc_sell_start,
+        # t2.c.tc_sell_kstick,
+        t2.c.tc_sell_count,
+        t2.c.tc_sell_signal,
+        t2.c.tc_action,
+        t2.c.tc_recording_high,
+        t2.c.tc_recording_low,
+        t2.c.tc_signal,
+        t2.c.tc_stop_high,
+        t2.c.tc_stop_low,
+    ]
+    s = select(columns2, (t2.c.tc_timing_id == timing_id))
+    df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
+    if not df_old.empty:
+        df_old = database.number_format(df_old, columns=formaters, precision=4)
+
+    # 更新数据库
+    database.batch(db, t2, df_new, df_old, timestamp=False)
+    # print "total signal: %d, %.2f/year" % (num_signal, num_signal * 250/len(df_new))
+
+    # 更新tc_timing_signal
+    df_new = df_new[['tc_signal']]
+    t3 = Table('tc_timing_signal', MetaData(bind=db), autoload=True)
+    columns3 = [
+        t3.c.tc_timing_id,
+        t3.c.tc_date,
+        t3.c.tc_signal,
+    ]
+    s = select(columns3, (t3.c.tc_timing_id == timing_id))
+    df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
+
+    # 更新数据库
+    database.batch(db, t3, df_new, df_old, timestamp=False)
+    return 0
+
+
+def signal_update_gftd(timing):
     '''calc timing signal for singe timing instance
     '''
     #

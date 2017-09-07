@@ -32,16 +32,13 @@ def load(timings, xtypes=None):
     ]
 
     s = select(columns)
-
     if timings is not None:
         s = s.where(t1.c.globalid.in_(timings))
     if xtypes is not None:
         s = s.where(t1.c.tc_type.in_(xtypes))
 
-    s = s.where(t1.c.tc_method == 1)
-    
+    s = s.where(t1.c.tc_method != 0)
     df = pd.read_sql(s, db)
-
     return df
 
 def max_id_between(min_id, max_id):

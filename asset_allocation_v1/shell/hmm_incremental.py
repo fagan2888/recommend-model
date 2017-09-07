@@ -12,7 +12,7 @@ import pylab as pl
 from matplotlib.dates import YearLocator, MonthLocator, DateFormatter
 from hmmlearn.hmm import GaussianHMM, MultinomialHMM
 import pandas as pd
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 # from pykalman import KalmanFilter
 from scipy.stats import boxcox
 from scipy import stats
