@@ -37,3 +37,24 @@ def load_index(begin_date=None, end_date=None):
     return df.index
 
 
+def load_trade_dates(begin_date=None, end_date=None):
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('trade_dates', metadata, autoload=True)
+
+    columns = [
+        t1.c.td_date,
+        t1.c.td_type,
+    ]
+
+    s = select(columns)
+    if begin_date is not None:
+        s = s.where(t1.c.td_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.td_date <= end_date)
+        
+    df = pd.read_sql(s, db, index_col = ['td_date'], parse_dates=['td_date'])
+
+    return df
+
+
