@@ -198,12 +198,10 @@ def markowitz_r_spe(funddfr, bounds):
     final_risk = 0
     final_return = 0
     final_ws = []
-    final_sharp = -10000000000000000000000000.0
-    final_codes = []
-
+    final_sharp = -np.inf
+    #final_codes = []
 
     codes = funddfr.columns
-
 
     return_rate = []
 
@@ -219,6 +217,49 @@ def markowitz_r_spe(funddfr, bounds):
             final_risk = risks[j]
             final_return = returns[j]
             final_ws = ws[j]
+            final_sharp = sharp
+
+    delta = 2.5
+    tau = 0.05
+    sigma = funddfr.cov().values
+    #P = np.array([
+    #    [-1,1,0,0,0],
+    #    [-1,0,1,0,0],
+    #    [-1,0,0,1,0],
+    #    [-1,0,0,0,1],
+    #    ])
+    #Q = np.array([
+    #    [0.0005],
+    #    [0.0005],
+    #    [0.0005],
+    #    [0.0005],
+    #    ])
+    #Omega = np.diag(np.repeat(1,4))
+    #P = np.array([[-0.001,-0.001,1,1,1]])
+    P = np.array([[0.001,0.001,-0.001,-0.001,-0.001]])
+    Q = np.array([[0.005]])
+    #Omega = np.diag([[10000000000]])
+    Omega = None
+    #print '##################################################################'
+    #print 'ori ws: ', final_ws
+    ws = np.array(final_ws).flat[:]
+    [pos_ret, ws, pos_sigma] = fin.black_litterman(delta, ws, sigma, tau, \
+            P, Q, Omega)
+    [risks, returns, portfolios] = fin.efficient_frontier_bl(bounds, pos_sigma, \
+            pos_ret)
+
+    final_risk = 0
+    final_return = 0
+    final_ws = []
+    rf = Const.rf
+    final_sharp = -np.inf
+
+    for j in range(0, len(risks)):
+        sharp = (returns[j] - rf) / risks[j]
+        if sharp > final_sharp:
+            final_risk = risks[j]
+            final_return = returns[j]
+            final_ws = np.array(portfolios[j]).flat[:]
             final_sharp = sharp
 
     return final_risk, final_return, final_ws, final_sharp
@@ -291,25 +332,33 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
 
     ws = wss / loop_num
     print
+    print 'bl ws: ', ws
+    '''
+    print
     print '###################################################################'
     print 'ori ws: ', ws
 
     delta = 2.5
     tau = 0.05
     sigma = df_inc.cov().values
-    P = np.array([
-        [-1,1,0,0,0],
-        [-1,0,1,0,0],
-        [-1,0,0,1,0],
-        [-1,0,0,0,1],
-        ])
-    Q = np.array([
-        [0.0000005],
-        [0.0000005],
-        [0.0000005],
-        [0.0000005],
-        ])
-    Omega = np.diag(np.repeat(10000,4))
+    #P = np.array([
+    #    [-1,1,0,0,0],
+    #    [-1,0,1,0,0],
+    #    [-1,0,0,1,0],
+    #    [-1,0,0,0,1],
+    #    ])
+    #Q = np.array([
+    #    [0.0005],
+    #    [0.0005],
+    #    [0.0005],
+    #    [0.0005],
+    #    ])
+    #Omega = np.diag(np.repeat(1,4))
+    #P = np.array([[-0.001,-0.001,1,1,1]])
+    P = np.array([[0.001,0.001,-0.001,-0.001,-0.001]])
+    Q = np.array([[0.005]])
+    #Omega = np.diag([[10000000000]])
+    Omega = None
     [pos_ret, ws, pos_sigma] = fin.black_litterman(delta, ws, sigma, tau, P, Q, Omega)
     [risks, returns, portfolios] = fin.efficient_frontier_bl(bound, pos_sigma, \
             pos_ret)
@@ -328,10 +377,10 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
             final_ws = np.array(portfolios[j]).flat[:]
             final_sharp = sharp
     print 'final ws: ', final_ws
-    print 'diff ws: ', final_ws - ws
-
-    #return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
     return final_risk, final_return, final_ws, final_sharp
+    '''
+
+    return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
 
 
 #利用blacklitterman做战略资产配置

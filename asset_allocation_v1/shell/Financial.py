@@ -104,14 +104,13 @@ def efficient_frontier_bl( bound, cov, asset_mean, \
 
     n_asset    =     len(asset_mean)
 
-    #print asset_mean
-    l = len(asset_mean)
 
     S           =     matrix(cov)
-    l2 = matrix(S * np.eye(l))
-    l2 = l2 * 2
-    S = S + l2
-    #S = l2
+
+    #l = len(asset_mean)
+    #l2 = matrix(S * np.eye(l))
+    #l2 = l2 * 2
+    #S = S + l2
 
     pbar       =     matrix(asset_mean)
 
@@ -559,6 +558,7 @@ def black_litterman(delta, weq, sigma, tau, P, Q, Omega = None):
     #cal Omega
     if Omega is None:
         Omega = np.dot(np.dot(P,tau*sigma),P.T) * np.eye(Q.shape[0])
+        #print 'Omega: ', Omega
 
     pi = weq.dot(sigma * delta)
 
