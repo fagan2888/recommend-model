@@ -56,7 +56,84 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
 
     G = matrix(0.0, (3 * n_asset + 2,  n_asset))
     h = matrix(0.0, (3 * n_asset + 2, 1) )
- 
+
+    h[3* n_asset, 0] = sum1
+    h[3* n_asset + 1, 0] = sum2
+    for i in range(0, n_asset):
+        #
+        # Wi >= 0
+        #
+        # h[i, 0] = 0
+        G[i, i] = -1
+        #
+        # Wi的下限
+        #
+        G[n_asset + i, i ]     = -1
+        h[n_asset + i, 0] = -1.0 * bound[i]['lower']
+        #
+        # Wi的上限
+        #
+        G[2 * n_asset + i, i ] = 1
+        h[2 * n_asset + i, 0] = bound[i]['upper']
+        #
+        # 某类资产之和的上限
+        #
+        if bound[i]['sum1'] == True or bound[i]['sum1'] == 1:
+            G[3 * n_asset, i] = 1
+
+        if bound[i]['sum2'] == True or bound[i]['sum2'] == 1:
+            G[3 * n_asset + 1, i] = 1
+
+    A          =  matrix(1.0, (1, n_asset))
+    b          =  matrix(1.0)
+
+    N          = 200
+    mus        = [ 10**(5.0*t/N-1.0) for t in range(N) ]
+    portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
+    returns    = [ dot(pbar,x) for x in portfolios ]
+    risks      = [ sqrt(dot(x, S*x)) for x in portfolios ]
+
+
+    return risks, returns, portfolios
+
+
+def efficient_frontier_bl( bound, cov, asset_mean, \
+        sum1 = 0.65, sum2 = 0.45):
+
+    solvers.options['show_progress'] = False
+
+    n_asset    =     len(asset_mean)
+
+    #print asset_mean
+    l = len(asset_mean)
+
+    S           =     matrix(cov)
+    l2 = matrix(S * np.eye(l))
+    l2 = l2 * 2
+    S = S + l2
+    #S = l2
+
+    pbar       =     matrix(asset_mean)
+
+    #
+    # 设置限制条件, 闲置条件的意思
+    #    GW <= H
+    # 其中:
+    #    G 是掩码矩阵, 其元素只有0,1,
+    #    W 是每个资产的权重,
+    #    H 是一个值
+    # 对于i行的意思是 sum(Gij * Wi | j=0..n_asset-1) <= Hi
+    #
+    # 具体地, 本函数有4类闲置条件:
+    #    1: Wi >= 0, 由G的0..(n_asset-1) 行控制
+    #    2: Wi下限, 由G的n_asset..(2*n_asset-1)行控制
+    #    3: Wi的上限,由G的2*n_asset..(3*n_asset-1)行控制
+    #    4: 某类资产之和的上限, 由G的3*n_asset 行控制
+    #
+
+    G = matrix(0.0, (3 * n_asset + 2,  n_asset))
+    h = matrix(0.0, (3 * n_asset + 2, 1) )
+
     h[3* n_asset, 0] = sum1
     h[3* n_asset + 1, 0] = sum2
     for i in range(0, n_asset):
@@ -473,49 +550,47 @@ def grs(portfolio):
 
 
 
-def black_litterman(delta, weq, sigma, tau, P, Q, Omega):
+def black_litterman(delta, weq, sigma, tau, P, Q, Omega = None):
 
     # Reverse optimize and back out the equilibrium returns
     # This is formula (12) page 6.
-    #print weq
+    # print weq
 
+    #cal Omega
+    if Omega is None:
+        Omega = np.dot(np.dot(P,tau*sigma),P.T) * np.eye(Q.shape[0])
 
     pi = weq.dot(sigma * delta)
-
 
     # We use tau * sigma many places so just compute it once
     ts = tau * sigma
 
-
     # Compute posterior estimate of the mean
     # This is a simplified version of formula (8) on page 4.
     middle = linalg.inv(np.dot(np.dot(P,ts),P.T) + Omega)
-
 
     #print middle
     #print(middle)
     #print(Q-np.expand_dims(np.dot(P,pi.T),axis=1))
     er = np.expand_dims(pi,axis=0).T + np.dot(np.dot(np.dot(ts,P.T),middle),(Q - np.expand_dims(np.dot(P,pi.T),axis=1)))
 
-
     # Compute posterior estimate of the uncertainty in the mean
     # This is a simplified and combined version of formulas (9) and (15)
     posteriorSigma = sigma + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
-    #print(posteriorSigma)
+    # print(posteriorSigma)
     # Compute posterior weights based on uncertainty in mean
     w = er.T.dot(linalg.inv(delta * posteriorSigma)).T
     # Compute lambda value
     # We solve for lambda from formula (17) page 7, rather than formula (18)
     # just because it is less to type, and we've already computed w*.
-    lmbda = np.dot(linalg.pinv(P).T,(w.T * (1 + tau) - weq).T)
 
+    # lmbda = np.dot(linalg.pinv(P).T,(w.T * (1 + tau) - weq).T)
 
     ws = []
     for v in w:
         ws.append(v[0])
 
-
-    return [er, ws, lmbda]
+    return [er, ws, delta*posteriorSigma]
 
 
 def printHello():
