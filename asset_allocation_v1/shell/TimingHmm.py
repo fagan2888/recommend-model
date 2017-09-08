@@ -46,12 +46,11 @@ class TimingHmm(object):
         max_train_num = len(ori_data[:start_date]) - 34 - 1
         # 最多只使用249个(5年)的样本, 避免加入过于久远的数据
         self.train_num = max_train_num if max_train_num < 249 else 249
-        #self.train_num = 700
 
 
     def preprocess_data(self, df_nav, asset_id, trade_dates):
         asset_id = int(asset_id)
-        av_selection = {120000001: 'volume', 120000002:'volume', '120000013':'volume',
+        av_selection = {120000001: 'volume', 120000002:'volume', 120000013:'volume',
                          120000014:'volume', 120000015:'amount', 120000028:'volume',
                             120000029:'volume'}
         df_nav = df_nav.rename(columns={'tc_open':'open', 'tc_high':'high', 'tc_close':'close', 'tc_low':'low', 'tc_volume':'volume', 'tc_amount':'amount'})
@@ -134,7 +133,7 @@ class TimingHmm(object):
             ratios = np.array(p_data['pct_chg'])
             [model, states] = self.training(p_data, list(feature_predict), self.state_num)
             means = self.cal_stats_pro(model, states, ratios)
-            print p_in_date, np.sign(means)
+            #print p_in_date, np.sign(means)
             means_arr.append(means)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]
