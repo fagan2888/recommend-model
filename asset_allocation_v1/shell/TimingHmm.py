@@ -59,6 +59,9 @@ class TimingHmm(object):
         df_nav = df_nav[columns]
         trade_dates.columns = ['trade_type']
         trade_dates.index.name = 'date'
+        df_nav['volume'] = df_nav['volume'].replace(0, np.nan)
+        df_nav = df_nav.fillna(method = 'ffill').fillna(method = 'bfill')
+        print df_nav
         df_nav = day_2_week(df_nav, trade_dates)
         return df_nav
 

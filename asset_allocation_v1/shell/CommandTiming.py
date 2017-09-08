@@ -70,9 +70,9 @@ def signal(ctx, optid, optlist, optonline):
     with click.progressbar(length=len(df_timing), label='update signal') as bar:
         for _, timing in df_timing.iterrows():
             bar.update(1)
-            if df_timing['tc_method'].values == 1:
+            if timing['tc_method'] == 1:
                 signal_update_gftd(timing)
-            elif df_timing['tc_method'].values == 3:
+            elif timing['tc_method'] == 3:
                 signal_update_hmm(timing)
 
 
