@@ -120,6 +120,7 @@ class Simple_cycle(object):
 
     @staticmethod
     def eff(a, RETRACE_PNTS):
+
         xs = []
         ys = []
         pivots = []
@@ -144,7 +145,7 @@ class Simple_cycle(object):
                     p2 = y
 
             # Found new pivot
-            if abs(p1 - p2) >= RETRACE_PNTS * 1:
+            if abs(p1 - p2) >= RETRACE_PNTS:
                 pivots.append((p1_bn, p1))
                 up = not up
                 p1_bn, p1 = p2_bn, p2
@@ -304,7 +305,7 @@ class Simple_cycle(object):
         t1 = 1/freq[order[0]]
         t2 = 1/freq[order[1]]
         t3 = 1/freq[order[2]]
-        print t1, t2, t3
+        #print t1, t2, t3
         return t1, t2, t3
 
     def handle(self, asset_column):
