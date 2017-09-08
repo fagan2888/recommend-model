@@ -16,6 +16,7 @@ import time
 import Const
 import DFUtil
 from TimingGFTD import TimingGFTD
+from TimingHmm import TimingHmm
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -64,15 +65,69 @@ def signal(ctx, optid, optlist, optonline):
     if optlist:
 
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
-        print tabulate(df_timing, headers='keys', tablefmt='psql')
         return 0
     
     with click.progressbar(length=len(df_timing), label='update signal') as bar:
         for _, timing in df_timing.iterrows():
             bar.update(1)
-            signal_update(timing)
+            if df_timing['tc_method'].values == 1:
+                signal_update_gftd(timing)
+            elif df_timing['tc_method'].values == 3:
+                signal_update_hmm(timing)
 
-def signal_update(timing):
+
+
+def signal_update_hmm(timing):
+    '''calc timing signal for singe timing instance
+    '''
+    #
+    # 加载OHLC数据
+    #
+    timing_id = timing['globalid']
+    yesterday = (datetime.now() - timedelta(days=1));
+
+    sdate = timing['tc_begin_date'].strftime("%Y-%m-%d")
+    edate = yesterday.strftime("%Y-%m-%d")
+
+    df_nav = base_ra_index_nav.load_ohlcav(
+        timing['tc_index_id'], end_date=edate, mask=[0, 1, 2])
+
+    tdates = base_trade_dates.load_index(begin_date = df_nav.index[0])
+    df_nav = df_nav.loc[tdates].dropna()
+
+    df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close', 'ra_volume':'tc_volume', 'ra_amount':'tc_amount'}, inplace=True)
+    df_nav.index.name='tc_date'
+
+    # risk_mgr = RiskManagement.RiskManagement()
+    trade_dates = base_trade_dates.load_trade_dates()
+    df_new = TimingHmm(ori_data = df_nav, timing = timing, trade_dates = trade_dates, start_date = df_nav.index[252 * 5] if df_nav.index[252 * 5] > datetime(2012,5,1) else '2012-05-01').timing()
+    df_new = df_new[['tc_signal']]
+
+    df_new['tc_timing_id'] = timing_id
+    df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
+
+    #
+    # 保存择时结果到数据库
+    #
+    db = database.connection('asset')
+
+    # 更新tc_timing_signal
+    df_new = df_new[['tc_signal']]
+    t3 = Table('tc_timing_signal', MetaData(bind=db), autoload=True)
+    columns3 = [
+        t3.c.tc_timing_id,
+        t3.c.tc_date,
+        t3.c.tc_signal,
+    ]
+    s = select(columns3, (t3.c.tc_timing_id == timing_id))
+    df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
+
+    # 更新数据库
+    database.batch(db, t3, df_new, df_old, timestamp=False)
+    return 0
+
+
+def signal_update_gftd(timing):
     '''calc timing signal for singe timing instance
     '''
     #

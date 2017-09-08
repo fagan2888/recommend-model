@@ -1,33 +1,27 @@
-#coding=utf8
-
-
-import logging
-import pandas as pd
-import numpy as np
-import datetime
-import calendar
-from sqlalchemy import *
-from cal_tech_indic import CalTechIndic as CalTec
-from hmmlearn.hmm import GaussianHMM, MultinomialHMM
-from scipy.stats import boxcox
-from scipy import stats
-from utils import day_2_week
-from sklearn.preprocessing import normalize
-from cal_tech_indic import CalTechIndic as CalTec
+# -*- coding: utf-8 -*-
+"""
+Created at Mar. 25, 2017
+Author: shengyitao
+Contact: shengyitao@licaimofang.com
+"""
+import sys
 import warnings
+import datetime
+import numpy as np
+import pandas as pd
 
+from hmmlearn.hmm import GaussianHMM
+from cal_tech_indic import CalTechIndic as CalTec
 
+sys.path.append('./shell')
 warnings.filterwarnings('ignore')
-logger = logging.getLogger(__name__)
 
+class HmmNesc(object):
 
-class TimingHmm(object):
-
-    def __init__(self, ori_data, timing, trade_dates, start_date = '20120727'):
-
+    def __init__(self, ori_data, vw_view, start_date = '20120727'):
         self.start_date = start_date
-        self.ass_id = timing['tc_index_id']
-        self.ori_data = self.preprocess_data(ori_data, timing['tc_index_id'],  trade_dates)
+        self.ass_id = vw_view['vw_asset_id']
+        self.ori_data = ori_data
         self.feature_selected = {
             '120000001':list(['bias', 'pct_chg', 'priceosc', 'roc']),
             '120000002':list(['sobv', 'pct_chg', 'bias', 'pvt']),
@@ -46,22 +40,6 @@ class TimingHmm(object):
         max_train_num = len(ori_data[:start_date]) - 34 - 1
         # 最多只使用249个(5年)的样本, 避免加入过于久远的数据
         self.train_num = max_train_num if max_train_num < 249 else 249
-
-
-    def preprocess_data(self, df_nav, asset_id, trade_dates):
-        asset_id = int(asset_id)
-        av_selection = {120000001: 'volume', 120000002:'volume', 120000013:'volume',
-                         120000014:'volume', 120000015:'amount', 120000028:'volume',
-                            120000029:'volume'}
-        df_nav = df_nav.rename(columns={'tc_open':'open', 'tc_high':'high', 'tc_close':'close', 'tc_low':'low', 'tc_volume':'volume', 'tc_amount':'amount'})
-        df_nav['volume'] = df_nav[av_selection[asset_id]]
-        columns = ['open', 'high', 'low', 'close', 'volume']
-        df_nav = df_nav[columns]
-        trade_dates.columns = ['trade_type']
-        trade_dates.index.name = 'date'
-        df_nav = day_2_week(df_nav, trade_dates)
-        return df_nav
-
 
     def cal_indictor(self):
         cal_tec_obj = CalTec(self.ori_data)
@@ -111,7 +89,7 @@ class TimingHmm(object):
         next_day_mean = model.means_[next_day_state, 1]
         return next_day_mean
 
-    def timing(self):
+    def handle(self):
         """
         :usage: 执行程序
         :return: None
@@ -132,8 +110,8 @@ class TimingHmm(object):
             p_data = self.ori_data[p_s_date:p_in_date]
             ratios = np.array(p_data['pct_chg'])
             [model, states] = self.training(p_data, list(feature_predict), self.state_num)
-            means = self.cal_stats_pro(model, states, ratios)
-            #print p_in_date, np.sign(means)
+            #means = HmmNesc.state_statistic(p_data, self.state_num, states, model)
+            means = HmmNesc.cal_stats_pro(model, states, ratios)
             means_arr.append(means)
             if p_in_date != p_e_date:
                 p_s_date = all_dates[p_s_num]
@@ -146,8 +124,6 @@ class TimingHmm(object):
         union_data_tmp["view"] = means_arr
         union_data_tmp = pd.DataFrame(union_data_tmp, index = all_data.index)
         union_data_tmp = union_data_tmp[self.start_date:]
-        union_data_tmp.index.name = 'tc_date'
-        union_data_tmp['tc_signal'] = np.sign(union_data_tmp['view'])
         return union_data_tmp
 
 if __name__ == "__main__":
