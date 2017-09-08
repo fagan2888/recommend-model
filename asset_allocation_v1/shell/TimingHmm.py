@@ -26,6 +26,7 @@ class TimingHmm(object):
     def __init__(self, ori_data, timing, trade_dates, start_date = '20120727'):
 
         self.start_date = start_date
+        self.state_num = 5
         self.ass_id = timing['tc_index_id']
         self.ori_data = self.preprocess_data(ori_data, timing['tc_index_id'],  trade_dates)
         self.feature_selected = {
@@ -38,7 +39,6 @@ class TimingHmm(object):
             '120000029':list(['priceosc', 'pct_chg', 'bias', 'roc']),
         }
         # 隐形状态数目
-        self.state_num = 5
         self.features = ['macd', 'atr', 'cci', 'rsi', 'sobv', 'mtm', 'roc', \
                         'slowkd', 'pct_chg', 'pvt', 'wvad', 'priceosc', \
                         'bias', 'vma', 'vstd', 'dpo']
@@ -49,6 +49,8 @@ class TimingHmm(object):
 
 
     def preprocess_data(self, df_nav, asset_id, trade_dates):
+        if asset_id == '120000013':
+            self.state_num = 3
         asset_id = int(asset_id)
         av_selection = {120000001: 'volume', 120000002:'volume', 120000013:'volume',
                          120000014:'volume', 120000015:'amount', 120000028:'volume',
