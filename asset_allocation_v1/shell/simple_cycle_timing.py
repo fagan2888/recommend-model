@@ -162,7 +162,7 @@ class Simple_cycle(object):
 
         return xs, ys
 
-
+    #useless function
     def training(self):
         t1, t2, t3 = self.cycle
         #train_yoy = self.asset_yoy[:self.train_num]
@@ -230,6 +230,7 @@ class Simple_cycle(object):
         else:
             t1, t2, t3 = self.cal_cycle(start, end, asset_column)
             asset_prob = self.cal_asset_prob(start, end, asset_column)
+            #asset_prob = self.asset_yoy.iloc[start:end, asset_column]
         asset_yoy = self.asset_yoy[start:end]
         phase = np.arange(-pi/2, pi/2, pi/6)
         result_df = pd.DataFrame()
@@ -403,13 +404,14 @@ class Simple_cycle(object):
 
 if __name__ == '__main__':
     st = Simple_cycle()
-    #for i in range(5):
-    #    print st.asset_id[i]
-    #    st.handle(i)
-    #    st.invest()
+    for i in range(5):
+        print st.asset_id[i]
+        st.handle(i)
+        st.invest()
 
-    i = 3
-    print st.asset_id[i]
-    st.handle(i)
-    st.invest()
+    #i = 3
+    #print st.asset_id[i]
+    #st.handle(i)
+    #st.invest()
+
     #st.cal_view()
