@@ -17,7 +17,7 @@ import Const
 import DFUtil
 from TimingGFTD import TimingGFTD
 from TimingHmm import TimingHmm
-
+from Volume_strategy import Volume_strategy
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
@@ -152,9 +152,20 @@ def signal_update_gftd(timing):
         
     df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
     df_nav.index.name='tc_date'
+
+    df_volume = base_ra_index_nav.load_ohlcav(
+        timing['tc_index_id'], reindex=tdates, begin_date=sdate, end_date=edate, mask=[0,2])
+
+    df_volume.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close', 'ra_amount':'tc_amount','ra_volume':'tc_volume'}, inplace=True)
+    df_volume.index.name='tc_date'
+    #print df_volume.head(100)
+
+
    
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
+    df_volume = Volume_strategy().timing(df_volume)
+    print df_volume
     
     df_new['tc_timing_id'] = timing_id
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
