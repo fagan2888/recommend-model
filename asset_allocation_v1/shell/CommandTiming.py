@@ -16,7 +16,7 @@ import time
 import Const
 import DFUtil
 from TimingGFTD import TimingGFTD
-from LLTStrategy import LLTStrategy
+from Volume_strategy import Volume_strategy
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
@@ -97,21 +97,21 @@ def signal_update(timing):
         
     df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
     df_nav.index.name='tc_date'
+
+    df_volume = base_ra_index_nav.load_ohlcav(
+        timing['tc_index_id'], reindex=tdates, begin_date=sdate, end_date=edate, mask=[0,2])
+
+    df_volume.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close', 'ra_amount':'tc_amount','ra_volume':'tc_volume'}, inplace=True)
+    df_volume.index.name='tc_date'
+    #print df_volume.head(100)
+
+
    
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
-    df_llt = LLTStrategy(0.065).timing(df_nav)
-    #print df_llt.head(100)  
-    df_new['tc_timing_id'] = timing_id
-    df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
-
-    # print df_new[df_new['tc_stop'].isnull()].head()
-    num_signal = df_new['tc_signal'].rolling(2, 1).apply(lambda x: 1 if x[-1] != x[0] else 0).sum()
+    df_volume = Volume_strategy().timing(df_volume)
+    #print df_volume
     
-    formaters = ['tc_close', 'tc_open', 'tc_high', 'tc_low', 'tc_recording_high', 'tc_recording_low', 'tc_stop_high', 'tc_stop_low']
-
-    if not df_new.empty:
-        df_new = database.number_format(df_new, columns=formaters, precision=4)
 
     #
     # 保存择时结果到数据库
@@ -320,3 +320,13 @@ def coverage_update(timing, n1s, n2s, n3s, n4s):
     # 更新数据库
     database.batch(db, t2, df, df_old, timestamp=False)
     
+#coding=utf8
+
+
+import getopt
+import string
+import json
+import os
+import sys
+sys.path.append('shell')
+import click
