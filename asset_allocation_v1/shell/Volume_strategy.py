@@ -20,8 +20,8 @@ class Volume_strategy(object):
 	#计算5日收盘价均值，20日收盘价均值
 	def compute_price(self, df_volume):
 		close_price = pd.DataFrame({'tc_close':df_volume.tc_close}, index = df_volume.index)
-		avg_5 = close_price.rolling(window=5).mean()
-		avg_20 = close_price.rolling(window=20).mean()
+		avg_5 = close_price.rolling(window=20).mean()
+		avg_20 = close_price.rolling(window=40).mean()
 		close_avg = pd.DataFrame({'avg_5':avg_5.tc_close, 'avg_20':avg_20.tc_close}, \
 								index = close_price.index)
 		return close_avg
