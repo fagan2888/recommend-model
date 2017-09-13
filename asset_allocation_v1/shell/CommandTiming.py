@@ -25,7 +25,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import *
 from util.xdebug import dd
-
+from Donchian_strategy import Donchian_strategy
 import traceback, code
 
 @click.group(invoke_without_command=True)
@@ -165,7 +165,8 @@ def signal_update_gftd(timing):
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
     df_volume = Volume_strategy().timing(df_volume)
-    print df_volume
+    df_donchian = Donchian_strategy(20).timing(df_nav)
+    
     
     df_new['tc_timing_id'] = timing_id
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
@@ -194,7 +195,7 @@ def signal_update_gftd(timing):
         # t2.c.tc_ud_flip,
         t2.c.tc_ud_acc,
         t2.c.tc_buy_start,
-        # t2.c.tc_buy_kstick,
+       # t2.c.tc_buy_kstick,
         t2.c.tc_buy_count,
         t2.c.tc_buy_signal,
         t2.c.tc_sell_start,
