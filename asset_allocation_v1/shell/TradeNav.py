@@ -696,7 +696,7 @@ class TradeNav(object):
             
             self.contrib[day] = sr_contrib
 
-            print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
+            #print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
 
             #
             # 删除无用持仓
