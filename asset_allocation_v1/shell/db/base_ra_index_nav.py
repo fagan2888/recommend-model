@@ -1,6 +1,8 @@
 #coding=utf8
 
+import numpy as np
 from sqlalchemy import MetaData, Table, select, func
+from TimingWavelets import TimingWt
 # import string
 # from datetime import datetime, timedelta
 import pandas as pd
@@ -27,7 +29,7 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     ]
 
     s = select(columns).where(t1.c.ra_index_id == id_)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
@@ -37,7 +39,7 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
             s = s.where(t1.c.ra_mask.in_(mask))
         else:
             s = s.where(t1.c.ra_mask == mask)
-        
+
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
@@ -56,7 +58,7 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
     ]
 
     s = select(columns).where(t1.c.ra_index_id == id_)
-    
+
     #if begin_date is not None:
     #    s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
@@ -66,9 +68,14 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
             s = s.where(t1.c.ra_mask.in_(mask))
         else:
             s = s.where(t1.c.ra_mask == mask)
-        
+
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
-    df = df.rolling(window = 10).mean().dropna()
+    TW = TimingWt(df)
+    filtered_df = TW.wavefilter(df.values.flat[:])
+    if len(filtered_df) < len(df):
+        filtered_df = np.append(0, filtered_df)
+    df['nav'] = filtered_df
+    #df = df.rolling(window = 10).mean().dropna()
     if begin_date is not None:
         df = df[df.index >= begin_date]
 
@@ -91,7 +98,7 @@ def load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     ]
 
     s = select(columns).where(t1.c.ra_index_id == id_)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
@@ -101,7 +108,7 @@ def load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
             s = s.where(t1.c.ra_mask.in_(mask))
         else:
             s = s.where(t1.c.ra_mask == mask)
-        
+
     df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
 
     if reindex is not None:

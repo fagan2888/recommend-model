@@ -31,7 +31,7 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group(invoke_without_command=True)  
+@click.group(invoke_without_command=True)
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.option('--name', 'optname', default=None, help=u'specify markowitz name')
@@ -173,7 +173,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
     df_tosave = df_tosave.loc[df_tosave['mz_ratio'] > 0, ['mz_ratio']]
     if not df_tosave.empty:
         database.number_format(df_tosave, columns=['mz_ratio'], precision=4)
-    
+
     df_tosave['updated_at'] = df_tosave['created_at'] = now
 
     df_tosave.to_sql(mz_markowitz_pos.name, db, index=True, if_exists='append', chunksize=500)
@@ -182,7 +182,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
         logger.info("insert %s (%5d) : %s " % (mz_markowitz_pos.name, len(df_tosave.index), df_tosave.index[0]))
 
     click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
-    
+
     return 0
 
 @markowitz.command()
@@ -207,7 +207,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     '''
 
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
+        yesterday = (datetime.now() - timedelta(days=1));
         enddate = yesterday.strftime("%Y-%m-%d")
 
     #
@@ -282,7 +282,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 optname = u'马克维茨%s(低风险)' % today.strftime("%m%d")
             if optalgo is None:
                 optalgo = 'average'
-                
+
         else: # short_cut == 'default'
             assets = {
                 120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
@@ -317,10 +317,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
-    
+
     # print df.head()
     # print df_sharpe.head()
-    
+
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     mz_markowitz        = Table('mz_markowitz', metadata, autoload=True)
@@ -365,7 +365,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # 导入数据: markowitz_pos
     #
     df = df.round(4)             # 四舍五入到万分位
- 
+
     #每四周做平滑
     df = df.rolling(window = 4, min_periods = 1).mean()
 
@@ -373,7 +373,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     if turnover >= 0.01:
-        df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
+        df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
 
     df.index.name = 'mz_date'
     df.columns.name='mz_markowitz_asset'
@@ -409,7 +409,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     # unstack
     df_tosave = df_tosave.stack()
     df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0) | (df_tosave['mz_markowitz_ratio'] > 0)]
-    
+
     # save
     # print df_tosave
     asset_mz_markowitz_pos.save(optid, df_tosave)
@@ -424,7 +424,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         df_criteria['mz_criteria_id'] = criteria_id
         df_criteria = df_criteria.reset_index().set_index(['mz_markowitz_id', 'mz_criteria_id', 'mz_date'])
         asset_mz_markowitz_criteria.save(optid, criteria_id,  df_criteria)
-    
+
     click.echo(click.style("markowitz allocation complement! instance id [%s]" % (optid), fg='green'))
 
     #
@@ -475,7 +475,7 @@ def merge_asset_name_and_type(asset_id, asset_data):
     else:
         (name, category) = database.load_asset_name_and_type(asset_id)
         (raw_asset, raw_name) = (asset_id, name)
-        
+
     return xdict.merge(asset_data, {
         'mz_asset_id': raw_asset,
         'mz_asset_name': raw_name,
@@ -486,14 +486,14 @@ def merge_asset_name_and_type(asset_id, asset_data):
 def average_days(start_date, end_date, assets):
     '''perform markowitz asset for days
     '''
-    
+
     if len(assets) > 0:
         ratio = 1.0 / len(assets)
     else:
         ratio = 0
 
     data = {k: {start_date: 0} for k in ['return', 'risk', 'sharpe']}
-    
+
     data.update({k: {start_date: ratio} for k in assets.keys()})
 
     df = pd.DataFrame(data)
@@ -533,7 +533,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
 def markowitz_day(day, lookback, assets, bootstrap, cpu_count):
     '''perform markowitz for single day
     '''
-    
+
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
     begin_date = index.min().strftime("%Y-%m-%d")
@@ -666,7 +666,7 @@ def nav(ctx, optid, optlist):
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
         return 0
-    
+
     with click.progressbar(
             df_markowitz.iterrows(), len(df_markowitz.index), label='%-20s' % 'update nav',
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
@@ -678,7 +678,7 @@ def nav_update(markowitz):
     markowitz_id = markowitz['globalid']
     # 加载仓位信息
     df_pos = asset_mz_markowitz_pos.load(markowitz_id)
-    
+
     # 加载资产收益率
     min_date = df_pos.index.min()
     #max_date = df_pos.index.max()
@@ -724,7 +724,7 @@ def turnover(ctx, optid, optlist):
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
         return 0
-    
+
     data = []
     with click.progressbar(
             df_markowitz.iterrows(), length=len(df_markowitz.index), label= '%-20s' % 'update turnover',
@@ -735,10 +735,10 @@ def turnover(ctx, optid, optlist):
             data.append((markowitz['globalid'], "%6.2f" % (turnover * 100)))
 
     headers = ['markowitz', 'turnover(%)']
-    print(tabulate(data, headers=headers, tablefmt="psql"))                 
-    # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))                 
-    # print(tabulate(data, headers=headers, tablefmt="grid"))                 
-            
+    print(tabulate(data, headers=headers, tablefmt="psql"))
+    # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
+    # print(tabulate(data, headers=headers, tablefmt="grid"))
+
 def turnover_update(markowitz):
     markowitz_id = markowitz['globalid']
     # 加载仓位信息
@@ -785,14 +785,14 @@ def delete(ctx, optid, optlist, optexec):
     if optid is None or not optexec:
          click.echo(click.style("\nboth --id and --exec is required to perform delete\n", fg='red'))
          return 0
-    
+
     data = []
     with click.progressbar(
             df_markowitz.iterrows(), length=len(df_markowitz.index), label= '%-20s' % 'delete markowitz',
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, markowitz in bar:
             perform_delete(markowitz)
-            
+
 def perform_delete(markowitz):
     markowitz_id = markowitz['globalid']
 
@@ -838,7 +838,7 @@ def perform_delete(markowitz):
 #     data = []
 #     for _, markowitz in df_markowitz.iterrows():
 #         perform_maxdd(markowitz)
-            
+
 # def perform_maxdd(markowitz):
 #     markowitz_id = markowitz['globalid']
 #     sdate = '2012-07-27'
@@ -858,4 +858,4 @@ def perform_delete(markowitz):
 #     if (y / abs(max_drawdown)) > 2:
 #         return 1
 #     return 0
-    
+
