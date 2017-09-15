@@ -1204,12 +1204,14 @@ class TradeNav(object):
             elif line == 'q':
                 sys.exit(0)
             elif line == 's':
-                print ""
-                print self.df_share
-                print ""
+                #print ""
+                #print self.df_share
+                #print ""
+                pass
             elif line == 'r':
-                print ""
-                print self.df_redeem
-                print ""
+                #print ""
+                #print self.df_redeem
+                #print ""
+                pass
             else:
                 print 'unknown command "%s"' % line
