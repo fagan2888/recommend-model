@@ -24,7 +24,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import *
 from util.xdebug import dd
-
+from RSI_strategy import RSI_strategy
 import traceback, code
 
 @click.group(invoke_without_command=True)
@@ -111,7 +111,8 @@ def signal_update(timing):
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
     df_volume = Volume_strategy().timing(df_volume)
     #print df_volume
-    
+    df_rsi = RSI_strategy(20,10,40).timing(df_nav)
+    #print df_rsi
 
     #
     # 保存择时结果到数据库
