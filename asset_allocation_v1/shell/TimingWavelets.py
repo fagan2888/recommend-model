@@ -7,8 +7,8 @@ class TimingWt(object):
     def __init__(self, data):
         self.data = data
         self.wname = "sym4"
-        self.maxlevel = 4
-        self.filter_level = [1,2,3,4]
+        self.maxlevel = 7
+        self.filter_level = [3,4,5,6,7]
 
     def wavefilter(self, data):
         """
