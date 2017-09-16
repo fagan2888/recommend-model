@@ -9,7 +9,6 @@ class TimingWt(object):
         self.wname = "sym4"
         self.maxlevel = 7
         self.filter_level = [3,4,5,6,7]
-        #self.filter_level = [0, 1, 2]
 
     def wavefilter(self, data):
         """
@@ -54,9 +53,9 @@ class TimingWt(object):
             return fdata # Otherwise, give back the 2D array
 
     def handle(self):
-        yoy = np.array(self.data.yoy)
+        yoy = np.array(self.data.close)
         signal = []
-        for i in np.arange(120, len(yoy)+1):
+        for i in np.arange(1200, len(yoy)+1):
             fdata = self.wavefilter(yoy[:i])
             if fdata[-1] - fdata[-2] > 0:
                 signal.append(1)
@@ -64,11 +63,14 @@ class TimingWt(object):
                 signal.append(-1)
         signal = [np.nan]*(len(yoy) - len(signal)) + signal
         self.data['signal'] = signal
-        self.data.to_csv('tmp/tw_sp500_result.csv', index_label = 'date')
+        print self.data
+        self.data = self.data.loc[:,['close', 'signal']]
+        self.data.dropna(inplace = True)
+        self.data.to_csv('tmp/tw_hsi.csv', index_label = 'date')
         print self.data
 
 if __name__ == '__main__':
-    data = pd.read_csv('tmp/cycle_sp500_result.csv', index_col = 0, \
+    data = pd.read_csv('tmp/120000015_ori_day_data.csv', index_col = 0, \
             parse_dates = True)
     tw = TimingWt(data)
     tw.handle()
