@@ -23,7 +23,7 @@ if __name__ == '__main__':
     loss_num = 0
     drawdown_threshold = 0.05
     for i in range(0, len(df) - 1):
-
+        '''
         v = df[code][i + 1]
         drawdown = df['drawdown'][i]
         if drawdown >= drawdown_threshold:
@@ -36,9 +36,8 @@ if __name__ == '__main__':
         #tmp_df = df.iloc[i : ]
         #tmp_df['cummax'] = tmp_df[code].cummax()
         #tmp_df['drawdown'] = 1.0 - tmp_df[code] / tmp_df['cummax']
-
-
         '''
+
         r = df['r'][i]
         v = df[code][i + 1]
         if r < 0:
@@ -50,5 +49,4 @@ if __name__ == '__main__':
             share = share + 10000 / v
             principal = principal + 10000
         money.append(v * share)
-        '''
     print principal, money[-1]
