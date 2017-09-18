@@ -14,6 +14,7 @@ from numpy import *
 from datetime import datetime
 import multiprocessing
 import random
+from multiprocessing import Manager
 
 from Const import datapath
 
@@ -229,7 +230,6 @@ def m_markowitz(queue, random_index, df_inc, bound):
         risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound)
         queue.put((risk, returns, ws, sharpe))
 
-
 def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
@@ -246,6 +246,7 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
     else:
         loop_num = bootstrap_count
 
+
     # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
         
     process_indexs = [[] for i in range(0, cpu_count)]
@@ -255,7 +256,6 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
     rep_num = loop_num * (look_back / 2) / look_back
     day_indexs = range(0, look_back) * rep_num
     random.shuffle(day_indexs)
-    #print day_indexs
     day_indexs = np.array(day_indexs)
 
     day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
@@ -265,7 +265,8 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
         process_indexs[mod].append(list(indexs))
 
 
-    q = multiprocessing.Queue()
+    manager = Manager()
+    q = manager.Queue()
     processes = []
     for indexs in process_indexs:
         p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound,))
@@ -273,7 +274,7 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
         p.start()
 
     for p in processes:
-        p.join()
+        p.join(5)
 
     wss = np.zeros(len(df_inc.columns))
     risks = []
