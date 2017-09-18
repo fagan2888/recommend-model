@@ -14,6 +14,7 @@ from numpy import *
 from datetime import datetime
 import multiprocessing
 import random
+from multiprocessing import Manager
 
 from Const import datapath
 
@@ -265,7 +266,8 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
         process_indexs[mod].append(list(indexs))
 
 
-    q = multiprocessing.Queue()
+    manager = Manager()
+    q = manager.Queue()
     processes = []
     for indexs in process_indexs:
         p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound,))
