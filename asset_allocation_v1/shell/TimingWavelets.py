@@ -6,7 +6,7 @@ class TimingWt(object):
 
     def __init__(self, data):
         self.data = data
-        self.wname = "sym4"
+        self.wname = "db1"
         self.maxlevel = 7
         self.filter_level = [3,4,5,6,7]
 
@@ -66,10 +66,18 @@ class TimingWt(object):
         self.data['signal'] = signal
         self.data = self.data.loc[:,['close', 'signal']]
         self.data.dropna(inplace = True)
-        self.data.to_csv('tmp/tw_sh300.csv', index_label = 'date')
+        df = self.data
+        df['r'] = df['close'].pct_change().fillna(0.0)
+        df['_signal'] = df['signal'].shift(1).fillna(-1)
+        df['_signal'][df['_signal'] < 0] = 0
+        df['_signal_r'] = df['_signal'] * df['r']
+        df['close_v'] = df['close'] / df['close'][0]
+        df['v'] = (df['_signal_r'] + 1).cumprod()
+        print df
+        #self.data.to_csv('tmp/tw_sh300.csv', index_label = 'date')
 
 if __name__ == '__main__':
-    data = pd.read_csv('tmp/120000001_ori_day_data.csv', index_col = 0, \
+    data = pd.read_csv('index_data/120000001_ori_day_data.csv', index_col = 0, \
             parse_dates = True)
     tw = TimingWt(data)
     tw.handle()
