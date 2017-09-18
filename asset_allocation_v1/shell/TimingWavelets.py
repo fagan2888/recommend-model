@@ -54,23 +54,22 @@ class TimingWt(object):
 
     def handle(self):
         yoy = np.array(self.data.close)
+        window = 900
         signal = []
-        for i in np.arange(1200, len(yoy)+1):
+        for i in np.arange(window, len(yoy)+1):
             fdata = self.wavefilter(yoy[:i])
             if fdata[-1] - fdata[-2] > 0:
                 signal.append(1)
             else:
                 signal.append(-1)
-        signal = [np.nan]*(len(yoy) - len(signal)) + signal
+        signal = [np.nan]*(window - 1) + signal
         self.data['signal'] = signal
-        print self.data
         self.data = self.data.loc[:,['close', 'signal']]
         self.data.dropna(inplace = True)
-        self.data.to_csv('tmp/tw_hsi.csv', index_label = 'date')
-        print self.data
+        self.data.to_csv('tmp/tw_sh300.csv', index_label = 'date')
 
 if __name__ == '__main__':
-    data = pd.read_csv('tmp/120000015_ori_day_data.csv', index_col = 0, \
+    data = pd.read_csv('tmp/120000001_ori_day_data.csv', index_col = 0, \
             parse_dates = True)
     tw = TimingWt(data)
     tw.handle()
