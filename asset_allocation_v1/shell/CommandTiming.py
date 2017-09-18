@@ -214,6 +214,9 @@ def signal_update_gftd(timing):
    
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
+    df_volume = Volume_strategy().timing(df_volume)
+    df_donchian = Donchian_strategy(20).timing(df_nav)
+    
     
     
     df_new['tc_timing_id'] = timing_id
