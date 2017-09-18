@@ -64,15 +64,19 @@ class TimingWt(object):
         yoy = np.array(self.data.close)
         window = 900
         signal = []
-        for i in np.arange(window, len(yoy)+1):
+        ds = []
+        for i in np.arange(window, len(yoy)):
             fdata = self.wavefilter(yoy[:i])
             if fdata[-1] - fdata[-2] > 0:
                 signal.append(1)
             else:
                 signal.append(-1)
-        signal = [np.nan]*(window - 1) + signal
-        self.data['signal'] = signal
-        self.data = self.data.loc[:,['close', 'signal']]
+            ds.append(self.data.index[i])
+        df = pd.DataFrame(signal, index = ds, columns = ['signal'])
+        #self.data = df
+        #self.data.dropna(inplace = True)
+        self.data = self.data.loc[df.index][['close']]
+        self.data['signal'] = df['signal']
         self.data.dropna(inplace = True)
         df = self.data
         df['r'] = df['close'].pct_change().fillna(0.0)
