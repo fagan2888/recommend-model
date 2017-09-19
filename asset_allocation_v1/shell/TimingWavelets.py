@@ -6,7 +6,7 @@ class TimingWt(object):
 
     def __init__(self, data):
         self.data = data
-        self.wname = "db1"
+        self.wname = "sym4"
         self.maxlevel = 7
         self.filter_level = [3,4,5,6,7]
 
@@ -45,6 +45,8 @@ class TimingWt(object):
             for j in self.filter_level:
                 c[j][:] = 0
             # Reconstruct the signal and save it
+            c[1][:] = pywt.threshold(c[1], np.percentile(abs(c[1]), 50), 'soft', 0)
+            c[2][:] = pywt.threshold(c[2], np.percentile(abs(c[2]), 80), 'soft', 0)
             fdata[i,:] = pywt.waverec(c, wname)
 
         if fdata.shape[0] == 1:
