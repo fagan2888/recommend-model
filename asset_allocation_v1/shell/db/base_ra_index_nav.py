@@ -70,19 +70,17 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
             s = s.where(t1.c.ra_mask == mask)
 
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
-    if reindex is not None:
-        df = df.reindex(reindex, method='pad')
-        print df
+
     TW = TimingWt(df)
     filtered_df = TW.wavefilter(df.values.flat[:])
-    df.to_csv("/home/ipython/yaojiahui/ori_data.csv")
     if len(filtered_df) < len(df):
         filtered_df = np.append(0, filtered_df)
+
     df['nav'] = filtered_df
-    df.to_csv("/home/ipython/yaojiahui/filtered_data.csv")
-    import os
-    os._exit(0)
-    #df = df.rolling(window = 10).mean().dropna()
+
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
     if begin_date is not None:
         df = df[df.index >= begin_date]
 
