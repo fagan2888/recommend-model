@@ -9,8 +9,8 @@ if __name__ == '__main__':
 
 
     a_month_day = 22
-    #code = 'nav'
-    code = '000001.SH'
+    code = 'nav'
+    #code = '000001.SH'
     df = pd.read_csv('./data/nav.csv', index_col = ['date'])
     df = df[[code]]
     df = df[df.index >= '2015-08-01']

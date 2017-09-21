@@ -8,8 +8,8 @@ import pandas as pd
 if __name__ == '__main__':
 
 
-    code = 'nav'
-    #code = '000001.SH'
+    #code = 'nav'
+    code = '000001.SH'
     df = pd.read_csv('./data/nav.csv', index_col = ['date'])
     df = df[df.index >= '2015-08-01']
     df = df[df.index <= '2017-08-31']
@@ -20,13 +20,13 @@ if __name__ == '__main__':
     #df['drawdown'] = 1.0 - df[code] / df['cummax']
     df['r'] = df[code].pct_change().fillna(0.0)
 
-    share = 100000 / df[code][0]
-    principal = 100000
-    money = [100000]
+    share = 0 / df[code][0]
+    principal = 0
+    money = [0]
     loss_num = 0
     drawdown_threshold = 0.05
     ds = []
-    m = 200000 / 24.0
+    m = 10000
     for i in range(0, len(df) - 1):
         v = df[code][i + 1]
         if i % 21 == 0:
