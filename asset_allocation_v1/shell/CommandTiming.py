@@ -74,7 +74,7 @@ def signal(ctx, optid, optlist, optonline):
                 signal_update_gftd(timing)
             elif timing['tc_method'] == 3:
                 signal_update_hmm(timing)
-            elif timing['tc_method'] == 5:
+            elif timing['tc_method'] == 4:
                 signal_update_LLT(timing)
 
 def signal_update_LLT(timing):
@@ -100,7 +100,7 @@ def signal_update_LLT(timing):
 
     # risk_mgr = RiskManagement.RiskManagement()
     trade_dates = base_trade_dates.load_trade_dates()
-    df_new = LLTStrategy(0.031).timing(df_nav)
+    df_new = LLTStrategy(60).timing(df_nav)
     df_new = df_new[['tc_signal']]
 
     df_new['tc_timing_id'] = timing_id

@@ -8,8 +8,8 @@ import numpy as np
 class LLTStrategy(object):
 	
 	#设置a为权重指数
-	def __init__(self,a):
-		self.a = a
+	def __init__(self,d):
+		self.a = 2.0/(d+1)
 
 	
 	#列出每日llt的值
