@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pandas as pd
 import numpy as np
 import datetime
@@ -20,10 +21,12 @@ def load_caihui():
             ]
 
     s = select(columns)\
-            .where(t.c.TRADEDATE >= '2015-01-04')\
-            .where(t.c.SECODE == 2070006523)
+            .where(t.c.TRADEDATE.between('2005-01-01', '2020-01-01'))\
+            .where(t.c.SECODE == 2070006523)\
+            .order_by(t.c.TRADEDATE)
 
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates = ['date'])
+    #print df
     return df
 
 
@@ -52,7 +55,14 @@ def insert_base(df):
 
     df.to_sql("ra_index_nav", db, if_exists='append', index=False)
 
-    print df
+    df2 = pd.DataFrame({'globalid':[120000042], 'ra_code':['W00475'], 'ra_caihui_code':\
+            [2070006523], 'ra_name':['标普高盛黄金'], 'ra_announce_date':[\
+            datetime.datetime(2000,1,1)], 'ra_begin_date':[datetime.datetime(2000,1,1)],\
+            'ra_base_date':[datetime.datetime(2000,1,1)],'created_at':[datetime.datetime.now()],\
+            'updated_at':[datetime.datetime.now()]})
+
+    df2.to_sql("ra_index", db, if_exists='append', index=False)
+    #print df
 
 
 if __name__ == '__main__':
