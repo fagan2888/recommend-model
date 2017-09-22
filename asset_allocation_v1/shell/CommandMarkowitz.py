@@ -270,11 +270,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 #120000013:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #标普500指数
                 #120000015:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #恒生指数修型
                 #120000014:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #黄金指数修型
-                120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
-                120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
+                120000016:  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
+                #120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
                 120000013:  {'sum1': 0, 'sum2' : 0,   'upper': 0.7, 'lower': 0.0}, #标普500指数
                 120000015:  {'sum1': 0, 'sum2' : 0,   'upper': 0.7, 'lower': 0.0}, #恒生指数修型
-                120000014:  {'sum1': 0, 'sum2' : 0,'upper': 0.7, 'lower': 0.0}, #黄金指数修型
+                120000041:  {'sum1': 0, 'sum2' : 0,'upper': 0.7, 'lower': 0.0}, #黄金指数修型
             }
             if optname is None:
                 optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
