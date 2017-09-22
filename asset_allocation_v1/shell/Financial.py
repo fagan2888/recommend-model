@@ -25,7 +25,6 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
     n_asset    =     len(return_rate)
 
     asset_mean = np.mean(return_rate, axis = 1)
-    #print asset_mean
     l = len(asset_mean)
 
     cov        =     np.cov(return_rate)
