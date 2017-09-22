@@ -5,7 +5,7 @@ import datetime
 from db import database
 from sqlalchemy import MetaData, Table, select
 
-def load_caihui():
+def load_caihui(start, end):
     db = database.connection('caihui')
     metadata = MetaData(bind = db)
     t = Table('tq_qt_index', metadata, autoload = True)
@@ -21,7 +21,7 @@ def load_caihui():
             ]
 
     s = select(columns)\
-            .where(t.c.TRADEDATE.between('2005-01-01', '2020-01-01'))\
+            .where(t.c.TRADEDATE.between(start, end))\
             .where(t.c.SECODE == 2070006523)\
             .order_by(t.c.TRADEDATE)
 
@@ -66,7 +66,10 @@ def insert_base(df):
 
 
 if __name__ == '__main__':
-    df = load_caihui()
     #df.to_csv('W00474.csv', index = False)
     #df = pd.read_csv('W00474.csv', index_col = ['date'], parse_dates = ['date'])
+
+    df = load_caihui(start = '1992-01-01', end = '2014-12-31')
+    insert_base(df)
+    df = load_caihui(start = '2005-01-01', end = '2024-12-31')
     insert_base(df)
