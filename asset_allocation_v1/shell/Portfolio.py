@@ -18,6 +18,8 @@ from multiprocessing import Manager
 
 from Const import datapath
 
+os.environ['OMP_NUM_THREADS'] = '1'
+
 logger = logging.getLogger(__name__)
 
 #strategicallocation
@@ -248,7 +250,7 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
 
 
     # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
-        
+
     process_indexs = [[] for i in range(0, cpu_count)]
 
     #print process_indexs
