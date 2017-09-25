@@ -48,11 +48,11 @@ class TimingWt(object):
             # Reconstruct the signal and save it
             c[1][:] = pywt.threshold(c[1], np.percentile(abs(c[1]), 50), 'soft', 0)
             c[2][:] = pywt.threshold(c[2], np.percentile(abs(c[2]), 80), 'soft', 0)
-            c[3][:] = pywt.threshold(c[3], np.percentile(abs(c[3]), 100), 'soft', 0)
-            c[4][:] = pywt.threshold(c[4], np.percentile(abs(c[4]), 100), 'soft', 0)
-            c[5][:] = pywt.threshold(c[5], np.percentile(abs(c[5]), 100), 'soft', 0)
-            c[6][:] = pywt.threshold(c[6], np.percentile(abs(c[6]), 100), 'soft', 0)
-            c[7][:] = pywt.threshold(c[7], np.percentile(abs(c[7]), 100), 'soft', 0)
+            c[3][:] = pywt.threshold(c[3], np.percentile(abs(c[3]), 100) + 1, 'soft', 0)
+            c[4][:] = pywt.threshold(c[4], np.percentile(abs(c[4]), 100) + 1, 'soft', 0)
+            c[5][:] = pywt.threshold(c[5], np.percentile(abs(c[5]), 100) + 1, 'soft', 0)
+            c[6][:] = pywt.threshold(c[6], np.percentile(abs(c[6]), 100) + 1, 'soft', 0)
+            c[7][:] = pywt.threshold(c[7], np.percentile(abs(c[7]), 100) + 1, 'soft', 0)
             fdata[i,:] = pywt.waverec(c, wname)
 
         if fdata.shape[0] == 1:

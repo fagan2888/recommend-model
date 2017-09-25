@@ -2,7 +2,8 @@
 
 import os
 
-rf = 0.025 / 52
+#rf = 0.025 / 52
+rf = 0
 annual_rf = 0.03
 
 
