@@ -209,46 +209,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     if not enddate:
         yesterday = (datetime.now() - timedelta(days=1));
         enddate = yesterday.strftime("%Y-%m-%d")
+    today = datetime.now()
 
-    #
-    # 处理id参数
-    #
-    if optid is not None:
-        #
-        # 检查id是否存在
-        #
-        df_existed = asset_mz_markowitz.load([str(optid)])
-        if not df_existed.empty:
-            s = 'markowitz instance [%s] existed' % str(optid)
-            if optreplace:
-                click.echo(click.style("%s, will replace!" % s, fg="yellow"))
-            else:
-                click.echo(click.style("%s, import aborted!" % s, fg="red"))
-                return -1;
-    else:
-        #
-        # 自动生成id
-        #
-        today = datetime.now()
-        prefix = '50' + today.strftime("%m%d");
-        if opttype == '9':
-            between_min, between_max = ('%s90' % (prefix), '%s99' % (prefix))
-        else:
-            between_min, between_max = ('%s00' % (prefix), '%s89' % (prefix))
-
-        max_id = asset_mz_markowitz.max_id_between(between_min, between_max)
-        if max_id is None:
-            optid = between_min
-        else:
-            if max_id >= between_max:
-                s = "run out of instance id [%d]" % max_id
-                click.echo(click.style("%s, import aborted!" % s, fg="red"))
-                return -1
-
-            if optreplace:
-                optid = max_id
-            else:
-                optid = max_id + 1;
     #
     # 处理assets参数
     #
@@ -263,7 +225,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 120000015:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #恒生指数修型
                 120000014:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #黄金指数修型
                 120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.70, 'lower': 0.0}, #中证全债
-                120000039:  {'sum1': 0, 'sum2' : 0,    'upper': 0.70, 'lower': 0.0}, #中证货币
+                #120000039:  {'sum1': 0, 'sum2' : 0,    'upper': 0.70, 'lower': 0.0}, #中证货币
                 # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
                 # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
                 # 120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
@@ -286,7 +248,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
         elif short_cut == 'low':
             assets = {
-                120000010:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                #120000010:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
                 120000011:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
             }
             if optname is None:
@@ -335,6 +297,47 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     # print df.head()
     # print df_sharpe.head()
+
+    #
+    # 处理id参数
+    #
+    if optid is not None:
+        #
+        # 检查id是否存在
+        #
+        df_existed = asset_mz_markowitz.load([str(optid)])
+        if not df_existed.empty:
+            s = 'markowitz instance [%s] existed' % str(optid)
+            if optreplace:
+                click.echo(click.style("%s, will replace!" % s, fg="yellow"))
+            else:
+                click.echo(click.style("%s, import aborted!" % s, fg="red"))
+                return -1;
+    else:
+        #
+        # 自动生成id
+        #
+        today = datetime.now()
+        prefix = '50' + today.strftime("%m%d");
+        if opttype == '9':
+            between_min, between_max = ('%s90' % (prefix), '%s99' % (prefix))
+        else:
+            between_min, between_max = ('%s00' % (prefix), '%s89' % (prefix))
+
+        max_id = asset_mz_markowitz.max_id_between(between_min, between_max)
+        if max_id is None:
+            optid = between_min
+        else:
+            if max_id >= between_max:
+                s = "run out of instance id [%d]" % max_id
+                click.echo(click.style("%s, import aborted!" % s, fg="red"))
+                return -1
+
+            if optreplace:
+                optid = max_id
+            else:
+                optid = max_id + 1;
+    #
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)

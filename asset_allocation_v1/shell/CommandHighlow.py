@@ -42,8 +42,9 @@ logger = logging.getLogger(__name__)
 @click.option('--riskmgr/--no-riskmgr', 'optriskmgr', default=True, help=u'with riskmgr or not')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
+@click.option('--turnover', 'optturnover', default=0.4, help=u'turnover filter')
 @click.pass_context
-def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate):
+def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate, optturnover):
 
     '''markowitz group
     '''
@@ -55,7 +56,7 @@ def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, 
                 tmpid = int(optid)
             else:
                 tmpid = optid
-            ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
+            ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk, turnover = optturnover)
             ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -75,7 +76,7 @@ def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, 
 @click.option('--riskmgr', 'optriskmgr', default='*', help=u'with riskmgr')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.pass_context
-def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk):
+def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, turnover):
     '''calc high low allocate
     '''
     if opthigh == 0 and 'markowitz.high' in ctx.obj:
@@ -283,10 +284,9 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
         # print df.head()
         df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
-        # df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
-        # if turnover >= 0.01:
-        #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
-
+        df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
+        if turnover >= 0.01:
+            df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
         df.index.name = 'mz_date'
         df.columns.name='mz_asset_id'
 
