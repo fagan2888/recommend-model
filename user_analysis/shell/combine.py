@@ -21,6 +21,6 @@ for code in fund_df.columns:
 
 fund_df.columns = columns
 
-df = pd.concat([fund_df, index_df])
+df = pd.concat([fund_df, index_df], axis = 1, join_axes = [fund_df.index])
 df = df.fillna(-1)
 df.to_csv('nav.csv')
