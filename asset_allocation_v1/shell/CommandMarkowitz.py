@@ -564,7 +564,13 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
 def markowitz_day(day, lookback, assets, bootstrap, cpu_count):
     '''perform markowitz for single day
     '''
-
+    cycles = []
+    for asset in assets:
+        cycle = base_ra_index_nav.cal_asset_cycle(asset, end_date = day)
+        cycles.append(cycle)
+    lookback = int(round(min(cycles), 0))
+    print
+    print lookback
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
     begin_date = index.min().strftime("%Y-%m-%d")

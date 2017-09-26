@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import numpy.fft as fft
 import pywt
 
 class TimingWt(object):
@@ -11,7 +12,7 @@ class TimingWt(object):
         #self.filter_level = [4,5,6,7]
         #self.filter_level = [4,5,7]
 
-    def wavefilter(self, data):
+    def wavefilter(self, data, wavenum):
         """
         This function requires that the NumPy and PyWavelet packages
         are installed. They are freely available at:
@@ -54,17 +55,67 @@ class TimingWt(object):
             c[6][:] = pywt.threshold(c[6], np.percentile(abs(c[6]), 80), 'soft', 0)
             c[7][:] = pywt.threshold(c[7], np.percentile(abs(c[7]), 80), 'soft', 0)
 
-            #c[3][:] = pywt.threshold(c[3], np.percentile(abs(c[3]), 100) + 1, 'soft', 0)
-            #c[4][:] = pywt.threshold(c[4], np.percentile(abs(c[4]), 100) + 1, 'soft', 0)
-            #c[5][:] = pywt.threshold(c[5], np.percentile(abs(c[5]), 100) + 1, 'soft', 0)
-            c[6][:] = pywt.threshold(c[6], np.percentile(abs(c[6]), 100) + 1, 'soft', 0)
-            c[7][:] = pywt.threshold(c[7], np.percentile(abs(c[7]), 100) + 1, 'soft', 0)
+            if wavenum <= 6:
+                c[7][:] = pywt.threshold(c[7], np.percentile(abs(c[7]), 100) + 1, 'soft', 0)
+            if wavenum <= 5:
+                c[6][:] = pywt.threshold(c[6], np.percentile(abs(c[6]), 100) + 1, 'soft', 0)
+            if wavenum <= 4:
+                c[5][:] = pywt.threshold(c[5], np.percentile(abs(c[5]), 100) + 1, 'soft', 0)
+            if wavenum <= 3:
+                c[4][:] = pywt.threshold(c[4], np.percentile(abs(c[4]), 100) + 1, 'soft', 0)
+            if wavenum <= 2:
+                c[3][:] = pywt.threshold(c[3], np.percentile(abs(c[3]), 100) + 1, 'soft', 0)
+            if wavenum <= 1:
+                c[2][:] = pywt.threshold(c[2], np.percentile(abs(c[2]), 100) + 1, 'soft', 0)
+
             fdata[i,:] = pywt.waverec(c, wname)
 
         if fdata.shape[0] == 1:
             return fdata.ravel() # If the signal is 1D, return a 1D array
         else:
             return fdata # Otherwise, give back the 2D array
+
+    def cal_cycle(self, data):
+
+        if len(data)%2 == 1:
+            data = data[1:]
+        # We will use the Daubechies(4) wavelet
+        wname = self.wname
+
+        data = np.atleast_2d(data)
+        numwires, datalength = data.shape
+        # Initialize the container for the filtered data
+        fdata = np.empty((numwires, datalength))
+
+        for i in range(numwires):
+            # Decompose the signal
+            c = pywt.wavedec(data[i,:], wname, level = self.maxlevel)
+            #print c
+            # Destroy the approximation coefficients
+            #for j in self.filter_level:
+            #    c[j][:] = 0
+            # Reconstruct the signal and save it
+
+            c[0][:] = pywt.threshold(c[0], np.percentile(abs(c[0]), 100) + 1, 'soft', 0)
+            c[1][:] = pywt.threshold(c[1], np.percentile(abs(c[1]), 100) + 1, 'soft', 0)
+            #c[2][:] = pywt.threshold(c[2], np.percentile(abs(c[2]), 100) + 1, 'soft', 0)
+            c[3][:] = pywt.threshold(c[3], np.percentile(abs(c[3]), 100) + 1, 'soft', 0)
+            c[4][:] = pywt.threshold(c[4], np.percentile(abs(c[4]), 100) + 1, 'soft', 0)
+            c[5][:] = pywt.threshold(c[5], np.percentile(abs(c[5]), 100) + 1, 'soft', 0)
+            c[6][:] = pywt.threshold(c[6], np.percentile(abs(c[6]), 100) + 1, 'soft', 0)
+            c[7][:] = pywt.threshold(c[7], np.percentile(abs(c[7]), 100) + 1, 'soft', 0)
+            fdata[i,:] = pywt.waverec(c, wname)
+
+            fdata = fdata.ravel() # If the signal is 1D, return a 1D array
+
+	wave = fdata
+	spectrum = fft.fft(wave)
+	freq = fft.fftfreq(len(wave))
+	order = np.argsort(abs(spectrum)[:spectrum.size/2])[::-1]
+	cycle = 1/freq[order[:20]]
+        max_cycle = cycle[0]/5
+
+        return max_cycle
 
     def handle(self):
         yoy = np.array(self.data.close)

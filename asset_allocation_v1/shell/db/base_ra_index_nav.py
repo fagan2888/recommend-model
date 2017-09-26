@@ -59,6 +59,17 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
 
     s = select(columns).where(t1.c.ra_index_id == id_)
 
+    '''
+    id_wavenum = {
+            120000001: 2,
+            120000002: 2,
+            120000013: 4,
+            120000014: 4,
+            120000015: 4,
+            }
+    wavenum = id_wavenum.get(id_)
+    '''
+
     #if begin_date is not None:
     #    s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
@@ -72,12 +83,11 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     TW = TimingWt(df)
-    filtered_df = TW.wavefilter(df.values.flat[:])
+    filtered_df = TW.wavefilter(df.values.flat[:], 2)
     if len(filtered_df) < len(df):
         filtered_df = np.append(0, filtered_df)
 
     df['nav'] = filtered_df
-
 
     if reindex is not None:
         df = df.reindex(reindex, method='pad')
@@ -86,6 +96,35 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
 
 
     return df['nav']
+
+def cal_asset_cycle(id_, begin_date=None, end_date=None, mask=None):
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_index_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav.label('nav'),
+    ]
+
+    s = select(columns).where(t1.c.ra_index_id == id_)
+
+    #if begin_date is not None:
+    #    s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+    if mask is not None:
+        if hasattr(mask, "__iter__") and not isinstance(mask, str):
+            s = s.where(t1.c.ra_mask.in_(mask))
+        else:
+            s = s.where(t1.c.ra_mask == mask)
+
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    TW = TimingWt(df)
+    cycle = TW.cal_cycle(df.values.flat[:])
+
+    return cycle
 
 def load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     db = database.connection('base')
