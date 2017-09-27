@@ -42,7 +42,7 @@ class RiskMgrSimple(object):
         sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
         
         sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
-        sr_cnfdn = sr_cnfdn.shift(1)
+        #sr_cnfdn = sr_cnfdn.shift(1)
 
         df = pd.DataFrame({
             'inc2d': sr_inc2d.fillna(0),
