@@ -50,25 +50,19 @@ class Improve_LLT(object):
         num = len(Llt)
         for i in range(2, num):
             if Llt.iloc[i-1][0] < Llt.iloc[i-1][1] and Llt.iloc[i][0] > Llt.iloc[i][1]:
-                #and diff.iloc[i][0] > 0 and diff.iloc[i][1] > 0 :
-                #and diff.iloc[i-1][0] > 0 and diff.iloc[i-1][1] > 0 \
                 Signal.iloc[i][0] = 1
-                #if avg_10.iloc[i-1][3] < avg_240.iloc[i-1][3] and avg_10.iloc[i][3] > avg_240.iloc[i][3]:
-                #if ((df_nav.iloc[i][1]+df_nav.iloc[i][2])/2) >= df_nav.iloc[i][3]:
                 if df_nav.iloc[i][3] >= df_nav.iloc[i][0]:
-                    Signal.iloc[i+1][0] = 1
+                #if df_nav.iloc[i][3] >= ((0.66*df_nav.iloc[i][3] + 0.33*df_nav.iloc[i][0])):
+                    Signal.iloc[i][0] = 1
                 else:
-                    Signal.iloc[i+1][0] = -1
+                    Signal.iloc[i][0] = -1
             elif Llt.iloc[i-1][0] > Llt.iloc[i-1][1] and Llt.iloc[i][0] < Llt.iloc[i][1]:
-                #and diff.iloc[i][0] < 0 and diff.iloc[i][1] < 0 :
-                #and diff.iloc[i-1][0] < 0 and diff.iloc[i-1][1] < 0 \
                 Signal.iloc[i][0] = -1
-                #if avg_10.iloc[i-1][3] > avg_240.iloc[i-1][3] and avg_10.iloc[i][3] < avg_240.iloc[i][3]:
-                #if ((df_nav.iloc[i][1]+df_nav.iloc[i][2])/2) <= df_nav.iloc[i][3]:
+                #if df_nav.iloc[i][3] <= ((0.66*df_nav.iloc[i][3] + 0.33*df_nav.iloc[i][0])):
                 if df_nav.iloc[i][3] <= df_nav.iloc[i][0]:
-                    Signal.iloc[i+1][0] = -1
+                    Signal.iloc[i][0] = -1
                 else:
-                    Signal.iloc[i+1][0] = 1
+                    Signal.iloc[i][0] = 1
         return Signal
 
 
