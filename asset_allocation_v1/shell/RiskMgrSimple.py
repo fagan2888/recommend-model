@@ -40,15 +40,22 @@ class RiskMgrSimple(object):
         sr_inc2d = sr_inc.rolling(window=2).sum() # 2日收益率
         sr_inc3d = sr_inc.rolling(window=3).sum() # 3日收益率
         sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
-        
-        sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
-        sr_cnfdn = sr_cnfdn.shift(1)
+
+        #sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
+        sr_cnfdn5 = sr_inc5d.rolling(window=self.period*10, min_periods = self.period).apply(lambda x: np.mean(x[x < np.percentile(x, 1)]))
+        sr_cnfdn2 = sr_inc2d.rolling(window=self.period*10, min_periods = self.period).apply(lambda x: np.mean(x[x < np.percentile(x, 1)]))
+        sr_cnfdn3 = sr_inc3d.rolling(window=self.period*10, min_periods = self.period).apply(lambda x: np.mean(x[x < np.percentile(x, 1)]))
+        sr_cnfdn5= sr_cnfdn5.shift(1)
+        sr_cnfdn2= sr_cnfdn3.shift(1)
+        sr_cnfdn3= sr_cnfdn2.shift(1)
 
         df = pd.DataFrame({
             'inc2d': sr_inc2d.fillna(0),
             'inc3d': sr_inc3d.fillna(0),
             'inc5d': sr_inc5d.fillna(0),
-            'cnfdn': sr_cnfdn,
+            'cnfdn2': sr_cnfdn2,
+            'cnfdn3': sr_cnfdn3,
+            'cnfdn5': sr_cnfdn5,
             'timing': df_input['timing'],
         })
 
@@ -72,13 +79,21 @@ class RiskMgrSimple(object):
                 #
                 # 是否启动风控
                 #
+                '''
                 if row['inc2d'] < self.maxdd:
                     status, empty_days, position, action = 1, 0, 0, 2
                 elif row['inc3d'] < self.maxdd:
                     status, empty_days, position, action = 1, 0, 0, 3
                 elif row['cnfdn'] is not None and row['inc5d'] < row['cnfdn'] and row['inc5d'] < self.mindd:
                     status, empty_days, position, action = 1, 0, 0, 5
+                    '''
 
+                if row['cnfdn2'] is not None and row['inc2d'] < row['cnfdn2']:
+                    status, empty_days, position, action = 1, 0, 0, 2
+                elif row['cnfdn3'] is not None and row['inc3d'] < row['cnfdn3']:
+                    status, empty_days, position, action = 1, 0, 0, 3
+                elif row['cnfdn5'] is not None and row['inc5d'] < row['cnfdn5']:
+                    status, empty_days, position, action = 1, 0, 0, 5
                 #
                 # 根据当前的风控状态进行处理
                 #
@@ -105,7 +120,7 @@ class RiskMgrSimple(object):
                 # 更新进度条
                 #
                 bar.update(1)
-        
+
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act})
         df_result.index.name = 'rm_date'
 

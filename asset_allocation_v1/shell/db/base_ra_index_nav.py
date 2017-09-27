@@ -83,7 +83,8 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     TW = TimingWt(df)
-    filtered_df = TW.wavefilter(df.values.flat[:], 2)
+    #选择用几个母小波
+    filtered_df = TW.wavefilter(df.values.flat[:], 4)
     if len(filtered_df) < len(df):
         filtered_df = np.append(0, filtered_df)
 
@@ -93,7 +94,6 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
         df = df.reindex(reindex, method='pad')
     if begin_date is not None:
         df = df[df.index >= begin_date]
-
 
     return df['nav']
 

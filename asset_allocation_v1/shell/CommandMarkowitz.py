@@ -224,6 +224,13 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 120000013:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普500指数
                 120000015:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #恒生指数修型
                 120000014:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #黄金指数修型
+                #120000041:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普高盛黄金指数修型
+                #120000016:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普高盛黄金指数修型
+                #120000023:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #摩根士丹利资本国际新兴市场指数
+                #120000024:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #富时金砖四国50美元
+                #120000028:  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0}, #标普高盛原油商品指数收益率
+                #120000029:  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0}, #南华商品指数
+                #120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
                 #120000010:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #中证全债风险0
 
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 1.00, 'lower': 0.70}, #中证全债风险0
@@ -564,13 +571,15 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
 def markowitz_day(day, lookback, assets, bootstrap, cpu_count):
     '''perform markowitz for single day
     '''
+    #计算各个资产的最长周期
+    '''
     cycles = []
     for asset in assets:
         cycle = base_ra_index_nav.cal_asset_cycle(asset, end_date = day)
         cycles.append(cycle)
-    lookback = int(round(min(cycles), 0))
-    print
-    print lookback
+    lookback = int(round(max(cycles), 0))
+    '''
+
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
     begin_date = index.min().strftime("%Y-%m-%d")
