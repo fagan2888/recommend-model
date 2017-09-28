@@ -8,6 +8,8 @@ import pandas as pd
 # import sys
 import logging
 import database
+import MySQLdb
+import config
 
 from dateutil.parser import parse
 
@@ -110,3 +112,42 @@ def load_ohlcav(id_, reindex=None, begin_date=None, end_date=None, mask=None):
 
     return df
 
+
+def index_value(start_date, end_date, ra_index_id):
+    #
+    # [XXX] 本来想按照周收盘取净值数据, 但实践中发现周收盘存在美股和A
+    # 股节假日对其的问题. 实践证明, 最好的方式是按照自然日的周五来对齐
+    # 数据.
+    #
+    date_sql = build_sql_trade_date_weekly(start_date, end_date)
+
+    sql = "SELECT ra_date as date, ra_index_id, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date and ra_index_id = %d ORDER BY ra_date" % (date_sql, ra_index_id)
+    
+    # sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
+
+
+    logger.debug("index_value: " + sql)
+
+    conn  = MySQLdb.connect(**config.db_base)
+    df = pd.read_sql(sql, conn, index_col = ['date', 'ra_index_id'], parse_dates=['date'])
+    conn.close()
+
+    df = df.unstack().fillna(method='pad')
+    df.columns = df.columns.droplevel(0)
+
+    return df
+
+
+def build_sql_trade_date_weekly(start_date, end_date, include_end_date=True):
+    if type(start_date) != str:
+        start_date = start_date.strftime("%Y-%m-%d")
+
+    if type(end_date) != str:
+        end_date = end_date.strftime("%Y-%m-%d")
+        
+    if include_end_date:
+        condition = "(td_type & 0x02 OR td_date = '%s')" % (end_date)
+    else:
+        condition = "(td_type & 0x02)"
+
+    return "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND %s" % (start_date, end_date, condition)

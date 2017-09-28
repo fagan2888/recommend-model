@@ -47,6 +47,8 @@ def load_weekly(begin_date, end_date, fund_ids=None, codes=None):
     return df
 
 def load_daily(begin_date, end_date, fund_ids=None, codes=None):
+
+ 
     db = database.connection('base')
     metadata = MetaData(bind=db)
     t1 = Table('ra_fund_nav', metadata, autoload=True)
@@ -75,6 +77,8 @@ def load_daily(begin_date, end_date, fund_ids=None, codes=None):
     df.columns = df.columns.droplevel(0)
 
     return df
+
+
 
 def load_series(code, reindex=None, begin_date=None, end_date=None):
     db = database.connection('base')

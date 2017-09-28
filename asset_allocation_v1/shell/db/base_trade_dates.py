@@ -8,6 +8,8 @@ import pandas as pd
 # import sys
 import logging
 import database
+import config
+import MySQLdb
 
 from dateutil.parser import parse
 
@@ -58,3 +60,16 @@ def load_trade_dates(begin_date=None, end_date=None):
     return df
 
 
+def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True):
+    if include_end_date:
+        condition = "(td_type & 0x02 OR td_date = '%s')" % (end_date)
+    else:
+        condition = "(td_type & 0x02)"
+        
+    sql = "SELECT td_date as date, td_type FROM trade_dates WHERE td_date <= '%s' AND %s ORDER By td_date DESC LIMIT %d" % (end_date, condition, lookback)
+
+    conn  = MySQLdb.connect(**config.db_base)
+    df = pd.read_sql(sql, conn, index_col = 'date', parse_dates=['date'])
+    conn.close()
+
+    return df.index.sort_values()
