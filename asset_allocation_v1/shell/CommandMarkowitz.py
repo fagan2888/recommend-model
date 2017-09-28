@@ -572,13 +572,11 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count):
     '''perform markowitz for single day
     '''
     #计算各个资产的最长周期
-    '''
     cycles = []
     for asset in assets:
         cycle = base_ra_index_nav.cal_asset_cycle(asset, end_date = day)
         cycles.append(cycle)
     lookback = int(round(max(cycles), 0))
-    '''
 
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)

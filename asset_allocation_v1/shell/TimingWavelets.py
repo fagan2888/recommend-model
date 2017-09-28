@@ -47,7 +47,6 @@ class TimingWt(object):
             #for j in self.filter_level:
             #    c[j][:] = 0
             # Reconstruct the signal and save it
-            '''
             c[1][:] = pywt.threshold(c[1], np.percentile(abs(c[1]), 50), 'soft', 0)
             c[2][:] = pywt.threshold(c[2], np.percentile(abs(c[2]), 80), 'soft', 0)
             c[3][:] = pywt.threshold(c[3], np.percentile(abs(c[3]), 80), 'soft', 0)
@@ -69,9 +68,7 @@ class TimingWt(object):
             if wavenum <= 1:
                 c[2][:] = pywt.threshold(c[2], np.percentile(abs(c[2]), 100) + 1, 'soft', 0)
             if wavenum == 0:
-                c[1][:] = pywt.threshold(c[1], np.percentile(abs(c[1]), 100) + 1, 'soft', 0)
-                c[0][:] = pywt.threshold(c[0], np.percentile(abs(c[0]), 100) + 1, 'soft', 0)
-                '''
+                c = pywt.wavedec(data[i,:], wname, level = self.maxlevel)
 
             fdata[i,:] = pywt.waverec(c, wname)
 
@@ -103,8 +100,8 @@ class TimingWt(object):
 
             c[0][:] = pywt.threshold(c[0], np.percentile(abs(c[0]), 100) + 1, 'soft', 0)
             c[1][:] = pywt.threshold(c[1], np.percentile(abs(c[1]), 100) + 1, 'soft', 0)
-            c[2][:] = pywt.threshold(c[2], np.percentile(abs(c[2]), 100) + 1, 'soft', 0)
-            #c[3][:] = pywt.threshold(c[3], np.percentile(abs(c[3]), 100) + 1, 'soft', 0)
+            #c[2][:] = pywt.threshold(c[2], np.percentile(abs(c[2]), 100) + 1, 'soft', 0)
+            c[3][:] = pywt.threshold(c[3], np.percentile(abs(c[3]), 100) + 1, 'soft', 0)
             c[4][:] = pywt.threshold(c[4], np.percentile(abs(c[4]), 100) + 1, 'soft', 0)
             c[5][:] = pywt.threshold(c[5], np.percentile(abs(c[5]), 100) + 1, 'soft', 0)
             c[6][:] = pywt.threshold(c[6], np.percentile(abs(c[6]), 100) + 1, 'soft', 0)

@@ -36,18 +36,19 @@ class RiskMgrSimple(object):
         #
         # 计算回撤矩阵 和 0.97, 0.75置信区间
         #
+        df_input = df_input['2005':]
         sr_inc = df_input['nav'].pct_change().fillna(0.0)
-        sr_inc2d = sr_inc.rolling(window=2).sum() # 2日收益率
-        sr_inc3d = sr_inc.rolling(window=3).sum() # 3日收益率
-        sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
+        sr_inc2d = sr_inc.rolling(window=2).sum().fillna(0.0) # 2日收益率
+        sr_inc3d = sr_inc.rolling(window=3).sum().fillna(0.0) # 3日收益率
+        sr_inc5d = sr_inc.rolling(window=5).sum().fillna(0.0) # 5日收益率
 
         #sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
-        sr_cnfdn5 = sr_inc5d.rolling(window=self.period*10, min_periods = self.period).apply(lambda x: np.mean(x[x < np.percentile(x, 1)]))
-        sr_cnfdn2 = sr_inc2d.rolling(window=self.period*10, min_periods = self.period).apply(lambda x: np.mean(x[x < np.percentile(x, 1)]))
-        sr_cnfdn3 = sr_inc3d.rolling(window=self.period*10, min_periods = self.period).apply(lambda x: np.mean(x[x < np.percentile(x, 1)]))
-        sr_cnfdn5= sr_cnfdn5.shift(1)
-        sr_cnfdn2= sr_cnfdn3.shift(1)
-        sr_cnfdn3= sr_cnfdn2.shift(1)
+        sr_cnfdn5 = sr_inc5d.rolling(window=self.period*2, min_periods = self.period).apply(lambda x: np.mean(x[x < np.percentile(x, 1)]))
+        sr_cnfdn2 = sr_inc2d.rolling(window=self.period*2, min_periods = self.period).apply(lambda x: np.mean(x[x < np.percentile(x, 1)]))
+        sr_cnfdn3 = sr_inc3d.rolling(window=self.period*2, min_periods = self.period).apply(lambda x: np.mean(x[x < np.percentile(x, 1)]))
+        #sr_cnfdn5= sr_cnfdn5.shift(1)
+        #sr_cnfdn2= sr_cnfdn3.shift(1)
+        #sr_cnfdn3= sr_cnfdn2.shift(1)
 
         df = pd.DataFrame({
             'inc2d': sr_inc2d.fillna(0),
@@ -59,6 +60,7 @@ class RiskMgrSimple(object):
             'timing': df_input['timing'],
         })
 
+        df.to_csv('test.csv')
         #
         # status: 0:不在风控中; 1:风控中
         # action: 0:无风控; 2:2日收益率触发风控; 3:3日收益率触发风控; 5:5日收益率触发风控; 6:无条件空仓; 7:无条件空仓结束等择时加仓信号; 8:择时满仓
