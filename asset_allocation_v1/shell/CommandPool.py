@@ -103,9 +103,13 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, op
         print date.strftime("%Y-%m-%d")
     
     for _, pool in df_pool.iterrows():
-        fund_update(pool, adjust_points, optlimit, optcalc)
 
-def fund_update(pool, adjust_points, optlimit, optcalc):
+        if pool['id'] < 100000:
+            fund_update(pool, adjust_points, optlimit, optcalc)
+        else:
+            fund_update_new(pool, adjust_points, optlimit, optcalc)
+
+def fund_update_new(pool, adjust_points, optlimit, optcalc):
     ''' re calc fund for single fund pool
     '''
     lookback = pool.ra_lookback
@@ -136,6 +140,94 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
 
         conn.close()
 
+def fund_update(pool, adjust_points, optlimit, optcalc):
+    ''' re calc fund for single fund pool
+    '''
+    lookback = pool.ra_lookback
+    limit = optlimit
+
+    if optcalc:
+        #
+        # 计算每个调仓点的最新配置
+        #
+        data_fund = {}
+        with click.progressbar(length=len(adjust_points), label='calc pool %d' % (pool.id)) as bar:
+            for day in adjust_points:
+                bar.update(1)
+                if pool['ra_fund_type'] == 1:
+                    data_fund[day] = LabelAsset.label_asset_stock_per_day(day, lookback, limit)
+                else:
+                    data_fund[day] = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
+                    
+
+        df_fund = pd.concat(data_fund, names=['ra_date', 'ra_category', 'ra_fund_code'])
+
+        df_new = df_fund.rename(index=DFUtil.categories_types(True), columns={'date':'ra_date', 'category':'ra_category', 'code':'ra_fund_code', 'sharpe':'ra_sharpe',  'jensen':'ra_jensen', 'sortino':'ra_sortino', 'ppw':'ra_ppw'})
+        df_new.drop('stability', axis=1, inplace=True)
+
+        df_new = df_new.applymap(lambda x: round(x, 4) if type(x) == float else x)
+        
+        codes = df_new.index.get_level_values(2)
+        xtab = fund_code_to_globalid(codes)
+        df_new['ra_fund_id'] = xtab[df_new.index.get_level_values('ra_fund_code')].values
+        df_new['ra_pool'] = pool.id
+        df_new['ra_fund_type'] = 1
+        df_new['ra_fund_level'] = 1
+
+        df_new.reset_index(inplace=True)
+        df_new = df_new.reindex_axis(['ra_pool', 'ra_category',  'ra_date', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_level', 'ra_sharpe', 'ra_jensen', 'ra_sortino', 'ra_ppw'], axis='columns')
+        df_new.sort_values(by=['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'], inplace=True)
+        
+        df_new.to_csv(datapath('pool_%d.csv' % (pool['id'])), index=False)
+        
+    else:
+        df_new = pd.read_csv(datapath('pool_%d.csv' % (pool['id'])), parse_dates=['ra_date'], dtype={'ra_fund_code': str})
+        
+    df_new.set_index(['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'], inplace=True)
+    df_new = df_new.applymap(lambda x: '%.4f' % (x) if type(x) == float else x)
+
+    db = database.connection('asset')
+    ra_pool_fund = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+
+    # 加载就数据
+    columns2 = [
+        ra_pool_fund.c.ra_pool,
+        ra_pool_fund.c.ra_category,
+        ra_pool_fund.c.ra_date,
+        ra_pool_fund.c.ra_fund_id,
+        ra_pool_fund.c.ra_fund_code,
+        ra_pool_fund.c.ra_fund_type,
+        ra_pool_fund.c.ra_fund_level,
+        ra_pool_fund.c.ra_sharpe,
+        ra_pool_fund.c.ra_jensen,
+        ra_pool_fund.c.ra_sortino,
+        ra_pool_fund.c.ra_ppw,
+    ]
+    stmt_select = select(columns2, ra_pool_fund.c.ra_pool == pool.id)
+    df_old = pd.read_sql(stmt_select, db, index_col=['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'])
+    if not df_old.empty:
+        df_old = df_old.applymap(lambda x: '%.4f' % (x) if type(x) == float else x)
+
+    database.batch(db, ra_pool_fund, df_new, df_old)
+
+
+def fund_code_to_globalid(codes):
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    ra_fund = Table('ra_fund', metadata, autoload=True)
+
+    columns = [
+        ra_fund.c.globalid,
+        ra_fund.c.ra_code,
+    ]
+    if codes is not None:
+        s = select(columns, ra_fund.c.ra_code.in_(codes))
+    else:
+        s = select(columns)
+        
+    df_result = pd.read_sql(s, db, index_col='ra_code')
+    
+    return df_result['globalid']
 
 def fund_code_to_globalid(codes):
     db = database.connection('base')
@@ -705,6 +797,8 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
             corr_threshold = np.percentile(corr.values, 80)
             if corr_threshold <= 0.7:
                 corr_threshold = 0.7
+            if corr_threshold >= 0.9:
+                corr_threshold = 0.9
             if corr[code] >= corr_threshold:
                 final_codes.append(code)
 
