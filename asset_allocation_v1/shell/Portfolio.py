@@ -17,6 +17,7 @@ import random
 from multiprocessing import Manager
 import scipy
 import scipy.optimize
+import pandas as pd
 
 
 from Const import datapath
@@ -227,9 +228,10 @@ def markowitz_r_spe(funddfr, bounds):
 
     return final_risk, final_return, final_ws, final_sharp
 
-def m_markowitz(queue, random_index, df_inc, bound):
+def m_markowitz(queue, random_index, blocks, bound):
     for index in random_index:
-        tmp_df_inc = df_inc.iloc[index]
+        tmp_df_inc = pd.concat(blocks[index], axis = 0)
+        #tmp_df_inc = df_inc.iloc[index]
         risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound)
         queue.put((risk, returns, ws, sharpe))
 
@@ -256,6 +258,8 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
 
     #print process_indexs
     #loop_num = 20
+
+    '''
     rep_num = loop_num * (look_back / 2) / look_back
     day_indexs = range(0, look_back) * rep_num
     random.shuffle(day_indexs)
@@ -267,7 +271,23 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
         indexs = day_indexs[m]
         mod = m % cpu_count
         process_indexs[mod].append(list(indexs))
+    '''
 
+    blocks = []
+    for i in range(0, 14):
+        blocks.append(df_inc.iloc[i : i + 13])
+
+    day_indexs = []
+    for i in range(0, 400):
+        day_indexs.append(random.randint(0, len(blocks) - 1))
+    day_indexs = np.array(day_indexs)
+    day_indexs = day_indexs.reshape(4, -1)
+
+
+    for m in range(0, len(day_indexs)):
+        indexs = day_indexs[m]
+        mod = m % cpu_count
+        process_indexs[mod].append(list(indexs))
 
     manager = Manager()
     q = manager.Queue()
