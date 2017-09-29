@@ -2,7 +2,7 @@
 
 
 import string
-import os
+import copy
 import sys
 sys.path.append('shell')
 import click
@@ -22,7 +22,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
+from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_tc_timing_signal
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates
 from util import xdict
@@ -224,17 +224,19 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 120000013:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普500指数
                 120000015:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #恒生指数修型
                 120000014:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #黄金指数修型
+                #30000477:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #鹏华全球高收益债
+                #32857720:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #南方亚洲美元债券
                 #120000041:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普高盛黄金指数修型
-                #120000016:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普高盛黄金指数修型
+                #120000042:  {'sum1': 0, 'sum2' : 0,   'upper': 1.00, 'lower': 0.35}, #全球债指数修型
+                #120000016:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #上证指数修型
                 #120000023:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #摩根士丹利资本国际新兴市场指数
                 #120000024:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #富时金砖四国50美元
                 #120000028:  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0}, #标普高盛原油商品指数收益率
                 #120000029:  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0}, #南华商品指数
                 #120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
-                #120000010:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #中证全债风险0
+                #120000010:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #中证全债指数
 
-                #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 1.00, 'lower': 0.70}, #中证全债风险0
-                #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.92, 'lower': 0.63}, #中证全债风险1
+                #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 1.00, 'lower': 0.70}, #中证全债风险1
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.84, 'lower': 0.56}, #中证全债风险2
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.76, 'lower': 0.49}, #中证全风险3
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.68, 'lower': 0.42}, #中证全风险4
@@ -243,12 +245,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.44, 'lower': 0.21}, #中证全风险7
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.36, 'lower': 0.14}, #中证全风险8
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.28, 'lower': 0.07}, #中证全风险9
-                #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.20, 'lower': 0.0}, #中证全债10
 
                 #120000039:  {'sum1': 0, 'sum2' : 0,    'upper': 0.70, 'lower': 0.0}, #中证货币
-                # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
-                # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
-                # 120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
+                #120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
+                #120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
+                #120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
                 #120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
                 #120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #中证500指数修型
                 #120000013:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #标普500指数
@@ -602,10 +603,82 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     for asset in df_inc.columns:
         bound.append(limits[asset])
 
-    if bootstrap is None:
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
-    else:
+    if bootstrap is not None:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+    else:
+        #view_asset_dict = {120000001:42110102, 120000002:42110202, 120000013:42120201, 120000014:42400102, 120000015:42120502}
+        view_asset_dict = {120000001:49101, 120000002:49102, 120000013:49201, 120000014:49301, 120000015:49401}
+        views = np.mean(df_inc)
+        day = df_inc.index[-1]
+        try:
+            for i in range(0, len(df_inc.columns)):
+                indexid = df_inc.columns[i]
+                viewid = view_asset_dict[indexid]
+                #asset_view = asset_vw_view_inc.get_asset_day_view(viewid, day).values[0][0]
+                asset_view = asset_tc_timing_signal.load_series(viewid).loc[day]
+                if asset_view > 0:
+                    views[indexid] = views[indexid] + abs(views[indexid])
+                elif asset_view < 0:
+                    views[indexid] = views[indexid] - abs(views[indexid])
+        except:
+            views = np.mean(df_inc)
+            print day, 'short no view'
+            pass
+        lcmf_views = views
+
+        view_asset_dict = {120000001:'000300.SH', 120000002:'000905.SH', 120000013:'SPX.GI', 120000014:'AU9999.SGE', 120000015:'HSCI.HI'}
+        view_df = pd.read_csv('./data/view4.csv', index_col = ['date'], parse_dates = ['date']).fillna(method = 'pad')
+        views = np.mean(df_inc)
+        day = df_inc.index[-1]
+        try:
+            if (not (view_df.loc[day].values == 1).all()) and \
+                    (not (view_df.loc[day].values == -1).all()):
+                for i in range(0, len(df_inc.columns)):
+                    indexid = df_inc.columns[i]
+                    viewid = view_asset_dict[indexid]
+                    asset_view = view_df.loc[day, viewid]
+                    if asset_view == 2:
+                        views[indexid] = views[indexid] + abs(views[indexid])
+                    elif asset_view == -2:
+                        views[indexid] = views[indexid] - abs(views[indexid])
+                    elif asset_view == 1:
+                        views[indexid] = views[indexid] + abs(views[indexid]) * 0.5
+                    elif asset_view == -1:
+                        views[indexid] = views[indexid] - abs(views[indexid]) * 0.5
+                        '''
+            view_df_day = view_df.loc[day]
+            #view_df_day['AU9999.SGE'] = (view_df_day[0] + view_df_day[1] + view_df_day[2] + view_df_day[4])/4
+            view_df_day = view_df_day - min(view_df_day)
+            view_df_day.index = views.index
+            views += view_df_day*0.004
+            '''
+
+        except:
+            views = np.mean(df_inc)
+            print day, 'long no view'
+            pass
+        jy_views = views
+        #print day, jy_views
+
+        #tmp_bound = copy.deepcopy(bound)
+        df_view_inc = PF.view_inc(df_inc, jy_views)
+        #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, tmp_bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_view_inc, bound)
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+
+        '''
+        for i in range(0, len(df_inc.columns)):
+            tmp_bound[i]['sum1'] = 0
+            tmp_bound[i]['sum2'] = 0
+            tmp_bound[i]['upper'] = ws[i] + 0.07 if ws[i] + 0.07 <= 1 else 1
+            tmp_bound[i]['lower'] = ws[i] - 0.07 if ws[i] - 0.07 >= 0 else 0
+            #tmp_bound[i]['upper'] = 1
+            #tmp_bound[i]['lower'] = 0
+            '''
+
+        df_inc = df_inc.iloc[len(df_inc) / 2 : ]
+        df_inc = PF.view_inc(df_inc, lcmf_views)
+        #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, tmp_bound)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),

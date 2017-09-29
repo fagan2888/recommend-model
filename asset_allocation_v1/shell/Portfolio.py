@@ -296,6 +296,14 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
     ws = wss / loop_num
     return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
 
+def view_inc(df_inc, view):
+
+    df_inc = df_inc.copy()
+    df_mean = np.mean(df_inc)
+    for col in df_inc.columns:
+        df_inc[col] = df_inc[col] + (view[col] - df_mean[col])
+    return df_inc
+
 
 #利用blacklitterman做战略资产配置
 def strategicallocation(delta,    weq, V, tau, P, Q):

@@ -83,12 +83,13 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     TW = TimingWt(df)
-    #选择用几个母小波
-    filtered_df = TW.wavefilter(df.values.flat[:], 4)
-    if len(filtered_df) < len(df):
-        filtered_df = np.append(0, filtered_df)
+    #选择用几个母小波, 债券不需要滤波
+    if id_ not in [120000042]:
+        filtered_df = TW.wavefilter(df.values.flat[:], 0)
+        if len(filtered_df) < len(df):
+            filtered_df = np.append(0, filtered_df)
 
-    df['nav'] = filtered_df
+        df['nav'] = filtered_df
 
     if reindex is not None:
         df = df.reindex(reindex, method='pad')
@@ -98,6 +99,8 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
     return df['nav']
 
 def cal_asset_cycle(id_, begin_date=None, end_date=None, mask=None):
+    if id_ in [120000010, 120000042, 30000477, 32857720]:
+        return 0
     db = database.connection('base')
     metadata = MetaData(bind=db)
     t1 = Table('ra_index_nav', metadata, autoload=True)
