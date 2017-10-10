@@ -72,10 +72,7 @@ class TimingWt(object):
 
             fdata[i,:] = pywt.waverec(c, wname)
 
-        if fdata.shape[0] == 1:
-            return fdata.ravel() # If the signal is 1D, return a 1D array
-        else:
-            return fdata # Otherwise, give back the 2D array
+        return fdata.ravel()
 
     def get_filtered_data(self, df, wavenum, startdate = None):
         if startdate is None:
@@ -133,11 +130,11 @@ class TimingWt(object):
 
             fdata = fdata.ravel() # If the signal is 1D, return a 1D array
 
-	wave = fdata
-	spectrum = fft.fft(wave)
-	freq = fft.fftfreq(len(wave))
-	order = np.argsort(abs(spectrum)[:spectrum.size/2])[::-1]
-	cycle = 1/freq[order[:20]]
+        wave = fdata
+        spectrum = fft.fft(wave)
+        freq = fft.fftfreq(len(wave))
+        order = np.argsort(abs(spectrum)[:spectrum.size/2])[::-1]
+        cycle = 1/freq[order[:20]]
         max_cycle = cycle[0]/5
 
         return max_cycle
