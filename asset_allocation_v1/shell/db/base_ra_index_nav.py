@@ -85,7 +85,7 @@ def load_series_mean(id_, reindex=None, begin_date=None, end_date=None, mask=Non
     TW = TimingWt(df)
     #选择用几个母小波, 债券不需要滤波
     if id_ not in [120000042]:
-        filtered_df = TW.wavefilter(df.values.flat[:], 0)
+        filtered_df = TW.wavefilter(df.values.flat[:], 4)
         if len(filtered_df) < len(df):
             filtered_df = np.append(0, filtered_df)
 

@@ -236,7 +236,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 #120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
                 #120000010:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #中证全债指数
 
-                #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 1.00, 'lower': 0.70}, #中证全债风险1
+                120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 1.00, 'lower': 0.70}, #中证全债风险1
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.84, 'lower': 0.56}, #中证全债风险2
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.76, 'lower': 0.49}, #中证全风险3
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.68, 'lower': 0.42}, #中证全风险4
