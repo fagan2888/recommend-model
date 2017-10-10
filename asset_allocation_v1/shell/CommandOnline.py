@@ -100,7 +100,7 @@ def nav_update(alloc, xtype, debug, optfee, optt0):
     df_pos = asset_on_online_fund.load_fund_pos(alloc_id)
     if df_pos.empty:
          click.echo(click.style("\nswarning: empty df_pos for alloc %d, skiped!" % (alloc_id), fg='yellow'))
-         return 
+         return
 
     df_pos.index.names=['ra_date', 'ra_fund_id']
     df_pos = df_pos.rename(columns={'on_fund_ratio': 'ra_fund_ratio'})
