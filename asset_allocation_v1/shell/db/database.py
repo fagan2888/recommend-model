@@ -635,7 +635,6 @@ def load_asset_name_and_type(asset_id):
 
     return (name, category)
 
-'''
 def load_pool_via_asset(asset_id):
     xtype = asset_id / 10000000
 
@@ -662,7 +661,6 @@ def load_pool_via_asset(asset_id):
         pool = 0
 
     return pool
-'''
 
 def load_asset_and_pool(gid):
     gid = int(gid)
