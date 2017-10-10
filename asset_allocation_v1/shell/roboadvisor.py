@@ -1,13 +1,13 @@
-# -*- coding: utf-8 -*-   
-__author__ = "Likun Liu"  
-  
+# -*- coding: utf-8 -*-
+__author__ = "Likun Liu"
+
 import logging
 import logging.config
 import json
 import os
-import sys  
-import click  
-import time  
+import sys
+import click
+import time
 import pandas as pd
 import Const
 from Const import datapath
@@ -27,6 +27,7 @@ import CommandTiming
 import CommandHighlow
 import CommandOnline
 import CommandInvestor
+import CommandWavelet
 
 from util import ProgressBar
 
@@ -34,10 +35,10 @@ from util import ProgressBar
 logger = logging.getLogger(__name__)
 
 def setup_logging(
-    default_path = './shell/logging.json', 
+    default_path = './shell/logging.json',
     default_level = logging.INFO,
     env_key = 'LOG_CFG'):
-    
+
     """Setup logging configuration
     """
     path = default_path
@@ -51,7 +52,7 @@ def setup_logging(
     else:
         logging.basicConfig(level=default_level)
 
-        
+
 @click.group(invoke_without_command=True)
 @click.pass_context
 def roboadvisor(ctx):
@@ -59,28 +60,28 @@ def roboadvisor(ctx):
     path = os.path.join(default_dir, "logging.json")
 
     setup_logging(default_path=path)
-    
+
     # pd.set_option('display.height', 1000)
     pd.set_option('display.max_rows', 500)
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    #config.load()        
+    #config.load()
 
-@roboadvisor.group()  
+@roboadvisor.group()
 @click.pass_context
 def model(ctx):
     '''run models
     '''
     click.echo("model")
 
-@roboadvisor.group()  
+@roboadvisor.group()
 @click.pass_context
 def nav(ctx):
     '''fund pool group
     '''
     pass
 
-@roboadvisor.command()  
+@roboadvisor.command()
 @click.pass_context
 def test(ctx):
     '''test code
@@ -121,8 +122,9 @@ def test(ctx):
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance for timing and riskmgr')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace existed instance')
 @click.option('--riskctrl/--no-riskctrl', 'optriskctrl', default=True, help=u'no riskmgr for highlow')
+@click.option('--wavelet/--no-wavelet', 'optwavelet', default=True, help=u'include wavelet group with in batch')
 @click.pass_context
-def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, opthigh, optlow, optratio, optonline, optreplace, optriskctrl):
+def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, opthigh, optlow, optratio, optonline, optreplace, optriskctrl, optwavelet):
     '''run all command in batch
     '''
     if optpool:
@@ -144,7 +146,7 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
     else:
         if opthigh is None:
             click.echo(click.style("--high required when --no-markowitz specified!", fg="red"))
-            return 
+            return
         else:
             ctx.obj['markowitz.high'] = opthigh
         if optlow is None:
@@ -163,6 +165,9 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
     if optportfolio:
         ctx.invoke(CommandPortfolio.portfolio, optreplace=optreplace, optturnover=optturnoverp, optenddate=enddate)
 
+    if optwavelet:
+        ctx.invoke(CommandWavelet.filtering)
+
 if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
     nav.add_command(CommandNavStock.stock)
@@ -180,6 +185,7 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandHighlow.highlow)
     roboadvisor.add_command(CommandOnline.online)
     roboadvisor.add_command(CommandInvestor.investor)
+    roboadvisor.add_command(CommandWavelet.filtering)
 
-    roboadvisor(obj={})  
-    
+    roboadvisor(obj={})
+
