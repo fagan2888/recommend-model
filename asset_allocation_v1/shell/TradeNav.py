@@ -992,6 +992,8 @@ class TradeNav(object):
             else:
                 print "WARN: missing yingmi_to_account_time, use default(t+3): fund_id: %d" % fund_id
 
+        if tdate.strftime("%Y-%m-%d") == '2017-09-09':
+            tdate = pd.to_datetime('2017-09-11')
         ack_date = self.df_t_plus_n.at[tdate, "T+%d" % n]
 
         return ack_date
