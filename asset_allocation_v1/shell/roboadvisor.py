@@ -28,6 +28,7 @@ import CommandHighlow
 import CommandOnline
 import CommandInvestor
 import CommandWavelet
+import CommandExchangeRateIndex
 
 from util import ProgressBar
 
@@ -186,6 +187,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandOnline.online)
     roboadvisor.add_command(CommandInvestor.investor)
     roboadvisor.add_command(CommandWavelet.filtering)
-
-    roboadvisor(obj={})
-
+    roboadvisor.add_command(CommandExchangeRateIndex.exrindex)
+    roboadvisor(obj={})  
