@@ -134,7 +134,7 @@ def cny(ctx, optfull, optid):
                 exchange_rate_index_nav_df['eri_high'] = ra_index_nav_df['ra_high'] * caihui_exchange_rate_df['cer_exchangeprice']
                 exchange_rate_index_nav_df['eri_low'] = ra_index_nav_df['ra_low'] * caihui_exchange_rate_df['cer_exchangeprice']
                 exchange_rate_index_nav_df['eri_nav'] = ra_index_nav_df['ra_nav'] * caihui_exchange_rate_df['cer_exchangeprice']
-                exchange_rate_index_nav_df['eri_nav'] = exchange_rate_index_nav_df['eri_nav'].pct_change().fillna(0.0)
+                exchange_rate_index_nav_df['eri_inc'] = exchange_rate_index_nav_df['eri_nav'].pct_change().fillna(0.0)
                 exchange_rate_index_nav_df['eri_index_code'] = record[6]
                 exchange_rate_index_nav_df['eri_name'] = record[7]
                 exchange_rate_index_nav_df['eri_date'] = ra_index_nav_df.index
