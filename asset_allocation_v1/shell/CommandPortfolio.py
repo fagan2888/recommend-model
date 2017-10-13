@@ -298,7 +298,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             df_asset_tosave = df_asset_tosave.set_index(['ra_portfolio_id', 'ra_asset_id'])
             asset_ra_portfolio_asset.save(gid, df_asset_tosave)
 
-        
+
         # click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
     #
     # 在context中保存optid

@@ -397,7 +397,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0) | (df_tosave['mz_markowitz_ratio'] > 0)]
     
     # save
-    print df_tosave.head()
     asset_mz_markowitz_pos.save(optid, df_tosave)
 
     # 导入数据: markowitz_criteria
@@ -465,7 +464,7 @@ def merge_asset_name_and_type(asset_id, asset_data):
     else:
         (name, category) = database.load_asset_name_and_type(asset_id)
         (raw_asset, raw_name) = (asset_id, name)
-        
+
     return xdict.merge(asset_data, {
         'mz_asset_id': raw_asset,
         'mz_asset_name': raw_name,

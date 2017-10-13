@@ -100,7 +100,7 @@ def save(gid, df):
         df_old = database.number_format(df_old, fmt_columns, fmt_precision)
 
     # 更新数据库
-    # print df_new.head()
-    # print df_old.head()
+    #print df.head()
+    #print df_old.head()
     database.batch(db, t2, df, df_old, timestamp=True)
 

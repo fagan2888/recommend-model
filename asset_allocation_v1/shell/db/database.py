@@ -33,6 +33,7 @@ import base_ra_fund_nav
 import base_ra_index
 import base_ra_index_nav
 import base_exchange_rate_index_nav
+import base_exchange_rate_index
 
 logger = logging.getLogger(__name__)
 
@@ -622,6 +623,10 @@ def load_asset_name_and_type(asset_id):
             category = 42
         elif '恒生' in name:
             category = 43
+    elif xtype == 'ERI':
+        asset = base_exchange_rate_index.find(asset_id)
+        (name, category) = (asset['eri_name'], 0)
+
     else:
          (name, category) = ('', 0)
 
