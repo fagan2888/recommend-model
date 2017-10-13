@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import os
 import logging
+import re
 import Const
 
 from sqlalchemy import *
@@ -535,6 +536,13 @@ def asset_risk_asset_allocation_nav_load_series(
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
     xtype = asset_id / 10000000
 
+    if asset_id.isdigit():
+        asset_id = int(asset_id)
+        xtype = asset_id / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+
+
     if xtype == 1:
         #
         # 基金池资产
@@ -562,14 +570,24 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         #
         sr = base_ra_index_nav.load_series(
             asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+    elif xtype == 'ERI':
+
+        sr = base_exchange_rate_index_nav.load_series(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     else:
         sr = pd.Series()
 
     return sr
 
+
 def load_asset_name_and_type(asset_id):
     (name, category) = ('', 0)
-    xtype = asset_id / 10000000
+
+    if asset_id.isdigit():
+        asset_id = int(asset_id)
+        xtype = asset_id / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
     if xtype == 1:
         #
@@ -610,8 +628,16 @@ def load_asset_name_and_type(asset_id):
 
     return (name, category)
 
+
 def load_pool_via_asset(asset_id):
     xtype = asset_id / 10000000
+
+    if asset_id.isdigit():
+        asset_id = int(asset_id)
+        xtype = asset_id / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+
 
     if xtype == 12:
         #
@@ -625,7 +651,6 @@ def load_pool_via_asset(asset_id):
             pool = 19240142
         elif '恒生' in name:
             pool = 19240143
-            
     else:
         pool = 0
 
