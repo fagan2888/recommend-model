@@ -191,6 +191,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     }
     mz_highlow.insert(row).execute()
 
+    print df_asset
     #
     # 导入数据: highlow_asset
     #
