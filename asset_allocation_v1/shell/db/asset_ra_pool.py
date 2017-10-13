@@ -4,6 +4,7 @@ from sqlalchemy import MetaData, Table, select, func
 # import string
 # from datetime import datetime, timedelta
 import pandas as pd
+import re
 # import os
 # import sys
 import logging
@@ -72,7 +73,11 @@ def find(globalid):
     
 
 def match_asset_pool(gid):
-    xtype = gid / 10000000
+
+    if gid.isdigit():
+        xtype = int(gid) / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',gid).strip()
 
     result = 0
     if xtype == 1:
@@ -128,6 +133,14 @@ def match_asset_pool(gid):
                 result = 11400100
             elif '恒生' in name:
                 result = 11120500
+    elif xtype == 'ERI':
+
+        xtab = {
+            'ERI000001': 11120200, # 标普500人民币计价指数, 标普基金池
+            'ERI000002': 11120500, # 恒生指数人民币计价指数, 恒生基金池
+        }
+        if gid in xtab:
+            result = xtab[gid]
     else:
         pass
 

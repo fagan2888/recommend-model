@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import os
 import time
+import re
 import logging
 import Const
 import DFUtil
@@ -191,7 +192,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     }
     mz_highlow.insert(row).execute()
 
-    print df_asset
     #
     # 导入数据: highlow_asset
     #
@@ -351,7 +351,13 @@ def load_riskmgr(assets, reindex=None, enable=True):
     return df
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
-    xtype = asset_id / 10000000
+
+
+    if asset_id.isdigit():
+        xtype = int(asset_id) / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+
 
     if xtype == 1:
         #
@@ -379,6 +385,10 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         # 指数资产
         #
         sr = base_ra_index_nav.load_series(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+    elif xtype == 'ERI':
+
+        sr = base_exchange_rate_index_nav.load_series(
             asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     else:
         sr = pd.Series()
