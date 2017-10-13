@@ -32,6 +32,7 @@ import base_ra_fund
 import base_ra_fund_nav
 import base_ra_index
 import base_ra_index_nav
+import base_exchange_rate_index_nav
 
 logger = logging.getLogger(__name__)
 
@@ -534,11 +535,9 @@ def asset_risk_asset_allocation_nav_load_series(
     return df['nav']
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
-    xtype = asset_id / 10000000
 
     if asset_id.isdigit():
-        asset_id = int(asset_id)
-        xtype = asset_id / 10000000
+        xtype = int(asset_id) / 10000000
     else:
         xtype = re.sub(r'([\d]+)','',asset_id).strip()
 

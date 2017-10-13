@@ -48,7 +48,7 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
 def load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     db = database.connection('base')
     metadata = MetaData(bind=db)
-    t1 = Table('eri_index_nav', metadata, autoload=True)
+    t1 = Table('exchange_rate_index_nav', metadata, autoload=True)
 
     columns = [
         t1.c.eri_date,
@@ -80,7 +80,7 @@ def load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
 def load_ohlcav(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     db = database.connection('base')
     metadata = MetaData(bind=db)
-    t1 = Table('eri_index_nav', metadata, autoload=True)
+    t1 = Table('exchange_rate_index_nav', metadata, autoload=True)
 
     columns = [
         t1.c.eri_date,
