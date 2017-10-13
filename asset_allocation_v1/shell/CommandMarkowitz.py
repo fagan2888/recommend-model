@@ -397,7 +397,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0) | (df_tosave['mz_markowitz_ratio'] > 0)]
     
     # save
-    # print df_tosave
+    print df_tosave.head()
     asset_mz_markowitz_pos.save(optid, df_tosave)
 
     # 导入数据: markowitz_criteria
