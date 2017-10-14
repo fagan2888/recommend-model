@@ -63,6 +63,7 @@ def signal(ctx, optid, optlist, optonline):
 
     df_timing = asset_tc_timing.load(timings, xtypes)
 
+
     if optlist:
 
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
@@ -231,6 +232,7 @@ def nav(ctx, optid, optlist):
         timings = None
 
     df_timing = asset_tc_timing.load(timings)
+
     if optlist:
 
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
@@ -396,5 +398,5 @@ def load_index_ohlc(asset_id, reindex, begin_date, end_date, mask):
         df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
         df_nav.index.name='tc_date'
 
-    print df_nav.head()
+    #print df_nav.head()
     return df_nav

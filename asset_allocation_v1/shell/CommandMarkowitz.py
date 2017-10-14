@@ -242,14 +242,14 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             optid = between_min
         else:
             if max_id >= between_max:
-                s = "run out of instance id [%d]" % max_id
+                s = "run out of instance id [%s]" % max_id
                 click.echo(click.style("%s, import aborted!" % s, fg="red"))
                 return -1
 
             if optreplace:
                 optid = max_id
             else:
-                optid = max_id + 1;
+                optid = str(string.atoi(max_id) + 1);
     #
     # 处理assets参数
     #
@@ -260,11 +260,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             assets = {
                 '120000001':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
                 '120000002':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
-                #'120000013':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
-                #'120000015':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
+                '120000013':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
+                '120000015':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
                 '120000014':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #黄金指数修型
-                'ERI000002':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价恒生指数
-                'ERI000001':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价标普500指数
+                #'ERI000002':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价恒生指数
+                #'ERI000001':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价标普500指数
                 # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
                 # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
                 # 120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
@@ -325,7 +325,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     mz_markowitz_asset  = Table('mz_markowitz_asset', metadata, autoload=True)
     mz_markowitz_pos    = Table('mz_markowitz_pos', metadata, autoload=True)
     mz_markowitz_nav    = Table('mz_markowitz_nav', metadata, autoload=True)
-    mz_markowitz_sharpe = Table('mz_markowitz_sharpe', metadata, autoload=True)
+    #mz_markowitz_sharpe = Table('mz_markowitz_sharpe', metadata, autoload=True)
 
     #
     # 处理替换
@@ -335,7 +335,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         mz_markowitz_asset.delete(mz_markowitz_asset.c.mz_markowitz_id == optid).execute()
         mz_markowitz_pos.delete(mz_markowitz_pos.c.mz_markowitz_id == optid).execute()
         mz_markowitz_nav.delete(mz_markowitz_nav.c.mz_markowitz_id == optid).execute()
-        mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == optid).execute()
+        #mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == optid).execute()
 
     now = datetime.now()
     # 导入数据: markowitz

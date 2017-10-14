@@ -632,7 +632,7 @@ def load_asset_name_and_type(asset_id):
 
     return (name, category)
 
-
+'''
 def load_pool_via_asset(asset_id):
     xtype = asset_id / 10000000
 
@@ -659,9 +659,10 @@ def load_pool_via_asset(asset_id):
         pool = 0
 
     return pool
-
+'''
 
 def load_asset_and_pool(gid):
+    gid = int(gid)
     xtype = gid / 10000000
 
     if xtype == 5:
@@ -710,6 +711,7 @@ def load_asset_and_pool(gid):
     return df_asset;
 
 def load_alloc_and_risk(gid):
+    gid = int(gid)
     xtype = gid / 10000000
 
     result = []
@@ -732,6 +734,7 @@ def load_alloc_and_risk(gid):
     return result
 
 def load_pos_frame(gid):
+    gid = int(gid)
     xtype = gid / 10000000
 
     if xtype == 5:

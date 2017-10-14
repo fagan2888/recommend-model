@@ -120,15 +120,16 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         between_min, between_max = ('%s00' % (prefix), '%s99' % (prefix))
 
         max_id = asset_ra_portfolio.max_id_between(between_min, between_max)
+        print max_id, between_min, between_max
         if max_id is None:
             optid = int(between_min)
         else:
             if max_id >= int(between_max):
                 if optreplace:
-                    s = "run out of instance id [%d]" % max_id
+                    s = "run out of instance id [%s]" % max_id
                     click.echo(click.style("%s, will replace!" % s, fg="yellow"))
                 else:
-                    s = "run out of instance id [%d]" % max_id
+                    s = "run out of instance id [%s]" % max_id
                     click.echo(click.style("%s, aborted!" % s, fg="red"))
                     return -1
 
@@ -357,7 +358,7 @@ def nav_update_alloc(portfolio, risks, fee, debug, enddate):
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='update nav %-9d' % (portfolio['globalid']),
+            label='update nav %-9s' % (portfolio['globalid']),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
     # with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
@@ -388,8 +389,8 @@ def nav_update(alloc, fee, debug, enddate):
         sr_contrib = pd.concat(tn.contrib)
     else:
         xtype = 9
-        print "df_pos", df_pos
-        print "max_date", max_date
+        #print "df_pos", df_pos
+        #print "max_date", max_date
         sr_nav_portfolio = DFUtil.portfolio_nav2(df_pos, end_date=max_date)
         sr_contrib = pd.Series()
 
