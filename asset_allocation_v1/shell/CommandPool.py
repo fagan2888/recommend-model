@@ -113,7 +113,7 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
         # 计算每个调仓点的最新配置
         #
         data_fund = {}
-        with click.progressbar(length=len(adjust_points), label='calc pool %d' % (pool.id)) as bar:
+        with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
             for day in adjust_points:
                 bar.update(1)
                 if pool['ra_fund_type'] == 1:
@@ -140,10 +140,10 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
         df_new = df_new.reindex_axis(['ra_pool', 'ra_category',  'ra_date', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_level', 'ra_sharpe', 'ra_jensen', 'ra_sortino', 'ra_ppw'], axis='columns')
         df_new.sort_values(by=['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'], inplace=True)
         
-        df_new.to_csv(datapath('pool_%d.csv' % (pool['id'])), index=False)
+        df_new.to_csv(datapath('pool_%s.csv' % (pool['id'])), index=False)
         
     else:
-        df_new = pd.read_csv(datapath('pool_%d.csv' % (pool['id'])), parse_dates=['ra_date'], dtype={'ra_fund_code': str})
+        df_new = pd.read_csv(datapath('pool_%s.csv' % (pool['id'])), parse_dates=['ra_date'], dtype={'ra_fund_code': str})
         
     df_new.set_index(['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'], inplace=True)
     df_new = df_new.applymap(lambda x: '%.4f' % (x) if type(x) == float else x)
@@ -286,7 +286,7 @@ def nav_update(db, pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
     
-    with click.progressbar(length=len(categories) + 1, label='update nav for pool %d' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label='update nav for pool %s' % (pool.id)) as bar:
         for category in categories:
             nav_update_category(db['asset'], pool, category)
             bar.update(1)
@@ -564,7 +564,7 @@ def turnover_update(pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
     
-    with click.progressbar(length=len(categories) + 1, label='update turnover for pool %d' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label='update turnover for pool %s' % (pool.id)) as bar:
         for category in categories:
             turnover_update_category(pool, category)
             bar.update(1)
@@ -640,7 +640,7 @@ def corr_update(pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
     
-    with click.progressbar(length=len(categories) + 1, label='update corr for pool %d' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label='update corr for pool %s' % (pool.id)) as bar:
         for category in categories:
             corr_update_category(pool, category, 52)
             bar.update(1)

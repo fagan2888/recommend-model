@@ -400,3 +400,4 @@ def load_index_ohlc(asset_id, reindex, begin_date, end_date, mask):
 
     #print df_nav.head()
     return df_nav
+
