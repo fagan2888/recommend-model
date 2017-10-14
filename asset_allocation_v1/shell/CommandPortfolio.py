@@ -152,8 +152,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         'pool_id': 'ra_pool_id',
     })
 
-    if 11310100 not in df_asset['ra_asset_id'].values:
-        sr = (11310100, '货币资产', 31, 11310100)
+    if '11310100' not in df_asset['ra_asset_id'].values:
+        sr = ('11310100', '货币资产', 31, '11310100')
         df_asset.ix[len(df_asset.index)] = sr
         
     db = database.connection('asset')
@@ -198,10 +198,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             df_ratio = database.load_pos_frame(ratio_id)
             #print df_ratio
             # print df_ratio.sum(axis=1)
-            if 11310100 not in df_ratio.columns:
-                df_ratio[11310100] = 1 - df_ratio.sum(axis=1)
+            if '11310100' not in df_ratio.columns:
+                df_ratio['11310100'] = 1 - df_ratio.sum(axis=1)
             else:
-                df_ratio[11310100] += 1 - df_ratio.sum(axis=1)
+                df_ratio['11310100'] += 1 - df_ratio.sum(axis=1)
             # print df_ratio.head()
 
             start = df_ratio.index.min()
@@ -217,12 +217,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
                 pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
                 pools[row['ra_asset_id']] = pool
             else:
-                if 11310100 not in pools:
-                    fund = asset_ra_pool_fund.load(11310100)
+                if '11310100' not in pools:
+                    fund = asset_ra_pool_fund.load('11310100')
                     if not fund.empty:
                         index = index.union(fund.index.get_level_values(0)).unique()
-                    pool = (11310100, fund[['ra_fund_code', 'ra_fund_type']])
-                    pools[11310100] = pool
+                    pool = ('11310100', fund[['ra_fund_code', 'ra_fund_type']])
+                    pools['11310100'] = pool
 
             #
             # 根据基金池和配置比例的索引并集reindex数据
@@ -245,10 +245,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
                     # 选择基金
                     (pool_id, df_fund) = pools[asset_id]
                     segments = choose_fund_avg(day, pool_id, ratio, df_fund.loc[day])
-                    if int(risk * 10) == 1:
-                        print segments
+                    #if int(risk * 10) == 1:
+                    #    print segments
                     data.extend(segments)
-            print data
+            #print data
             df_raw = pd.DataFrame(data, columns=['ra_date', 'ra_pool_id', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_ratio'])
             df_raw.set_index(['ra_date', 'ra_pool_id', 'ra_fund_id'], inplace=True)
 
@@ -715,7 +715,7 @@ def convert1(ctx, optfrom, optto, optlist):
     df_result = df_result.groupby(level=(0, 1, 2, 3)).agg({
         'ai_inst_type':'first', 'ai_fund_code':'first', 'ai_fund_type':'first', 'ai_fund_ratio':'sum', 'updated_at':'first', 'created_at':'first'
     })
-    print df_result.head()
+    #print df_result.head()
 
     t2.delete(t2.c.ai_inst_id == optto).execute()
     df_result.to_sql(t2.name, db, index=True, if_exists='append', flavor='mysql', chunksize=500)
