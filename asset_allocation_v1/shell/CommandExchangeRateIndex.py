@@ -128,6 +128,7 @@ def cny(ctx, optfull, optid):
                 caihui_exchange_rate_df = caihui_exchange_rate_df.reindex(ra_index_nav_df.index)
                 caihui_exchange_rate_df = caihui_exchange_rate_df.fillna(method = 'pad')
 
+                print caihui_exchange_rate_df.head()
 
                 exchange_rate_index_nav_df = pd.DataFrame([])
                 exchange_rate_index_nav_df['eri_open'] = ra_index_nav_df['ra_open'] * caihui_exchange_rate_df['cer_exchangeprice']
