@@ -152,8 +152,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         'pool_id': 'ra_pool_id',
     })
 
-    if 11310100 not in df_asset['ra_asset_id'].values:
-        sr = (11310100, '货币资产', 31, 11310100)
+    if '11310100' not in df_asset['ra_asset_id'].values:
+        sr = ('11310100', '货币资产', 31, '11310100')
         df_asset.ix[len(df_asset.index)] = sr
         
     db = database.connection('asset')

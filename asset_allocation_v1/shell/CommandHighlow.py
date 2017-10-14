@@ -157,7 +157,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     #
     dt_pool = {}
     for k, v in df_asset.iterrows():
-        dt_pool[k] = asset_ra_pool.match_asset_pool(k)
+        dt_pool[k] = asset_ra_pool.match_asset_pool(int(k))
     df_asset['mz_pool_id'] = pd.Series(dt_pool)
 
     if 11310100 not in df_asset.index:
