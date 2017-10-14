@@ -361,7 +361,7 @@ def nav_update_alloc(portfolio, risks, fee, debug, enddate):
             label='update nav %-9s' % (portfolio['globalid']),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
-    # with click.progressbar(length=len(df_alloc), label='update nav %d' % (portfolio['globalid'])) as bar:
+    # with click.progressbar(length=len(df_alloc), label='update nav %s' % (portfolio['globalid'])) as bar:
     #     for _, alloc in :
     #         bar.update(1)
             nav_update(alloc, fee, debug, enddate)
@@ -371,7 +371,7 @@ def nav_update(alloc, fee, debug, enddate):
     # 加载仓位信息
     df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
     if df_pos.empty:
-        click.echo(click.style("\nswarning: empty df_pos for alloc %d, skiped!" % (alloc_id), fg='yellow'))
+        click.echo(click.style("\nswarning: empty df_pos for alloc %s, skiped!" % (alloc_id), fg='yellow'))
         return
 
     if enddate is not None:
@@ -447,7 +447,7 @@ def turnover_update_alloc(portfolio):
             label='turnover %-11d' % (portfolio['globalid']),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
-    # with click.progressbar(length=len(df_alloc), label='update turnover %d' % (portfolio['globalid'])) as bar:
+    # with click.progressbar(length=len(df_alloc), label='update turnover %s' % (portfolio['globalid'])) as bar:
     #     for _, alloc in df_alloc.iterrows():
     #         bar.update(1)
             turnover_update(alloc)

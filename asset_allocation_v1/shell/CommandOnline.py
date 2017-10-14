@@ -89,7 +89,7 @@ def nav_update_alloc(online, risks, xtype, debug, optfee, optt0):
             label='update nav %-9d' % (online['globalid']),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
-    # with click.progressbar(length=len(df_alloc), label='update nav %d' % (online['globalid'])) as bar:
+    # with click.progressbar(length=len(df_alloc), label='update nav %s' % (online['globalid'])) as bar:
     #     for _, alloc in :
     #         bar.update(1)
             nav_update(alloc, xtype, debug, optfee, optt0)
@@ -99,7 +99,7 @@ def nav_update(alloc, xtype, debug, optfee, optt0):
     # 加载仓位信息
     df_pos = asset_on_online_fund.load_fund_pos(alloc_id)
     if df_pos.empty:
-         click.echo(click.style("\nswarning: empty df_pos for alloc %d, skiped!" % (alloc_id), fg='yellow'))
+         click.echo(click.style("\nswarning: empty df_pos for alloc %s, skiped!" % (alloc_id), fg='yellow'))
          return
 
     df_pos.index.names=['ra_date', 'ra_fund_id']
@@ -175,7 +175,7 @@ def turnover_update_alloc(online):
             label='turnover %-11d' % (online['globalid']),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
-    # with click.progressbar(length=len(df_alloc), label='update turnover %d' % (online['globalid'])) as bar:
+    # with click.progressbar(length=len(df_alloc), label='update turnover %s' % (online['globalid'])) as bar:
     #     for _, alloc in df_alloc.iterrows():
     #         bar.update(1)
             turnover_update(alloc)

@@ -168,7 +168,7 @@ def nav_update_fund(db, asset):
     df_inc = df_nav.pct_change().fillna(0.0)
 
     if df_inc.empty:
-        click.echo(click.style("\nskipping due to fund/index nav for asset %d" % (asset['globalid']), fg='yellow'))
+        click.echo(click.style("\nskipping due to fund/index nav for asset %s" % (asset['globalid']), fg='yellow'))
         return False
 
     # 计算复合资产净值
