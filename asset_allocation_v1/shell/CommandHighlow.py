@@ -30,7 +30,7 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group(invoke_without_command=True)  
+@click.group(invoke_without_command=True)
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.option('--name', 'optname', default=None, help=u'specify highlow name')
@@ -164,7 +164,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         df_asset.loc[11310100] = (0, u'货币(低)', 31, 0, 11310100)
     if 11310101 not in df_asset.index:
         df_asset.loc[11310101] = (0, u'货币(高)', 31, 0, 11310101)
-    
+
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     mz_highlow        = Table('mz_highlow', metadata, autoload=True)
@@ -286,7 +286,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
         df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
         if turnover >= 0.01:
-            df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
+            df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
         df.index.name = 'mz_date'
         df.columns.name='mz_asset_id'
 
@@ -304,12 +304,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         asset_mz_highlow_pos.save(highlow_id, df_tosave)
 
         # click.echo(click.style("highlow allocation complement! instance id [%s]" % (optid), fg='green'))
-        
+
     #
     # 在context的记录id, 以便命令两中使用
     #
     ctx.obj['highlow'] = optid
-        
+
     click.echo(click.style("highlow allocation complement! instance id [%s]" % (optid), fg='green'))
 
 
@@ -350,12 +350,13 @@ def load_riskmgr(assets, reindex=None, enable=True):
     return df
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
-    xtype = asset_id / 10000000
+    xtype = int(asset_id) / 10000000
 
     if xtype == 1:
         #
         # 基金池资产
         #
+        asset_id = int(asset_id)
         asset_id %= 10000000
         (pool_id, category) = (asset_id / 100, asset_id % 100)
         ttype = pool_id / 10000
@@ -404,30 +405,30 @@ def nav(ctx, optid, optlist, optenddate):
         enddate = pd.to_datetime(optenddate)
     else:
         enddate = None
-        
+
     df_highlow = asset_mz_highlow.load(highlows)
 
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_highlow, headers='keys', tablefmt='psql')
         return 0
-    
+
     for _, highlow in df_highlow.iterrows():
         nav_update_alloc(highlow, enddate)
 
 def nav_update_alloc(highlow, enddate):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
-    
+
     with click.progressbar(length=len(df_alloc), label='update nav %d' % (highlow['globalid'])) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             nav_update(alloc, enddate)
-    
+
 def nav_update(alloc, enddate):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_mz_highlow_pos.load(alloc_id)
-    
+
     # 加载资产收益率
     min_date = df_pos.index.min()
     #max_date = df_pos.index.max()
@@ -476,7 +477,7 @@ def turnover(ctx, optid, optlist):
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_highlow, headers='keys', tablefmt='psql')
         return 0
-    
+
     data = []
     with click.progressbar(length=len(df_highlow), label='update turnover') as bar:
         for _, highlow in df_highlow.iterrows():
@@ -485,13 +486,13 @@ def turnover(ctx, optid, optlist):
 
 def turnover_update_alloc(highlow):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
-    
+
     with click.progressbar(length=len(df_alloc), label='update turnover %d' % (highlow['globalid'])) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             turnover_update(alloc)
 
-            
+
 def turnover_update(highlow):
     highlow_id = highlow['globalid']
     # 加载仓位信息
@@ -538,13 +539,13 @@ def delete(ctx, optid, optlist, optexec):
     if optid is None or not optexec:
          click.echo(click.style("\nboth --id and --exec is required to perform delete\n", fg='red'))
          return 0
-    
+
     data = []
     with click.progressbar(length=len(df_highlow), label='highlow delete') as bar:
         for _, highlow in df_highlow.iterrows():
             bar.update(1)
             perform_delete(highlow)
-            
+
 def perform_delete(highlow):
     highlow_id = highlow['globalid']
 
@@ -565,4 +566,4 @@ def perform_delete(highlow):
 
 
 
-    
+

@@ -236,7 +236,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 #120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
                 #120000010:  {'sum1': 0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #中证全债指数
 
-                120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 1.00, 'lower': 0.70}, #中证全债风险1
+                #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 1.00, 'lower': 0.70}, #中证全债风险1
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.84, 'lower': 0.56}, #中证全债风险2
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.76, 'lower': 0.49}, #中证全风险3
                 #120000010:  {'sum1': 0, 'sum2' : 0,    'upper': 0.68, 'lower': 0.42}, #中证全风险4
@@ -661,7 +661,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         #print day, jy_views
 
         #tmp_bound = copy.deepcopy(bound)
-        df_view_inc = PF.view_inc(df_inc, jy_views)
+        #df_view_inc = PF.view_inc(df_inc, jy_views)
         #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, tmp_bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
         #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_view_inc, bound)
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
@@ -688,7 +688,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     return sr_result
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
-    xtype = asset_id / 10000000
+    xtype = int(asset_id) / 10000000
 
     if xtype == 1:
         #
