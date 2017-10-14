@@ -249,6 +249,7 @@ def nav_update(timing):
     df_position = asset_tc_timing_signal.load(timing_id)
     # 构建仓位
     df_position.loc[df_position[timing_id] < 1, timing_id] = 0
+
     
     # 加载基金收益率
     min_date = df_position.index.min()
@@ -395,4 +396,5 @@ def load_index_ohlc(asset_id, reindex, begin_date, end_date, mask):
         df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
         df_nav.index.name='tc_date'
 
+    print df_nav.head()
     return df_nav

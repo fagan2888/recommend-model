@@ -196,6 +196,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
 
             # 加载资产配置比例
             df_ratio = database.load_pos_frame(ratio_id)
+            #print df_ratio
             # print df_ratio.sum(axis=1)
             if 11310100 not in df_ratio.columns:
                 df_ratio[11310100] = 1 - df_ratio.sum(axis=1)
@@ -233,7 +234,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
                 (pool, df_fund) = v
                 tmp[k] = (pool, df_fund.unstack().reindex(index, method='pad').stack())
             pools = tmp
-
             #
             # 计算基金配置比例
             #
@@ -245,8 +245,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
                     # 选择基金
                     (pool_id, df_fund) = pools[asset_id]
                     segments = choose_fund_avg(day, pool_id, ratio, df_fund.loc[day])
+                    if int(risk * 10) == 1:
+                        print segments
                     data.extend(segments)
-
+            print data
             df_raw = pd.DataFrame(data, columns=['ra_date', 'ra_pool_id', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_ratio'])
             df_raw.set_index(['ra_date', 'ra_pool_id', 'ra_fund_id'], inplace=True)
 
@@ -268,8 +270,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             df_raw['ra_fund_ratio'] = df_raw['ra_fund_ratio'].round(4)            # 四舍五入到万分位
 
             df_tmp = df_raw[['ra_fund_ratio']]
-            # print df_tmp.head(20)
 
+            #print gid, df_tmp
             df_tmp = df_tmp.unstack([1, 2])
             df_tmp = df_tmp.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
             df_tmp = DFUtil.filter_same_with_last(df_tmp)          # 过滤掉相同
