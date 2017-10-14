@@ -197,10 +197,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             # 加载资产配置比例
             df_ratio = database.load_pos_frame(ratio_id)
             # print df_ratio.sum(axis=1)
-            if 11310100 not in df_ratio.columns:
-                df_ratio[11310100] = 1 - df_ratio.sum(axis=1)
+            if '11310100' not in df_ratio.columns:
+                df_ratio['11310100'] = 1 - df_ratio.sum(axis=1)
             else:
-                df_ratio[11310100] += 1 - df_ratio.sum(axis=1)
+                df_ratio['11310100'] += 1 - df_ratio.sum(axis=1)
             # print df_ratio.head()
 
             start = df_ratio.index.min()
@@ -216,12 +216,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
                 pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
                 pools[row['ra_asset_id']] = pool
             else:
-                if 11310100 not in pools:
-                    fund = asset_ra_pool_fund.load(11310100)
+                if '11310100' not in pools:
+                    fund = asset_ra_pool_fund.load('11310100')
                     if not fund.empty:
                         index = index.union(fund.index.get_level_values(0)).unique()
-                    pool = (11310100, fund[['ra_fund_code', 'ra_fund_type']])
-                    pools[11310100] = pool
+                    pool = ('11310100', fund[['ra_fund_code', 'ra_fund_type']])
+                    pools['11310100'] = pool
 
             #
             # 根据基金池和配置比例的索引并集reindex数据
