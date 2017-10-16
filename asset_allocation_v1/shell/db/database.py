@@ -547,9 +547,12 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         #
         # 基金池资产
         #
-        asset_id = int(asset_id) / 10000000
-        (pool_id, category) = (asset_id / 100, asset_id % 100)
-        ttype = pool_id / 10000
+        if asset_id.isdigit():
+            asset_id = int(asset_id) % 10000000
+            (pool_id, category) = (asset_id / 100, asset_id % 100)
+            ttype = pool_id / 10000
+        else:
+            pool_id, category, ttype = asset_id, 0, 9
         sr = asset_ra_pool_nav.load_series(
             pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
     elif xtype == 3:
