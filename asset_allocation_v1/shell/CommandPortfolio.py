@@ -443,7 +443,7 @@ def turnover_update_alloc(portfolio):
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='turnover %-11d' % (portfolio['globalid']),
+            label='turnover %-11s' % (portfolio['globalid']),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
     # with click.progressbar(length=len(df_alloc), label='update turnover %s' % (portfolio['globalid'])) as bar:
