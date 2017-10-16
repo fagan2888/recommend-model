@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import os
 import logging
+import re
 import Const
 
 from sqlalchemy import *
@@ -31,6 +32,8 @@ import base_ra_fund
 import base_ra_fund_nav
 import base_ra_index
 import base_ra_index_nav
+import base_exchange_rate_index_nav
+import base_exchange_rate_index
 
 logger = logging.getLogger(__name__)
 
@@ -532,16 +535,24 @@ def asset_risk_asset_allocation_nav_load_series(
 
     return df['nav']
 
+
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
-    xtype = asset_id / 10000000
+
+    if asset_id.isdigit():
+        xtype = int(asset_id) / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
     if xtype == 1:
         #
         # 基金池资产
         #
-        asset_id %= 10000000
-        (pool_id, category) = (asset_id / 100, asset_id % 100)
-        ttype = pool_id / 10000
+        if asset_id.isdigit():
+            asset_id = int(asset_id) % 10000000
+            (pool_id, category) = (asset_id / 100, asset_id % 100)
+            ttype = pool_id / 10000
+        else:
+            pool_id, category, ttype = asset_id, 0, 9
         sr = asset_ra_pool_nav.load_series(
             pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
     elif xtype == 3:
@@ -562,14 +573,24 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         #
         sr = base_ra_index_nav.load_series(
             asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+    elif xtype == 'ERI':
+
+        sr = base_exchange_rate_index_nav.load_series(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     else:
         sr = pd.Series()
 
     return sr
 
+
 def load_asset_name_and_type(asset_id):
     (name, category) = ('', 0)
-    xtype = asset_id / 10000000
+
+    if asset_id.isdigit():
+        asset_id = int(asset_id)
+        xtype = asset_id / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
     if xtype == 1:
         #
@@ -605,13 +626,25 @@ def load_asset_name_and_type(asset_id):
             category = 42
         elif '恒生' in name:
             category = 43
+    elif xtype == 'ERI':
+        asset = base_exchange_rate_index.find(asset_id)
+        (name, category) = (asset['eri_name'], 0)
+
     else:
          (name, category) = ('', 0)
 
     return (name, category)
 
+'''
 def load_pool_via_asset(asset_id):
     xtype = asset_id / 10000000
+
+    if asset_id.isdigit():
+        asset_id = int(asset_id)
+        xtype = asset_id / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+
 
     if xtype == 12:
         #
@@ -625,14 +658,14 @@ def load_pool_via_asset(asset_id):
             pool = 19240142
         elif '恒生' in name:
             pool = 19240143
-            
     else:
         pool = 0
 
     return pool
-
+'''
 
 def load_asset_and_pool(gid):
+    gid = int(gid)
     xtype = gid / 10000000
 
     if xtype == 5:
@@ -681,6 +714,7 @@ def load_asset_and_pool(gid):
     return df_asset;
 
 def load_alloc_and_risk(gid):
+    gid = int(gid)
     xtype = gid / 10000000
 
     result = []
@@ -703,6 +737,7 @@ def load_alloc_and_risk(gid):
     return result
 
 def load_pos_frame(gid):
+    gid = int(gid)
     xtype = gid / 10000000
 
     if xtype == 5:

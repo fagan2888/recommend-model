@@ -114,7 +114,7 @@ def nav_update(alloc, xtype, debug, optfee, optt0, enddate):
     # 加载仓位信息
     df_pos = asset_is_investor_pos.load_fund_pos(alloc_id)
     if df_pos.empty:
-        click.echo(click.style("\nswarning: empty df_pos for alloc %d, skiped!" % (alloc_id), fg='yellow'))
+        click.echo(click.style("\nswarning: empty df_pos for alloc %s, skiped!" % (alloc_id), fg='yellow'))
         return
     
     df_pos.index.names=['ra_date', 'ra_fund_id']

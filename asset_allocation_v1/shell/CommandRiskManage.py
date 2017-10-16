@@ -385,7 +385,7 @@ def signal_update(riskmgr):
     sr_timing = asset_tc_timing_signal.load_series(riskmgr['rm_timing_id'])
     # print sr_timing.head()
     if sr_timing.empty:
-        click.echo(click.style("\nempty timing signal (%d, %d), suppose all 1\n" % (riskmgr_id, riskmgr['rm_timing_id']), fg="red"))
+        click.echo(click.style("\nempty timing signal (%s, %s), suppose all 1\n" % (riskmgr_id, riskmgr['rm_timing_id']), fg="red"))
     
     # 加载资产收益率
     # min_date = df_position.index.min()

@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import os
 import time
+import re
 import logging
 import Const
 import DFUtil
@@ -112,6 +113,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
 
         max_id = asset_mz_highlow.max_id_between(between_min, between_max)
         if max_id is None:
+            max_id = between_min
+
+        if not (isinstance(max_id, int) or isinstance(max_id, long)):
+            max_id = string.atoi(max_id)
+
+        if max_id is None:
             optid = int(between_min)
         else:
             if max_id >= int(between_max):
@@ -124,9 +131,9 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
                     return -1
 
             if optreplace:
-                optid = int(max_id)
+                optid = str(max_id)
             else:
-                optid = int(max_id) + 10
+                optid = str(max_id + 10)
 
     if optname is None:
         optname = u'高低风险%s' % today.strftime("%m%d")
@@ -159,10 +166,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         dt_pool[k] = asset_ra_pool.match_asset_pool(k)
     df_asset['mz_pool_id'] = pd.Series(dt_pool)
 
-    if 11310100 not in df_asset.index:
-        df_asset.loc[11310100] = (0, u'货币(低)', 31, 0, 11310100)
-    if 11310101 not in df_asset.index:
-        df_asset.loc[11310101] = (0, u'货币(高)', 31, 0, 11310101)
+    if '11310100' not in df_asset.index:
+        df_asset.loc['11310100'] = (0, u'货币(低)', 31, 0, '11310100')
+    if '11310101' not in df_asset.index:
+        df_asset.loc['11310101'] = (0, u'货币(高)', 31, 0, '11310101')
     
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -227,7 +234,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     #
 
     for risk in [int(x) for x in optrisk.split(',')]:
-        highlow_id = optid + (risk % 10)
+        highlow_id = str(string.atoi(optid) + (risk % 10))
         name = optname + u"-等级%d" % (risk)
         # 配置比例
         ratio_h  = (risk - 1) * 1.0 / 9
@@ -256,12 +263,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         if ratio_h > 0:
             sr = ratio_h - df_h.sum(axis=1)
             if (sr > 0.000099).any():
-                df_h[11310101] = sr
+                df_h['11310101'] = sr
 
         if ratio_l > 0:
             sr = ratio_l - df_l.sum(axis=1)
             if (sr > 0.000099).any():
-                df_h[11310100] = sr
+                df_h['11310100'] = sr
         #
         # 合并持仓
         #
@@ -350,13 +357,19 @@ def load_riskmgr(assets, reindex=None, enable=True):
     return df
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
-    xtype = asset_id / 10000000
+
+
+    if asset_id.isdigit():
+        xtype = int(asset_id) / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+
 
     if xtype == 1:
         #
         # 基金池资产
         #
-        asset_id %= 10000000
+        asset_id = string.atoi(asset_id) / 10000000
         (pool_id, category) = (asset_id / 100, asset_id % 100)
         ttype = pool_id / 10000
         sr = asset_ra_pool_nav.load_series(
@@ -379,6 +392,11 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         #
         sr = base_ra_index_nav.load_series(
             asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+    elif xtype == 'ERI':
+
+        sr = base_exchange_rate_index_nav.load_series(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+
     else:
         sr = pd.Series()
 
@@ -418,7 +436,7 @@ def nav(ctx, optid, optlist, optenddate):
 def nav_update_alloc(highlow, enddate):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
     
-    with click.progressbar(length=len(df_alloc), label='update nav %d' % (highlow['globalid'])) as bar:
+    with click.progressbar(length=len(df_alloc), label='update nav %s' % (highlow['globalid'])) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             nav_update(alloc, enddate)
@@ -486,7 +504,7 @@ def turnover(ctx, optid, optlist):
 def turnover_update_alloc(highlow):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
     
-    with click.progressbar(length=len(df_alloc), label='update turnover %d' % (highlow['globalid'])) as bar:
+    with click.progressbar(length=len(df_alloc), label='update turnover %s' % (highlow['globalid'])) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             turnover_update(alloc)

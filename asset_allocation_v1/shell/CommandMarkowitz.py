@@ -11,6 +11,7 @@ import numpy as np
 import os
 import time
 import logging
+import re
 import Const
 import DFUtil
 import DBData
@@ -24,7 +25,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
-from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 
 import traceback, code
@@ -241,14 +242,14 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             optid = between_min
         else:
             if max_id >= between_max:
-                s = "run out of instance id [%d]" % max_id
+                s = "run out of instance id [%s]" % max_id
                 click.echo(click.style("%s, import aborted!" % s, fg="red"))
                 return -1
 
             if optreplace:
                 optid = max_id
             else:
-                optid = max_id + 1;
+                optid = str(string.atoi(max_id) + 1);
     #
     # 处理assets参数
     #
@@ -257,11 +258,13 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     else:
         if short_cut == 'high':
             assets = {
-                120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
-                120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
-                120000013:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
-                120000015:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
-                120000014:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.35, 'lower': 0.0}, #黄金指数修型
+                '120000001':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
+                '120000002':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
+                '120000013':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
+                '120000015':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
+                '120000014':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #黄金指数修型
+                #'ERI000002':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价恒生指数
+                #'ERI000001':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价标普500指数
                 # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
                 # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
                 # 120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
@@ -270,8 +273,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
         elif short_cut == 'low':
             assets = {
-                120000010:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
-                120000011:  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                '120000010':  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
+                '120000011':  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
             }
             if optname is None:
                 optname = u'马克维茨%s(低风险)' % today.strftime("%m%d")
@@ -280,8 +283,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 
         else: # short_cut == 'default'
             assets = {
-                120000001:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
-                120000002:  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #中证500指数修型
+                '120000001':  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #沪深300指数修型
+                '120000002':  {'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0}, #中证500指数修型
 
                 # 120000013:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
                 # 120000015:  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
@@ -289,12 +292,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
                 # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益
 
-                120000013:  {'sum1': 0, 'sum2' : 0,   'upper': 0.55, 'lower': 0.0}, #标普500指数
-                120000015:  {'sum1': 0, 'sum2' : 0,   'upper': 0.55, 'lower': 0.0}, #恒生指数修型
-                120000014:  {'sum1': 0, 'sum2' : 0,'upper': 0.32, 'lower': 0.0}, #黄金指数修型
-                120000029:  {'sum1': 0, 'sum2' : 0,'upper': 0.20, 'lower': 0.0}, #南华商品指数
-                120000028:  {'sum1': 0, 'sum2' : 0,'upper': 0.15, 'lower': 0.0}, #标普高盛原油商品指数收益率
-                120000031:  {'sum1': 0, 'sum2' : 0,'upper': 0.20, 'lower': 0.0}, #房地产指数
+                '120000013':  {'sum1': 0, 'sum2' : 0,   'upper': 0.55, 'lower': 0.0}, #标普500指数
+                '120000015':  {'sum1': 0, 'sum2' : 0,   'upper': 0.55, 'lower': 0.0}, #恒生指数修型
+                '120000014':  {'sum1': 0, 'sum2' : 0,'upper': 0.32, 'lower': 0.0}, #黄金指数修型
+                '120000029':  {'sum1': 0, 'sum2' : 0,'upper': 0.20, 'lower': 0.0}, #南华商品指数
+                '120000028':  {'sum1': 0, 'sum2' : 0,'upper': 0.15, 'lower': 0.0}, #标普高盛原油商品指数收益率
+                '120000031':  {'sum1': 0, 'sum2' : 0,'upper': 0.20, 'lower': 0.0}, #房地产指数
 
             }
 
@@ -322,7 +325,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     mz_markowitz_asset  = Table('mz_markowitz_asset', metadata, autoload=True)
     mz_markowitz_pos    = Table('mz_markowitz_pos', metadata, autoload=True)
     mz_markowitz_nav    = Table('mz_markowitz_nav', metadata, autoload=True)
-    mz_markowitz_sharpe = Table('mz_markowitz_sharpe', metadata, autoload=True)
+    #mz_markowitz_sharpe = Table('mz_markowitz_sharpe', metadata, autoload=True)
 
     #
     # 处理替换
@@ -332,7 +335,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         mz_markowitz_asset.delete(mz_markowitz_asset.c.mz_markowitz_id == optid).execute()
         mz_markowitz_pos.delete(mz_markowitz_pos.c.mz_markowitz_id == optid).execute()
         mz_markowitz_nav.delete(mz_markowitz_nav.c.mz_markowitz_id == optid).execute()
-        mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == optid).execute()
+        #mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == optid).execute()
 
     now = datetime.now()
     # 导入数据: markowitz
@@ -377,21 +380,9 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     raw_ratios = {}
     raw_assets = {}
     for asset_id in df.columns:
-        if asset_id / 10000000 != 4:
-            raw_assets[asset_id] = asset_id
-            raw_ratios[asset_id] = df[asset_id]
-        else:
-            #
-            # 修型资产
-            #
-            rs_reshape = asset_rs_reshape.find(asset_id)
-            if rs_reshape is None:
-                raw_assets[asset_id] = asset_id
-                raw_ratios[asset_id] = df[asset_id]
-            else:
-                raw_assets[asset_id] = rs_reshape['rs_asset_id']
-                sr_reshape_pos = asset_rs_reshape_pos.load_series(asset_id, reindex=df.index)
-                raw_ratios[asset_id] = df[asset_id] * sr_reshape_pos
+        raw_assets[asset_id] = asset_id
+        raw_ratios[asset_id] = df[asset_id]
+
     df_raw_ratio = pd.DataFrame(raw_ratios, columns=df.columns)
     df_raw_asset = pd.DataFrame(raw_assets, index=df.index, columns=df.columns)
 
@@ -406,7 +397,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0) | (df_tosave['mz_markowitz_ratio'] > 0)]
     
     # save
-    # print df_tosave
     asset_mz_markowitz_pos.save(optid, df_tosave)
 
     # 导入数据: markowitz_criteria
@@ -458,7 +448,11 @@ def parse_asset(asset):
     return result
 
 def merge_asset_name_and_type(asset_id, asset_data):
-    xtype = asset_id / 10000000
+
+    if asset_id.isdigit():
+        xtype = int(asset_id) / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
     if xtype == 4:
         #
@@ -470,7 +464,7 @@ def merge_asset_name_and_type(asset_id, asset_data):
     else:
         (name, category) = database.load_asset_name_and_type(asset_id)
         (raw_asset, raw_name) = (asset_id, name)
-        
+
     return xdict.merge(asset_data, {
         'mz_asset_id': raw_asset,
         'mz_asset_name': raw_name,
@@ -564,8 +558,15 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
 
     return sr_result
 
+
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
-    xtype = asset_id / 10000000
+
+
+    if asset_id.isdigit():
+        xtype = int(asset_id) / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+
 
     if xtype == 1:
         #
@@ -593,6 +594,10 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         # 指数资产
         #
         sr = base_ra_index_nav.load_series(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+    elif xtype == 'ERI':
+
+        sr = base_exchange_rate_index_nav.load_series(
             asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
     else:
         sr = pd.Series()

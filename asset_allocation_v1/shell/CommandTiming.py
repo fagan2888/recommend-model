@@ -13,6 +13,7 @@ import numpy as np
 import LabelAsset
 import os
 import time
+import re
 import Const
 import DFUtil
 from TimingGFTD import TimingGFTD
@@ -61,6 +62,7 @@ def signal(ctx, optid, optlist, optonline):
         xtypes = [1]
 
     df_timing = asset_tc_timing.load(timings, xtypes)
+
 
     if optlist:
 
@@ -147,12 +149,9 @@ def signal_update_gftd(timing):
     argv = {k: int(v) for (k,v) in [x.split('=') for x in timing['tc_argv'].split(',')]}
     n1, n2, n3, n4 = argv['n1'], argv['n2'], argv['n3'], argv['n4']
         
-    df_nav = base_ra_index_nav.load_ohlc(
+    df_nav = load_index_ohlc(
         timing['tc_index_id'], reindex=tdates, begin_date=sdate, end_date=edate, mask=[0, 2])
-        
-    df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
-    df_nav.index.name='tc_date'
-   
+    
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
     
@@ -233,6 +232,7 @@ def nav(ctx, optid, optlist):
         timings = None
 
     df_timing = asset_tc_timing.load(timings)
+
     if optlist:
 
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
@@ -251,6 +251,7 @@ def nav_update(timing):
     df_position = asset_tc_timing_signal.load(timing_id)
     # 构建仓位
     df_position.loc[df_position[timing_id] < 1, timing_id] = 0
+
     
     # 加载基金收益率
     min_date = df_position.index.min()
@@ -373,4 +374,30 @@ def coverage_update(timing, n1s, n2s, n3s, n4s):
 
     # 更新数据库
     database.batch(db, t2, df, df_old, timestamp=False)
-    
+   
+
+
+def load_index_ohlc(asset_id, reindex, begin_date, end_date, mask):
+
+    if asset_id.isdigit():
+        xtype = int(asset_id) / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+
+    if xtype == 'ERI':
+        df_nav = base_exchange_rate_index_nav.load_ohlc(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date, mask = mask)
+
+        df_nav.rename(columns={'eri_open':'tc_open', 'eri_high':'tc_high', 'eri_low':'tc_low', 'eri_close':'tc_close'}, inplace=True)
+        df_nav.index.name='tc_date'
+
+    elif xtype == 12:
+        df_nav = base_ra_index_nav.load_ohlc(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date, mask = mask)
+
+        df_nav.rename(columns={'ra_open':'tc_open', 'ra_high':'tc_high', 'ra_low':'tc_low', 'ra_close':'tc_close'}, inplace=True)
+        df_nav.index.name='tc_date'
+
+    #print df_nav.head()
+    return df_nav
+
