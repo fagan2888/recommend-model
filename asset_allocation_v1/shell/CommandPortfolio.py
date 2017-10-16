@@ -120,7 +120,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         between_min, between_max = ('%s00' % (prefix), '%s99' % (prefix))
 
         max_id = asset_ra_portfolio.max_id_between(between_min, between_max)
-        print max_id, between_min, between_max
+        max_id = int(max_id)
         if max_id is None:
             optid = int(between_min)
         else:
