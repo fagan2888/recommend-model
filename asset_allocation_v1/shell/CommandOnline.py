@@ -86,7 +86,7 @@ def nav_update_alloc(online, risks, xtype, debug, optfee, optt0):
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='update nav %-9d' % (online['globalid']),
+            label='update nav %-9s' % (online['globalid']),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
     # with click.progressbar(length=len(df_alloc), label='update nav %s' % (online['globalid'])) as bar:
@@ -172,7 +172,7 @@ def turnover_update_alloc(online):
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='turnover %-11d' % (online['globalid']),
+            label='turnover %-11s' % (online['globalid']),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
     # with click.progressbar(length=len(df_alloc), label='update turnover %s' % (online['globalid'])) as bar:
