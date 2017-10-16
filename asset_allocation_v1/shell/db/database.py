@@ -535,6 +535,7 @@ def asset_risk_asset_allocation_nav_load_series(
 
     return df['nav']
 
+
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
     if asset_id.isdigit():
@@ -542,12 +543,11 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
     else:
         xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
-
     if xtype == 1:
         #
         # 基金池资产
         #
-        asset_id %= 10000000
+        asset_id = int(asset_id) / 10000000
         (pool_id, category) = (asset_id / 100, asset_id % 100)
         ttype = pool_id / 10000
         sr = asset_ra_pool_nav.load_series(
