@@ -5,10 +5,13 @@ import sys
 sys.path.append('shell')
 import click
 import pandas as pd
+import re
+import logging
 
 from sqlalchemy import MetaData, Table, select
 from TimingWavelet import TimingWt
-from db import asset_wt_filter, base_ra_index_nav, database
+from db import asset_wt_filter, base_ra_index_nav, database, base_exchange_rate_index_nav
+logger = logging.getLogger(__name__)
 
 
 @click.group(invoke_without_command=True)
@@ -20,7 +23,7 @@ def filtering(ctx, optid, optfull):
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        if not optfull:
+        if optid is not None:
             ctx.invoke(nav, optid=optid)
         else:
             df_filtering = asset_wt_filter.load(None)
@@ -43,15 +46,16 @@ def nav(ctx, optid):
 
     df_filtering = asset_wt_filter.load(filterings)
 
-    with click.progressbar(length=len(df_filtering), label='update signal') as bar:
+    with click.progressbar(length=len(df_filtering), label='update filter') as bar:
         for _, filtering in df_filtering.iterrows():
             bar.update(1)
+            print "\t%s, %s" % (filtering['globalid'], filtering['wt_name'])
             nav_update(filtering)
 
 def nav_update(filtering):
 
-    ori_data = base_ra_index_nav.load_series(filtering['wt_index_id'])
-    print ori_data
+    #ori_data = base_ra_index_nav.load_series(filtering['wt_index_id'])
+    ori_data = load_nav_series(filtering['wt_index_id'])
 
     wt = TimingWt(ori_data)
     filtered_data = wt.get_filtered_data(ori_data, filtering['wt_filter_num'], \

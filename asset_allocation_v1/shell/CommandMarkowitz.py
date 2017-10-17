@@ -23,7 +23,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe
+from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
@@ -46,17 +46,19 @@ logger = logging.getLogger(__name__)
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
 @click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
+@click.option('--wavelet/--no-wavelet', 'optwavelet', default=False, help=u'use wavelet filter or not')
+@click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help=u'use wavelet filter num')
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
-def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optcpu, short_cut, assets):
+def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optfull is False:
-            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, short_cut=short_cut, assets=assets)
+            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optwavelet = optwavelet, optwaveletfilternum = optwaveletfilternum, short_cut=short_cut, assets=assets)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -199,11 +201,13 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
 @click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
+@click.option('--wavelet/--no-wavelet', 'optwavelet', default=False, help=u'use wavelet filter or not')
+@click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help=u'use wavelet filter num')
 @click.option('--short-cut', type=click.Choice(['default', 'high', 'low']))
 @click.option('--algo', 'optalgo', type=click.Choice(['markowitz', 'average']), help=u'which algorithm to use for allocate')
 @click.argument('assets', nargs=-1)
 @click.pass_context
-def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optbootcount, optcpu, short_cut, optalgo, assets):
+def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, short_cut, optalgo, assets):
     '''calc high low model markowitz
     '''
 
@@ -260,11 +264,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             assets = {
                 '120000001':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
                 '120000002':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
-                #'120000013':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
-                #'120000015':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
+                '120000013':  {'sum1': 0.0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普500指数
+                '120000015':  {'sum1': 0.0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #恒生指数修型
                 '120000014':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #黄金指数修型
-                'ERI000002':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价恒生指数
-                'ERI000001':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价标普500指数
+                #'ERI000002':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价恒生指数
+                #'ERI000001':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价标普500指数
                 # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
                 # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
                 # 120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
@@ -311,7 +315,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     else:
         df = markowitz_days(
             startdate, enddate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=bootstrap, cpu_count=optcpu)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=bootstrap, cpu_count=optcpu, wavelet = optwavelet, wavelet_filter_num = optwaveletfilternum)
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
@@ -489,7 +493,7 @@ def average_days(start_date, end_date, assets):
 
     return df
 
-def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0):
+def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, wavelet = False, wavelet_filter_num = 0):
     '''perform markowitz asset for days
     '''
     # 加载时间轴数据
@@ -515,11 +519,11 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
             # bar.update(1)
             logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
             # 高风险资产配置
-            data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count)
+            data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
 
     return pd.DataFrame(data).T
 
-def markowitz_day(day, lookback, assets, bootstrap, cpu_count):
+def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
     '''perform markowitz for single day
     '''
     
@@ -528,13 +532,15 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count):
     begin_date = index.min().strftime("%Y-%m-%d")
     end_date = index.max().strftime("%Y-%m-%d")
 
+    #print wavelet, wavelet_filter_num
     #
     # 加载数据
     #
     data = {}
     for asset in assets:
-        data[asset] = load_nav_series(asset, index, begin_date, end_date)
+        data[asset] = load_nav_series(asset, index, begin_date, end_date, wavelet, wavelet_filter_num)
     df_nav = pd.DataFrame(data).fillna(method='pad')
+    print df_nav.head()
     df_inc  = df_nav.pct_change().fillna(0.0)
 
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
@@ -559,7 +565,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     return sr_result
 
 
-def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
+def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None, wavelet = None, wavelet_filter_num = None):
 
 
     if asset_id.isdigit():
@@ -567,8 +573,10 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
     else:
         xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
-
-    if xtype == 1:
+    if wavelet:
+        sr = asset_wt_filter_nav.load_series(asset_id, filter_num = wavelet_filter_num, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        #print asset_id, sr
+    elif xtype == 1:
         #
         # 基金池资产
         #

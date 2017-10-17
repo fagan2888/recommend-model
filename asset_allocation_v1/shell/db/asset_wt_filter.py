@@ -34,4 +34,3 @@ def load(filters):
 
     df = pd.read_sql(s, db)
     return df
-

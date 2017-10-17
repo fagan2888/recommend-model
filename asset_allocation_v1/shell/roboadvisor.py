@@ -118,15 +118,16 @@ def test(ctx):
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
 @click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
+@click.option('--wavelet/--no-wavelet', 'optwavelet', default=False, help=u'use wavelet filter or not')
+@click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help=u'use wavelet filter num')
 @click.option('--high', 'opthigh', type=int, help=u'specify markowitz high id when --no-markowitz')
 @click.option('--low', 'optlow', type=int, help=u'specify markowitz low id when --no-markowitz specified')
 @click.option('--ratio', 'optratio', type=int, help=u'specify highlow when --no-highlow specified ')
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance for timing and riskmgr')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace existed instance')
 @click.option('--riskctrl/--no-riskctrl', 'optriskctrl', default=True, help=u'no riskmgr for highlow')
-@click.option('--wavelet/--no-wavelet', 'optwavelet', default=True, help=u'include wavelet group with in batch')
 @click.pass_context
-def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, opthigh, optlow, optratio, optonline, optreplace, optriskctrl, optwavelet):
+def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, opthigh, optlow, optratio, optonline, optreplace, optriskctrl):
     '''run all command in batch
     '''
     if optpool:
@@ -143,7 +144,7 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
         ctx.invoke(CommandRiskManage.riskmgr, optonline=optonline)
 
     if optmarkowtiz:
-        ctx.invoke(CommandMarkowitz.markowitz, short_cut='high', startdate=startdate, optturnover=optturnoverm, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optreplace=optreplace)
+        ctx.invoke(CommandMarkowitz.markowitz, short_cut='high', startdate=startdate, optturnover=optturnoverm, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu,optwavelet=optwavelet, optwaveletfilternum=optwaveletfilternum, optreplace=optreplace)
         ctx.invoke(CommandMarkowitz.markowitz, short_cut='low', startdate=startdate, optturnover=optturnoverm, optbootstrap=False, optbootcount=optbootcount, optcpu=optcpu)
     else:
         if opthigh is None:
