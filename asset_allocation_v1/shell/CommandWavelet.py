@@ -89,7 +89,6 @@ def nav_update(filtering):
     database.batch(db, t, df_new, df_old, timestamp=False)
 
     #print df_result.head()
-=======
     filtered_data = get_filtered_data(ori_data, filtering['wt_filter_num'], \
             filtering['wt_begin_date'])
 
@@ -118,7 +117,6 @@ def nav_update(filtering):
 
     #print df_result.head()
 '''
->>>>>>> add CommandWavelet
 
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
