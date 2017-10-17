@@ -34,6 +34,7 @@ class TimingWt(object):
         # We will use the Daubechies(4) wavelet
         wname = self.wname
 
+        dates = data.index
         data = np.atleast_2d(data)
         numwires, datalength = data.shape
         # Initialize the container for the filtered data
@@ -72,7 +73,9 @@ class TimingWt(object):
 
             fdata[i,:] = pywt.waverec(c, wname)
 
-        return fdata.ravel()
+        sr = pd.Series(fdata.ravel(), index = dates)
+
+        return sr
 
     def get_filtered_data(self, df, wavenum, startdate = None):
         if startdate is None:

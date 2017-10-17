@@ -17,6 +17,7 @@ import DFUtil
 import DBData
 import util_numpy as npu
 import Portfolio as PF
+from TimingWavelet import TimingWt
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -538,7 +539,10 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     #
     data = {}
     for asset in assets:
-        data[asset] = load_nav_series(asset, index, begin_date, end_date, wavelet, wavelet_filter_num)
+        if wavelet:
+            data[asset] = load_wavelet_nav_series(asset, index, begin_date, end_date, wavelet, wavelet_filter_num)
+        else:
+            data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
@@ -564,7 +568,59 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     return sr_result
 
 
-def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None, wavelet = None, wavelet_filter_num = None):
+def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=None, wavelet=None, wavelet_filter_num=None):
+
+    if asset_id.isdigit():
+        xtype = int(asset_id) / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+
+    if xtype == 1:
+        #
+        # 基金池资产
+        #
+        asset_id %= 10000000
+        (pool_id, category) = (asset_id / 100, asset_id % 100)
+        ttype = pool_id / 10000
+        sr = asset_ra_pool_nav.load_series(
+            pool_id, category, ttype, reindex=None, end_date=end_date)
+    elif xtype == 3:
+        #
+        # 基金池资产
+        #
+        sr = base_ra_fund_nav.load_series(
+            asset_id, reindex=None, end_date=end_date)
+    elif xtype == 4:
+        #
+        # 修型资产
+        #
+        sr = asset_rs_reshape_nav.load_series(
+            asset_id, reindex=None, end_date=end_date)
+    elif xtype == 12:
+        #
+        # 指数资产
+        #
+        sr = base_ra_index_nav.load_series(
+            asset_id, reindex=None, end_date=end_date)
+    elif xtype == 'ERI':
+
+        sr = base_exchange_rate_index_nav.load_series(
+            asset_id, reindex=None, end_date=end_date)
+
+    else:
+        sr = pd.Series()
+
+
+    wt = TimingWt(sr)
+    filtered_data = wt.wavefilter(sr, wavelet_filter_num)
+    filtered_data = filtered_data.fillna(0.0)
+    filtered_data = filtered_data[filtered_data.index >= begin_date]
+    filtered_data = filtered_data.loc[reindex]
+
+    return filtered_data
+
+
+def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
 
     if asset_id.isdigit():
@@ -572,10 +628,7 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None, wave
     else:
         xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
-    if wavelet:
-        sr = asset_wt_filter_nav.load_series(asset_id, filter_num = wavelet_filter_num, reindex=reindex, begin_date=begin_date, end_date=end_date)
-        #print asset_id, sr
-    elif xtype == 1:
+    if xtype == 1:
         #
         # 基金池资产
         #
