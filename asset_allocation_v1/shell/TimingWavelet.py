@@ -83,8 +83,7 @@ class TimingWt(object):
         filtered_close = []
 
         for day in days:
-            #tmp_close = np.array(df[:day])
-            tmp_close = np.array(df[:day].close)
+            tmp_close = np.array(df[:day])
             tmp_filtered_close = self.wavefilter(tmp_close, wavenum)
             tmp_last_close = tmp_filtered_close[-1]
             idx.append(day)
