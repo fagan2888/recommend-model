@@ -446,16 +446,16 @@ class MonthlyStaRetention(object):
             rp_date.append(e_date_db)
             rp_retention_type.append(re_type)
             # 复购用户uid
-            resub_uids = trade_type_uids_in(s_date, end_date, \
+            resub_uids = trade_type_uids_in(start_date_rp, end_date, \
                         [11], first_buy_uids)
             # 赎回用户uid
-            redeem_uids = trade_type_uids_in(s_date, end_date, \
+            redeem_uids = trade_type_uids_in(start_date_rp, end_date, \
                         [20, 21, 30, 31], first_buy_uids)
             # 留存用户uid,不能用持仓
             # retain_uids = date_holding_uids_in(end_date_rp, \
             #             first_buy_uids)
             # print '    ', s_date, end_date_rp
-            clear_uids_tmp = date_range_clear_uids_in(s_date, end_date_rp, \
+            clear_uids_tmp = date_range_clear_uids_in(start_date_rp, end_date_rp, \
                 first_buy_uids)
             retain_uids = list(set(first_buy_uids) - set(clear_uids_tmp))
             #print '    ', len(first_buy_uids), len(retain_uids)
@@ -478,11 +478,11 @@ class MonthlyStaRetention(object):
             # 留存用户数
             rp_user_hold.append(retain_num)
             # 复购金额
-            resub_amount = ds_order.get_specific_month_amount(s_date, \
+            resub_amount = ds_order.get_specific_month_amount(start_date_rp, \
                 end_date, [11], resub_uids)
             rp_amount_resub.append(resub_amount[0][0])
             # 赎回金额
-            redeem_amount = ds_order.get_specific_month_amount(s_date, \
+            redeem_amount = ds_order.get_specific_month_amount(start_date_rp, \
                 end_date, [20, 21, 30, 31], redeem_uids)
             rp_amount_redeem.append(redeem_amount[0][0])
             # 在管资产
