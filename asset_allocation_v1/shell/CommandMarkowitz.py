@@ -949,23 +949,4 @@ def copy(ctx, optsrc, optdst, optlist):
     asset_mz_markowitz_asset.save(df_xtab['globalid'], df_markowitz_asset)
 
 
-# def perform_maxdd(markowitz):
-#     markowitz_id = markowitz['globalid']
-#     sdate = '2012-07-27'
-#     tdates = base_trade_dates.load_index(sdate);
-#     # sr_nav = database.load_nav_series(markowitz_id, reindex=tdates, begin_date=sdate)
-#     sr_nav = asset_mz_markowitz_nav.load_series(markowitz_id, reindex=tdates, begin_date=sdate)
-
-#     positive, total = (0, 0)
-#     for w in [60, 120, 250]:
-#         tmp = sr_nav.rolling(window=250, min_periods=250).apply(maxdd);
-#         tmp = tmp.dropna()
-#         print "win", w,  tmp.sum()/len(tmp)
-
-# def maxdd(x):
-#     y = x[-1]/x[0] - 1
-#     max_drawdown = (x/np.maximum.accumulate(x) - 1).min()
-#     if (y / abs(max_drawdown)) > 2:
-#         return 1
-#     return 0
 
