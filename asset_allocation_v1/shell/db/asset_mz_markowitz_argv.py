@@ -10,6 +10,7 @@ import logging
 import database
 
 from dateutil.parser import parse
+from util.xdebug import dd
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +20,13 @@ logger = logging.getLogger(__name__)
 def load(gids):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
-    t1 = Table('mz_markowitz_asset', metadata, autoload=True)
+    t1 = Table('mz_markowitz_argv', metadata, autoload=True)
 
     columns = [
         t1.c.mz_markowitz_id,
-        t1.c.mz_asset_id,
-        t1.c.mz_asset_name,
-        t1.c.mz_markowitz_asset_id,
-        t1.c.mz_markowitz_asset_name,
-        t1.c.mz_asset_type,
+        t1.c.mz_key,
+        t1.c.mz_value,
+        t1.c.mz_desc,
     ]
 
     s = select(columns)
@@ -35,7 +34,7 @@ def load(gids):
     if gids is not None:
         s = s.where(t1.c.mz_markowitz_id.in_(gids))
 
-    df = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_markowitz_asset_id'])
+    df = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_key'])
 
     return df
 
@@ -50,20 +49,14 @@ def load(gids):
 
 #     return s.execute().scalar()
 def save(gids, df):
-    fmt_columns = ['mz_upper_limit', 'mz_lower_limit', 'mz_sum1_limit', 'mz_sum2_limit']
-    fmt_precision = 4
-    if not df.empty:
-        df = database.number_format(df, fmt_columns, fmt_precision)
     #
     # 保存择时结果到数据库
     #
     db = database.connection('asset')
-    t2 = Table('mz_markowitz_asset', MetaData(bind=db), autoload=True)
+    t2 = Table('mz_markowitz_argv', MetaData(bind=db), autoload=True)
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
     s = select(columns, (t2.c.mz_markowitz_id.in_(gids)))
-    df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_markowitz_asset_id'])
-    if not df_old.empty:
-        df_old = database.number_format(df_old, fmt_columns, fmt_precision)
+    df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_key'])
 
     # 更新数据库
     # print df_new.head()

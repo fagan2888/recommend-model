@@ -26,10 +26,11 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
+from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
+from util.xdebug import dd
 
 import traceback, code
 
@@ -364,7 +365,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         'sum1':'mz_sum1_limit',  'sum2': 'mz_sum2_limit'
     })
     df_asset = df_asset.reset_index().set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
-    asset_mz_markowitz_asset.save(optid, df_asset)
+    asset_mz_markowitz_asset.save([optid], df_asset)
 
     #
     # 导入数据: markowitz_pos
@@ -868,29 +869,85 @@ def perform_delete(markowitz):
     mz_markowitz_sharpe.delete(mz_markowitz_sharpe.c.mz_markowitz_id == markowitz_id).execute()
     mz_markowitz.delete(mz_markowitz.c.globalid == markowitz_id).execute()
 
-# @markowitz.command()
-# @click.option('--id', 'optid', help=u'ids of markowitz to update')
-# @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
-# @click.pass_context
-# def maxdd(ctx, optid, optlist):
-#     ''' delete markowitz instance
-#     '''
-#     if optid is not None:
-#         markowitzs = [s.strip() for s in optid.split(',')]
-#     else:
-#         markowitzs = None
+@markowitz.command()
+@click.option('--src', 'optsrc', help=u'src id of markowitz to copy from')
+@click.option('--dst', 'optdst', help=u'dst id of markowitz to copy to')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.pass_context
+def copy(ctx, optsrc, optdst, optlist):
+    ''' create new markowitz by copying  existed one
+    '''
+    if optsrc is not None:
+        markowitzs = [optsrc]
+    else:
+        markowitzs = None
 
-#     df_markowitz = asset_mz_markowitz.load(markowitzs)
+    df_markowitz = asset_mz_markowitz.load(markowitzs)
 
-#     if optlist:
+    if optlist:
 
-#         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
-#         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
-#         return 0
+        df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_markowitz, headers='keys', tablefmt='psql')
+        return 0
 
-#     data = []
-#     for _, markowitz in df_markowitz.iterrows():
-#         perform_maxdd(markowitz)
+    if optsrc  is None or optdst is None:
+        click.echo(click.style("\n both --src-id  and --dst-id is required to perform copy\n", fg='red'))
+        return 0
+
+    #
+    # copy mz_markowitz
+    #
+    df_markowitz['globalid'] = optdst
+    df_markowitz.set_index(['globalid'], inplace=True)
+    asset_mz_markowitz.save(optdst, df_markowitz)
+
+    #
+    # copy mz_markowitz_alloc
+    #
+    df_markowitz_alloc = asset_mz_markowitz_alloc.load(optsrc)
+    df_markowitz_alloc.reset_index(inplace=True)
+
+    df_markowitz_alloc['mz_markowitz_id'] = optdst
+    df_markowitz_alloc['old'] = df_markowitz_alloc['globalid']
+    sr_tmp = df_markowitz_alloc['mz_markowitz_id'].str[:len(optdst) - 1]
+    df_markowitz_alloc['globalid'] = sr_tmp.str.cat((df_markowitz_alloc['mz_risk'] * 10 % 10).astype(int).astype(str))
+
+    df_xtab = df_markowitz_alloc[['globalid', 'old']].copy()
+
+    df_markowitz_alloc.drop(['old'], axis=1, inplace=True)
+    
+    df_markowitz_alloc.set_index(['globalid'], inplace=True)
+    asset_mz_markowitz_alloc.save(optdst, df_markowitz_alloc)
+
+    # df_xtab.set_index(['old'], inplace=True)
+    
+    #
+    # copy mz_markowitz_argv
+    #
+    df_markowitz_argv = asset_mz_markowitz_argv.load(df_xtab['old'])
+    df_markowitz_argv.reset_index(inplace=True)
+
+    df_markowitz_argv = df_markowitz_argv.merge(df_xtab, left_on='mz_markowitz_id', right_on = 'old')
+    df_markowitz_argv['mz_markowitz_id'] = df_markowitz_argv['globalid']
+    df_markowitz_argv.drop(['globalid', 'old'], inplace=True, axis=1)
+    df_markowitz_argv = df_markowitz_argv.set_index(['mz_markowitz_id', 'mz_key'])
+
+    asset_mz_markowitz_argv.save(df_xtab['globalid'], df_markowitz_argv)
+
+    #
+    # copy mz_markowitz_asset
+    #
+    df_markowitz_asset = asset_mz_markowitz_asset.load(df_xtab['old'])
+    df_markowitz_asset.reset_index(inplace=True)
+
+    df_markowitz_asset = df_markowitz_asset.merge(df_xtab, left_on='mz_markowitz_id', right_on = 'old')
+
+    df_markowitz_asset['mz_markowitz_id'] = df_markowitz_asset['globalid']
+    df_markowitz_asset.drop(['globalid', 'old'], inplace=True, axis=1)
+    df_markowitz_asset = df_markowitz_asset.set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
+
+    asset_mz_markowitz_asset.save(df_xtab['globalid'], df_markowitz_asset)
+
 
 # def perform_maxdd(markowitz):
 #     markowitz_id = markowitz['globalid']

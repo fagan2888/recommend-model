@@ -28,7 +28,6 @@ import CommandHighlow
 import CommandOnline
 import CommandInvestor
 import CommandExchangeRateIndex
-import RaPortfolio
 
 from util import ProgressBar
 
@@ -188,5 +187,4 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandOnline.online)
     roboadvisor.add_command(CommandInvestor.investor)
     roboadvisor.add_command(CommandExchangeRateIndex.exrindex)
-    roboadvisor.add_command(RaPortfolio.raportfolio)
     roboadvisor(obj={})
