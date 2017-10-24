@@ -28,6 +28,7 @@ import CommandHighlow
 import CommandOnline
 import CommandInvestor
 import CommandExchangeRateIndex
+import CommandUtil
 
 from util import ProgressBar
 
@@ -169,6 +170,20 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
     if optwavelet:
         ctx.invoke(CommandWavelet.filtering)
 
+
+@roboadvisor.command()
+@click.option('--from', 'optfrom', default=True, help=u'--from id')
+@click.option('--to', 'optto', default=True, help=u'--to id')
+@click.option('--name', 'optname', default=True, help=u'name')
+#@click.option('--riskmgr/--no-riskmgr', 'optriskmgr', default=True, help=u'include riskmgr command group with in batch')
+#@click.option('--markowitz/--no-markowitz', 'optmarkowtiz', default=True, help=u'include markowitz command group with in batch')
+@click.pass_context
+def cp(ctx, optfrom, optto, optname):
+
+    pass
+
+
+
 if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
     nav.add_command(CommandNavStock.stock)
@@ -187,4 +202,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandOnline.online)
     roboadvisor.add_command(CommandInvestor.investor)
     roboadvisor.add_command(CommandExchangeRateIndex.exrindex)
+    roboadvisor.add_command(CommandUtil.util)
     roboadvisor(obj={})
