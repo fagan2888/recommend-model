@@ -18,6 +18,8 @@ import DBData
 import util_numpy as npu
 import Portfolio as PF
 from TimingWavelet import TimingWt
+import multiprocessing
+from multiprocessing import Manager
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -494,6 +496,7 @@ def average_days(start_date, end_date, assets):
 
     return df
 
+
 def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, wavelet = False, wavelet_filter_num = 0):
     '''perform markowitz asset for days
     '''
@@ -508,21 +511,52 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
     else:
         adjust_index = index
 
+
     #
     # 马科维兹资产配置
     #
     s = 'perform %-12s' % label
     data = {}
-    with click.progressbar(
-            adjust_index, label=s,
-            item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
-        for day in bar:
-            # bar.update(1)
-            logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
-            # 高风险资产配置
-            data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
+    if not bootstrap:
+
+        count = multiprocessing.cpu_count() / 2
+        process_adjust_indexs = [[] for i in range(0, count)]
+        for i in range(0, len(adjust_index)):
+           process_adjust_indexs[i % count].append(adjust_index[i])
+
+        manager = Manager()
+        q = manager.Queue()
+        processes = []
+        for indexs in process_adjust_indexs:
+            p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num,))
+            processes.append(p)
+            p.start()
+
+        for p in processes:
+            p.join()
+
+        for m in range(0, q.qsize()):
+            record = q.get(m)
+            data[record[0]] = record[1]
+    else:
+        with click.progressbar(
+                adjust_index, label=s,
+                item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+            for day in bar:
+                # bar.update(1)
+                logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+                # 高风险资产配置
+                data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
 
     return pd.DataFrame(data).T
+
+
+def m_markowitz_day(queue, days, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
+
+    for day in days:
+        sr = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
+        queue.put((day, sr))
+
 
 def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
     '''perform markowitz for single day
