@@ -698,7 +698,6 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
-@click.option('--id', 'optid', help=u'ids of markowitz to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--start-date', 'sdate', default='2012-07-27', help=u'start date to calc')

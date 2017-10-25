@@ -40,7 +40,7 @@ def load(gids, xtypes=None):
 
     return df
 
-def where_highlow_id(highlow_id, xtypes=None):
+def where_highlow_id(highlow_id, risks=None, xtypes=None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('mz_highlow_alloc', metadata, autoload=True)
@@ -57,6 +57,8 @@ def where_highlow_id(highlow_id, xtypes=None):
 
     if highlow_id is not None:
         s = s.where(t1.c.mz_highlow_id == highlow_id)
+    if risks is not None:
+        s = s.where(t1.c.mz_risk.in_(risks))
     if xtypes is not None:
         s = s.where(t1.c.mz_type.in_(xtypes))
     

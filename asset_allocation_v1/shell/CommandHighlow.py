@@ -356,6 +356,31 @@ def load_riskmgr(assets, reindex=None, enable=True):
 
     return df
 
+def load_riskmgr2(assets, sr_riskmgr, reindex=None, enable=True):
+    data = {}
+    index = reindex.copy()
+    for asset_id in assets:
+        sr = None
+        if enable and asset_id in sr_riskmgr:
+            gid = sr_riskmgr.at[asset_id]
+            if gid != '' and gid != '0':
+                sr = asset_rm_riskmgr_signal.load_series(gid)
+                index = index.union(sr.index)
+                
+        if sr is None:
+            sr = pd.Series(1.0, index=reindex)
+            sr.index.name = 'mz_date'
+
+        data[asset_id] = sr
+
+    df = pd.DataFrame(data, index=index).fillna(method='pad')
+    df.columns.name = 'mz_asset_id'
+
+    if reindex is not None:
+        df = df[reindex.min():]
+
+    return df
+
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
 
@@ -401,6 +426,188 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         sr = pd.Series()
 
     return sr
+
+@highlow.command()
+@click.option('--id', 'optid', help=u'ids of highlow to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.pass_context
+def pos(ctx, optid, optlist, optrisk):
+    ''' calc pool nav and inc
+    '''
+    if optid is not None:
+        highlows = [s.strip() for s in optid.split(',')]
+    else:
+        if 'highlow' in ctx.obj:
+            highlows = [str(ctx.obj['highlow'])]
+        else:
+            highlows = None
+
+    df_highlow = asset_mz_highlow.load(highlows)
+
+    if optlist:
+        df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_highlow, headers='keys', tablefmt='psql')
+        return 0
+
+    for _, highlow in df_highlow.iterrows():
+        pos_update_alloc(highlow, optrisk)
+        
+def pos_update_alloc(highlow, optrisk):
+    risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
+    df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'], risks)
+    
+    for _, alloc in df_alloc.iterrows():
+        pos_update(highlow, alloc)
+
+    click.echo(click.style("highlow allocation complement! instance id [%s]" % (highlow['globalid']), fg='green'))
+        
+def pos_update(highlow, alloc):
+    highlow_id = alloc['globalid']
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    mz_highlow_pos    = Table('mz_highlow_pos', metadata, autoload=True)
+    mz_highlow_nav    = Table('mz_highlow_nav', metadata, autoload=True)
+
+    #
+    # 处理替换
+    #
+    mz_highlow_nav.delete(mz_highlow_nav.c.mz_highlow_id == highlow_id).execute()
+    mz_highlow_pos.delete(mz_highlow_pos.c.mz_highlow_id == highlow_id).execute()
+
+    # #
+    # # 加载参数
+    # #
+    # df_argv = asset_mz_markowitz_argv.load([markowitz_id])
+    # df_argv.reset_index(level=0, inplace=True)
+    # argv = df_argv['mz_value'].to_dict()
+
+    # lookback = int(argv.get('lookback', '26'))
+    # adjust_period = int(argv.get('adjust_period', 1))
+    # wavelet_filter_num = int(argv.get('optwaveletfilternum', 2))
+    # turnover = float(argv.get('turnover', 0))
+
+    # algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
+    algo = highlow['mz_algo']
+    
+    if algo == 1:
+        #
+        # 焦氏策略
+        #
+        if highlow['mz_high_id'] == '' or highlow['mz_low_id'] == '':
+            click.echo(click.style("\n both mz_high_id and mz_low_id must be set for jiao_method %d:%s\n" % (algo, highlow_id), fg='red'))
+            return
+        
+        df = jiao(highlow, alloc)
+    elif algo == 2:
+        #
+        # 姚氏策略
+        #
+        df = yao(highlow, alloc)
+    else:
+        click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
+        return
+
+    #
+    # 导入数据: highlow_pos
+    #
+    df = df.round(4)             # 四舍五入到万分位
+    df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
+    # print df.head()
+    df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+    # df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
+    # if turnover >= 0.01:
+    #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
+
+    df.index.name = 'mz_date'
+    df.columns.name='mz_asset_id'
+
+
+    # index
+    df['mz_highlow_id'] = highlow_id
+    df = df.reset_index().set_index(['mz_highlow_id', 'mz_date'])
+
+    # unstack
+    df_tosave = df.stack().to_frame('mz_ratio')
+    df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0)]
+
+    # save
+    # print df_tosave
+    asset_mz_highlow_pos.save(highlow_id, df_tosave)
+
+def jiao(highlow, alloc):
+
+    high = highlow['mz_high_id']
+    low  = highlow['mz_low_id']
+    risk = int(alloc['mz_risk'] * 10)
+
+    df_asset = asset_mz_highlow_asset.load([highlow['globalid']])
+    df_asset.set_index(['mz_asset_id'], inplace=True)
+    
+    #
+    # 加载高风险资产仓位
+    #
+    index = None
+
+    df_high = asset_mz_markowitz_pos.load_raw(high)
+    df_high_riskmgr = load_riskmgr2(df_high.columns, df_asset['mz_riskmgr_id'], df_high.index, True)
+    index = df_high.index.union(df_high_riskmgr.index)
+
+    #
+    # 加载低风险资产仓位
+    #
+    df_low  = asset_mz_markowitz_pos.load_raw(low)
+    df_low_riskmgr = load_riskmgr2(df_low.columns, df_asset['mz_riskmgr_id'], df_low.index, True)
+    if index is None:
+        index = df_low.index.union(df_low_riskmgr.index)
+    else:
+        index = index.union(df_low.index).union(df_low_riskmgr.index)
+
+    # 配置比例
+    ratio_h  = (risk - 1) * 1.0 / 9
+    ratio_l  = 1 - ratio_h
+
+    data_h = {}
+    if not df_high.empty:
+        df_high = df_high.reindex(index, method='pad')
+        df_high_riskmgr = df_high_riskmgr.reindex(index, method='pad')
+        for column in df_high.columns:
+            data_h[column] = df_high[column] * df_high_riskmgr[column] * ratio_h
+    df_h = pd.DataFrame(data_h)
+
+    data_l = {}
+    if not df_low.empty:
+        df_low = df_low.reindex(index, method='pad')
+        df_low_riskmgr = df_low_riskmgr.reindex(index, method='pad')
+        for column in df_low.columns:
+            data_l[column] = df_low[column] * df_low_riskmgr[column] * ratio_l
+    df_l = pd.DataFrame(data_l)
+    #
+    # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
+    # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
+    # 天的持仓100%， 如果因为风控空仓，需要用货币补足。
+    #
+    if ratio_h > 0:
+        sr = ratio_h - df_h.sum(axis=1)
+        if (sr > 0.000099).any():
+            df_h['11310101'] = sr
+
+    if ratio_l > 0:
+        sr = ratio_l - df_l.sum(axis=1)
+        if (sr > 0.000099).any():
+            df_h['11310100'] = sr
+    #
+    # 合并持仓
+    #
+    df = pd.concat([df_h, df_l], axis=1)
+
+    
+    return df
+
+def yao(highlow, alloc):
+    return jiao(highlow, alloc)
+    
 
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')
