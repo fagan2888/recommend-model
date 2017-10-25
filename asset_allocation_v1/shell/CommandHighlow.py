@@ -505,7 +505,7 @@ def pos_update(highlow, alloc):
         #
         df = yao(highlow, alloc)
     else:
-        click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
+        click.echo(click.style("\n unknow algo %d for %s\n" % (algo, highlow_id), fg='red'))
         return
 
     #

@@ -320,6 +320,192 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.pass_context
+def pos(ctx, optid, optlist, optrisk):
+    ''' calc pool nav and inc
+    '''
+    if optid is not None:
+        portfolios = [s.strip() for s in optid.split(',')]
+    else:
+        if 'portfolio' in ctx.obj:
+            portfolios = [str(ctx.obj['portfolio'])]
+        else:
+            portfolios = None
+
+    df_portfolio = asset_ra_portfolio.load(portfolios)
+
+    if optlist:
+        df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_portfolio, headers='keys', tablefmt='psql')
+        return 0
+
+    for _, portfolio in df_portfolio.iterrows():
+        pos_update_alloc(portfolio, optrisk)
+        
+def pos_update_alloc(portfolio, optrisk):
+    risks = [int(s.strip()) for s in optrisk.split(',')]
+    df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'], risks)
+    df_alloc = df_alloc.loc[(df_alloc['ra_risk'] * 10).astype(int).isin(risks)]
+    
+    with click.progressbar(
+            df_alloc.iterrows(), length=len(df_alloc.index),
+            label='update pos %-9s' % (portfolio['globalid']),
+            item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
+        for _, alloc in bar:
+            pos_update(portfolio, alloc)
+
+    click.echo(click.style("portfolio allocation complement! instance id [%s]" % (portfolio['globalid']), fg='green'))
+        
+def pos_update(portfolio, alloc):
+    gid = alloc['globalid']
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    ra_portfolio_criteria = Table('ra_portfolio_criteria', metadata, autoload=True)
+    ra_portfolio_contrib = Table('ra_portfolio_contrib', metadata, autoload=True)
+    ra_portfolio_pos    = Table('ra_portfolio_pos', metadata, autoload=True)
+    ra_portfolio_nav    = Table('ra_portfolio_nav', metadata, autoload=True)
+
+    #
+    # 处理替换
+    #
+    ra_portfolio_criteria.delete(ra_portfolio_criteria.c.ra_portfolio_id == gid).execute()
+    ra_portfolio_contrib.delete(ra_portfolio_contrib.c.ra_portfolio_id == gid).execute()
+    ra_portfolio_nav.delete(ra_portfolio_nav.c.ra_portfolio_id == gid).execute()
+    ra_portfolio_pos.delete(ra_portfolio_pos.c.ra_portfolio_id == gid).execute()
+
+    #
+    # 加载参数
+    #
+    df_argv = asset_ra_portfolio_argv.load([gid])
+    df_argv.reset_index(level=0, inplace=True)
+    argv = df_argv['ra_value'].to_dict()
+
+    # lookback = int(argv.get('lookback', '26'))
+    # adjust_period = int(argv.get('adjust_period', 1))
+    # wavelet_filter_num = int(argv.get('optwaveletfilternum', 2))
+    turnover = float(argv.get('turnover', 0.4))
+
+    # algo = alloc['ra_algo'] if alloc['ra_algo'] != 0 else portfolio['ra_algo']
+    algo = portfolio['ra_algo']
+    
+    if algo == 1:
+        #
+        # 等权均分
+        #
+        df_raw = kun(portfolio, alloc)
+    else:
+        click.echo(click.style("\n unknow algo %d for %s\n" % (algo, gid), fg='red'))
+        return
+
+    df_tmp = df_raw[['ra_fund_ratio']]
+
+    #print gid, df_tmp
+    df_tmp = df_tmp.unstack([1, 2])
+    df_tmp = df_tmp.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+    df_tmp = DFUtil.filter_same_with_last(df_tmp)          # 过滤掉相同
+    if turnover >= 0.01:
+        df_tmp = DFUtil.filter_by_turnover(df_tmp, turnover)   # 基于换手率进行规律
+        df_tmp.index.name = 'ra_date'
+    df_tmp = df_tmp.stack([1, 2])
+    df = df_tmp.merge(df_raw[['ra_fund_code', 'ra_fund_type']], how='left', left_index=True, right_index=True)
+
+
+    # index
+    df['ra_portfolio_id'] = gid
+    df = df.reset_index().set_index(['ra_portfolio_id', 'ra_date', 'ra_pool_id', 'ra_fund_id'])
+    df_tosave = df.loc[(df['ra_fund_ratio'] > 0)].copy()
+
+    # save
+    # print df_tosave
+    asset_ra_portfolio_pos.save(gid, df_tosave)
+
+def kun(portfolio, alloc):
+    gid = alloc['globalid']
+    risk = int(alloc['ra_risk'] * 10)
+    ratio_id = alloc['ra_ratio_id']
+    
+    #
+    # 加载用到的资产池
+    #
+    df_asset = asset_ra_portfolio_asset.load([gid])
+    
+    if '11310100' not in df_asset['ra_asset_id'].values:
+        sr = (gid, '11310100', '货币资产', 31, '11310100')
+        df_asset.ix[len(df_asset.index)] = sr
+
+    # 加载资产配置比例
+    df_ratio = database.load_pos_frame(ratio_id)
+    #print df_ratio
+    # print df_ratio.sum(axis=1)
+    if '11310100' not in df_ratio.columns:
+        df_ratio['11310100'] = 1 - df_ratio.sum(axis=1)
+    else:
+        df_ratio['11310100'] += 1 - df_ratio.sum(axis=1)
+    # print df_ratio.head()
+
+    start = df_ratio.index.min()
+    index = df_ratio.index.copy()
+
+    #
+    # 加载基金池
+    #
+    pools = {}
+    for _, row in df_asset.iterrows():
+        fund = asset_ra_pool_fund.load(row['ra_pool_id'])
+        if not fund.empty:
+            index = index.union(fund.index.get_level_values(0)).unique()
+        pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
+        pools[row['ra_asset_id']] = pool
+    else:
+        if '11310100' not in pools:
+            fund = asset_ra_pool_fund.load('11310100')
+            if not fund.empty:
+                index = index.union(fund.index.get_level_values(0)).unique()
+            pool = ('11310100', fund[['ra_fund_code', 'ra_fund_type']])
+            pools['11310100'] = pool
+
+    #
+    # 根据基金池和配置比例的索引并集reindex数据
+    #
+    index = index[index >= start]
+    df_ratio = df_ratio.reindex(index, method='pad')
+    tmp = {}
+    for k, v in pools.iteritems():
+        (pool, df_fund) = v
+        tmp[k] = (pool, df_fund.unstack().reindex(index, method='pad').stack())
+    pools = tmp
+    #
+    # 计算基金配置比例
+    #
+    data = []
+    for day, row in df_ratio.iterrows():
+        for asset_id, ratio in row.iteritems():
+            if (ratio <= 0):
+                continue
+            # 选择基金
+            (pool_id, df_fund) = pools[asset_id]
+            segments = choose_fund_avg(day, pool_id, ratio, df_fund.loc[day])
+            #if int(risk * 10) == 1:
+            #    print segments
+            data.extend(segments)
+    #print data
+    df_raw = pd.DataFrame(data, columns=['ra_date', 'ra_pool_id', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_ratio'])
+    df_raw.set_index(['ra_date', 'ra_pool_id', 'ra_fund_id'], inplace=True)
+
+    #
+    # 导入数据: portfolio_pos
+    #
+    #print df_raw.head()
+    df_raw.loc[df_raw['ra_fund_ratio'] < 0.00009999, 'ra_fund_ratio'] = 0 # 过滤掉过小的份额
+    df_raw['ra_fund_ratio'] = df_raw['ra_fund_ratio'].round(4)            # 四舍五入到万分位
+
+    return df_raw
+
+@portfolio.command()
+@click.option('--id', 'optid', help=u'ids of portfolio to update')
 @click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
 @click.option('--fee', 'optfee', default='9,8', help=u'fee type(8:with fee; 9:without fee')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')

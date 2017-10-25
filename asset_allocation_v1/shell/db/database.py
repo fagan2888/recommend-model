@@ -16,6 +16,7 @@ import Const
 
 from sqlalchemy import *
 from util.xlist import chunks
+from util.xdebug import dd
 
 from dateutil.parser import parse
 
@@ -735,22 +736,32 @@ def load_alloc_and_risk(gid):
     return result
 
 def load_pos_frame(gid):
-    gid = int(gid)
-    xtype = gid / 10000000
+    prefix = gid[0:2]
+    if prefix.isdigit():
+        gid = int(gid)
+        xtype = gid / 10000000
 
-    if xtype == 5:
-        #
-        # 马克维茨
-        #
-        df = asset_mz_markowitz_pos.load(gid)
+        if xtype == 5:
+            #
+            # 马克维茨
+            #
+            df = asset_mz_markowitz_pos.load(gid)
 
-    elif xtype == 7:
-        #
-        # 高低风险
-        #
-        df = asset_mz_highlow_pos.load(gid)
+        elif xtype == 7:
+            #
+            # 高低风险
+            #
+            df = asset_mz_highlow_pos.load(gid)
+        else:
+            df = pd.DataFrame(columns=['mz_date', 'mz_asset_id', 'mz_ratio'])
+
     else:
-        df = pd.DataFrame(columns=['mz_date', 'mz_asset_id', 'mz_ratio'])
+        if prefix == 'MZ':
+            df = asset_mz_markowitz_pos.load(gid)
+        elif prefix == 'HL':
+            df = asset_mz_highlow_pos.load(gid)
+        else:
+            df = pd.DataFrame(columns=['mz_date', 'mz_asset_id', 'mz_ratio'])
 
     return df
 
