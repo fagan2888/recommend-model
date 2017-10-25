@@ -776,11 +776,11 @@ class MonthlyStaSrrc(object):
 
 
 if __name__ == "__main__":
-    # obj = MonthlyStaApportion()
-    # obj.incremental_update()
+    obj = MonthlyStaApportion()
+    obj.incremental_update()
     obj_reten = MonthlyStaRetention()
     obj_reten.handle()
-    # obj_rolling = MonthlyStaRolling()
-    # obj_rolling.handle()
-    # obj_srrc = MonthlyStaSrrc()
-    # obj_srrc.handle()
+    obj_rolling = MonthlyStaRolling()
+    obj_rolling.handle()
+    obj_srrc = MonthlyStaSrrc()
+    obj_srrc.handle()
