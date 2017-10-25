@@ -495,9 +495,20 @@ def pos_update(highlow, alloc):
         # 焦氏策略
         #
         if highlow['mz_high_id'] == '' or highlow['mz_low_id'] == '':
-            click.echo(click.style("\n both mz_high_id and mz_low_id must be set for jiao_method %d:%s\n" % (algo, highlow_id), fg='red'))
-            return
-        
+            markowitz_id = highlow['mz_markowitz_id']
+            if  markowitz_id == '' or markowitz_id == '0':
+                click.echo(click.style("\n both mz_high_id and mz_low_id must be set for jiao_method %d:%s\n" % (algo, highlow_id), fg='red'))
+                return
+            df_markowitz_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz_id)
+            if df_markowitz_alloc.empty:
+                click.echo(click.style("\n both mz_high_id and mz_low_id must be set for jiao_method %d:%s\n" % (algo, highlow_id), fg='red'))
+                return
+            max_ix = df_markowitz_alloc['mz_risk'].argmax()
+            min_ix = df_markowitz_alloc['mz_risk'].argmin()
+            
+            highlow['mz_high_id'] = df_markowitz_alloc.at[max_ix, 'globalid']
+            highlow['mz_low_id'] = df_markowitz_alloc.at[min_ix, 'globalid']
+
         df = jiao(highlow, alloc)
     elif algo == 2:
         #
@@ -863,7 +874,4 @@ def copy(ctx, optsrc, optdst, optlist):
     df_highlow_asset = df_highlow_asset.set_index(['mz_highlow_id', 'mz_asset_id'])
 
     asset_mz_highlow_asset.save(df_xtab['globalid'], df_highlow_asset)
-
-
-
     
