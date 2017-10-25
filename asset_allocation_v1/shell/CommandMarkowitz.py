@@ -1067,8 +1067,6 @@ def copy(ctx, optsrc, optdst, optlist):
     df_markowitz_alloc.set_index(['globalid'], inplace=True)
     asset_mz_markowitz_alloc.save(optdst, df_markowitz_alloc)
 
-    # df_xtab.set_index(['old'], inplace=True)
-    
     #
     # copy mz_markowitz_argv
     #

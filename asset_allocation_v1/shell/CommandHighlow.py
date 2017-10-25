@@ -204,7 +204,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     df_asset_tosave = df_asset.copy()
     df_asset_tosave['mz_highlow_id'] = optid
     df_asset_tosave = df_asset_tosave.reset_index().set_index(['mz_highlow_id', 'mz_asset_id'])
-    asset_mz_highlow_asset.save(optid, df_asset_tosave)
+    asset_mz_highlow_asset.save([optid], df_asset_tosave)
 
     #
     # 加载高风险资产仓位
@@ -580,6 +580,83 @@ def perform_delete(highlow):
     mz_highlow_pos.delete(mz_highlow_pos.c.mz_highlow_id == highlow_id).execute()
     mz_highlow_asset.delete(mz_highlow_asset.c.mz_highlow_id == highlow_id).execute()
     mz_highlow.delete(mz_highlow.c.globalid == highlow_id).execute()
+
+@highlow.command()
+@click.option('--src', 'optsrc', help=u'src id of highlow to copy from')
+@click.option('--dst', 'optdst', help=u'dst id of highlow to copy to')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.pass_context
+def copy(ctx, optsrc, optdst, optlist):
+    ''' create new highlow by copying  existed one
+    '''
+    if optsrc is not None:
+        highlows = [optsrc]
+    else:
+        highlows = None
+
+    df_highlow = asset_mz_highlow.load(highlows)
+
+    if optlist:
+
+        df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_highlow, headers='keys', tablefmt='psql')
+        return 0
+
+    if optsrc  is None or optdst is None:
+        click.echo(click.style("\n both --src-id  and --dst-id is required to perform copy\n", fg='red'))
+        return 0
+
+    #
+    # copy mz_highlow
+    #
+    df_highlow['globalid'] = optdst
+    df_highlow.set_index(['globalid'], inplace=True)
+    asset_mz_highlow.save(optdst, df_highlow)
+
+    #
+    # copy mz_highlow_alloc
+    #
+    df_highlow_alloc = asset_mz_highlow_alloc.where_highlow_id(optsrc)
+    # df_highlow_alloc.reset_index(inplace=True)
+
+    df_highlow_alloc['mz_highlow_id'] = optdst
+    df_highlow_alloc['old'] = df_highlow_alloc['globalid']
+    sr_tmp = df_highlow_alloc['mz_highlow_id'].str[:len(optdst) - 1]
+    df_highlow_alloc['globalid'] = sr_tmp.str.cat((df_highlow_alloc['mz_risk'] * 10 % 10).astype(int).astype(str))
+
+    df_xtab = df_highlow_alloc[['globalid', 'old']].copy()
+
+    df_highlow_alloc.drop(['old'], axis=1, inplace=True)
+    
+    df_highlow_alloc.set_index(['globalid'], inplace=True)
+    asset_mz_highlow_alloc.save(optdst, df_highlow_alloc)
+
+    #
+    # copy mz_highlow_argv
+    #
+    df_highlow_argv = asset_mz_highlow_argv.load(df_xtab['old'])
+    df_highlow_argv.reset_index(inplace=True)
+
+    df_highlow_argv = df_highlow_argv.merge(df_xtab, left_on='mz_highlow_id', right_on = 'old')
+    df_highlow_argv['mz_highlow_id'] = df_highlow_argv['globalid']
+    df_highlow_argv.drop(['globalid', 'old'], inplace=True, axis=1)
+    df_highlow_argv = df_highlow_argv.set_index(['mz_highlow_id', 'mz_key'])
+
+    asset_mz_highlow_argv.save(df_xtab['globalid'], df_highlow_argv)
+
+    #
+    # copy mz_highlow_asset
+    #
+    df_highlow_asset = asset_mz_highlow_asset.load(df_xtab['old'])
+    # df_highlow_asset.reset_index(inplace=True)
+
+    df_highlow_asset = df_highlow_asset.merge(df_xtab, left_on='mz_highlow_id', right_on = 'old')
+
+    df_highlow_asset['mz_highlow_id'] = df_highlow_asset['globalid']
+    df_highlow_asset.drop(['globalid', 'old'], inplace=True, axis=1)
+    df_highlow_asset = df_highlow_asset.set_index(['mz_highlow_id', 'mz_asset_id'])
+
+    asset_mz_highlow_asset.save(df_xtab['globalid'], df_highlow_asset)
 
 
 

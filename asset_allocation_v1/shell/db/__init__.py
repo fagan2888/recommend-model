@@ -7,11 +7,14 @@ import asset_is_investor_pos
 import asset_is_investor_criteria
 import asset_mz_highlow
 import asset_mz_highlow_alloc
+import asset_mz_highlow_argv
 import asset_mz_highlow_asset
 import asset_mz_highlow_criteria
 import asset_mz_highlow_nav
 import asset_mz_highlow_pos
 import asset_mz_markowitz
+import asset_mz_markowitz_alloc
+import asset_mz_markowitz_argv
 import asset_mz_markowitz_asset
 import asset_mz_markowitz_nav
 import asset_mz_markowitz_pos

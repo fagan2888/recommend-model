@@ -1,6 +1,6 @@
 #coding=utf8
 
-from sqlalchemy import MetaData, Table, select, func
+from sqlalchemy import MetaData, Table, select, func, literal_column
 # import string
 # from datetime import datetime, timedelta
 import pandas as pd
@@ -25,6 +25,7 @@ def load(gids, xtypes=None):
         t1.c.globalid,
         t1.c.mz_type,
         t1.c.mz_algo,
+        t1.c.mz_markowitz_id,
         t1.c.mz_high_id,
         t1.c.mz_low_id,
         t1.c.mz_persistent,
@@ -54,3 +55,17 @@ def max_id_between(min_id, max_id):
 
     return s.execute().scalar()
 
+def save(gid, df):
+    #
+    # 保存择时结果到数据库
+    #
+    db = database.connection('asset')
+    t2 = Table('mz_highlow', MetaData(bind=db), autoload=True)
+    columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
+    s = select(columns, (t2.c.globalid == gid))
+    df_old = pd.read_sql(s, db, index_col=['globalid'])
+
+    # 更新数据库
+    # print df_new.head()
+    # print df_old.head()
+    database.batch(db, t2, df, df_old, timestamp=False)
