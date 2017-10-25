@@ -298,7 +298,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             df_asset_tosave = df_asset[df_asset['ra_pool_id'].isin(pool_ids)].copy()
             df_asset_tosave['ra_portfolio_id'] = gid
             df_asset_tosave = df_asset_tosave.set_index(['ra_portfolio_id', 'ra_asset_id'])
-            asset_ra_portfolio_asset.save(gid, df_asset_tosave)
+            asset_ra_portfolio_asset.save([gid], df_asset_tosave)
 
 
         # click.echo(click.style("portfolio allocation complement! instance id [%s]" % (gid), fg='green'))
@@ -721,5 +721,81 @@ def convert1(ctx, optfrom, optto, optlist):
     df_result.to_sql(t2.name, db, index=True, if_exists='append', flavor='mysql', chunksize=500)
     
 
+@portfolio.command()
+@click.option('--src', 'optsrc', help=u'src id of portfolio to copy from')
+@click.option('--dst', 'optdst', help=u'dst id of portfolio to copy to')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.pass_context
+def copy(ctx, optsrc, optdst, optlist):
+    ''' create new portfolio by copying  existed one
+    '''
+    if optsrc is not None:
+        portfolios = [optsrc]
+    else:
+        portfolios = None
+
+    df_portfolio = asset_ra_portfolio.load(portfolios)
+
+    if optlist:
+
+        df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_portfolio, headers='keys', tablefmt='psql')
+        return 0
+
+    if optsrc  is None or optdst is None:
+        click.echo(click.style("\n both --src-id  and --dst-id is required to perform copy\n", fg='red'))
+        return 0
+
+    #
+    # copy ra_portfolio
+    #
+    df_portfolio['globalid'] = optdst
+    df_portfolio.set_index(['globalid'], inplace=True)
+    asset_ra_portfolio.save(optdst, df_portfolio)
+
+    #
+    # copy ra_portfolio_alloc
+    #
+    df_portfolio_alloc = asset_ra_portfolio_alloc.where_portfolio_id(optsrc)
+    # df_portfolio_alloc.reset_index(inplace=True)
+
+    df_portfolio_alloc['ra_portfolio_id'] = optdst
+    df_portfolio_alloc['old'] = df_portfolio_alloc['globalid']
+    sr_tmp = df_portfolio_alloc['ra_portfolio_id'].str[:len(optdst) - 1]
+    df_portfolio_alloc['globalid'] = sr_tmp.str.cat((df_portfolio_alloc['ra_risk'] * 10 % 10).astype(int).astype(str))
+
+    df_xtab = df_portfolio_alloc[['globalid', 'old']].copy()
+
+    df_portfolio_alloc.drop(['old'], axis=1, inplace=True)
+    
+    df_portfolio_alloc.set_index(['globalid'], inplace=True)
+    asset_ra_portfolio_alloc.save(optdst, df_portfolio_alloc)
+
+    #
+    # copy ra_portfolio_argv
+    #
+    df_portfolio_argv = asset_ra_portfolio_argv.load(df_xtab['old'])
+    df_portfolio_argv.reset_index(inplace=True)
+
+    df_portfolio_argv = df_portfolio_argv.merge(df_xtab, left_on='ra_portfolio_id', right_on = 'old')
+    df_portfolio_argv['ra_portfolio_id'] = df_portfolio_argv['globalid']
+    df_portfolio_argv.drop(['globalid', 'old'], inplace=True, axis=1)
+    df_portfolio_argv = df_portfolio_argv.set_index(['ra_portfolio_id', 'ra_key'])
+
+    asset_ra_portfolio_argv.save(df_xtab['globalid'], df_portfolio_argv)
+
+    #
+    # copy ra_portfolio_asset
+    #
+    df_portfolio_asset = asset_ra_portfolio_asset.load(df_xtab['old'])
+    # df_portfolio_asset.reset_index(inplace=True)
+
+    df_portfolio_asset = df_portfolio_asset.merge(df_xtab, left_on='ra_portfolio_id', right_on = 'old')
+
+    df_portfolio_asset['ra_portfolio_id'] = df_portfolio_asset['globalid']
+    df_portfolio_asset.drop(['globalid', 'old'], inplace=True, axis=1)
+    df_portfolio_asset = df_portfolio_asset.set_index(['ra_portfolio_id', 'ra_asset_id'])
+
+    asset_ra_portfolio_asset.save(df_xtab['globalid'], df_portfolio_asset)
 
     

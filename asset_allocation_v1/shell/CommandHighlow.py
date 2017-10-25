@@ -383,7 +383,6 @@ def load_riskmgr2(assets, sr_riskmgr, reindex=None, enable=True):
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
-
     if asset_id.isdigit():
         xtype = int(asset_id) / 10000000
     else:

@@ -30,6 +30,7 @@ import asset_ra_pool_fund
 import asset_ra_pool_nav
 import asset_ra_portfolio
 import asset_ra_portfolio_alloc
+import asset_ra_portfolio_argv
 import asset_ra_portfolio_asset
 import asset_ra_portfolio_criteria
 import asset_ra_portfolio_contrib
