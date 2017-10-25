@@ -512,14 +512,12 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
     else:
         adjust_index = index
 
-
     #
     # 马科维兹资产配置
     #
     s = 'perform %-12s' % label
     data = {}
     if not bootstrap:
-
         count = multiprocessing.cpu_count() / 2
         process_adjust_indexs = [[] for i in range(0, count)]
         for i in range(0, len(adjust_index)):
@@ -553,7 +551,6 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
 
 
 def m_markowitz_day(queue, days, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
-
     for day in days:
         sr = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
         queue.put((day, sr))
@@ -698,6 +695,157 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         sr = pd.Series()
 
     return sr
+
+@markowitz.command()
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--start-date', 'sdate', default='2012-07-27', help=u'start date to calc')
+@click.option('--end-date', 'edate', help=u'end date to calc')
+@click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
+@click.pass_context
+def pos(ctx, optid, optlist, optrisk, sdate, edate, optcpu):
+    ''' calc pool nav and inc
+    '''
+    if optid is not None:
+        markowitzs = [s.strip() for s in optid.split(',')]
+    else:
+        if 'markowitz' in ctx.obj:
+            markowitzs = [str(ctx.obj['markowitz'])]
+        else:
+            markowitzs = None
+
+    df_markowitz = asset_mz_markowitz.load(markowitzs)
+
+    if optlist:
+        df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_markowitz, headers='keys', tablefmt='psql')
+        return 0
+
+    for _, markowitz in df_markowitz.iterrows():
+        nav_update_alloc(markowitz, optrisk, sdate, edate, optcpu)
+        
+def nav_update_alloc(markowitz, optrisk, sdate, edate, optcpu):
+    risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
+    df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
+    
+    for _, alloc in df_alloc.iterrows():
+        pos_update(markowitz, alloc, sdate, edate, optcpu)
+
+    click.echo(click.style("markowitz allocation complement! instance id [%s]" % (markowitz['globalid']), fg='green'))
+        
+def pos_update(markowitz, alloc, sdate, edate, optcpu):
+    markowitz_id = alloc['globalid']
+    #
+    # 加载资产
+    #
+    df_asset = asset_mz_markowitz_asset.load([markowitz_id])
+    df_asset.reset_index(level=0, inplace=True)
+    df_asset = df_asset[['mz_upper_limit', 'mz_lower_limit', 'mz_sum1_limit', 'mz_sum2_limit']];
+    df_asset = df_asset.rename(columns={'mz_upper_limit': 'upper', 'mz_lower_limit': 'lower', 'mz_sum1_limit': 'sum1', 'mz_sum2_limit': 'sum2'})
+    assets = df_asset.T.to_dict()
+    #
+    # 加载参数
+    #
+    df_argv = asset_mz_markowitz_argv.load([markowitz_id])
+    df_argv.reset_index(level=0, inplace=True)
+    argv = df_argv['mz_value'].to_dict()
+
+    lookback = int(argv.get('lookback', '26'))
+    adjust_period = int(argv.get('adjust_period', 1))
+    wavelet_filter_num = int(argv.get('optwaveletfilternum', 2))
+    turnover = float(argv.get('turnover', 0))
+    
+
+    algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
+    
+    if algo == 1:
+        df = average_days(sdate, edate, assets)
+    elif algo == 2:
+        df = markowitz_days(
+            sdate, edate, assets,
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=False, cpu_count=optcpu, wavelet = False)
+    elif algo == 3:
+        df = markowitz_days(
+            sdate, edate, assets,
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=True, cpu_count=optcpu, wavelet = False)
+    elif algo == 4:
+        df = markowitz_days(
+            sdate, edate, assets,
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=False, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+    else:
+        click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
+        return;
+
+    df_sharpe = df[['return', 'risk', 'sharpe']].copy()
+    df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
+
+    # print df_sharpe.head()
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    mz_markowitz_pos    = Table('mz_markowitz_pos', metadata, autoload=True)
+    mz_markowitz_nav    = Table('mz_markowitz_nav', metadata, autoload=True)
+
+    #
+    # 处理替换
+    #
+    mz_markowitz_pos.delete(mz_markowitz_pos.c.mz_markowitz_id == markowitz_id).execute()
+    mz_markowitz_nav.delete(mz_markowitz_nav.c.mz_markowitz_id == markowitz_id).execute()
+
+    #
+    # 导入数据: markowitz_pos
+    #
+    df = df.round(4)             # 四舍五入到万分位
+
+    #每四周做平滑
+    df = df.rolling(window = 4, min_periods = 1).mean()
+
+    df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
+    df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+    df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
+    if turnover >= 0.01:
+        df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
+
+    df.index.name = 'mz_date'
+    df.columns.name='mz_markowitz_asset'
+
+    # 计算原始资产仓位
+    raw_ratios = {}
+    raw_assets = {}
+    for asset_id in df.columns:
+        raw_assets[asset_id] = asset_id
+        raw_ratios[asset_id] = df[asset_id]
+
+    df_raw_ratio = pd.DataFrame(raw_ratios, columns=df.columns)
+    df_raw_asset = pd.DataFrame(raw_assets, index=df.index, columns=df.columns)
+
+    df_tosave = pd.concat({'mz_markowitz_ratio': df, 'mz_asset_id':df_raw_asset, 'mz_ratio': df_raw_ratio}, axis=1)
+
+    # index
+    df_tosave['mz_markowitz_id'] = markowitz_id
+    df_tosave = df_tosave.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
+
+    # unstack
+    df_tosave = df_tosave.stack()
+    df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0) | (df_tosave['mz_markowitz_ratio'] > 0)]
+
+    # save
+    asset_mz_markowitz_pos.save(markowitz_id, df_tosave)
+
+    # 导入数据: markowitz_criteria
+    criterias = {'return': '0001', 'risk':'0002', 'sharpe':'0003'}
+    df_sharpe.index.name = 'mz_date'
+    for column in df_sharpe.columns:
+        criteria_id = criterias[column]
+        df_criteria = df_sharpe[column].to_frame('mz_value')
+        df_criteria['mz_markowitz_id'] = markowitz_id
+        df_criteria['mz_criteria_id'] = criteria_id
+        df_criteria = df_criteria.reset_index().set_index(['mz_markowitz_id', 'mz_criteria_id', 'mz_date'])
+        asset_mz_markowitz_criteria.save(markowitz_id, criteria_id,  df_criteria)
+
+    return 0
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')

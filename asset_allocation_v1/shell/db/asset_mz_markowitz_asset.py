@@ -24,10 +24,14 @@ def load(gids):
     columns = [
         t1.c.mz_markowitz_id,
         t1.c.mz_asset_id,
-        t1.c.mz_asset_name,
         t1.c.mz_markowitz_asset_id,
-        t1.c.mz_markowitz_asset_name,
         t1.c.mz_asset_type,
+        t1.c.mz_upper_limit,
+        t1.c.mz_lower_limit,
+        t1.c.mz_sum1_limit,
+        t1.c.mz_sum2_limit,
+        t1.c.mz_asset_name,
+        t1.c.mz_markowitz_asset_name,
     ]
 
     s = select(columns)

@@ -23,10 +23,11 @@ def load(gid):
 
     columns = [
         t1.c.globalid,
-        t1.c.mz_name,
         t1.c.mz_type,
+        t1.c.mz_algo,
         t1.c.mz_markowitz_id,
         t1.c.mz_risk,
+        t1.c.mz_name,
     ]
 
     s = select(columns)
@@ -35,6 +36,33 @@ def load(gid):
         s = s.where(t1.c.mz_markowitz_id == gid)
     
     df = pd.read_sql(s, db, index_col=['globalid'])
+
+    return df
+
+def where_markowitz_id(markowitz_id, risks=None, xtypes=None):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('mz_markowitz_alloc', metadata, autoload=True)
+
+    columns = [
+        t1.c.globalid,
+        t1.c.mz_type,
+        t1.c.mz_algo,
+        t1.c.mz_risk,
+        t1.c.mz_markowitz_id,
+        t1.c.mz_name,
+    ]
+
+    s = select(columns)
+
+    if markowitz_id is not None:
+        s = s.where(t1.c.mz_markowitz_id == markowitz_id)
+    if xtypes is not None:
+        s = s.where(t1.c.mz_type.in_(xtypes))
+    if risks is not None:
+        s = s.where(t1.c.mz_risk.in_(risks))
+    
+    df = pd.read_sql(s, db)
 
     return df
 
@@ -48,6 +76,7 @@ def load(gid):
 #     s = select([func.max(t.c.globalid).label('maxid')]).where(t.c.globalid.between(min_id, max_id))
 
 #     return s.execute().scalar()
+
 def save(gid, df):
     fmt_columns = ['mz_risk']
     fmt_precision = 2
