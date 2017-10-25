@@ -70,3 +70,6 @@ def save(gids, df):
     # print df_old.head()
     database.batch(db, t2, df, df_old, timestamp=True)
 
+
+
+
