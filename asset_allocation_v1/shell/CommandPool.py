@@ -207,7 +207,7 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
         # 计算每个调仓点的最新配置
         #
         data_fund = {}
-        with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
+        with click.progressbar(length=len(adjust_points), label=('calc pool %s' % (pool.id)).ljust(30)) as bar:
             for day in adjust_points:
                 bar.update(1)
                 if pool['ra_fund_type'] == 1:
@@ -381,8 +381,7 @@ def nav(ctx, optid, optlist):
 def nav_update(db, pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
-
-    with click.progressbar(length=len(categories) + 1, label='update nav for pool %s' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label=('update nav for pool %s' % (pool.id)).ljust(30)) as bar:
         for category in categories:
             nav_update_category(db['asset'], pool, category)
             bar.update(1)
@@ -660,7 +659,7 @@ def turnover_update(pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
     
-    with click.progressbar(length=len(categories) + 1, label='update turnover for pool %s' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label=('update turnover for pool %s' % (pool.id)).ljust(30)) as bar:
         for category in categories:
             turnover_update_category(pool, category)
             bar.update(1)
@@ -736,7 +735,7 @@ def corr_update(pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
     
-    with click.progressbar(length=len(categories) + 1, label='update corr for pool %s' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label=('update corr for pool %s' % (pool.id)).ljust(30)) as bar:
         for category in categories:
             corr_update_category(pool, category, 52)
             bar.update(1)

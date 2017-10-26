@@ -541,7 +541,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
             data[record[0]] = record[1]
     else:
         with click.progressbar(
-                adjust_index, label=s,
+                adjust_index, label=s.ljust(30),
                 item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
             for day in bar:
                 # bar.update(1)
@@ -900,7 +900,7 @@ def nav(ctx, optid, optrisk, optlist):
         return 0
 
     with click.progressbar(
-            df_markowitz.iterrows(), len(df_markowitz.index), label='%-20s' % 'update nav',
+            df_markowitz.iterrows(), len(df_markowitz.index), label='update nav'.ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, markowitz in bar:
             # bar.update(1)
@@ -967,7 +967,7 @@ def turnover(ctx, optid, optrisk, optlist):
 
     data = []
     with click.progressbar(
-            df_markowitz.iterrows(), length=len(df_markowitz.index), label= '%-20s' % 'update turnover',
+            df_markowitz.iterrows(), length=len(df_markowitz.index), label= 'update turnover'.ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, markowitz in bar:
             # bar.update(1)
@@ -1036,7 +1036,7 @@ def delete(ctx, optid, optlist, optexec):
 
     data = []
     with click.progressbar(
-            df_markowitz.iterrows(), length=len(df_markowitz.index), label= '%-20s' % 'delete markowitz',
+            df_markowitz.iterrows(), length=len(df_markowitz.index), label= 'delete markowitz'.ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, markowitz in bar:
             perform_delete(markowitz)

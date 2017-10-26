@@ -90,7 +90,7 @@ def nav(ctx, optasset, optlist):
         print tabulate(df_asset, headers='keys', tablefmt='psql')
         return 0
     
-    with click.progressbar(length=len(df_asset.index), label='update nav for assets') as bar:
+    with click.progressbar(length=len(df_asset.index), label='update nav for assets'.ljust(30)) as bar:
         for _, asset in df_asset.iterrows():
             if asset['ra_calc_type'] == 2:
                 nav_update_index(db, asset)

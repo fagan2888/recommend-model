@@ -654,7 +654,7 @@ def nav(ctx, optid, optlist, optenddate):
 def nav_update_alloc(highlow, enddate):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
     
-    with click.progressbar(length=len(df_alloc), label='update nav %s' % (highlow['globalid'])) as bar:
+    with click.progressbar(length=len(df_alloc), label=('update nav %s' % (highlow['globalid'])).ljust(30)) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             nav_update(alloc, enddate)
@@ -714,7 +714,7 @@ def turnover(ctx, optid, optlist):
         return 0
     
     data = []
-    with click.progressbar(length=len(df_highlow), label='update turnover') as bar:
+    with click.progressbar(length=len(df_highlow), label='update turnover'.ljust(30)) as bar:
         for _, highlow in df_highlow.iterrows():
             bar.update(1)
             turnover_update_alloc(highlow)
@@ -722,7 +722,7 @@ def turnover(ctx, optid, optlist):
 def turnover_update_alloc(highlow):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
     
-    with click.progressbar(length=len(df_alloc), label='update turnover %s' % (highlow['globalid'])) as bar:
+    with click.progressbar(length=len(df_alloc), label=('update turnover %s' % (highlow['globalid'])).ljust(30)) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             turnover_update(alloc)
@@ -776,7 +776,7 @@ def delete(ctx, optid, optlist, optexec):
          return 0
     
     data = []
-    with click.progressbar(length=len(df_highlow), label='highlow delete') as bar:
+    with click.progressbar(length=len(df_highlow), label='highlow delete'.ljust(30)) as bar:
         for _, highlow in df_highlow.iterrows():
             bar.update(1)
             perform_delete(highlow)
