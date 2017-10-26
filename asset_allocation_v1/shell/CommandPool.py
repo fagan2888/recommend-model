@@ -381,7 +381,7 @@ def nav(ctx, optid, optlist):
 def nav_update(db, pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
-    with click.progressbar(length=len(categories) + 1, label='update nav for pool %s' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label=('update nav for pool %s' % (pool.id)).ljust(30)) as bar:
         for category in categories:
             nav_update_category(db['asset'], pool, category)
             bar.update(1)
