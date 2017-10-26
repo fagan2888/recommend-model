@@ -18,7 +18,7 @@ import util_numpy as npu
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
-from sqlalchemy import MetaData, Table, select, func
+from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
 from db import database, base_exchange_rate_index, base_ra_index
 from util import xdict
@@ -41,91 +41,114 @@ def util(ctx):
 @click.pass_context
 def imp(ctx, optpath):
 
-
-    '''
     all_portfolio_df = pd.read_csv(optpath.strip(), parse_dates = ['start_date', 'end_date'])
 
-    portfolio_id                 = all_portfolio_df['ra_portfolio_id'].unique().item()
-    markowitz_id                 = all_portfolio_df['mz_markowitz_id'].unique().item()
-    highlow_id                   = all_portfolio_df['mz_highlow_id'].unique().item()
-    portfolio_name               = all_portfolio_df['ra_portfolio_name'].unique().item()
-    markowitz_name               = all_portfolio_df['mz_markowitz_name'].unique().item()
-    highlow_name                 = all_portfolio_df['mz_highlow_name'].unique().item()
-    allocate_algo                = all_portfolio_df['allocate_algo'].unique().item()
-    turnover_filter              = all_portfolio_df['turnover_filter'].unique().item()
-    date_type                    = all_portfolio_df['date_type'].unique().item()
-    adjust_position_period       = all_portfolio_df['adjust_position_period'].unique().item()
-    adjust_position_dates        = all_portfolio_df['adjust_position_dates'].unique().item()
-    look_back                    = all_portfolio_df['look_back'].unique().item()
-    start_dates                  = all_portfolio_df['start_date'].unique().ravel()
-    end_dates                    = all_portfolio_df['end_date'].unique().ravel()
-    start_dates.sort()
-    start_date                   = start_dates[0]
-    end_dates.sort()
-    end_date                     = end_dates[0]
-    portfolio_df = pd.DataFrame([[portfolio_id, allocate_algo, turnover_filter, date_type, adjust_position_period, adjust_position_dates, look_back,start_date, end_date]], columns = ['portfolio_id', 'allocate_algo', 'turnover_filter', 'date_type', 'adjust_position_period', 'adjust_position_dates', 'look_back','start_date', 'end_date'])
-    portfolio_df = portfolio_df.set_index(['portfolio_id'])
-
-    portfolio_asset_data = []
-    for i in range(0, len(all_portfolio_df)):
-        record = all_portfolio_df.iloc[i]
-        portfolio_asset_data.append([record['risk'], record['asset_id'],record['pool_id'], record['sum1'], record['sum2'], record['lower'], record['upper'],
-                                    record['wavelet'], record['start_date'], record['end_date'], record['timing_id'], record['riskmgr_id']])
-
-    portfolio_asset_df = pd.DataFrame(portfolio_asset_data, columns = ['risk','asset_id','pool_id', 'sum1', 'sum2', 'lower', 'upper',
-                                                                        'wavelet', 'start_date', 'end_date', 'timing_id', 'riskmgr_id'])
-
-    print portfolio_df
-    print portfolio_asset_df
-    '''
-
-    all_portfolio_df = pd.read_csv(optpath.strip(), parse_dates = ['start_date', 'end_date'])
     imp_markowitz(all_portfolio_df)
     imp_highlow(all_portfolio_df)
+    imp_portfolio(all_portfolio_df)
 
 
-def imp_portfolio():
+def imp_portfolio(df):
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    portfolio_t = Table('ra_portfolio', metadata, autoload=True)
+    portfolio_alloc_t = Table('ra_portfolio_alloc', metadata, autoload=True)
+    portfolio_asset_t = Table('ra_portfolio_asset', metadata, autoload=True)
+    portfolio_argv_t = Table('ra_portfolio_argv', metadata, autoload=True)
+
 
     df = df.copy()
 
-    portfolio_id                 = df['mz_markowitz_id'].unique().item()
-    portfolio_name               = df['mz_markowitz_name'].unique().item()
-    markowitz_df = pd.DataFrame([[markowitz_id, markowitz_name]], columns = ['globalid', 'mz_name'])
-    markowitz_df['mz_type'] = 1
-    markowitz_df = markowitz_df.set_index(['globalid'])
+    portfolio_id               = df['ra_portfolio_id'].unique().item()
+    portfolio_name             = df['ra_portfolio_name'].unique().item()
+    highlow_id                 = df['mz_highlow_id'].unique().item()
+    portfolio_df = pd.DataFrame([[portfolio_id, portfolio_name, highlow_id]], columns = ['globalid', 'ra_name', 'ra_ratio_id'])
+    portfolio_df['ra_type'] = 1
+    portfolio_df = portfolio_df.set_index(['globalid'])
+    portfolio_df['ra_algo'] = df['ra_portfolio_algo'].unique().item()
+    portfolio_df['ra_persistent'] = 0
+
+    df_new = portfolio_df
+    columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+    s = select(columns)
+    s = s.where(portfolio_t.c.globalid.in_(df_new.index.tolist()))
+    df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+    database.batch(db, portfolio_t, df_new, df_old)
 
     for k, v in df.groupby(['risk']):
-        markowitz_id = v['mz_markowitz_id'].unique().item()
+        portfolio_id = v['ra_portfolio_id'].unique().item()
         risk = v['risk'].unique().item()
-        markowitz_id_num = markowitz_id.strip().split('.')[1]
+        portfolio_id_num = portfolio_id.strip().split('.')[1]
+        portfolio_risk_id = portfolio_id.replace(portfolio_id_num, str(string.atoi(portfolio_id_num) + int(risk * 10) % 10))
+        highlow_id_num = highlow_id.strip().split('.')[1]
+        highlow_risk_id = highlow_id.replace(highlow_id_num, str(string.atoi(highlow_id_num) + int(risk * 10) % 10))
 
-        markowitz_risk_id = markowitz_id.replace(markowitz_id_num, str(string.atoi(markowitz_id_num) + int(risk * 10) % 10))
 
-        tmpv = v[['asset_id', 'allocate_algo','sum1', 'sum2', 'lower', 'upper', 'start_date', 'end_date']]
-        tmpv['mz_markowitz_id'] = markowitz_risk_id
+        portfolio_alloc_df = pd.DataFrame([[portfolio_risk_id, portfolio_name, portfolio_id, highlow_risk_id, risk]], columns = ['globalid', 'ra_name', 'ra_portfolio_id', 'ra_ratio_id', 'ra_risk'])
+        portfolio_alloc_df = portfolio_alloc_df.set_index(['globalid'])
+        portfolio_alloc_df['ra_type'] = 1
 
-        tmpv = tmpv.rename(columns = {'asset_id':'mz_asset_id', 'allocate_algo':'mz_algo', 'sum1' : 'mz_sum1_limit',
-                                        'sum2' : 'mz_sum2_limit','upper' : 'mz_upper_limit','lower' : 'mz_lower_limit',
-                                        'start_date' : 'mz_start_date', 'end_date': 'mz_end_date'})
 
-        tmpv['mz_markowitz_asset_id'] = tmpv['mz_asset_id']
+        df_new = portfolio_alloc_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(portfolio_alloc_t.c.globalid.in_(df_new.index.tolist()))
+        df_old = pd.read_sql(s, db, index_col = [df_new.index.name])
+        database.batch(db, portfolio_alloc_t, df_new, df_old)
 
+
+        portfolio_asset_df = v[['asset_id', 'pool_id']]
+        portfolio_asset_df['ra_portfolio_id'] = portfolio_risk_id
+
+        portfolio_asset_df = portfolio_asset_df.rename(columns = {'asset_id':'ra_asset_id', 'pool_id' : 'ra_pool_id'})
+
+        portfolio_asset_df['ra_asset_type'] = 0
+
+        asset_names = []
+        for asset_id in portfolio_asset_df['ra_asset_id']:
+            asset_names.append(find_asset_name(asset_id))
+        portfolio_asset_df['ra_asset_name'] = asset_names
+        portfolio_asset_df = portfolio_asset_df.set_index(['ra_portfolio_id', 'ra_asset_id'])
+
+
+        df_new = portfolio_asset_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(portfolio_asset_t.c.ra_portfolio_id.in_(df_new.index.get_level_values(0).tolist()))
+        s = s.where(portfolio_asset_t.c.ra_asset_id.in_(df_new.index.get_level_values(1).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, portfolio_asset_t, df_new, df_old)
 
         data = []
         for col in v.columns:
             key = col.strip()
-            if key.startswith('allocate'):
+            if key.startswith('portfolio'):
                 value = str(v[col].unique().item()).strip()
                 value = value if not value == 'nan' else ''
-                data.append([markowitz_risk_id, key, value])
+                data.append([portfolio_risk_id, key, value])
 
-        argv_df = pd.DataFrame(data, columns = ['mz_markowitz_id', 'mz_key', 'mz_value'])
-        argv_df = argv_df.set_index(['mz_markowitz_id', 'mz_key'])
+        argv_df = pd.DataFrame(data, columns = ['ra_portfolio_id', 'ra_key', 'ra_value'])
+        argv_df = argv_df.set_index(['ra_portfolio_id', 'ra_key'])
 
-        #print argv_df
+        df_new = argv_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(portfolio_argv_t.c.ra_portfolio_id.in_(df_new.index.get_level_values(0).tolist()))
+        s = s.where(portfolio_argv_t.c.ra_key.in_(df_new.index.get_level_values(1).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, portfolio_argv_t, df_new, df_old)
+
 
 
 def imp_highlow(df):
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    highlow_t = Table('mz_highlow', metadata, autoload=True)
+    highlow_alloc_t = Table('mz_highlow_alloc', metadata, autoload=True)
+    highlow_asset_t = Table('mz_highlow_asset', metadata, autoload=True)
+    highlow_argv_t = Table('mz_highlow_argv', metadata, autoload=True)
 
     df = df.copy()
 
@@ -139,27 +162,63 @@ def imp_highlow(df):
     highlow_df['mz_persistent'] = 0
 
 
+    df_new = highlow_df
+    columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+    s = select(columns)
+    s = s.where(highlow_t.c.globalid.in_(df_new.index.tolist()))
+    df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+    database.batch(db, highlow_t, df_new, df_old)
+
+
     for k, v in df.groupby(['risk']):
+
         highlow_id = v['mz_highlow_id'].unique().item()
         risk = v['risk'].unique().item()
         highlow_id_num = highlow_id.strip().split('.')[1]
-
         highlow_risk_id = highlow_id.replace(highlow_id_num, str(string.atoi(highlow_id_num) + int(risk * 10) % 10))
+        highlow_name = v['mz_highlow_name'].unique().item()
+        markowitz_id_num = markowitz_id.strip().split('.')[1]
+        markowitz_risk_id = markowitz_id.replace(markowitz_id_num, str(string.atoi(markowitz_id_num) + int(risk * 10) % 10))
 
-        tmpv = v[['asset_id', 'riskmgr_id', 'pool_id']]
-        tmpv['mz_highlow_id'] = highlow_risk_id
 
-        tmpv = tmpv.rename(columns = {'asset_id':'mz_asset_id', 'riskmgr_id':'mz_riskmgr_id', 'pool_id' : 'mz_pool_id'})
+        highlow_alloc_df = pd.DataFrame([[highlow_risk_id, highlow_name, highlow_id, risk]], columns = ['globalid', 'mz_name', 'mz_highlow_id', 'mz_risk'])
+        highlow_alloc_df = highlow_alloc_df.set_index(['globalid'])
+        highlow_alloc_df['mz_type'] = 1
 
-        tmpv['mz_asset_type'] = 0
-        tmpv['mz_highlow_id'] = highlow_risk_id
+
+        df_new = highlow_alloc_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(highlow_alloc_t.c.globalid.in_(df_new.index.tolist()))
+        df_old = pd.read_sql(s, db, index_col = [df_new.index.name])
+        database.batch(db, highlow_alloc_t, df_new, df_old)
+
+
+        highlow_asset_df = v[['asset_id', 'riskmgr_id', 'pool_id']]
+        highlow_asset_df['mz_highlow_id'] = highlow_risk_id
+
+        highlow_asset_df = highlow_asset_df.rename(columns = {'asset_id':'mz_asset_id', 'riskmgr_id':'mz_riskmgr_id', 'pool_id' : 'mz_pool_id'})
+
+        highlow_asset_df['mz_asset_type'] = 0
+        highlow_asset_df['mz_highlow_id'] = highlow_risk_id
 
         asset_names = []
-        for asset_id in tmpv['mz_asset_id']:
+        for asset_id in highlow_asset_df['mz_asset_id']:
             asset_names.append(find_asset_name(asset_id))
-        tmpv['mz_asset_name'] = asset_names
+        highlow_asset_df['mz_asset_name'] = asset_names
+        highlow_asset_df['mz_highlow_id'] =  highlow_risk_id
+        highlow_asset_df = highlow_asset_df.set_index(['mz_highlow_id', 'mz_asset_id'])
+        highlow_asset_df['mz_origin_id'] = markowitz_id
 
-        print tmpv
+
+        df_new = highlow_asset_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(highlow_asset_t.c.mz_highlow_id.in_(df_new.index.get_level_values(0).tolist()))
+        s = s.where(highlow_asset_t.c.mz_asset_id.in_(df_new.index.get_level_values(1).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, highlow_asset_t, df_new, df_old)
+
 
         data = []
         for col in v.columns:
@@ -174,38 +233,95 @@ def imp_highlow(df):
 
         #print argv_df
 
+        df_new = argv_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(highlow_argv_t.c.mz_highlow_id.in_(df_new.index.get_level_values(0).tolist()))
+        s = s.where(highlow_argv_t.c.mz_key.in_(df_new.index.get_level_values(1).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, highlow_argv_t, df_new, df_old)
+
+
     pass
 
 
 def imp_markowitz(df):
 
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    markowitz_t = Table('mz_markowitz', metadata, autoload=True)
+    markowitz_alloc_t = Table('mz_markowitz_alloc', metadata, autoload=True)
+    markowitz_asset_t = Table('mz_markowitz_asset', metadata, autoload=True)
+    markowitz_argv_t = Table('mz_markowitz_argv', metadata, autoload=True)
+
+
     df = df.copy()
 
     markowitz_id                 = df['mz_markowitz_id'].unique().item()
     markowitz_name               = df['mz_markowitz_name'].unique().item()
-    markowitz_df = pd.DataFrame([[markowitz_id, markowitz_name]], columns = ['globalid', 'mz_name'])
+    markowitz_algo               = df['allocate_algo'].unique().item()
+    markowitz_df = pd.DataFrame([[markowitz_id, markowitz_name, markowitz_algo]], columns = ['globalid', 'mz_name', 'mz_algo'])
     markowitz_df['mz_type'] = 1
     markowitz_df = markowitz_df.set_index(['globalid'])
 
+
+
+    df_new = markowitz_df
+    columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+    s = select(columns)
+    s = s.where(markowitz_t.c.globalid.in_(df_new.index.tolist()))
+    df_old = pd.read_sql(s, db, index_col = [df_new.index.name])
+    database.batch(db, markowitz_t, df_new, df_old)
+
+
+
     for k, v in df.groupby(['risk']):
+
         markowitz_id = v['mz_markowitz_id'].unique().item()
         risk = v['risk'].unique().item()
         markowitz_id_num = markowitz_id.strip().split('.')[1]
-
         markowitz_risk_id = markowitz_id.replace(markowitz_id_num, str(string.atoi(markowitz_id_num) + int(risk * 10) % 10))
+        markowitz_algo               = v['allocate_algo'].unique().item()
 
-        tmpv = v[['asset_id', 'allocate_algo','sum1', 'sum2', 'lower', 'upper', 'start_date', 'end_date']]
-        tmpv['mz_markowitz_id'] = markowitz_risk_id
 
-        tmpv = tmpv.rename(columns = {'asset_id':'mz_asset_id', 'allocate_algo':'mz_algo', 'sum1' : 'mz_sum1_limit',
-                                        'sum2' : 'mz_sum2_limit','upper' : 'mz_upper_limit','lower' : 'mz_lower_limit',
-                                        'start_date' : 'mz_start_date', 'end_date': 'mz_end_date'})
 
-        tmpv['mz_markowitz_asset_id'] = tmpv['mz_asset_id']
+        markowitz_alloc_df = pd.DataFrame([[markowitz_risk_id, markowitz_id, markowitz_name, markowitz_algo, risk]], columns = ['globalid', 'mz_markowitz_id', 'mz_name', 'mz_algo', 'mz_risk'])
+        markowitz_alloc_df = markowitz_alloc_df.set_index(['globalid'])
+        markowitz_alloc_df['mz_type'] = 1
+
+
+
+        df_new = markowitz_alloc_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(markowitz_alloc_t.c.globalid.in_(df_new.index.tolist()))
+        df_old = pd.read_sql(s, db, index_col = [df_new.index.name])
+        database.batch(db, markowitz_alloc_t, df_new, df_old)
+
+
+
+        markowitz_asset_df = v[['asset_id', 'sum1', 'sum2', 'lower', 'upper']]
+        markowitz_asset_df['mz_markowitz_id'] = markowitz_risk_id
+
+        markowitz_asset_df = markowitz_asset_df.rename(columns = {'asset_id':'mz_asset_id', 'sum1' : 'mz_sum1_limit',
+                                        'sum2' : 'mz_sum2_limit','upper' : 'mz_upper_limit','lower' : 'mz_lower_limit',})
+
+        markowitz_asset_df['mz_markowitz_asset_id'] = markowitz_asset_df['mz_asset_id']
         asset_names = []
-        for asset_id in tmpv['mz_asset_id']:
+        for asset_id in markowitz_asset_df['mz_asset_id']:
             asset_names.append(find_asset_name(asset_id))
-        tmpv['mz_asset_name'] = tmpv['mz_markowitz_asset_name'] = asset_names
+        markowitz_asset_df['mz_asset_name'] = markowitz_asset_df['mz_markowitz_asset_name'] = asset_names
+        markowitz_asset_df = markowitz_asset_df.set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
+
+
+        df_new = markowitz_asset_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(markowitz_asset_t.c.mz_markowitz_id.in_(df_new.index.get_level_values(0).tolist()))
+        s = s.where(markowitz_asset_t.c.mz_markowitz_asset_id.in_(df_new.index.get_level_values(1).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, markowitz_asset_t, df_new, df_old)
+
 
         data = []
         for col in v.columns:
@@ -217,6 +333,16 @@ def imp_markowitz(df):
 
         argv_df = pd.DataFrame(data, columns = ['mz_markowitz_id', 'mz_key', 'mz_value'])
         argv_df = argv_df.set_index(['mz_markowitz_id', 'mz_key'])
+
+
+        df_new = argv_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(markowitz_argv_t.c.mz_markowitz_id.in_(df_new.index.get_level_values(0).tolist()))
+        s = s.where(markowitz_argv_t.c.mz_key.in_(df_new.index.get_level_values(1).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, markowitz_argv_t, df_new, df_old)
+
 
         #print argv_df
 
