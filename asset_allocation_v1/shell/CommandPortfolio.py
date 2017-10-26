@@ -67,10 +67,11 @@ def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpo
             else:
                 tmpid = optid
             ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
-            ctx.invoke(nav, optid=optid, optenddate=optenddate)
+            ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
         else:
-            ctx.invoke(nav, optid=optid, optenddate=optenddate)
+            ctx.invoke(pos, optid=optid, optrisk=optrisk)
+            ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
@@ -411,7 +412,6 @@ def pos_update(portfolio, alloc):
         df_tmp.index.name = 'ra_date'
     df_tmp = df_tmp.stack([1, 2])
     df = df_tmp.merge(df_raw[['ra_fund_code', 'ra_fund_type']], how='left', left_index=True, right_index=True)
-
 
     # index
     df['ra_portfolio_id'] = gid

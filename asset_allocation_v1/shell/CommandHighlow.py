@@ -60,6 +60,7 @@ def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, 
             ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
         else:
+            ctx.invoke(pos, optid=optid, optrisk=optrisk)
             ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
     else:
