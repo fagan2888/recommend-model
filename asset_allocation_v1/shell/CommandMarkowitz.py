@@ -66,6 +66,7 @@ def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, endd
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
+            ctx.invoke(pos, optid=optid)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
     else:
@@ -655,45 +656,73 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
-
-    if asset_id.isdigit():
+    prefix = asset_id[0:2]
+    if prefix.isdigit():
         xtype = int(asset_id) / 10000000
-    else:
-        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+        if xtype == 1:
+            #
+            # 基金池资产
+            #
+            asset_id %= 10000000
+            (pool_id, category) = (asset_id / 100, asset_id % 100)
+            ttype = pool_id / 10000
+            sr = asset_ra_pool_nav.load_series(
+                pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 3:
+            #
+            # 基金池资产
+            #
+            sr = base_ra_fund_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 4:
+            #
+            # 修型资产
+            #
+            sr = asset_rs_reshape_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 12:
+            #
+            # 指数资产
+            #
+            sr = base_ra_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 'ERI':
 
-    if xtype == 1:
-        #
-        # 基金池资产
-        #
-        asset_id %= 10000000
-        (pool_id, category) = (asset_id / 100, asset_id % 100)
-        ttype = pool_id / 10000
-        sr = asset_ra_pool_nav.load_series(
-            pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 3:
-        #
-        # 基金池资产
-        #
-        sr = base_ra_fund_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 4:
-        #
-        # 修型资产
-        #
-        sr = asset_rs_reshape_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 12:
-        #
-        # 指数资产
-        #
-        sr = base_ra_index_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 'ERI':
-
-        sr = base_exchange_rate_index_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+            sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        else:
+            sr = pd.Series()
     else:
-        sr = pd.Series()
+        if prefix == 'AP':
+            #
+            # 基金池资产
+            #
+            sr = asset_ra_pool_nav.load_series(
+                asset_id, 0, 9, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'FD':
+            #
+            # 基金资产
+            #
+            sr = base_ra_fund_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'RS':
+            #
+            # 修型资产
+            #
+            sr = asset_rs_reshape_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'IX':
+            #
+            # 指数资产
+            #
+            sr = base_ra_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'ER':
+
+            sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        else:
+            sr = pd.Series()
 
     return sr
 
@@ -724,9 +753,9 @@ def pos(ctx, optid, optlist, optrisk, sdate, edate, optcpu):
         return 0
 
     for _, markowitz in df_markowitz.iterrows():
-        nav_update_alloc(markowitz, optrisk, sdate, edate, optcpu)
+        pos_update_alloc(markowitz, optrisk, sdate, edate, optcpu)
         
-def nav_update_alloc(markowitz, optrisk, sdate, edate, optcpu):
+def pos_update_alloc(markowitz, optrisk, sdate, edate, optcpu):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
     
@@ -849,9 +878,10 @@ def pos_update(markowitz, alloc, sdate, edate, optcpu):
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def nav(ctx, optid, optlist):
+def nav(ctx, optid, optrisk, optlist):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -874,12 +904,19 @@ def nav(ctx, optid, optlist):
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, markowitz in bar:
             # bar.update(1)
-            nav_update(markowitz)
+            nav_update_alloc(markowitz, optrisk)
 
-def nav_update(markowitz):
-    markowitz_id = markowitz['globalid']
+def nav_update_alloc(markowitz, optrisk):
+    risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
+    df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
+    
+    for _, alloc in df_alloc.iterrows():
+        nav_update(markowitz, alloc)
+
+def nav_update(markowitz, alloc):
+    gid = alloc['globalid']
     # 加载仓位信息
-    df_pos = asset_mz_markowitz_pos.load(markowitz_id)
+    df_pos = asset_mz_markowitz_pos.load(gid)
 
     # 加载资产收益率
     min_date = df_pos.index.min()
@@ -899,16 +936,17 @@ def nav_update(markowitz):
     df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'mz_nav'}).copy()
     df_result.index.name = 'mz_date'
     df_result['mz_inc'] = df_result['mz_nav'].pct_change().fillna(0.0)
-    df_result['mz_markowitz_id'] = markowitz['globalid']
+    df_result['mz_markowitz_id'] = gid
     df_result = df_result.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
 
-    asset_mz_markowitz_nav.save(markowitz_id, df_result)
+    asset_mz_markowitz_nav.save(gid, df_result)
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def turnover(ctx, optid, optlist):
+def turnover(ctx, optid, optrisk, optlist):
     ''' calc pool turnover and inc
     '''
     if optid is not None:
@@ -933,36 +971,44 @@ def turnover(ctx, optid, optlist):
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, markowitz in bar:
             # bar.update(1)
-            turnover = turnover_update(markowitz)
-            data.append((markowitz['globalid'], "%6.2f" % (turnover * 100)))
+            segments = turnover_update_alloc(markowitz, optrisk)
+            data.extend(segments)
 
     headers = ['markowitz', 'turnover(%)']
     print(tabulate(data, headers=headers, tablefmt="psql"))
     # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
     # print(tabulate(data, headers=headers, tablefmt="grid"))
+    
+def turnover_update_alloc(markowitz, optrisk):
+    risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
+    df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
 
-def turnover_update(markowitz):
-    markowitz_id = markowitz['globalid']
+    data = []
+    for _, alloc in df_alloc.iterrows():
+        turnover = turnover_update(markowitz, alloc)
+        data.append((alloc['globalid'], "%6.2f" % (turnover * 100)))
+
+    return data
+
+def turnover_update(markowitz, alloc):
+    gid = alloc['globalid']
     # 加载仓位信息
-    df = asset_mz_markowitz_pos.load(markowitz_id, use_markowitz_ratio=False)
+    df = asset_mz_markowitz_pos.load(gid, use_markowitz_ratio=False)
 
     # 计算宽口换手率
     sr_turnover = DFUtil.calc_turnover(df)
 
     criteria_id = 6
     df_result = sr_turnover.to_frame('mz_value')
-    df_result['mz_markowitz_id'] = markowitz_id
+    df_result['mz_markowitz_id'] = gid
     df_result['mz_criteria_id'] = criteria_id
     df_result = df_result.reset_index().set_index(['mz_markowitz_id', 'mz_criteria_id', 'mz_date'])
-    asset_mz_markowitz_criteria.save(markowitz_id, criteria_id,  df_result)
+    asset_mz_markowitz_criteria.save(gid, criteria_id,  df_result)
 
     total_turnover = sr_turnover.sum()
 
     return total_turnover
 
-    # df_result.reset_index(inplace=True)
-    # df_result['turnover'] = df_result['turnover'].map(lambda x: "%6.2f%%" % (x * 100))
-    # print tabulate(df_result, headers='keys', tablefmt='psql', stralign=u'right')
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
