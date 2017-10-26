@@ -181,9 +181,11 @@ def imp_highlow(df):
         markowitz_risk_id = markowitz_id.replace(markowitz_id_num, str(string.atoi(markowitz_id_num) + int(risk * 10) % 10))
 
 
-        highlow_alloc_df = pd.DataFrame([[highlow_risk_id, highlow_name, highlow_id, risk]], columns = ['globalid', 'mz_name', 'mz_highlow_id', 'mz_risk'])
+        highlow_alloc_df = pd.DataFrame([[highlow_risk_id, highlow_name, highlow_id, risk, markowitz_risk_id]], columns = ['globalid', 'mz_name', 'mz_highlow_id', 'mz_risk', 'mz_markowitz_id'])
         highlow_alloc_df = highlow_alloc_df.set_index(['globalid'])
         highlow_alloc_df['mz_type'] = 1
+        #highlow_alloc_df['mz_high_id'] = ''
+        #highlow_alloc_df['mz_low_id'] = ''
 
 
         df_new = highlow_alloc_df
@@ -240,7 +242,6 @@ def imp_highlow(df):
         s = s.where(highlow_argv_t.c.mz_key.in_(df_new.index.get_level_values(1).tolist()))
         df_old = pd.read_sql(s, db, index_col = df_new.index.names)
         database.batch(db, highlow_argv_t, df_new, df_old)
-
 
     pass
 

@@ -526,6 +526,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
         manager = Manager()
         q = manager.Queue()
         processes = []
+        print time.time()
         for indexs in process_adjust_indexs:
             p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num,))
             processes.append(p)
@@ -587,7 +588,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     for asset in df_inc.columns:
         bound.append(limits[asset])
 
-    if bootstrap is None:
+    if bootstrap is None or bootstrap == False:
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
@@ -758,7 +759,7 @@ def pos_update(markowitz, alloc, sdate, edate, optcpu):
     
 
     algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
-    
+   
     if algo == 1:
         df = average_days(sdate, edate, assets)
     elif algo == 2:

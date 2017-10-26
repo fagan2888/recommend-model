@@ -89,6 +89,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
     index_delete = df_old.index.difference(df_new.index)
     index_update = df_new.index.intersection(df_old.index)
 
+
     #
     # 我们首先计算需要更新的条目个数, 因为更新的性能很差, 所以, 如果需
     # 要更新的条目过多(>50), 则采用删除+插入的批量处理方式
@@ -101,6 +102,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
         df_update = df1.loc[masks.any(axis=1)].copy()
     else:
         df_update = pd.DataFrame(columns=df_new.columns)
+
 
     if len(df_update) > 50:
         keys = [table.c.get(c) for c in df_old.index.names]
@@ -139,7 +141,11 @@ def batch(db, table, df_new, df_old, timestamp=True):
                 origin = df2.loc[key]
                 columns = row[masks.loc[key]]
 
-                pkeys = zip(df_update.index.names, key)
+                pkeys = []
+                if len(df_update.index.names) == 1:
+                    pkeys.append((df_update.index.names[0], key))
+                else:
+                    pkeys = zip(df_update.index.names, key)
 
                 dirty = {k:{'old':origin[k], 'new':v} for k,v in columns.iteritems()}
 
