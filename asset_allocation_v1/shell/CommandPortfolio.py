@@ -189,7 +189,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     #
     with click.progressbar(
             database.load_alloc_and_risk(optratio),
-            label='update %-13s' % 'portfolio',
+            label=('update %-13s' % 'portfolio').ljust(30),
             item_show_func=lambda x:  'risk %d' % int(x[0] * 10) if x else None) as bar:
         for (risk, ratio_id) in bar:
             gid = optid + (int(risk * 10) % 10)
@@ -352,7 +352,7 @@ def pos_update_alloc(portfolio, optrisk):
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='update pos %-9s' % (portfolio['globalid']),
+            label=('update pos %-9s' % (portfolio['globalid'])).ljust(30),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
             pos_update(portfolio, alloc)
@@ -540,19 +540,19 @@ def nav(ctx, optid, optlist, optrisk, optfee, optdebug, optenddate):
 def nav_update_alloc(portfolio, risks, fee, debug, enddate):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     df_alloc = df_alloc.loc[(df_alloc['ra_risk'] * 10).astype(int).isin(risks)]
+
+    feestr = 'FEE' if fee == 8 else 'NOF'
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='update nav %-9s' % (portfolio['globalid']),
+            label=('update nav %-9s (%s)' % (portfolio['globalid'], feestr)).ljust(30),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
-    # with click.progressbar(length=len(df_alloc), label='update nav %s' % (portfolio['globalid'])) as bar:
-    #     for _, alloc in :
-    #         bar.update(1)
             nav_update(alloc, fee, debug, enddate)
     
 def nav_update(alloc, fee, debug, enddate):
     alloc_id = alloc['globalid']
+
     # 加载仓位信息
     df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
     if df_pos.empty:
@@ -629,12 +629,9 @@ def turnover_update_alloc(portfolio):
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='turnover %-11s' % (portfolio['globalid']),
+            label=('turnover %-11s' % (portfolio['globalid'])).ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
-    # with click.progressbar(length=len(df_alloc), label='update turnover %s' % (portfolio['globalid'])) as bar:
-    #     for _, alloc in df_alloc.iterrows():
-    #         bar.update(1)
             turnover_update(alloc)
 
             
