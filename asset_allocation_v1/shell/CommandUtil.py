@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 @click.pass_context
 def util(ctx):
     '''
-        import, update, cp portfolio highlow markowitz
+        import, update, cp portfolio highlow markowitz or ra_pool_sample
     '''
     pass
 
@@ -39,16 +39,16 @@ def util(ctx):
 @util.command()
 @click.option('--path', 'optpath', default=True, help=u'file path')
 @click.pass_context
-def imp(ctx, optpath):
+def imp_portfolio(ctx, optpath):
 
     all_portfolio_df = pd.read_csv(optpath.strip(), parse_dates = ['start_date', 'end_date'])
 
     imp_markowitz(all_portfolio_df)
     imp_highlow(all_portfolio_df)
-    imp_portfolio(all_portfolio_df)
+    imp_portf(all_portfolio_df)
 
 
-def imp_portfolio(df):
+def imp_portf(df):
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -364,6 +364,24 @@ def find_asset_name(asset_id):
     else:
         return None
     #flag = asset_id.strip().split('.')[0]
+
+
+
+@util.command()
+@click.option('--path', 'optpath', default=True, help=u'--path id')
+@click.pass_context
+def import_pool_sample(ctx, optpath):
+
+
+    df = pd.read_csv(optpath.strip(), index_col = ['ra_pool_id'])
+    db = database.connection('asset')
+    t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
+    columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
+
+    for pool_id in set(df.index):
+        s = select(columns, (t.c.ra_pool_id == pool_id))
+        df_old = pd.read_sql(s, db, index_col=['ra_pool_id'])
+        database.batch(db, t, df, df_old, timestamp=True)
 
 
 @util.command()

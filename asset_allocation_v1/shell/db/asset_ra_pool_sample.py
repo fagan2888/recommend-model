@@ -14,7 +14,7 @@ from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
 
-def load(gid, reindex=None):
+def load(gid):
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -32,8 +32,5 @@ def load(gid, reindex=None):
         return None
 
     df = pd.read_sql(s, db)
-
-    if reindex is not None:
-        df = df.unstack().reindex(reindex, method='pad').stack()
 
     return df
