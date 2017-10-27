@@ -104,6 +104,8 @@ def batch(db, table, df_new, df_old, timestamp=True):
         df_update = pd.DataFrame(columns=df_new.columns)
 
 
+
+
     if len(df_update) > 50:
         keys = [table.c.get(c) for c in df_old.index.names]
         for segment in chunks(df_old.index.tolist(), 500):
