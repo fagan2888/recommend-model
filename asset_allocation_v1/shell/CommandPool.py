@@ -293,7 +293,7 @@ def load_pools(pools, pool_type=None):
     columns = [
         ra_pool.c.id,
         ra_pool.c.ra_type,
-        #ra_pool.c.ra_algo,
+        ra_pool.c.ra_algo,
         ra_pool.c.ra_date_type,
         ra_pool.c.ra_fund_type,
         ra_pool.c.ra_lookback,
@@ -840,7 +840,6 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
         corr_threshold = np.percentile(corr.values, 80)
         corr_threshold = 0.7 if corr_threshold <= 0.7 else corr_threshold
         corr_threshold = 0.9 if corr_threshold >= 0.9 else corr_threshold
-        #corr_threshold = 0
         for i in range(0, len(sorted_x)):
             code, jensen = sorted_x[i]
             if corr[code] >= corr_threshold:
