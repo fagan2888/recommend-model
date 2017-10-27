@@ -366,6 +366,24 @@ def find_asset_name(asset_id):
     #flag = asset_id.strip().split('.')[0]
 
 
+
+@util.command()
+@click.option('--path', 'optpath', default=True, help=u'--path id')
+@click.pass_context
+def import_pool_sample(ctx, optpath):
+
+
+    df = pd.read_csv(optpath.strip(), index_col = ['ra_pool_id'])
+    db = database.connection('asset')
+    t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
+    columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
+
+    for pool_id in set(df.index):
+        s = select(columns, (t.c.ra_pool_id == pool_id))
+        df_old = pd.read_sql(s, db, index_col=['ra_pool_id'])
+        database.batch(db, t, df, df_old, timestamp=True)
+
+
 @util.command()
 @click.option('--path', 'optpath', help=u'--path id')
 @click.option('--poolid', 'optpoolid', help=u'--pool id')
