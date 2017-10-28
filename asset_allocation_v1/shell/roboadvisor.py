@@ -31,6 +31,7 @@ import CommandExchangeRateIndex
 import CommandUtil
 
 from util import ProgressBar
+from util.xdebug import dd
 
 
 logger = logging.getLogger(__name__)
@@ -105,7 +106,7 @@ def test(ctx):
 @roboadvisor.command()
 @click.option('--pool/--no-pool', 'optpool', default=True, help=u'include pool command group with in batch')
 @click.option('--timing/--no-timing', 'opttiming', default=True, help=u'include timing command group with in batch')
-@click.option('--reshape/--no-reshape', 'optreshape', default=True, help=u'include reshape command group with in batch')
+@click.option('--reshape/--no-reshape', 'optreshape', default=False, help=u'include reshape command group with in batch')
 @click.option('--riskmgr/--no-riskmgr', 'optriskmgr', default=True, help=u'include riskmgr command group with in batch')
 @click.option('--markowitz/--no-markowitz', 'optmarkowtiz', default=True, help=u'include markowitz command group with in batch')
 @click.option('--highlow/--no-highlow', 'opthighlow', default=True, help=u'include highlow command group with in batch')
@@ -125,8 +126,9 @@ def test(ctx):
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance for timing and riskmgr')
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace existed instance')
 @click.option('--riskctrl/--no-riskctrl', 'optriskctrl', default=True, help=u'no riskmgr for highlow')
+@click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
 @click.pass_context
-def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, opthigh, optlow, optratio, optonline, optreplace, optriskctrl):
+def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, opthigh, optlow, optratio, optonline, optreplace, optriskctrl, optnew):
     '''run all command in batch
     '''
     if optpool:
@@ -142,34 +144,47 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
     if optriskmgr:
         ctx.invoke(CommandRiskManage.riskmgr, optonline=optonline)
 
-    if optmarkowtiz:
-        ctx.invoke(CommandMarkowitz.markowitz, short_cut='high', startdate=startdate, optturnover=optturnoverm, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu,optwavelet=optwavelet, optwaveletfilternum=optwaveletfilternum, optreplace=optreplace)
-        ctx.invoke(CommandMarkowitz.markowitz, short_cut='low', startdate=startdate, optturnover=optturnoverm, optbootstrap=False, optbootcount=optbootcount, optcpu=optcpu)
+    if optnew:
+        if optmarkowtiz:
+            ctx.invoke(CommandMarkowitz.markowitz, optnew=True)
+
+        if opthighlow:
+            ctx.invoke(CommandHighlow.highlow, optnew=True)
+
+        if optportfolio:
+            ctx.invoke(CommandPortfolio.portfolio, optnew=True)
+
+        if optwavelet:
+            ctx.invoke(CommandWavelet.filtering, optnew=True)
+
     else:
-        if opthigh is None:
-            click.echo(click.style("--high required when --no-markowitz specified!", fg="red"))
-            return
+        if optmarkowtiz:
+            ctx.invoke(CommandMarkowitz.markowitz, short_cut='high', startdate=startdate, optturnover=optturnoverm, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu,optwavelet=optwavelet, optwaveletfilternum=optwaveletfilternum, optreplace=optreplace)
+            ctx.invoke(CommandMarkowitz.markowitz, short_cut='low', startdate=startdate, optturnover=optturnoverm, optbootstrap=False, optbootcount=optbootcount, optcpu=optcpu)
         else:
-            ctx.obj['markowitz.high'] = opthigh
-        if optlow is None:
-            click.echo(click.style("--low required when --no-markowitz specified!", fg="red"))
+            if opthigh is None:
+                click.echo(click.style("--high required when --no-markowitz specified!", fg="red"))
+                return
+            else:
+                ctx.obj['markowitz.high'] = opthigh
+            if optlow is None:
+                click.echo(click.style("--low required when --no-markowitz specified!", fg="red"))
+            else:
+                ctx.obj['markowitz.low'] = optlow
+
+        if opthighlow:
+            ctx.invoke(CommandHighlow.highlow, optreplace=optreplace, optriskmgr=optriskctrl)
         else:
-            ctx.obj['markowitz.low'] = optlow
+            if optratio is None:
+                click.echo(click.style("--ratio required when --no-highlow specified!", fg="red"))
+            else:
+                ctx.obj['highlow'] = optratio
 
-    if opthighlow:
-        ctx.invoke(CommandHighlow.highlow, optreplace=optreplace, optriskmgr=optriskctrl)
-    else:
-        if optratio is None:
-            click.echo(click.style("--ratio required when --no-highlow specified!", fg="red"))
-        else:
-            ctx.obj['highlow'] = optratio
+        if optportfolio:
+            ctx.invoke(CommandPortfolio.portfolio, optreplace=optreplace, optturnover=optturnoverp, optenddate=enddate)
 
-    if optportfolio:
-        ctx.invoke(CommandPortfolio.portfolio, optreplace=optreplace, optturnover=optturnoverp, optenddate=enddate)
-
-    if optwavelet:
-        ctx.invoke(CommandWavelet.filtering)
-
+        if optwavelet:
+            ctx.invoke(CommandWavelet.filtering)
 
 @roboadvisor.command()
 @click.option('--from', 'optfrom', default=True, help=u'--from id')

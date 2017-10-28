@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)  
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
+@click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.option('--name', 'optname', default=None, help=u'specify highlow name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
@@ -44,25 +45,29 @@ logger = logging.getLogger(__name__)
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate):
+def highlow(ctx, optfull, optnew, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        if optfull is False:
-            # ctx.obj['highlow'] = 70032880
-            if optid is not None:
-                tmpid = int(optid)
-            else:
-                tmpid = optid
-            ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
-            ctx.invoke(nav, optid=optid, optenddate=optenddate)
-            ctx.invoke(turnover, optid=optid)
-        else:
+        if optnew:
             ctx.invoke(pos, optid=optid, optrisk=optrisk)
             ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
+        else:
+            if optfull is False:
+                # ctx.obj['highlow'] = 70032880
+                if optid is not None:
+                    tmpid = int(optid)
+                else:
+                    tmpid = optid
+                ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
+                ctx.invoke(nav, optid=optid, optenddate=optenddate)
+                ctx.invoke(turnover, optid=optid)
+            else:
+                ctx.invoke(nav, optid=optid, optenddate=optenddate)
+                ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
@@ -430,9 +435,10 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.pass_context
-def pos(ctx, optid, optlist, optrisk):
+def pos(ctx, optid, opttype, optlist, optrisk):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -443,7 +449,9 @@ def pos(ctx, optid, optlist, optrisk):
         else:
             highlows = None
 
-    df_highlow = asset_mz_highlow.load(highlows)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_highlow = asset_mz_highlow.load(highlows, xtypes)
 
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
@@ -623,9 +631,10 @@ def yao(highlow, alloc):
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def nav(ctx, optid, optlist, optenddate):
+def nav(ctx, optid, opttype, optlist, optenddate):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -641,7 +650,9 @@ def nav(ctx, optid, optlist, optenddate):
     else:
         enddate = None
         
-    df_highlow = asset_mz_highlow.load(highlows)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_highlow = asset_mz_highlow.load(highlows, xtypes)
 
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
@@ -692,9 +703,10 @@ def nav_update(alloc, enddate):
 
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def turnover(ctx, optid, optlist):
+def turnover(ctx, optid, opttype, optlist):
     ''' calc pool turnover and inc
     '''
     if optid is not None:
@@ -705,7 +717,9 @@ def turnover(ctx, optid, optlist):
         else:
             highlows = None
 
-    df_highlow = asset_mz_highlow.load(highlows)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_highlow = asset_mz_highlow.load(highlows, xtypes)
 
     if optlist:
 

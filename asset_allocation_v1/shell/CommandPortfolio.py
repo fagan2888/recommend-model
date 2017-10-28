@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)  
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
+@click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
 @click.option('--id', 'optid', help=u'specify portfolio id')
 @click.option('--name', 'optname', default=None, help=u'specify portfolio name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
@@ -55,24 +56,28 @@ logger = logging.getLogger(__name__)
 @click.option('--turnover', 'optturnover',  type=float, default=0, help=u'fitler by turnover')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpool, optrisk, optturnover,optenddate):
+def portfolio(ctx, optfull, optnew, optid, optname, opttype, optreplace, optratio, optpool, optrisk, optturnover,optenddate):
 
     '''generate final portolio
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        if optfull is False:
-            if optid is not None:
-                tmpid = int(optid)
-            else:
-                tmpid = optid
-            ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
-            ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
-            ctx.invoke(turnover, optid=optid)
-        else:
+        if optnew:
             ctx.invoke(pos, optid=optid, optrisk=optrisk)
             ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
+        else:
+            if optfull is False:
+                if optid is not None:
+                    tmpid = int(optid)
+                else:
+                    tmpid = optid
+                ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
+                ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
+                ctx.invoke(turnover, optid=optid)
+            else:
+                ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
+                ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
@@ -321,10 +326,11 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.pass_context
-def pos(ctx, optid, optlist, optrisk):
+def pos(ctx, optid, opttype, optlist, optrisk):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -335,7 +341,9 @@ def pos(ctx, optid, optlist, optrisk):
         else:
             portfolios = None
 
-    df_portfolio = asset_ra_portfolio.load(portfolios)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
 
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
@@ -506,13 +514,14 @@ def kun(portfolio, alloc):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
 @click.option('--fee', 'optfee', default='9,8', help=u'fee type(8:with fee; 9:without fee')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def nav(ctx, optid, optlist, optrisk, optfee, optdebug, optenddate):
+def nav(ctx, optid, opttype, optlist, optrisk, optfee, optdebug, optenddate):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -526,7 +535,9 @@ def nav(ctx, optid, optlist, optrisk, optfee, optdebug, optenddate):
     fees = [int(s.strip()) for s in optfee.split(',')]
     risks = [int(s.strip()) for s in optrisk.split(',')]
 
-    df_portfolio = asset_ra_portfolio.load(portfolios)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
 
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
@@ -599,9 +610,10 @@ def nav_update(alloc, fee, debug, enddate):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def turnover(ctx, optid, optlist):
+def turnover(ctx, optid, opttype, optlist):
     ''' calc pool turnover and inc
     '''
     if optid is not None:
@@ -611,8 +623,10 @@ def turnover(ctx, optid, optlist):
             portfolios = [str(ctx.obj['portfolio'])]
         else:
             portfolios = None
+            
+    xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_portfolio = asset_ra_portfolio.load(portfolios)
+    df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
 
     if optlist:
 
