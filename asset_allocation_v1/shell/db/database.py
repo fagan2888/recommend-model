@@ -122,7 +122,9 @@ def batch(db, table, df_new, df_old, timestamp=True):
 
         if len(index_delete):
             keys = [table.c.get(c) for c in df_new.index.names]
-            table.delete(tuple_(*keys).in_(index_delete.tolist())).execute()
+            for segment in chunks(index_delete.tolist(), 500):
+                table.delete(tuple_(*keys).in_(segment)).execute()
+            #table.delete(tuple_(*keys).in_(index_delete.tolist())).execute()
 
             if len(index_delete) > 1:
                 logger.info("delete %s (%5d records) : %s " % (table.name, len(index_insert), index_delete[0]))
