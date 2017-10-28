@@ -366,14 +366,15 @@ def find_asset_name(asset_id):
     #flag = asset_id.strip().split('.')[0]
 
 
-
 @util.command()
-@click.option('--path', 'optpath', default=True, help=u'--path id')
+@click.option('--path', 'optpath', help=u'--path id')
+@click.option('--poolid', 'optpoolid', help=u'--pool id')
 @click.pass_context
-def import_pool_sample(ctx, optpath):
+def import_pool_sample(ctx, optpath, optpoolid):
 
 
     df = pd.read_csv(optpath.strip(), index_col = ['ra_pool_id'])
+
     db = database.connection('asset')
     t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
@@ -382,6 +383,57 @@ def import_pool_sample(ctx, optpath):
         s = select(columns, (t.c.ra_pool_id == pool_id))
         df_old = pd.read_sql(s, db, index_col=['ra_pool_id'])
         database.batch(db, t, df, df_old, timestamp=True)
+
+
+@util.command()
+@click.option('--fundtype', 'optfundtype', help=u'fund type')
+@click.option('--inpath', 'optinpath', default=True, help=u'fund code path')
+#@click.option('--outpath', 'optoutpath', default=True, help=u'out fund code path')
+@click.option('--poolid', 'optpoolid', help=u'--pool id')
+@click.pass_context
+def filter_fund_by_list_to_pool_sample(ctx, optfundtype, optinpath, optpoolid):
+
+
+    df = pd.read_csv(optinpath.strip())
+    codes_set = set()
+    for code in df['codes'].values:
+        codes_set.add('%06d' % int(code))
+
+    fund_type = int(optfundtype.strip())
+
+    db = database.connection('base')
+    t = Table('ra_fund', MetaData(bind=db), autoload=True)
+    columns = [
+                t.c.ra_code,
+                ]
+    s = select(columns)
+    s = s.where(t.c.ra_type == fund_type)
+    df = pd.read_sql(s, db)
+
+    final_codes = []
+    for code in df['ra_code'].values:
+        code = '%06d' % int(code)
+        if code in codes_set:
+            final_codes.append(code)
+
+    print final_codes
+
+
+    df = pd.DataFrame(final_codes, columns = ['ra_fund_code'])
+    df['ra_pool_id'] = optpoolid.strip()
+    df = df.set_index(['ra_pool_id', 'ra_fund_code'])
+
+
+    db = database.connection('asset')
+    t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
+    columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
+
+    for pool_id in set(df.index.get_level_values(0)):
+        s = select(columns, (t.c.ra_pool_id == pool_id))
+        df_old = pd.read_sql(s, db, index_col=['ra_pool_id', 'ra_fund_code'])
+        print df
+        database.batch(db, t, df, df_old, timestamp=True)
+
 
 
 @util.command()
