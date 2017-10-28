@@ -172,6 +172,8 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
                 bar.update(1)
                 codes = pool_by_corr_jensen(pool, day, lookback, limit)
                 print day, codes
+                if codes is None or len(codes) == 0:
+                    continue
                 ra_fund = base_ra_fund.load(codes = codes)
                 ra_fund = ra_fund.set_index(['ra_code'])
                 ra_pool    = pool['id']
@@ -185,7 +187,7 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
         columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
         s = select(columns)
         s = s.where(ra_pool_fund_t.c.ra_pool.in_(df_new.index.get_level_values(0).tolist()))
-        s = s.where(ra_pool_fund_t.c.ra_date.in_(df_new.index.get_level_values(1).tolist()))
+        #s = s.where(ra_pool_fund_t.c.ra_date.in_(df_new.index.get_level_values(1).tolist()))
         df_old = pd.read_sql(s, db, index_col = df_new.index.names)
         #print type(df_new['ra_fund_code'].ravel()[0])
         #print type(df_old['ra_fund_code'].ravel()[0])
@@ -291,7 +293,7 @@ def load_pools(pools, pool_type=None):
     columns = [
         ra_pool.c.id,
         ra_pool.c.ra_type,
-        ra_pool.c.ra_algo,
+        #ra_pool.c.ra_algo,
         ra_pool.c.ra_date_type,
         ra_pool.c.ra_fund_type,
         ra_pool.c.ra_lookback,
@@ -838,6 +840,7 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
         corr_threshold = np.percentile(corr.values, 80)
         corr_threshold = 0.7 if corr_threshold <= 0.7 else corr_threshold
         corr_threshold = 0.9 if corr_threshold >= 0.9 else corr_threshold
+        #corr_threshold = 0
         for i in range(0, len(sorted_x)):
             code, jensen = sorted_x[i]
             if corr[code] >= corr_threshold:
