@@ -596,7 +596,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     if bootstrap is None or bootstrap == False:
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -764,7 +764,7 @@ def pos(ctx, optid, optlist, opttype, optrisk, sdate, edate, optcpu):
 def pos_update_alloc(markowitz, optrisk, sdate, edate, optcpu):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
-    print df_alloc
+    #print df_alloc
     
     for _, alloc in df_alloc.iterrows():
         pos_update(markowitz, alloc, sdate, edate, optcpu)
