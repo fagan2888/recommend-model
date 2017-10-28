@@ -460,16 +460,17 @@ def pos(ctx, optid, opttype, optlist, optrisk):
 
     for _, highlow in df_highlow.iterrows():
         pos_update_alloc(highlow, optrisk)
-        
+
 def pos_update_alloc(highlow, optrisk):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'], risks)
-    
+
     for _, alloc in df_alloc.iterrows():
         pos_update(highlow, alloc)
 
     click.echo(click.style("highlow allocation complement! instance id [%s]" % (highlow['globalid']), fg='green'))
-        
+
+
 def pos_update(highlow, alloc):
     highlow_id = alloc['globalid']
 
@@ -563,7 +564,7 @@ def jiao(highlow, alloc):
 
     df_asset = asset_mz_highlow_asset.load([highlow['globalid']])
     df_asset.set_index(['mz_asset_id'], inplace=True)
-    
+
     #
     # 加载高风险资产仓位
     #
@@ -621,12 +622,45 @@ def jiao(highlow, alloc):
     #
     df = pd.concat([df_h, df_l], axis=1)
 
-    
     return df
 
 def yao(highlow, alloc):
-    return jiao(highlow, alloc)
-    
+
+    high = alloc['mz_markowitz_id']
+    risk = int(alloc['mz_risk'] * 10)
+
+    df_asset = asset_mz_highlow_asset.load([alloc['globalid']])
+    df_asset.set_index(['mz_asset_id'], inplace=True)
+
+    #
+    # 加载高风险资产仓位
+    #
+    index = None
+
+    df_high = asset_mz_markowitz_pos.load_raw(high)
+    df_high_riskmgr = load_riskmgr2(df_high.columns, df_asset['mz_riskmgr_id'], df_high.index, True)
+    index = df_high.index.union(df_high_riskmgr.index)
+
+    data_h = {}
+    if not df_high.empty:
+        df_high = df_high.reindex(index, method='pad')
+        df_high_riskmgr = df_high_riskmgr.reindex(index, method='pad')
+        for column in df_high.columns:
+            data_h[column] = df_high[column] * df_high_riskmgr[column]
+
+    df_h = pd.DataFrame(data_h)
+
+    #
+    # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
+    # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
+    # 天的持仓100%， 如果因为风控空仓，需要用货币补足。
+    #
+    sr = 1.0 - df_h.sum(axis=1)
+    if (sr > 0.000099).any():
+        df_h['11310103'] = sr
+
+    return df_h
+
 
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')
