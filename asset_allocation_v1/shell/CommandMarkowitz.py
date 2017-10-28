@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
+@click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.option('--name', 'optname', default=None, help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
@@ -55,20 +56,24 @@ logger = logging.getLogger(__name__)
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
-def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
+def markowitz(ctx, optnew, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        if optfull is False:
-            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optwavelet = optwavelet, optwaveletfilternum = optwaveletfilternum, short_cut=short_cut, assets=assets)
-            ctx.invoke(nav, optid=optid)
-            ctx.invoke(turnover, optid=optid)
-        else:
+        if optnew:
             ctx.invoke(pos, optid=optid)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
+        else:
+            if optfull is False:
+                ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optwavelet = optwavelet, optwaveletfilternum = optwaveletfilternum, short_cut=short_cut, assets=assets)
+                ctx.invoke(nav, optid=optid)
+                ctx.invoke(turnover, optid=optid)
+            else:
+                ctx.invoke(nav, optid=optid)
+                ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
@@ -728,13 +733,14 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
-@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--start-date', 'sdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'edate', help=u'end date to calc')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.pass_context
-def pos(ctx, optid, optlist, optrisk, sdate, edate, optcpu):
+def pos(ctx, optid, optlist, opttype, optrisk, sdate, edate, optcpu):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -745,8 +751,9 @@ def pos(ctx, optid, optlist, optrisk, sdate, edate, optcpu):
         else:
             markowitzs = None
 
-    df_markowitz = asset_mz_markowitz.load(markowitzs)
+    xtypes = [s.strip() for s in opttype.split(',')]
 
+    df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
     if optlist:
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
@@ -878,10 +885,11 @@ def pos_update(markowitz, alloc, sdate, edate, optcpu):
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def nav(ctx, optid, optrisk, optlist):
+def nav(ctx, optid, opttype, optrisk, optlist):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -892,7 +900,9 @@ def nav(ctx, optid, optrisk, optlist):
         else:
             markowitzs = None
 
-    df_markowitz = asset_mz_markowitz.load(markowitzs)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
 
     if optlist:
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
@@ -943,10 +953,11 @@ def nav_update(markowitz, alloc):
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def turnover(ctx, optid, optrisk, optlist):
+def turnover(ctx, optid, opttype, optrisk, optlist):
     ''' calc pool turnover and inc
     '''
     if optid is not None:
@@ -957,7 +968,9 @@ def turnover(ctx, optid, optrisk, optlist):
         else:
             markowitzs = None
 
-    df_markowitz = asset_mz_markowitz.load(markowitzs)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
 
     if optlist:
 
