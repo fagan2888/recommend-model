@@ -315,6 +315,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
             }
 
+    today = datetime.now()
     if optname is None:
         optname = u'马克维茨%s(实验)' % today.strftime("%m%d")
 
@@ -329,7 +330,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
-
     # print df.head()
     # print df_sharpe.head()
 
@@ -532,7 +532,6 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
         manager = Manager()
         q = manager.Queue()
         processes = []
-        print time.time()
         for indexs in process_adjust_indexs:
             p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num,))
             processes.append(p)
@@ -765,6 +764,7 @@ def pos(ctx, optid, optlist, opttype, optrisk, sdate, edate, optcpu):
 def pos_update_alloc(markowitz, optrisk, sdate, edate, optcpu):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
+    print df_alloc
     
     for _, alloc in df_alloc.iterrows():
         pos_update(markowitz, alloc, sdate, edate, optcpu)
@@ -795,7 +795,7 @@ def pos_update(markowitz, alloc, sdate, edate, optcpu):
     
 
     algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
-   
+
     if algo == 1:
         df = average_days(sdate, edate, assets)
     elif algo == 2:
