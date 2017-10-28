@@ -26,6 +26,7 @@ def load(gids, xtypes=None):
         t1.c.mz_type,
         t1.c.mz_risk,
         t1.c.mz_highlow_id,
+        t1.c.mz_markowitz_id,
         t1.c.mz_name,
     ]
 
@@ -50,6 +51,7 @@ def where_highlow_id(highlow_id, risks=None, xtypes=None):
         t1.c.mz_type,
         t1.c.mz_risk,
         t1.c.mz_highlow_id,
+        t1.c.mz_markowitz_id,
         t1.c.mz_name,
     ]
 
