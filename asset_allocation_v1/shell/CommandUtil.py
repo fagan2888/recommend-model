@@ -436,7 +436,6 @@ def filter_fund_by_list_to_pool_sample(ctx, optfundtype, optinpath, optpoolid):
 
     print final_codes
 
-
     df = pd.DataFrame(final_codes, columns = ['ra_fund_code'])
     df['ra_pool_id'] = optpoolid.strip()
     df = df.set_index(['ra_pool_id', 'ra_fund_code'])
