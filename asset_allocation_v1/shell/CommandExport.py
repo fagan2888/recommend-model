@@ -178,10 +178,15 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optfundtype, optpool, opt
 @click.option('--month/--no-month', 'optmonth', default=True, help=u'month return for investor')
 # @click.option('--tools', '-t', type=click.Choice(['tool1', 'tool2', 'tool3']), multiple=True)
 @click.option('--output', '-o', type=click.Path(), help=u'output file')
+@click.option('--excel/--no-excel', 'optexcel', default=False, help=u'export excel, default is csv')
 @click.pass_context
-def investor_return(ctx, optlist, optstartid, optendid, optmonth, output):
+def investor_return(ctx, optlist, optstartid, optendid, optmonth, output, optexcel):
     '''run constant risk model
     '''
+    import sys
+    # sys.setdefaultencoding() does not exist, here!
+    reload(sys)  # Reload does the trick!
+    sys.setdefaultencoding('UTF8')
     
     db = database.connection('asset')
 
@@ -230,11 +235,115 @@ def investor_risk_maxdrawdown(ctx, optlist, optstartid, optendid, optmonth, outp
     df_result = df_result.unstack(1)
     df_result.columns = df_result.columns.droplevel(0)
 
+    if optexcel:
+        if output is not None:
+            path = output
+        else:
+            path = datapath('export-return.xlsx')
+
+        writer = pd.ExcelWriter(path, options={'encoding':'utf-8'})
+        # df_result['is_date'] = df_result['is_date'].apply(lambda x: x.strftime("%Y-%m-%d"))
+        # df_result = df_result.rename(columns={'is_date':'日期', 'is_fund_code':'基金代码', 'ra_name':'基金名称', 'is_fund_ratio':'配置比例'})
+        # df_result.set_index(['日期', '基金代码'], inplace=True)
+        # df_result = df_result[['基金名称','配置比例']]
+        df_result = df_result.sort_index()
+        df_result.to_excel(writer, encoding='UTF-8')
+
+        # Close the Pandas Excel writer and output the Excel file.
+        writer.save()    
+    else:
+        if output is not None:
+            path = output
+        else:
+            path = datapath('export-return.csv')
+
+        df_result.to_csv(path)
+
+    print "export nav to file %s" % (path)
+
+@export.command()
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--start-id', 'optstartid', help=u'start investor id to export')
+@click.option('--end-id', 'optendid', help=u'end investor id to export')
+@click.option('--month/--no-month', 'optmonth', default=True, help=u'month return for investor')
+# @click.option('--tools', '-t', type=click.Choice(['tool1', 'tool2', 'tool3']), multiple=True)
+@click.option('--output', '-o', type=click.Path(), help=u'output file')
+@click.pass_context
+def investor_pos(ctx, optlist, optstartid, optendid, optmonth, output):
+    '''run constant risk model
+    '''
+    import sys
+    # sys.setdefaultencoding() does not exist, here!
+    reload(sys)  # Reload does the trick!
+    sys.setdefaultencoding('UTF8')
+    
     if output is not None:
         path = output
     else:
-        path = datapath('export-nav.csv')
+        path = datapath('export-pos.xlsx')
         
-    df_result.to_csv(path)
+    
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('is_investor', metadata, autoload=True)
 
+    columns = [
+        t1.c.globalid,
+        t1.c.is_risk,
+        t1.c.is_name,
+    ]
+
+    s = select(columns)
+
+    if optstartid is not None:
+        s = s.where(t1.c.globalid >= optstartid)
+    if optendid is not None:
+        s = s.where(t1.c.globalid <= optendid)
+        
+    df_investor = pd.read_sql(s, db, index_col=['globalid'])
+
+    if df_investor.empty:
+        click.echo(click.style("no investor found, abort!" % (optid), fg='yellow'))
+        return
+
+    # Create a Pandas Excel writer using XlsxWriter as the engine.
+    # writer = pd.ExcelWriter(path, engine='xlsxwriter', options={'encoding':'utf-8'})
+    writer = pd.ExcelWriter(path, options={'encoding':'utf-8'})
+    t1 = Table('is_investor_pos', metadata, autoload=True)
+
+    columns = [
+        t1.c.is_date,
+        t1.c.is_pool_id,
+        t1.c.is_fund_code,
+        t1.c.is_fund_ratio,
+    ]
+    index_col = ['is_date', 'is_pool_id', 'is_fund_code']
+
+    for k, v in df_investor.iterrows():
+        s = select(columns).where(t1.c.is_investor_id == k)
+
+        df_pos = pd.read_sql(s, db, index_col=index_col, parse_dates=['is_date'])
+        #
+        # 合并来自不同基金池的基金份额
+        #
+        df_result = df_pos.groupby(level=['is_date', 'is_fund_code']).sum()
+
+        df_result.reset_index(inplace=True)
+        
+        df_fund = base_ra_fund.load(codes=df_result['is_fund_code'])
+        df_fund.set_index(['ra_code'], inplace=True)
+
+        df_result = df_result.merge(df_fund[['ra_name']], left_on=['is_fund_code'], right_index=True)
+        df_result['is_date'] = df_result['is_date'].apply(lambda x: x.strftime("%Y-%m-%d"))
+        df_result = df_result.rename(columns={'is_date':'日期', 'is_fund_code':'基金代码', 'ra_name':'基金名称', 'is_fund_ratio':'配置比例'})
+        df_result.set_index(['日期', '基金代码'], inplace=True)
+        df_result = df_result[['基金名称','配置比例']]
+        df_result = df_result.sort_index()
+        # df_result.set_index(['is_date', 'is_fund_code'], inplace=True)
+        # df_result = df_result[['ra_name','is_fund_ratio']]
+        df_result.to_excel(writer, sheet_name=k, encoding='UTF-8')
+
+    # Close the Pandas Excel writer and output the Excel file.
+    writer.save()    
     print "export nav to file %s" % (path)
+
