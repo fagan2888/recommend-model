@@ -380,8 +380,8 @@ class MonthlyStaRetention(object):
         month_list = getBetweenMonth(self.start_date, self.end_date)
         # 为得到old_df
         dates_list = []
-        if len(month_list) >= 14:
-            month_list = month_list[-14:]
+        if len(month_list) >= 15:
+            month_list = month_list[-15:]
         for month_tube in month_list:
             m_index = month_list.index(month_tube)
             cur_date = datetime.date(month_tube[0], month_tube[1], 1)
