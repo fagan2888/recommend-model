@@ -367,7 +367,7 @@ class MonthlyStaRetention(object):
     def __init__(self):
         self.retention_type = {100:0, 101:1, 102:2, 103:3, 104:4, 105:5, \
                                 106:6, 107:7, 108:8, 109:9, 110:10, 111:11, \
-                                112:12}
+                                112:12, 113:13}
         # 开始有交易的时间
         self.start_date = ds_order.get_min_date()
         # 当前交易时间
