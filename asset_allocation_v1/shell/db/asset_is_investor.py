@@ -36,6 +36,7 @@ def load(gids):
 
     return df
 
+
 # def max_id_between(min_id, max_id):
 #     db = database.connection('asset')
 #     metadata = MetaData(bind=db)
