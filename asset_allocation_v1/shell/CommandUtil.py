@@ -93,7 +93,7 @@ def imp_portf(df):
         df_new = portfolio_alloc_df
         columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
         s = select(columns)
-        s = s.where(portfolio_alloc_t.c.ra_portfolio_id.in_(v['ra_portfolio_id'].unique())
+        s = s.where(portfolio_alloc_t.c.ra_portfolio_id.in_(v['ra_portfolio_id'].ravel()))
         df_old = pd.read_sql(s, db, index_col = [df_new.index.name])
         database.batch(db, portfolio_alloc_t, df_new, df_old)
 
