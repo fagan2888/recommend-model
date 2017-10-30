@@ -100,7 +100,7 @@ def corr_update(corr, codes):
     df_fund = base_ra_fund.load(codes=codes)
     
     data = []
-    with click.progressbar(length=len(df_fund.index), label='update corr for corr %d' % (corr['globalid'])) as bar:
+    with click.progressbar(length=len(df_fund.index), label=('update corr for corr %d' % (corr['globalid'])).ljust(30)) as bar:
         for _,fund in df_fund.iterrows():
             bar.update(1)
             tmp = corr_update_fund(corr, fund, df_inc_index)

@@ -271,6 +271,11 @@ class TradeNav(object):
         # 加载分红信息
         #
         self.df_bonus = base_ra_fund_bonus.load(fund_ids, sdate=sdate, edate=edate)
+        #
+        # 我们发现基础数据里面有部分基金缺少派息日信息(000930)，这里统
+        # 一用除息日填充。
+        #
+        self.df_bonus.loc[self.df_bonus['ra_payment_date'].isnull(), 'ra_payment_date'] = self.df_bonus['ra_dividend_date']
         # dd(self.df_bonus, self.df_bonus.loc[('2016-01-20', [523, 524]), :])
         
         # 

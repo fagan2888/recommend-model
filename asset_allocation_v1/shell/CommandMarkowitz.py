@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
+@click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.option('--name', 'optname', default=None, help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
@@ -55,19 +56,24 @@ logger = logging.getLogger(__name__)
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
-def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
+def markowitz(ctx, optnew, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        if optfull is False:
-            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optwavelet = optwavelet, optwaveletfilternum = optwaveletfilternum, short_cut=short_cut, assets=assets)
+        if optnew:
+            ctx.invoke(pos, optid=optid)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
-            ctx.invoke(nav, optid=optid)
-            ctx.invoke(turnover, optid=optid)
+            if optfull is False:
+                ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optwavelet = optwavelet, optwaveletfilternum = optwaveletfilternum, short_cut=short_cut, assets=assets)
+                ctx.invoke(nav, optid=optid)
+                ctx.invoke(turnover, optid=optid)
+            else:
+                ctx.invoke(nav, optid=optid)
+                ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
@@ -309,6 +315,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
             }
 
+    today = datetime.now()
     if optname is None:
         optname = u'马克维茨%s(实验)' % today.strftime("%m%d")
 
@@ -323,7 +330,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
-
     # print df.head()
     # print df_sharpe.head()
 
@@ -526,7 +532,6 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
         manager = Manager()
         q = manager.Queue()
         processes = []
-        print time.time()
         for indexs in process_adjust_indexs:
             p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num,))
             processes.append(p)
@@ -540,7 +545,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
             data[record[0]] = record[1]
     else:
         with click.progressbar(
-                adjust_index, label=s,
+                adjust_index, label=s.ljust(30),
                 item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
             for day in bar:
                 # bar.update(1)
@@ -591,7 +596,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     if bootstrap is None or bootstrap == False:
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -655,57 +660,86 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
-
-    if asset_id.isdigit():
+    prefix = asset_id[0:2]
+    if prefix.isdigit():
         xtype = int(asset_id) / 10000000
-    else:
-        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+        if xtype == 1:
+            #
+            # 基金池资产
+            #
+            asset_id = int(asset_id) % 10000000
+            (pool_id, category) = (asset_id / 100, asset_id % 100)
+            ttype = pool_id / 10000
+            sr = asset_ra_pool_nav.load_series(
+                pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 3:
+            #
+            # 基金池资产
+            #
+            sr = base_ra_fund_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 4:
+            #
+            # 修型资产
+            #
+            sr = asset_rs_reshape_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 12:
+            #
+            # 指数资产
+            #
+            sr = base_ra_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 'ERI':
 
-    if xtype == 1:
-        #
-        # 基金池资产
-        #
-        asset_id %= 10000000
-        (pool_id, category) = (asset_id / 100, asset_id % 100)
-        ttype = pool_id / 10000
-        sr = asset_ra_pool_nav.load_series(
-            pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 3:
-        #
-        # 基金池资产
-        #
-        sr = base_ra_fund_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 4:
-        #
-        # 修型资产
-        #
-        sr = asset_rs_reshape_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 12:
-        #
-        # 指数资产
-        #
-        sr = base_ra_index_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 'ERI':
-
-        sr = base_exchange_rate_index_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+            sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        else:
+            sr = pd.Series()
     else:
-        sr = pd.Series()
+        if prefix == 'AP':
+            #
+            # 基金池资产
+            #
+            sr = asset_ra_pool_nav.load_series(
+                asset_id, 0, 9, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'FD':
+            #
+            # 基金资产
+            #
+            sr = base_ra_fund_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'RS':
+            #
+            # 修型资产
+            #
+            sr = asset_rs_reshape_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'IX':
+            #
+            # 指数资产
+            #
+            sr = base_ra_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'ER':
+
+            sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        else:
+            sr = pd.Series()
 
     return sr
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
-@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--start-date', 'sdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'edate', help=u'end date to calc')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.pass_context
-def pos(ctx, optid, optlist, optrisk, sdate, edate, optcpu):
+def pos(ctx, optid, optlist, opttype, optrisk, sdate, edate, optcpu):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -716,19 +750,21 @@ def pos(ctx, optid, optlist, optrisk, sdate, edate, optcpu):
         else:
             markowitzs = None
 
-    df_markowitz = asset_mz_markowitz.load(markowitzs)
+    xtypes = [s.strip() for s in opttype.split(',')]
 
+    df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
     if optlist:
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
         return 0
 
     for _, markowitz in df_markowitz.iterrows():
-        nav_update_alloc(markowitz, optrisk, sdate, edate, optcpu)
+        pos_update_alloc(markowitz, optrisk, sdate, edate, optcpu)
         
-def nav_update_alloc(markowitz, optrisk, sdate, edate, optcpu):
+def pos_update_alloc(markowitz, optrisk, sdate, edate, optcpu):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
+    #print df_alloc
     
     for _, alloc in df_alloc.iterrows():
         pos_update(markowitz, alloc, sdate, edate, optcpu)
@@ -759,7 +795,7 @@ def pos_update(markowitz, alloc, sdate, edate, optcpu):
     
 
     algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
-   
+
     if algo == 1:
         df = average_days(sdate, edate, assets)
     elif algo == 2:
@@ -849,9 +885,11 @@ def pos_update(markowitz, alloc, sdate, edate, optcpu):
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def nav(ctx, optid, optlist):
+def nav(ctx, optid, opttype, optrisk, optlist):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -862,7 +900,9 @@ def nav(ctx, optid, optlist):
         else:
             markowitzs = None
 
-    df_markowitz = asset_mz_markowitz.load(markowitzs)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
 
     if optlist:
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
@@ -870,16 +910,23 @@ def nav(ctx, optid, optlist):
         return 0
 
     with click.progressbar(
-            df_markowitz.iterrows(), len(df_markowitz.index), label='%-20s' % 'update nav',
+            df_markowitz.iterrows(), len(df_markowitz.index), label='update nav'.ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, markowitz in bar:
             # bar.update(1)
-            nav_update(markowitz)
+            nav_update_alloc(markowitz, optrisk)
 
-def nav_update(markowitz):
-    markowitz_id = markowitz['globalid']
+def nav_update_alloc(markowitz, optrisk):
+    risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
+    df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
+    
+    for _, alloc in df_alloc.iterrows():
+        nav_update(markowitz, alloc)
+
+def nav_update(markowitz, alloc):
+    gid = alloc['globalid']
     # 加载仓位信息
-    df_pos = asset_mz_markowitz_pos.load(markowitz_id)
+    df_pos = asset_mz_markowitz_pos.load(gid)
 
     # 加载资产收益率
     min_date = df_pos.index.min()
@@ -899,16 +946,18 @@ def nav_update(markowitz):
     df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'mz_nav'}).copy()
     df_result.index.name = 'mz_date'
     df_result['mz_inc'] = df_result['mz_nav'].pct_change().fillna(0.0)
-    df_result['mz_markowitz_id'] = markowitz['globalid']
+    df_result['mz_markowitz_id'] = gid
     df_result = df_result.reset_index().set_index(['mz_markowitz_id', 'mz_date'])
 
-    asset_mz_markowitz_nav.save(markowitz_id, df_result)
+    asset_mz_markowitz_nav.save(gid, df_result)
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def turnover(ctx, optid, optlist):
+def turnover(ctx, optid, opttype, optrisk, optlist):
     ''' calc pool turnover and inc
     '''
     if optid is not None:
@@ -919,7 +968,9 @@ def turnover(ctx, optid, optlist):
         else:
             markowitzs = None
 
-    df_markowitz = asset_mz_markowitz.load(markowitzs)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
 
     if optlist:
 
@@ -929,40 +980,48 @@ def turnover(ctx, optid, optlist):
 
     data = []
     with click.progressbar(
-            df_markowitz.iterrows(), length=len(df_markowitz.index), label= '%-20s' % 'update turnover',
+            df_markowitz.iterrows(), length=len(df_markowitz.index), label= 'update turnover'.ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, markowitz in bar:
             # bar.update(1)
-            turnover = turnover_update(markowitz)
-            data.append((markowitz['globalid'], "%6.2f" % (turnover * 100)))
+            segments = turnover_update_alloc(markowitz, optrisk)
+            data.extend(segments)
 
     headers = ['markowitz', 'turnover(%)']
     print(tabulate(data, headers=headers, tablefmt="psql"))
     # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
     # print(tabulate(data, headers=headers, tablefmt="grid"))
+    
+def turnover_update_alloc(markowitz, optrisk):
+    risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
+    df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
 
-def turnover_update(markowitz):
-    markowitz_id = markowitz['globalid']
+    data = []
+    for _, alloc in df_alloc.iterrows():
+        turnover = turnover_update(markowitz, alloc)
+        data.append((alloc['globalid'], "%6.2f" % (turnover * 100)))
+
+    return data
+
+def turnover_update(markowitz, alloc):
+    gid = alloc['globalid']
     # 加载仓位信息
-    df = asset_mz_markowitz_pos.load(markowitz_id, use_markowitz_ratio=False)
+    df = asset_mz_markowitz_pos.load(gid, use_markowitz_ratio=False)
 
     # 计算宽口换手率
     sr_turnover = DFUtil.calc_turnover(df)
 
     criteria_id = 6
     df_result = sr_turnover.to_frame('mz_value')
-    df_result['mz_markowitz_id'] = markowitz_id
+    df_result['mz_markowitz_id'] = gid
     df_result['mz_criteria_id'] = criteria_id
     df_result = df_result.reset_index().set_index(['mz_markowitz_id', 'mz_criteria_id', 'mz_date'])
-    asset_mz_markowitz_criteria.save(markowitz_id, criteria_id,  df_result)
+    asset_mz_markowitz_criteria.save(gid, criteria_id,  df_result)
 
     total_turnover = sr_turnover.sum()
 
     return total_turnover
 
-    # df_result.reset_index(inplace=True)
-    # df_result['turnover'] = df_result['turnover'].map(lambda x: "%6.2f%%" % (x * 100))
-    # print tabulate(df_result, headers='keys', tablefmt='psql', stralign=u'right')
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
@@ -990,7 +1049,7 @@ def delete(ctx, optid, optlist, optexec):
 
     data = []
     with click.progressbar(
-            df_markowitz.iterrows(), length=len(df_markowitz.index), label= '%-20s' % 'delete markowitz',
+            df_markowitz.iterrows(), length=len(df_markowitz.index), label= 'delete markowitz'.ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, markowitz in bar:
             perform_delete(markowitz)

@@ -1,0 +1,6 @@
+#filter_by_list_to_pool_sample
+#根据基金列表过滤基金，然后导入到基金样本池
+python shell/roboadvisor.py util filter_fund_by_list_to_pool_sample --inpath data/zheshang_bank_fund.csv --fundtype 1 --poolid 11110101
+
+#根据corr和Jensen选基金
+python shell/roboadvisor.py pool fund_corr_jensen --id 11400101 --limit 5

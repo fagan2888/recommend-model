@@ -41,7 +41,7 @@ def util(ctx):
 @click.pass_context
 def imp_portfolio(ctx, optpath):
 
-    all_portfolio_df = pd.read_csv(optpath.strip(), parse_dates = ['start_date', 'end_date'])
+    all_portfolio_df = pd.read_csv(optpath.strip(), parse_dates = ['start_date', 'end_date'], dtype = {'asset_id':str})
 
     imp_markowitz(all_portfolio_df)
     imp_highlow(all_portfolio_df)
@@ -64,7 +64,7 @@ def imp_portf(df):
     portfolio_name             = df['ra_portfolio_name'].unique().item()
     highlow_id                 = df['mz_highlow_id'].unique().item()
     portfolio_df = pd.DataFrame([[portfolio_id, portfolio_name, highlow_id]], columns = ['globalid', 'ra_name', 'ra_ratio_id'])
-    portfolio_df['ra_type'] = 1
+    portfolio_df['ra_type'] = 9
     portfolio_df = portfolio_df.set_index(['globalid'])
     portfolio_df['ra_algo'] = df['ra_portfolio_algo'].unique().item()
     portfolio_df['ra_persistent'] = 0
@@ -87,7 +87,7 @@ def imp_portf(df):
 
         portfolio_alloc_df = pd.DataFrame([[portfolio_risk_id, portfolio_name, portfolio_id, highlow_risk_id, risk]], columns = ['globalid', 'ra_name', 'ra_portfolio_id', 'ra_ratio_id', 'ra_risk'])
         portfolio_alloc_df = portfolio_alloc_df.set_index(['globalid'])
-        portfolio_alloc_df['ra_type'] = 1
+        portfolio_alloc_df['ra_type'] = 9
 
 
         df_new = portfolio_alloc_df
@@ -156,7 +156,7 @@ def imp_highlow(df):
     highlow_name               = df['mz_highlow_name'].unique().item()
     markowitz_id               = df['mz_markowitz_id'].unique().item()
     highlow_df = pd.DataFrame([[highlow_id, highlow_name, markowitz_id]], columns = ['globalid', 'mz_name', 'mz_markowitz_id'])
-    highlow_df['mz_type'] = 1
+    highlow_df['mz_type'] = 9
     highlow_df = highlow_df.set_index(['globalid'])
     highlow_df['mz_algo'] = df['mz_highlow_algo'].unique().item()
     highlow_df['mz_persistent'] = 0
@@ -183,7 +183,7 @@ def imp_highlow(df):
 
         highlow_alloc_df = pd.DataFrame([[highlow_risk_id, highlow_name, highlow_id, risk, markowitz_risk_id]], columns = ['globalid', 'mz_name', 'mz_highlow_id', 'mz_risk', 'mz_markowitz_id'])
         highlow_alloc_df = highlow_alloc_df.set_index(['globalid'])
-        highlow_alloc_df['mz_type'] = 1
+        highlow_alloc_df['mz_type'] = 9
         #highlow_alloc_df['mz_high_id'] = ''
         #highlow_alloc_df['mz_low_id'] = ''
 
@@ -260,9 +260,9 @@ def imp_markowitz(df):
 
     markowitz_id                 = df['mz_markowitz_id'].unique().item()
     markowitz_name               = df['mz_markowitz_name'].unique().item()
-    markowitz_algo               = df['allocate_algo'].unique().item()
+    markowitz_algo               = 0
     markowitz_df = pd.DataFrame([[markowitz_id, markowitz_name, markowitz_algo]], columns = ['globalid', 'mz_name', 'mz_algo'])
-    markowitz_df['mz_type'] = 1
+    markowitz_df['mz_type'] = 9
     markowitz_df = markowitz_df.set_index(['globalid'])
 
 
@@ -288,7 +288,7 @@ def imp_markowitz(df):
 
         markowitz_alloc_df = pd.DataFrame([[markowitz_risk_id, markowitz_id, markowitz_name, markowitz_algo, risk]], columns = ['globalid', 'mz_markowitz_id', 'mz_name', 'mz_algo', 'mz_risk'])
         markowitz_alloc_df = markowitz_alloc_df.set_index(['globalid'])
-        markowitz_alloc_df['mz_type'] = 1
+        markowitz_alloc_df['mz_type'] = 9
 
 
 
@@ -366,6 +366,24 @@ def find_asset_name(asset_id):
     #flag = asset_id.strip().split('.')[0]
 
 
+
+@util.command()
+@click.option('--path', 'optpath', default=True, help=u'--path id')
+@click.pass_context
+def import_pool_sample(ctx, optpath):
+
+
+    df = pd.read_csv(optpath.strip(), index_col = ['ra_pool_id'])
+    db = database.connection('asset')
+    t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
+    columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
+
+    for pool_id in set(df.index):
+        s = select(columns, (t.c.ra_pool_id == pool_id))
+        df_old = pd.read_sql(s, db, index_col=['ra_pool_id'])
+        database.batch(db, t, df, df_old, timestamp=True)
+
+
 @util.command()
 @click.option('--path', 'optpath', help=u'--path id')
 @click.option('--poolid', 'optpoolid', help=u'--pool id')
@@ -417,7 +435,6 @@ def filter_fund_by_list_to_pool_sample(ctx, optfundtype, optinpath, optpoolid):
             final_codes.append(code)
 
     print final_codes
-
 
     df = pd.DataFrame(final_codes, columns = ['ra_fund_code'])
     df['ra_pool_id'] = optpoolid.strip()

@@ -69,7 +69,7 @@ def signal(ctx, optid, optlist, optonline):
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
         return 0
     
-    with click.progressbar(length=len(df_timing), label='update signal') as bar:
+    with click.progressbar(length=len(df_timing), label='update signal'.ljust(30)) as bar:
         for _, timing in df_timing.iterrows():
             bar.update(1)
             if timing['tc_method'] == 1:
@@ -239,7 +239,7 @@ def nav(ctx, optid, optlist):
         print tabulate(df_timing, headers='keys', tablefmt='psql')
         return 0
     
-    with click.progressbar(length=len(df_timing), label='update nav') as bar:
+    with click.progressbar(length=len(df_timing), label='update nav'.ljust(30)) as bar:
         for _, timing in df_timing.iterrows():
             bar.update(1)
             nav_update(timing)
@@ -324,7 +324,7 @@ def coverage(ctx, optid, optlist, optn1, optn2, optn3, optn4):
 
     with click.progressbar(
             df_timing.iterrows(), length=len(df_timing.index),
-            label='update %-13s' % 'coverage',
+            label=('update %-13s' % 'coverage').ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, timing in bar:
             coverage_update(timing, n1s, n2s, n3s, n4s)

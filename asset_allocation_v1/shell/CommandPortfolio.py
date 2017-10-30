@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)  
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
+@click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
 @click.option('--id', 'optid', help=u'specify portfolio id')
 @click.option('--name', 'optname', default=None, help=u'specify portfolio name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
@@ -55,23 +56,28 @@ logger = logging.getLogger(__name__)
 @click.option('--turnover', 'optturnover',  type=float, default=0, help=u'fitler by turnover')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def portfolio(ctx, optfull, optid, optname, opttype, optreplace, optratio, optpool, optrisk, optturnover,optenddate):
+def portfolio(ctx, optfull, optnew, optid, optname, opttype, optreplace, optratio, optpool, optrisk, optturnover,optenddate):
 
     '''generate final portolio
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        if optfull is False:
-            if optid is not None:
-                tmpid = int(optid)
-            else:
-                tmpid = optid
-            ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
-            ctx.invoke(nav, optid=optid, optenddate=optenddate)
+        if optnew:
+            ctx.invoke(pos, optid=optid, optrisk=optrisk)
+            ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
         else:
-            ctx.invoke(nav, optid=optid, optenddate=optenddate)
-            ctx.invoke(turnover, optid=optid)
+            if optfull is False:
+                if optid is not None:
+                    tmpid = int(optid)
+                else:
+                    tmpid = optid
+                ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
+                ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
+                ctx.invoke(turnover, optid=optid)
+            else:
+                ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
+                ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
@@ -152,8 +158,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         'pool_id': 'ra_pool_id',
     })
 
-    if '11310100' not in df_asset['ra_asset_id'].values:
-        sr = ('11310100', '货币资产', 31, '11310100')
+    if '120000039' not in df_asset['ra_asset_id'].values:
+        sr = ('120000039', '货币资产', 31, '120000039')
         df_asset.ix[len(df_asset.index)] = sr
         
     db = database.connection('asset')
@@ -188,7 +194,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     #
     with click.progressbar(
             database.load_alloc_and_risk(optratio),
-            label='update %-13s' % 'portfolio',
+            label=('update %-13s' % 'portfolio').ljust(30),
             item_show_func=lambda x:  'risk %d' % int(x[0] * 10) if x else None) as bar:
         for (risk, ratio_id) in bar:
             gid = optid + (int(risk * 10) % 10)
@@ -198,10 +204,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             df_ratio = database.load_pos_frame(ratio_id)
             #print df_ratio
             # print df_ratio.sum(axis=1)
-            if '11310100' not in df_ratio.columns:
-                df_ratio['11310100'] = 1 - df_ratio.sum(axis=1)
+            if '120000039' not in df_ratio.columns:
+                df_ratio['120000039'] = 1 - df_ratio.sum(axis=1)
             else:
-                df_ratio['11310100'] += 1 - df_ratio.sum(axis=1)
+                df_ratio['120000039'] += 1 - df_ratio.sum(axis=1)
             # print df_ratio.head()
 
             start = df_ratio.index.min()
@@ -217,12 +223,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
                 pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
                 pools[row['ra_asset_id']] = pool
             else:
-                if '11310100' not in pools:
-                    fund = asset_ra_pool_fund.load('11310100')
+                if '120000039' not in pools:
+                    fund = asset_ra_pool_fund.load('120000039')
                     if not fund.empty:
                         index = index.union(fund.index.get_level_values(0)).unique()
-                    pool = ('11310100', fund[['ra_fund_code', 'ra_fund_type']])
-                    pools['11310100'] = pool
+                    pool = ('120000039', fund[['ra_fund_code', 'ra_fund_type']])
+                    pools['120000039'] = pool
 
             #
             # 根据基金池和配置比例的索引并集reindex数据
@@ -320,10 +326,11 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.pass_context
-def pos(ctx, optid, optlist, optrisk):
+def pos(ctx, optid, opttype, optlist, optrisk):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -334,7 +341,9 @@ def pos(ctx, optid, optlist, optrisk):
         else:
             portfolios = None
 
-    df_portfolio = asset_ra_portfolio.load(portfolios)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
 
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
@@ -346,12 +355,12 @@ def pos(ctx, optid, optlist, optrisk):
         
 def pos_update_alloc(portfolio, optrisk):
     risks = [int(s.strip()) for s in optrisk.split(',')]
-    df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'], risks)
+    df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     df_alloc = df_alloc.loc[(df_alloc['ra_risk'] * 10).astype(int).isin(risks)]
-    
+   
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='update pos %-9s' % (portfolio['globalid']),
+            label=('update pos %-9s' % (portfolio['globalid'])).ljust(30),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
             pos_update(portfolio, alloc)
@@ -412,7 +421,6 @@ def pos_update(portfolio, alloc):
     df_tmp = df_tmp.stack([1, 2])
     df = df_tmp.merge(df_raw[['ra_fund_code', 'ra_fund_type']], how='left', left_index=True, right_index=True)
 
-
     # index
     df['ra_portfolio_id'] = gid
     df = df.reset_index().set_index(['ra_portfolio_id', 'ra_date', 'ra_pool_id', 'ra_fund_id'])
@@ -432,18 +440,18 @@ def kun(portfolio, alloc):
     #
     df_asset = asset_ra_portfolio_asset.load([gid])
     
-    if '11310100' not in df_asset['ra_asset_id'].values:
-        sr = (gid, '11310100', '货币资产', 31, '11310100')
+    if '120000039' not in df_asset['ra_asset_id'].values:
+        sr = (gid, '120000039', '货币资产', 31, '120000039')
         df_asset.ix[len(df_asset.index)] = sr
 
     # 加载资产配置比例
     df_ratio = database.load_pos_frame(ratio_id)
     #print df_ratio
     # print df_ratio.sum(axis=1)
-    if '11310100' not in df_ratio.columns:
-        df_ratio['11310100'] = 1 - df_ratio.sum(axis=1)
+    if '120000039' not in df_ratio.columns:
+        df_ratio['120000039'] = 1 - df_ratio.sum(axis=1)
     else:
-        df_ratio['11310100'] += 1 - df_ratio.sum(axis=1)
+        df_ratio['120000039'] += 1 - df_ratio.sum(axis=1)
     # print df_ratio.head()
 
     start = df_ratio.index.min()
@@ -460,12 +468,12 @@ def kun(portfolio, alloc):
         pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
         pools[row['ra_asset_id']] = pool
     else:
-        if '11310100' not in pools:
-            fund = asset_ra_pool_fund.load('11310100')
+        if '120000039' not in pools:
+            fund = asset_ra_pool_fund.load('120000039')
             if not fund.empty:
                 index = index.union(fund.index.get_level_values(0)).unique()
-            pool = ('11310100', fund[['ra_fund_code', 'ra_fund_type']])
-            pools['11310100'] = pool
+            pool = ('120000039', fund[['ra_fund_code', 'ra_fund_type']])
+            pools['120000039'] = pool
 
     #
     # 根据基金池和配置比例的索引并集reindex数据
@@ -486,6 +494,7 @@ def kun(portfolio, alloc):
             if (ratio <= 0):
                 continue
             # 选择基金
+            #print type(asset_id), asset_id,  pools.keys()
             (pool_id, df_fund) = pools[asset_id]
             segments = choose_fund_avg(day, pool_id, ratio, df_fund.loc[day])
             #if int(risk * 10) == 1:
@@ -506,13 +515,14 @@ def kun(portfolio, alloc):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--risk', 'optrisk', default='1,2,3,4,5,6,7,8,9,10', help=u'which risk to update')
 @click.option('--fee', 'optfee', default='9,8', help=u'fee type(8:with fee; 9:without fee')
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def nav(ctx, optid, optlist, optrisk, optfee, optdebug, optenddate):
+def nav(ctx, optid, opttype, optlist, optrisk, optfee, optdebug, optenddate):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -526,7 +536,9 @@ def nav(ctx, optid, optlist, optrisk, optfee, optdebug, optenddate):
     fees = [int(s.strip()) for s in optfee.split(',')]
     risks = [int(s.strip()) for s in optrisk.split(',')]
 
-    df_portfolio = asset_ra_portfolio.load(portfolios)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
 
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
@@ -540,19 +552,19 @@ def nav(ctx, optid, optlist, optrisk, optfee, optdebug, optenddate):
 def nav_update_alloc(portfolio, risks, fee, debug, enddate):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     df_alloc = df_alloc.loc[(df_alloc['ra_risk'] * 10).astype(int).isin(risks)]
+
+    feestr = 'FEE' if fee == 8 else 'NOF'
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='update nav %-9s' % (portfolio['globalid']),
+            label=('update nav %-9s (%s)' % (portfolio['globalid'], feestr)).ljust(30),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
-    # with click.progressbar(length=len(df_alloc), label='update nav %s' % (portfolio['globalid'])) as bar:
-    #     for _, alloc in :
-    #         bar.update(1)
             nav_update(alloc, fee, debug, enddate)
     
 def nav_update(alloc, fee, debug, enddate):
     alloc_id = alloc['globalid']
+
     # 加载仓位信息
     df_pos = asset_ra_portfolio_pos.load_fund_pos(alloc_id)
     if df_pos.empty:
@@ -599,9 +611,10 @@ def nav_update(alloc, fee, debug, enddate):
 
 @portfolio.command()
 @click.option('--id', 'optid', help=u'ids of portfolio to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def turnover(ctx, optid, optlist):
+def turnover(ctx, optid, opttype, optlist):
     ''' calc pool turnover and inc
     '''
     if optid is not None:
@@ -611,8 +624,10 @@ def turnover(ctx, optid, optlist):
             portfolios = [str(ctx.obj['portfolio'])]
         else:
             portfolios = None
+            
+    xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_portfolio = asset_ra_portfolio.load(portfolios)
+    df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
 
     if optlist:
 
@@ -629,12 +644,9 @@ def turnover_update_alloc(portfolio):
     
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
-            label='turnover %-11s' % (portfolio['globalid']),
+            label=('turnover %-11s' % (portfolio['globalid'])).ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
-    # with click.progressbar(length=len(df_alloc), label='update turnover %s' % (portfolio['globalid'])) as bar:
-    #     for _, alloc in df_alloc.iterrows():
-    #         bar.update(1)
             turnover_update(alloc)
 
             

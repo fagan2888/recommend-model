@@ -56,11 +56,11 @@ def where_portfolio_id(portfolio_id, xtypes=None):
 
     s = select(columns)
 
+
     if portfolio_id is not None:
         s = s.where(t1.c.ra_portfolio_id == portfolio_id)
     if xtypes is not None:
         s = s.where(t1.c.ra_type.in_(xtypes))
-    
     df = pd.read_sql(s, db)
 
     return df

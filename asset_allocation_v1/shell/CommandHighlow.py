@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)  
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
+@click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.option('--name', 'optname', default=None, help=u'specify highlow name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
@@ -44,24 +45,29 @@ logger = logging.getLogger(__name__)
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def highlow(ctx, optfull, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate):
+def highlow(ctx, optfull, optnew, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        if optfull is False:
-            # ctx.obj['highlow'] = 70032880
-            if optid is not None:
-                tmpid = int(optid)
-            else:
-                tmpid = optid
-            ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
+        if optnew:
+            ctx.invoke(pos, optid=optid, optrisk=optrisk)
             ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
         else:
-            ctx.invoke(nav, optid=optid, optenddate=optenddate)
-            ctx.invoke(turnover, optid=optid)
+            if optfull is False:
+                # ctx.obj['highlow'] = 70032880
+                if optid is not None:
+                    tmpid = int(optid)
+                else:
+                    tmpid = optid
+                ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, opthigh=opthigh, optlow=optlow, optriskmgr=optriskmgr, optrisk=optrisk)
+                ctx.invoke(nav, optid=optid, optenddate=optenddate)
+                ctx.invoke(turnover, optid=optid)
+            else:
+                ctx.invoke(nav, optid=optid, optenddate=optenddate)
+                ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
@@ -166,10 +172,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         dt_pool[k] = asset_ra_pool.match_asset_pool(k)
     df_asset['mz_pool_id'] = pd.Series(dt_pool)
 
-    if '11310100' not in df_asset.index:
-        df_asset.loc['11310100'] = (0, u'货币(低)', 31, 0, '11310100')
-    if '11310101' not in df_asset.index:
-        df_asset.loc['11310101'] = (0, u'货币(高)', 31, 0, '11310101')
+    if '120000039' not in df_asset.index:
+        df_asset.loc['120000039'] = (0, u'货币(低)', 31, 0, '120000039')
+    if '120000039' not in df_asset.index:
+        df_asset.loc['120000039'] = (0, u'货币(高)', 31, 0, '120000039')
     
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -263,12 +269,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         if ratio_h > 0:
             sr = ratio_h - df_h.sum(axis=1)
             if (sr > 0.000099).any():
-                df_h['11310101'] = sr
+                df_h['120000039'] = sr
 
         if ratio_l > 0:
             sr = ratio_l - df_l.sum(axis=1)
             if (sr > 0.000099).any():
-                df_h['11310100'] = sr
+                df_h['120000039'] = sr
         #
         # 合并持仓
         #
@@ -429,9 +435,10 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.pass_context
-def pos(ctx, optid, optlist, optrisk):
+def pos(ctx, optid, opttype, optlist, optrisk):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -442,7 +449,9 @@ def pos(ctx, optid, optlist, optrisk):
         else:
             highlows = None
 
-    df_highlow = asset_mz_highlow.load(highlows)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_highlow = asset_mz_highlow.load(highlows, xtypes)
 
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
@@ -451,16 +460,17 @@ def pos(ctx, optid, optlist, optrisk):
 
     for _, highlow in df_highlow.iterrows():
         pos_update_alloc(highlow, optrisk)
-        
+
 def pos_update_alloc(highlow, optrisk):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'], risks)
-    
+
     for _, alloc in df_alloc.iterrows():
         pos_update(highlow, alloc)
 
     click.echo(click.style("highlow allocation complement! instance id [%s]" % (highlow['globalid']), fg='green'))
-        
+
+
 def pos_update(highlow, alloc):
     highlow_id = alloc['globalid']
 
@@ -554,7 +564,7 @@ def jiao(highlow, alloc):
 
     df_asset = asset_mz_highlow_asset.load([highlow['globalid']])
     df_asset.set_index(['mz_asset_id'], inplace=True)
-    
+
     #
     # 加载高风险资产仓位
     #
@@ -601,30 +611,64 @@ def jiao(highlow, alloc):
     if ratio_h > 0:
         sr = ratio_h - df_h.sum(axis=1)
         if (sr > 0.000099).any():
-            df_h['11310101'] = sr
+            df_h['120000039'] = sr
 
     if ratio_l > 0:
         sr = ratio_l - df_l.sum(axis=1)
         if (sr > 0.000099).any():
-            df_h['11310100'] = sr
+            df_h['120000039'] = sr
     #
     # 合并持仓
     #
     df = pd.concat([df_h, df_l], axis=1)
 
-    
     return df
 
 def yao(highlow, alloc):
-    return jiao(highlow, alloc)
-    
+
+    high = alloc['mz_markowitz_id']
+    risk = int(alloc['mz_risk'] * 10)
+
+    df_asset = asset_mz_highlow_asset.load([alloc['globalid']])
+    df_asset.set_index(['mz_asset_id'], inplace=True)
+
+    #
+    # 加载高风险资产仓位
+    #
+    index = None
+
+    df_high = asset_mz_markowitz_pos.load_raw(high)
+    df_high_riskmgr = load_riskmgr2(df_high.columns, df_asset['mz_riskmgr_id'], df_high.index, True)
+    index = df_high.index.union(df_high_riskmgr.index)
+
+    data_h = {}
+    if not df_high.empty:
+        df_high = df_high.reindex(index, method='pad')
+        df_high_riskmgr = df_high_riskmgr.reindex(index, method='pad')
+        for column in df_high.columns:
+            data_h[column] = df_high[column] * df_high_riskmgr[column]
+
+    df_h = pd.DataFrame(data_h)
+
+    #
+    # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
+    # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
+    # 天的持仓100%， 如果因为风控空仓，需要用货币补足。
+    #
+    sr = 1.0 - df_h.sum(axis=1)
+    if (sr > 0.000099).any():
+        df_h['120000039'] = sr
+
+    return df_h
+
 
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def nav(ctx, optid, optlist, optenddate):
+def nav(ctx, optid, opttype, optlist, optenddate):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -640,7 +684,9 @@ def nav(ctx, optid, optlist, optenddate):
     else:
         enddate = None
         
-    df_highlow = asset_mz_highlow.load(highlows)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_highlow = asset_mz_highlow.load(highlows, xtypes)
 
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
@@ -653,7 +699,7 @@ def nav(ctx, optid, optlist, optenddate):
 def nav_update_alloc(highlow, enddate):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
     
-    with click.progressbar(length=len(df_alloc), label='update nav %s' % (highlow['globalid'])) as bar:
+    with click.progressbar(length=len(df_alloc), label=('update nav %s' % (highlow['globalid'])).ljust(30)) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             nav_update(alloc, enddate)
@@ -691,9 +737,10 @@ def nav_update(alloc, enddate):
 
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
-def turnover(ctx, optid, optlist):
+def turnover(ctx, optid, opttype, optlist):
     ''' calc pool turnover and inc
     '''
     if optid is not None:
@@ -704,7 +751,9 @@ def turnover(ctx, optid, optlist):
         else:
             highlows = None
 
-    df_highlow = asset_mz_highlow.load(highlows)
+    xtypes = [s.strip() for s in opttype.split(',')]
+
+    df_highlow = asset_mz_highlow.load(highlows, xtypes)
 
     if optlist:
 
@@ -713,7 +762,7 @@ def turnover(ctx, optid, optlist):
         return 0
     
     data = []
-    with click.progressbar(length=len(df_highlow), label='update turnover') as bar:
+    with click.progressbar(length=len(df_highlow), label='update turnover'.ljust(30)) as bar:
         for _, highlow in df_highlow.iterrows():
             bar.update(1)
             turnover_update_alloc(highlow)
@@ -721,7 +770,7 @@ def turnover(ctx, optid, optlist):
 def turnover_update_alloc(highlow):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
     
-    with click.progressbar(length=len(df_alloc), label='update turnover %s' % (highlow['globalid'])) as bar:
+    with click.progressbar(length=len(df_alloc), label=('update turnover %s' % (highlow['globalid'])).ljust(30)) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             turnover_update(alloc)
@@ -775,7 +824,7 @@ def delete(ctx, optid, optlist, optexec):
          return 0
     
     data = []
-    with click.progressbar(length=len(df_highlow), label='highlow delete') as bar:
+    with click.progressbar(length=len(df_highlow), label='highlow delete'.ljust(30)) as bar:
         for _, highlow in df_highlow.iterrows():
             bar.update(1)
             perform_delete(highlow)

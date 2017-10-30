@@ -187,12 +187,7 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
         columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
         s = select(columns)
         s = s.where(ra_pool_fund_t.c.ra_pool.in_(df_new.index.get_level_values(0).tolist()))
-        #s = s.where(ra_pool_fund_t.c.ra_date.in_(df_new.index.get_level_values(1).tolist()))
         df_old = pd.read_sql(s, db, index_col = df_new.index.names)
-        #print type(df_new['ra_fund_code'].ravel()[0])
-        #print type(df_old['ra_fund_code'].ravel()[0])
-        #database.batch(db, ra_pool_fund_t, pd.DataFrame([]), df_old)
-        #df_old = pd.read_sql(s, db, index_col = df_new.index.names)
         database.batch(db, ra_pool_fund_t, df_new, df_old)
 
 
@@ -207,7 +202,7 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
         # 计算每个调仓点的最新配置
         #
         data_fund = {}
-        with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
+        with click.progressbar(length=len(adjust_points), label=('calc pool %s' % (pool.id)).ljust(30)) as bar:
             for day in adjust_points:
                 bar.update(1)
                 if pool['ra_fund_type'] == 1:
@@ -293,7 +288,7 @@ def load_pools(pools, pool_type=None):
     columns = [
         ra_pool.c.id,
         ra_pool.c.ra_type,
-        #ra_pool.c.ra_algo,
+        ra_pool.c.ra_algo,
         ra_pool.c.ra_date_type,
         ra_pool.c.ra_fund_type,
         ra_pool.c.ra_lookback,
@@ -381,8 +376,7 @@ def nav(ctx, optid, optlist):
 def nav_update(db, pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
-
-    with click.progressbar(length=len(categories) + 1, label='update nav for pool %s' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label=('update nav for pool %s' % (pool.id)).ljust(30)) as bar:
         for category in categories:
             nav_update_category(db['asset'], pool, category)
             bar.update(1)
@@ -660,7 +654,7 @@ def turnover_update(pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
     
-    with click.progressbar(length=len(categories) + 1, label='update turnover for pool %s' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label=('update turnover for pool %s' % (pool.id)).ljust(30)) as bar:
         for category in categories:
             turnover_update_category(pool, category)
             bar.update(1)
@@ -736,7 +730,7 @@ def corr_update(pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
     
-    with click.progressbar(length=len(categories) + 1, label='update corr for pool %s' % (pool.id)) as bar:
+    with click.progressbar(length=len(categories) + 1, label=('update corr for pool %s' % (pool.id)).ljust(30)) as bar:
         for category in categories:
             corr_update_category(pool, category, 52)
             bar.update(1)
@@ -841,7 +835,6 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
         corr_threshold = np.percentile(corr.values, 80)
         corr_threshold = 0.7 if corr_threshold <= 0.7 else corr_threshold
         corr_threshold = 0.9 if corr_threshold >= 0.9 else corr_threshold
-        #corr_threshold = 0
         for i in range(0, len(sorted_x)):
             code, jensen = sorted_x[i]
             if corr[code] >= corr_threshold:
