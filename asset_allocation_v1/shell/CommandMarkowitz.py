@@ -734,12 +734,13 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
 @click.option('--type', 'opttype', default='8,9', help=u'which type to run')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--append/--no-append', 'optappend', default=False, help=u'append pos or not')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--start-date', 'sdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'edate', help=u'end date to calc')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.pass_context
-def pos(ctx, optid, optlist, opttype, optrisk, sdate, edate, optcpu):
+def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -759,19 +760,19 @@ def pos(ctx, optid, optlist, opttype, optrisk, sdate, edate, optcpu):
         return 0
 
     for _, markowitz in df_markowitz.iterrows():
-        pos_update_alloc(markowitz, optrisk, sdate, edate, optcpu)
+        pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu)
         
-def pos_update_alloc(markowitz, optrisk, sdate, edate, optcpu):
+def pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
     #print df_alloc
     
     for _, alloc in df_alloc.iterrows():
-        pos_update(markowitz, alloc, sdate, edate, optcpu)
+        pos_update(markowitz, alloc, optappend, sdate, edate, optcpu)
 
     click.echo(click.style("markowitz allocation complement! instance id [%s]" % (markowitz['globalid']), fg='green'))
         
-def pos_update(markowitz, alloc, sdate, edate, optcpu):
+def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     markowitz_id = alloc['globalid']
     #
     # 加载资产
@@ -788,13 +789,28 @@ def pos_update(markowitz, alloc, sdate, edate, optcpu):
     df_argv.reset_index(level=0, inplace=True)
     argv = df_argv['mz_value'].to_dict()
 
-    lookback = int(argv.get('lookback', '26'))
-    adjust_period = int(argv.get('adjust_period', 1))
-    wavelet_filter_num = int(argv.get('optwaveletfilternum', 2))
-    turnover = float(argv.get('turnover', 0))
-    
+    lookback = int(argv.get('allocate_lookback', '26'))
+    adjust_period = int(argv.get('allocate_adjust_position_period', 1))
+    wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+    turnover = float(argv.get('allocate_turnover_filter', 0))
 
     algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
+
+    #print optappend, sdate, markowitz_id
+
+    #load df old pos
+    df_pos_old = asset_mz_markowitz_pos.load_raw(markowitz_id)
+    pos_old_dates = list(df_pos_old.index.ravel())
+    pos_old_dates.sort()
+    index = DBData.trade_date_index(None, end_date=edate)
+    dates = df_pos_old.index & index
+    dates.sort_values()
+    df_pos_old = df_pos_old.loc[dates]
+
+    if optappend and len(pos_old_dates) > 0:
+        sdate = pos_old_dates[-1]
+    else:
+        pass
 
     if algo == 1:
         df = average_days(sdate, edate, assets)
@@ -816,8 +832,29 @@ def pos_update(markowitz, alloc, sdate, edate, optcpu):
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
+    df_pos_old = asset_mz_markowitz_pos.load_raw(markowitz_id)
 
-    # print df_sharpe.head()
+    if len(df_pos_old) <= 0:
+        pass
+    elif len(df) == 0:
+        df = df_pos_old
+    elif df.index[-1] <= df_pos_old.index[-1]:
+        df = df_pos_old
+    elif optappend:
+        pos_old_dates = list(df_pos_old.index.ravel())
+        pos_old_dates.sort()
+        index = DBData.trade_date_index(None, end_date=edate)
+        dates = df_pos_old.index & index
+        dates.sort_values()
+        tmp_df_pos_old = df_pos_old.loc[dates]
+        tmp_df_pos_old = tmp_df_pos_old[df.columns]
+        tmp_df_pos_old = tmp_df_pos_old[tmp_df_pos_old.index < df.index[0]]
+        tmp_df = pd.concat([tmp_df_pos_old, df], axis = 0)
+        df = tmp_df
+
+    #print df
+    #print df.tail()
+    #print df
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -865,6 +902,7 @@ def pos_update(markowitz, alloc, sdate, edate, optcpu):
 
     # unstack
     df_tosave = df_tosave.stack()
+    #print df_tosave.head()
     df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0) | (df_tosave['mz_markowitz_ratio'] > 0)]
 
     # save
