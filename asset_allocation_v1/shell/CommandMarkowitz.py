@@ -501,6 +501,8 @@ def average_days(start_date, end_date, assets):
 
     df = pd.DataFrame(data)
 
+    df.index = pd.to_datetime(df.index)
+
     return df
 
 
@@ -800,15 +802,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     #load df old pos
     df_pos_old = asset_mz_markowitz_pos.load_raw(markowitz_id)
-    pos_old_dates = list(df_pos_old.index.ravel())
-    pos_old_dates.sort()
-    index = DBData.trade_date_index(None, end_date=edate)
-    dates = df_pos_old.index & index
-    dates.sort_values()
-    df_pos_old = df_pos_old.loc[dates]
 
-    if optappend and len(pos_old_dates) > 0:
-        sdate = pos_old_dates[-1]
+    if optappend and len(df_pos_old) > 0:
+        sdate = df_pos_old.index[-1]
+        df_pos_old = df_pos_old.iloc[:-1,]
     else:
         pass
 
@@ -832,29 +829,11 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     df_sharpe = df[['return', 'risk', 'sharpe']].copy()
     df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
-    df_pos_old = asset_mz_markowitz_pos.load_raw(markowitz_id)
 
-    if len(df_pos_old) <= 0:
-        pass
-    elif len(df) == 0:
-        df = df_pos_old
-    elif df.index[-1] <= df_pos_old.index[-1]:
-        df = df_pos_old
-    elif optappend:
-        pos_old_dates = list(df_pos_old.index.ravel())
-        pos_old_dates.sort()
-        index = DBData.trade_date_index(None, end_date=edate)
-        dates = df_pos_old.index & index
-        dates.sort_values()
-        tmp_df_pos_old = df_pos_old.loc[dates]
-        tmp_df_pos_old = tmp_df_pos_old[df.columns]
-        tmp_df_pos_old = tmp_df_pos_old[tmp_df_pos_old.index < df.index[0]]
-        tmp_df = pd.concat([tmp_df_pos_old, df], axis = 0)
-        df = tmp_df
 
-    #print df
-    #print df.tail()
-    #print df
+    if optappend:
+        df = pd.concat([df_pos_old, df]).fillna(0.0)
+
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)

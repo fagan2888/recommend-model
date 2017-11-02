@@ -143,7 +143,7 @@ def portfolio_nav2(df_pos, end_date=None) :
         #
         df_inc += 1
         # 第一天是调仓日, 没有收益, 直接设置各资产比例
-        print len(df_ratio)
+        #print len(df_ratio)
         df_inc.iloc[0] = sr_nav_portfolio[-1] * df_ratio.iloc[0]
         #
         # 后面所有日期累积乘即为每天净值

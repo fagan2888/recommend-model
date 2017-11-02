@@ -172,10 +172,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         dt_pool[k] = asset_ra_pool.match_asset_pool(k)
     df_asset['mz_pool_id'] = pd.Series(dt_pool)
 
-    if '11310100' not in df_asset.index:
-        df_asset.loc['11310100'] = (0, u'货币(低)', 31, 0, '11310100')
-    if '11310101' not in df_asset.index:
-        df_asset.loc['11310101'] = (0, u'货币(高)', 31, 0, '11310101')
+    if '120000039' not in df_asset.index:
+        df_asset.loc['120000039'] = (0, u'货币(低)', 31, 0, '120000039')
+    if '120000039' not in df_asset.index:
+        df_asset.loc['120000039'] = (0, u'货币(高)', 31, 0, '120000039')
     
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -269,12 +269,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         if ratio_h > 0:
             sr = ratio_h - df_h.sum(axis=1)
             if (sr > 0.000099).any():
-                df_h['11310100'] = sr
+                df_h['120000039'] = sr
 
         if ratio_l > 0:
             sr = ratio_l - df_l.sum(axis=1)
             if (sr > 0.000099).any():
-                df_h['11310101'] = sr
+                df_h['120000039'] = sr
         #
         # 合并持仓
         #
@@ -611,12 +611,12 @@ def jiao(highlow, alloc):
     if ratio_h > 0:
         sr = ratio_h - df_h.sum(axis=1)
         if (sr > 0.000099).any():
-            df_h['11310100'] = sr
+            df_h['120000039'] = sr
 
     if ratio_l > 0:
         sr = ratio_l - df_l.sum(axis=1)
         if (sr > 0.000099).any():
-            df_h['11310101'] = sr
+            df_h['120000039'] = sr
     #
     # 合并持仓
     #
@@ -657,7 +657,7 @@ def yao(highlow, alloc):
     #
     sr = 1.0 - df_h.sum(axis=1)
     if (sr > 0.000099).any():
-        df_h['11310101'] = sr
+        df_h['120000039'] = sr
 
     return df_h
 

@@ -30,6 +30,8 @@ import DFUtil
 import LabelAsset
 import util_numpy as npu
 import TradeNav
+import multiprocessing
+from multiprocessing import Manager
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -439,7 +441,8 @@ def kun(portfolio, alloc):
     # 加载用到的资产池
     #
     df_asset = asset_ra_portfolio_asset.load([gid])
-    
+
+ 
     if '120000039' not in df_asset['ra_asset_id'].values:
         sr = (gid, '120000039', '货币资产', 31, '120000039')
         df_asset.ix[len(df_asset.index)] = sr
@@ -549,19 +552,32 @@ def nav(ctx, optid, opttype, optlist, optrisk, optfee, optdebug, optenddate):
         for _, portfolio in df_portfolio.iterrows():
             nav_update_alloc(portfolio, risks, fee, optdebug, optenddate)
 
+
 def nav_update_alloc(portfolio, risks, fee, debug, enddate):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     df_alloc = df_alloc.loc[(df_alloc['ra_risk'] * 10).astype(int).isin(risks)]
 
     feestr = 'FEE' if fee == 8 else 'NOF'
-    
+
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
             label=('update nav %-9s (%s)' % (portfolio['globalid'], feestr)).ljust(30),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
             nav_update(alloc, fee, debug, enddate)
-    
+
+        '''
+        processes = []
+        for _, alloc in bar:
+            nav_update(alloc, fee, debug, enddate)
+            p = multiprocessing.Process(target = nav_update, args = (alloc, fee, debug, enddate,))
+            processes.append(p)
+            p.start()
+
+        for p in processes:
+            p.join()
+        '''
+
 def nav_update(alloc, fee, debug, enddate):
     alloc_id = alloc['globalid']
 
@@ -655,7 +671,6 @@ def turnover_update(portfolio):
     # 加载仓位信息
     df = asset_ra_portfolio_pos.load_fund_pos(portfolio_id)
     df = df.unstack()
-
 
     # 计算宽口换手率
     sr_turnover = DFUtil.calc_turnover(df)
