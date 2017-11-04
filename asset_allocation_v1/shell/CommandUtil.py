@@ -474,11 +474,13 @@ def filter_fund_by_list_to_pool_sample(ctx, optfundtype, optinpath, optpoolid):
     s = s.where(t.c.ra_type == fund_type)
     df = pd.read_sql(s, db)
 
+    #print len(df)
     final_codes = []
     for code in df['ra_code'].values:
         code = '%06d' % int(code)
         if code in codes_set:
             final_codes.append(code)
+
 
     print final_codes
 
