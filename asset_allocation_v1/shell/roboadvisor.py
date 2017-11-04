@@ -29,6 +29,7 @@ import CommandOnline
 import CommandInvestor
 import CommandExchangeRateIndex
 import CommandUtil
+import CommandAnalysis
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -218,4 +219,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandInvestor.investor)
     roboadvisor.add_command(CommandExchangeRateIndex.exrindex)
     roboadvisor.add_command(CommandUtil.util)
+    roboadvisor.add_command(CommandAnalysis.analysis)
     roboadvisor(obj={})
