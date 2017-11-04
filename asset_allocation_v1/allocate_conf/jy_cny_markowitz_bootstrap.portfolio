@@ -1,6 +1,7 @@
 ra_portfolio_id,ra_portfolio_name,ra_portfolio_algo,mz_markowitz_id,mz_markowitz_name,risk,mz_highlow_id,mz_highlow_name,mz_highlow_algo,asset_id,pool_id,sum1,sum2,lower,upper,allocate_algo,allocate_turnover_filter,highlow_turnover_filter,portfolio_turnover_filter,allocate_date_type,allocate_adjust_position_period,allocate_adjust_position_dates,allocate_look_back,allocate_wavelet,start_date,end_date,timing_id,riskmgr_id
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.1,HL.100030,jy_cny_markowitz_bootstrap,2,120000010,11110100,0,0,0.5,0.5,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210100
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.1,HL.100030,jy_cny_markowitz_bootstrap,2,120000011,11110200,0,0,0.5,0.5,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210200
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.1,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.2,HL.100030,jy_cny_markowitz_bootstrap,2,120000001,11400100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110100,61110101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.2,HL.100030,jy_cny_markowitz_bootstrap,2,120000002,11120500,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110200,61110201
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.2,HL.100030,jy_cny_markowitz_bootstrap,2,120000014,11120200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21400100,61400101
@@ -8,6 +9,7 @@ PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.2,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.2,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000001,11110100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120202,61120202
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.2,HL.100030,jy_cny_markowitz_bootstrap,2,120000010,11110200,0,0,0.4444,0.4444,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210100
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.2,HL.100030,jy_cny_markowitz_bootstrap,2,120000011,11400100,0,0,0.4444,0.4444,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210200
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.2,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.3,HL.100030,jy_cny_markowitz_bootstrap,2,120000001,11120500,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110100,61110101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.3,HL.100030,jy_cny_markowitz_bootstrap,2,120000002,11120200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110200,61110201
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.3,HL.100030,jy_cny_markowitz_bootstrap,2,120000014,11210200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21400100,61400101
@@ -15,6 +17,7 @@ PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.3,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.3,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000001,11110200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120202,61120202
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.3,HL.100030,jy_cny_markowitz_bootstrap,2,120000010,11400100,0,0,0.3888,0.3888,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210100
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.3,HL.100030,jy_cny_markowitz_bootstrap,2,120000011,11120500,0,0,0.3888,0.3888,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210200
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.3,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.4,HL.100030,jy_cny_markowitz_bootstrap,2,120000001,11120200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110100,61110101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.4,HL.100030,jy_cny_markowitz_bootstrap,2,120000002,11210200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110200,61110201
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.4,HL.100030,jy_cny_markowitz_bootstrap,2,120000014,11110100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21400100,61400101
@@ -22,6 +25,7 @@ PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.4,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.4,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000001,11400100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120202,61120202
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.4,HL.100030,jy_cny_markowitz_bootstrap,2,120000010,11120500,0,0,0.3333,0.3333,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210100
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.4,HL.100030,jy_cny_markowitz_bootstrap,2,120000011,11120200,0,0,0.3333,0.3333,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210200
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.4,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.5,HL.100030,jy_cny_markowitz_bootstrap,2,120000001,11210200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110100,61110101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.5,HL.100030,jy_cny_markowitz_bootstrap,2,120000002,11110100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110200,61110201
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.5,HL.100030,jy_cny_markowitz_bootstrap,2,120000014,11110200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21400100,61400101
@@ -29,6 +33,7 @@ PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.5,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.5,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000001,11120500,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120202,61120202
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.5,HL.100030,jy_cny_markowitz_bootstrap,2,120000010,11120200,0,0,0.2777,0.2777,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210100
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.5,HL.100030,jy_cny_markowitz_bootstrap,2,120000011,11210200,0,0,0.2777,0.2777,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210200
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.5,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.6,HL.100030,jy_cny_markowitz_bootstrap,2,120000001,11110100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110100,61110101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.6,HL.100030,jy_cny_markowitz_bootstrap,2,120000002,11110200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110200,61110201
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.6,HL.100030,jy_cny_markowitz_bootstrap,2,120000014,11400100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21400100,61400101
@@ -36,6 +41,7 @@ PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.6,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.6,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000001,11120200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120202,61120202
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.6,HL.100030,jy_cny_markowitz_bootstrap,2,120000010,11210200,0,0,0.2222,0.2222,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210100
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.6,HL.100030,jy_cny_markowitz_bootstrap,2,120000011,11110100,0,0,0.2222,0.2222,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210200
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.6,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.7,HL.100030,jy_cny_markowitz_bootstrap,2,120000001,11110200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110100,61110101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.7,HL.100030,jy_cny_markowitz_bootstrap,2,120000002,11400100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110200,61110201
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.7,HL.100030,jy_cny_markowitz_bootstrap,2,120000014,11120500,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21400100,61400101
@@ -43,6 +49,7 @@ PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.7,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.7,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000001,11210200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120202,61120202
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.7,HL.100030,jy_cny_markowitz_bootstrap,2,120000010,11110100,0,0,0.1666,0.1666,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210100
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.7,HL.100030,jy_cny_markowitz_bootstrap,2,120000011,11110200,0,0,0.1666,0.1666,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210200
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.7,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.8,HL.100030,jy_cny_markowitz_bootstrap,2,120000001,11400100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110100,61110101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.8,HL.100030,jy_cny_markowitz_bootstrap,2,120000002,11120500,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110200,61110201
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.8,HL.100030,jy_cny_markowitz_bootstrap,2,120000014,11120200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21400100,61400101
@@ -50,6 +57,7 @@ PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.8,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.8,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000001,11110100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120202,61120202
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.8,HL.100030,jy_cny_markowitz_bootstrap,2,120000010,11110200,0,0,0.1111,0.1111,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210100
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.8,HL.100030,jy_cny_markowitz_bootstrap,2,120000011,11400100,0,0,0.1111,0.1111,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210200
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.8,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.9,HL.100030,jy_cny_markowitz_bootstrap,2,120000001,11120500,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110100,61110101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.9,HL.100030,jy_cny_markowitz_bootstrap,2,120000002,11120200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110200,61110201
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.9,HL.100030,jy_cny_markowitz_bootstrap,2,120000014,11210200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21400100,61400101
@@ -57,8 +65,10 @@ PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.9,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.9,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000001,11110200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120202,61120202
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.9,HL.100030,jy_cny_markowitz_bootstrap,2,120000010,11400100,0,0,0.0555,0.0555,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210100
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.9,HL.100030,jy_cny_markowitz_bootstrap,2,120000011,11120500,0,0,0.0555,0.0555,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,61210200
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,0.9,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,1,HL.100030,jy_cny_markowitz_bootstrap,2,120000001,11120200,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110100,61110101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,1,HL.100030,jy_cny_markowitz_bootstrap,2,120000002,11110100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21110200,61110201
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,1,HL.100030,jy_cny_markowitz_bootstrap,2,120000014,11400100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21400100,61400101
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,1,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000002,11120500,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120501,61120503
 PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,1,HL.100030,jy_cny_markowitz_bootstrap,2,ERI000001,11400100,0,0,0,0.7,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,21120202,61120202
+PO.100030,jy_cny_markowitz_bootstrap,1,MZ.100030,jy_cny_markowitz_bootstrap,1,HL.100030,jy_cny_markowitz_bootstrap,2,120000039,11310100,0,0,0,0,3,0,0,0.4,trade_week,1,,26,0,2012/7/1,,,
