@@ -279,12 +279,15 @@ def investor_pos(ctx, optlist, optstartid, optendid, optmonth, output):
 
     columns = [
         t1.c.is_date,
+        t1.c.is_date,
         t1.c.is_pool_id,
         t1.c.is_fund_code,
         t1.c.is_fund_ratio,
     ]
-    index_col = ['is_date', 'is_pool_id', 'is_fund_code']
+    index_col = ['is_date','is_fund_code']
 
+
+    dfs = []
     for k, v in df_investor.iterrows():
         s = select(columns).where(t1.c.is_investor_id == k)
 
@@ -302,12 +305,17 @@ def investor_pos(ctx, optlist, optstartid, optendid, optmonth, output):
         df_result = df_result.merge(df_fund[['ra_name']], left_on=['is_fund_code'], right_index=True)
         df_result['is_date'] = df_result['is_date'].apply(lambda x: x.strftime("%Y-%m-%d"))
         df_result = df_result.rename(columns={'is_date':'日期', 'is_fund_code':'基金代码', 'ra_name':'基金名称', 'is_fund_ratio':'配置比例'})
-        df_result.set_index(['日期', '基金代码'], inplace=True)
+        df_result['用户'] = k
+        df_result.set_index(['用户','日期', '基金代码'], inplace=True)
         df_result = df_result[['基金名称','配置比例']]
         df_result = df_result.sort_index()
         # df_result.set_index(['is_date', 'is_fund_code'], inplace=True)
         # df_result = df_result[['ra_name','is_fund_ratio']]
-        df_result.to_excel(writer, sheet_name=k, encoding='UTF-8')
+        #df_result.to_excel(writer, sheet_name=k, encoding='UTF-8')
+        dfs.append(df_result)
+
+    df_result = pd.concat(dfs)
+    df_result.to_excel(writer, encoding = 'utf-8')
 
     # Close the Pandas Excel writer and output the Excel file.
     writer.save()    
