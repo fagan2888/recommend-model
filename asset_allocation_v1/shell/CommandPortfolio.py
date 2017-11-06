@@ -70,11 +70,7 @@ def portfolio(ctx, optfull, optnew, optid, optname, opttype, optreplace, optrati
             ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
         else:
             if optfull is False:
-                if optid is not None:
-                    tmpid = int(optid)
-                else:
-                    tmpid = optid
-                ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
+                ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
                 ctx.invoke(turnover, optid=optid)
                 ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
             else:
@@ -414,6 +410,9 @@ def pos_update(portfolio, alloc):
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, gid), fg='red'))
         return
 
+    if df_raw is None:
+        return 
+    
     df_tmp = df_raw[['ra_fund_ratio']]
 
     #print gid, df_tmp
@@ -440,7 +439,6 @@ def pos_update(portfolio, alloc):
     # print df_tosave
     asset_ra_portfolio_pos.save(gid, df_tosave)
 
-
 def kun(portfolio, alloc):
     gid = alloc['globalid']
     risk = int(alloc['ra_risk'] * 10)
@@ -458,6 +456,10 @@ def kun(portfolio, alloc):
 
     # 加载资产配置比例
     df_ratio = database.load_pos_frame(ratio_id)
+    if df_ratio.empty:
+        click.echo(click.style("empty highlow_pos [%s] dected, will abort!" % gid, fg="yellow"))
+        return None
+        
     #print df_ratio
     # print df_ratio.sum(axis=1)
     if '11310100' not in df_ratio.columns:
