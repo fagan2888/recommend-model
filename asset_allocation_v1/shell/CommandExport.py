@@ -331,7 +331,7 @@ def investor_risk_drawdown(ctx, optlist, optstartid, optendid, optstartdate, opt
     # sys.setdefaultencoding() does not exist, here!
     reload(sys)  # Reload does the trick!
     sys.setdefaultencoding('UTF8')
-    
+
     db = database.connection('asset')
 
     sql = "SELECT is_investor_id, is_date, is_amount FROM `is_investor_holding` WHERE 1 "
@@ -339,16 +339,18 @@ def investor_risk_drawdown(ctx, optlist, optstartid, optendid, optstartdate, opt
         sql += " AND is_investor_id >= '%s' " % optstartid
     if optendid is not None:
         sql += " AND is_investor_id <= '%s' " % optendid
-    if optstartid is not None:
+    if optstartdate is not None:
         sql += " AND is_date >= '%s' " % optstartdate
-    if optendid is not None:
+    if optenddate is not None:
         sql += " AND is_date <= '%s' " % optenddate
     sql += "ORDER BY is_investor_id, is_date"
 
     df_result = pd.read_sql(sql, db,  index_col=['is_investor_id', 'is_date'])
     df_result = df_result.unstack(0)
-    df_result = (1 - df_result.div(df_result.cummax()).min(axis=0)).rename('risk_drawdown')
+    #print df_result.std(axis = 1) * 
+    df_result = pd.concat([(1 - df_result.div(df_result.cummax()).min(axis=0)).rename('max_drawdown'),(df_result.pct_change().std() * (360 ** 0.5)).rename('annual_std')],axis=1)
     df_result.index = df_result.index.droplevel(0)
+
 
     if optexcel:
         if output is not None:
@@ -402,11 +404,10 @@ def investor_month_risk(ctx, optlist, optstartid, optendid, optmonth, output, op
         sql += " AND is_investor_id <= '%s' " % optendid
     sql += "ORDER BY is_investor_id, is_date"
 
+
     df_result = pd.read_sql(sql, db,  index_col=['is_investor_id', 'is_month', 'is_date'])
-    df_result = df_result.unstack(2)
-    df_result = df_result.pct_change(axis=1).std(axis=1) * np.sqrt(365)
-    df_result = df_result.unstack(1)
-    #df_result.columns = df_result.columns.droplevel(0)
+    df_result = df_result.unstack('is_investor_id').pct_change().unstack('is_month').std().T.unstack('is_month') * np.sqrt(360)
+    df_result.index = df_result.index.droplevel(0)
 
     if optexcel:
         if output is not None:
