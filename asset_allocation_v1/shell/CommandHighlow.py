@@ -266,7 +266,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         if ratio_l > 0:
             sr = ratio_l - df_l.sum(axis=1)
             if (sr > 0.000099).any():
-                df_h['11310100'] = sr
+                df_l['11310100'] = sr
         #
         # 合并持仓
         #
