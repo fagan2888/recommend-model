@@ -322,8 +322,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     bootstrap = optbootcount if optbootstrap else None
 
     if optalgo == 'average':
+        algo, risk = 1, 0.1
         df = average_days(startdate, enddate, assets)
     else:
+        algo, risk = 3, 1.0
         df = markowitz_days(
             startdate, enddate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=bootstrap, cpu_count=optcpu, wavelet = optwavelet, wavelet_filter_num = optwaveletfilternum)
@@ -336,6 +338,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     mz_markowitz        = Table('mz_markowitz', metadata, autoload=True)
+    mz_markowitz_alloc  = Table('mz_markowitz_alloc', metadata, autoload=True)
     mz_markowitz_asset  = Table('mz_markowitz_asset', metadata, autoload=True)
     mz_markowitz_pos    = Table('mz_markowitz_pos', metadata, autoload=True)
     mz_markowitz_nav    = Table('mz_markowitz_nav', metadata, autoload=True)
@@ -358,6 +361,13 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         'created_at': func.now(), 'updated_at': func.now()
     }
     mz_markowitz.insert(row).execute()
+    # 导入数据: markowitz_alloc
+    row = {
+        'globalid': optid, 'mz_markowitz_id': optid, 'mz_type':opttype,
+        'mz_name': optname, 'mz_algo': algo, 'mz_risk': risk,
+        'created_at': func.now(), 'updated_at': func.now()
+    }
+    mz_markowitz_alloc.insert(row).execute()
 
     #
     # 导入数据: markowitz_asset
@@ -525,7 +535,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
     #
     s = 'perform %-12s' % label
     data = {}
-    if not bootstrap:
+    if bootstrap is None:
         count = multiprocessing.cpu_count() / 2
         process_adjust_indexs = [[] for i in range(0, count)]
         for i in range(0, len(adjust_index)):
@@ -595,10 +605,10 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     for asset in df_inc.columns:
         bound.append(limits[asset])
 
-    if bootstrap is None or bootstrap == False:
+    if bootstrap is None:
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -814,15 +824,15 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     elif algo == 2:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=False, cpu_count=optcpu, wavelet = False)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
     elif algo == 3:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=True, cpu_count=optcpu, wavelet = False)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
     elif algo == 4:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=False, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -919,8 +929,11 @@ def nav(ctx, optid, opttype, optrisk, optlist):
 
     xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
-
+    if markowitzs is not None:
+        df_markowitz = asset_mz_markowitz.load(markowitzs)
+    else:
+        df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
+        
     if optlist:
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
@@ -987,10 +1000,12 @@ def turnover(ctx, optid, opttype, optrisk, optlist):
 
     xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
+    if markowitzs is not None:
+        df_markowitz = asset_mz_markowitz.load(markowitzs)
+    else:
+        df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
 
     if optlist:
-
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
         return 0
