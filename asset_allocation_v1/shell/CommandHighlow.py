@@ -542,8 +542,8 @@ def pos_update(highlow, alloc):
     # if turnover >= 0.01:
     #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
 
-    if alloc['mz_risk'] == 0.9:
-        dd(df)
+    #if alloc['mz_risk'] == 0.9:
+    #    dd(df)
     df.index.name = 'mz_date'
     df.columns.name='mz_asset_id'
 
@@ -556,9 +556,13 @@ def pos_update(highlow, alloc):
     df_tosave = df.stack().to_frame('mz_ratio')
     df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0)]
 
-    if alloc['mz_risk'] == 0.9:
-        df_tosave = df_tosave.unstack(2)
-        dd(df_tosave)
+
+
+    #print alloc
+    #print df_tosave[df_tosave.index.duplicated()]
+    #if alloc['mz_risk'] == 0.9:
+    #    df_tosave = df_tosave.unstack(2)
+    #    dd(df_tosave)
     # save
     # print df_tosave
     asset_mz_highlow_pos.save(highlow_id, df_tosave)
@@ -620,12 +624,12 @@ def jiao(highlow, alloc):
     if ratio_h > 0:
         sr = ratio_h - df_h.sum(axis=1)
         if (sr > 0.000099).any():
-            df_h['120000039'] = sr
+            df_h['11310101'] = sr
 
     if ratio_l > 0:
         sr = ratio_l - df_l.sum(axis=1)
         if (sr > 0.000099).any():
-            df_l['120000039'] = sr
+            df_l['11310100'] = sr
 
     #
     # 合并持仓

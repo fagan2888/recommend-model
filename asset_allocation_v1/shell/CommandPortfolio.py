@@ -160,8 +160,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         'pool_id': 'ra_pool_id',
     })
 
-    if '120000039' not in df_asset['ra_asset_id'].values:
-        sr = ('120000039', '货币资产', 31, '120000039')
+    if '11310100' not in df_asset['ra_asset_id'].values:
+        sr = ('11310100', '货币资产', 31, '11310100')
         df_asset.ix[len(df_asset.index)] = sr
         
     db = database.connection('asset')
@@ -206,10 +206,10 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             df_ratio = database.load_pos_frame(ratio_id)
             #print df_ratio
             # print df_ratio.sum(axis=1)
-            if '120000039' not in df_ratio.columns:
-                df_ratio['120000039'] = 1 - df_ratio.sum(axis=1)
+            if '11310100' not in df_ratio.columns:
+                df_ratio['11310100'] = 1 - df_ratio.sum(axis=1)
             else:
-                df_ratio['120000039'] += 1 - df_ratio.sum(axis=1)
+                df_ratio['11310100'] += 1 - df_ratio.sum(axis=1)
             # print df_ratio.head()
 
             start = df_ratio.index.min()
@@ -225,12 +225,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
                 pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
                 pools[row['ra_asset_id']] = pool
             else:
-                if '120000039' not in pools:
-                    fund = asset_ra_pool_fund.load('120000039')
+                if '11310100' not in pools:
+                    fund = asset_ra_pool_fund.load('11310100')
                     if not fund.empty:
                         index = index.union(fund.index.get_level_values(0)).unique()
-                    pool = ('120000039', fund[['ra_fund_code', 'ra_fund_type']])
-                    pools['120000039'] = pool
+                    pool = ('11310100', fund[['ra_fund_code', 'ra_fund_type']])
+                    pools['11310100'] = pool
 
             #
             # 根据基金池和配置比例的索引并集reindex数据
@@ -401,7 +401,7 @@ def pos_update(portfolio, alloc):
 
     # algo = alloc['ra_algo'] if alloc['ra_algo'] != 0 else portfolio['ra_algo']
     algo = portfolio['ra_algo']
-    
+
     if algo == 1:
         #
         # 等权均分
@@ -414,6 +414,11 @@ def pos_update(portfolio, alloc):
     df_tmp = df_raw[['ra_fund_ratio']]
 
     #print gid, df_tmp
+    #data = {}
+    #for k, v in df_tmp.groupby(df_tmp.index):
+    #    data[k] = v.sum()
+    #df_tmp = pd.DataFrame(data)
+    #df_tmp = df_tmp[~df_tmp.index.duplicated()]
     df_tmp = df_tmp.unstack([1, 2])
     df_tmp = df_tmp.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df_tmp = DFUtil.filter_same_with_last(df_tmp)          # 过滤掉相同
@@ -432,29 +437,30 @@ def pos_update(portfolio, alloc):
     # print df_tosave
     asset_ra_portfolio_pos.save(gid, df_tosave)
 
+
 def kun(portfolio, alloc):
     gid = alloc['globalid']
     risk = int(alloc['ra_risk'] * 10)
     ratio_id = alloc['ra_ratio_id']
-    
+
     #
     # 加载用到的资产池
     #
     df_asset = asset_ra_portfolio_asset.load([gid])
 
- 
-    if '120000039' not in df_asset['ra_asset_id'].values:
-        sr = (gid, '120000039', '货币资产', 31, '120000039')
+
+    if '11310100' not in df_asset['ra_asset_id'].values:
+        sr = (gid, '11310100', '货币资产', 31, '11310100')
         df_asset.ix[len(df_asset.index)] = sr
 
     # 加载资产配置比例
     df_ratio = database.load_pos_frame(ratio_id)
     #print df_ratio
     # print df_ratio.sum(axis=1)
-    if '120000039' not in df_ratio.columns:
-        df_ratio['120000039'] = 1 - df_ratio.sum(axis=1)
+    if '11310100' not in df_ratio.columns:
+        df_ratio['11310100'] = 1 - df_ratio.sum(axis=1)
     else:
-        df_ratio['120000039'] += 1 - df_ratio.sum(axis=1)
+        df_ratio['11310100'] += 1 - df_ratio.sum(axis=1)
     # print df_ratio.head()
 
     start = df_ratio.index.min()
@@ -471,12 +477,12 @@ def kun(portfolio, alloc):
         pool = (row['ra_pool_id'], fund[['ra_fund_code', 'ra_fund_type']])
         pools[row['ra_asset_id']] = pool
     else:
-        if '120000039' not in pools:
-            fund = asset_ra_pool_fund.load('120000039')
+        if '11310100' not in pools:
+            fund = asset_ra_pool_fund.load('11310100')
             if not fund.empty:
                 index = index.union(fund.index.get_level_values(0)).unique()
-            pool = ('120000039', fund[['ra_fund_code', 'ra_fund_type']])
-            pools['120000039'] = pool
+            pool = ('11310100', fund[['ra_fund_code', 'ra_fund_type']])
+            pools['11310100'] = pool
 
     #
     # 根据基金池和配置比例的索引并集reindex数据
