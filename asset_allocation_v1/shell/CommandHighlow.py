@@ -317,12 +317,12 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         asset_mz_highlow_pos.save(highlow_id, df_tosave)
 
         # click.echo(click.style("highlow allocation complement! instance id [%s]" % (optid), fg='green'))
-        
+
     #
     # 在context的记录id, 以便命令两中使用
     #
     ctx.obj['highlow'] = optid
-        
+
     click.echo(click.style("highlow allocation complement! instance id [%s]" % (optid), fg='green'))
 
 
@@ -372,7 +372,7 @@ def load_riskmgr2(assets, sr_riskmgr, reindex=None, enable=True):
             if gid != '' and gid != '0':
                 sr = asset_rm_riskmgr_signal.load_series(gid)
                 index = index.union(sr.index)
-                
+
         if sr is None:
             sr = pd.Series(1.0, index=reindex)
             sr.index.name = 'mz_date'
@@ -499,7 +499,7 @@ def pos_update(highlow, alloc):
 
     # algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
     algo = highlow['mz_algo']
-    
+
     if algo == 1:
         #
         # 焦氏策略
@@ -515,7 +515,7 @@ def pos_update(highlow, alloc):
                 return
             max_ix = df_markowitz_alloc['mz_risk'].argmax()
             min_ix = df_markowitz_alloc['mz_risk'].argmin()
-            
+
             highlow['mz_high_id'] = df_markowitz_alloc.at[max_ix, 'globalid']
             highlow['mz_low_id'] = df_markowitz_alloc.at[min_ix, 'globalid']
 
@@ -529,6 +529,8 @@ def pos_update(highlow, alloc):
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, highlow_id), fg='red'))
         return
 
+
+
     #
     # 导入数据: highlow_pos
     #
@@ -540,6 +542,8 @@ def pos_update(highlow, alloc):
     # if turnover >= 0.01:
     #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
 
+    if alloc['mz_risk'] == 0.9:
+        dd(df)
     df.index.name = 'mz_date'
     df.columns.name='mz_asset_id'
 
@@ -552,6 +556,9 @@ def pos_update(highlow, alloc):
     df_tosave = df.stack().to_frame('mz_ratio')
     df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0)]
 
+    if alloc['mz_risk'] == 0.9:
+        df_tosave = df_tosave.unstack(2)
+        dd(df_tosave)
     # save
     # print df_tosave
     asset_mz_highlow_pos.save(highlow_id, df_tosave)
@@ -596,6 +603,8 @@ def jiao(highlow, alloc):
             data_h[column] = df_high[column] * df_high_riskmgr[column] * ratio_h
     df_h = pd.DataFrame(data_h)
 
+    #dd(df_h)
+
     data_l = {}
     if not df_low.empty:
         df_low = df_low.reindex(index, method='pad')
@@ -616,7 +625,8 @@ def jiao(highlow, alloc):
     if ratio_l > 0:
         sr = ratio_l - df_l.sum(axis=1)
         if (sr > 0.000099).any():
-            df_h['120000039'] = sr
+            df_l['120000039'] = sr
+
     #
     # 合并持仓
     #
