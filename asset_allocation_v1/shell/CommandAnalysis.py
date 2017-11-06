@@ -67,6 +67,7 @@ def portfolio_turnover_freq(ctx, optid, optstartdate, optenddate):
     for globalid in alloc_df['globalid'].ravel():
         s = select(pos_columns).where(portfolio_pos_t.c.ra_portfolio_id == globalid)
         pos_df = pd.read_sql(s, db, index_col = ['ra_date', 'ra_fund_code'], parse_dates = ['ra_date'])
+        pos_df = pos_df.groupby(level=[0,1]).sum()
         pos_df = pos_df.unstack(1).fillna(0.0)
         dates = pos_df.index.ravel()
         if optstartdate is not None:
