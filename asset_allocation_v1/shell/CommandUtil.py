@@ -190,7 +190,6 @@ def imp_highlow(df):
     df_old = pd.read_sql(s, db, index_col = df_new.index.names)
     database.batch(db, highlow_t, df_new, df_old)
 
-
     highlow_alloc_data = []
     highlow_asset_data = []
     highlow_argv_data  = []
@@ -261,7 +260,7 @@ def imp_highlow(df):
     database.batch(db, highlow_alloc_t, df_new, df_old)
 
 
-    df_new = highlow_asset_df
+    df_new = highlow_asset_df.fillna('')
     columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
     s = select(columns)
     s = s.where(highlow_asset_t.c.mz_highlow_id.in_(df_new.index.get_level_values(0).tolist()))
