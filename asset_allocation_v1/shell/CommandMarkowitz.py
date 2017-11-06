@@ -838,8 +838,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
 
-    df_sharpe = df[['return', 'risk', 'sharpe']].copy()
-    df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
+    if 'return' in df.columns:
+        df_sharpe = df[['return', 'risk', 'sharpe']].copy()
+        df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
 
 
     if optappend:
@@ -897,17 +898,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     # save
     asset_mz_markowitz_pos.save(markowitz_id, df_tosave)
-
-    # 导入数据: markowitz_criteria
-    criterias = {'return': '0001', 'risk':'0002', 'sharpe':'0003'}
-    df_sharpe.index.name = 'mz_date'
-    for column in df_sharpe.columns:
-        criteria_id = criterias[column]
-        df_criteria = df_sharpe[column].to_frame('mz_value')
-        df_criteria['mz_markowitz_id'] = markowitz_id
-        df_criteria['mz_criteria_id'] = criteria_id
-        df_criteria = df_criteria.reset_index().set_index(['mz_markowitz_id', 'mz_criteria_id', 'mz_date'])
-        asset_mz_markowitz_criteria.save(markowitz_id, criteria_id,  df_criteria)
 
     return 0
 
