@@ -205,14 +205,6 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
     mz_highlow.insert(row).execute()
 
     #
-    # 导入数据: highlow_asset
-    #
-    df_asset_tosave = df_asset.copy()
-    df_asset_tosave['mz_highlow_id'] = optid
-    df_asset_tosave = df_asset_tosave.reset_index().set_index(['mz_highlow_id', 'mz_asset_id'])
-    asset_mz_highlow_asset.save([optid], df_asset_tosave)
-
-    #
     # 加载高风险资产仓位
     #
     index = None
@@ -288,6 +280,14 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
             'mz_highlow_id': optid, 'mz_risk': risk / 10.0, 'created_at': func.now(), 'updated_at': func.now()
         }
         mz_highlow_alloc.insert(row).execute()
+
+        #
+        # 导入数据: highlow_asset
+        #
+        df_asset_tosave = df_asset.copy()
+        df_asset_tosave['mz_highlow_id'] = highlow_id
+        df_asset_tosave = df_asset_tosave.reset_index().set_index(['mz_highlow_id', 'mz_asset_id'])
+        asset_mz_highlow_asset.save([highlow_id], df_asset_tosave)
 
         #
         # 导入数据: highlow_pos
@@ -451,8 +451,11 @@ def pos(ctx, optid, opttype, optlist, optrisk):
 
     xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_highlow = asset_mz_highlow.load(highlows, xtypes)
-
+    if highlows is not None:
+        df_highlow = asset_mz_highlow.load(highlows)
+    else:
+        df_highlow = asset_mz_highlow.load(highlows, xtypes)
+        
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_highlow, headers='keys', tablefmt='psql')
@@ -700,8 +703,11 @@ def nav(ctx, optid, opttype, optlist, optenddate):
         
     xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_highlow = asset_mz_highlow.load(highlows, xtypes)
-
+    if highlows is not None:
+        df_highlow = asset_mz_highlow.load(highlows)
+    else:
+        df_highlow = asset_mz_highlow.load(highlows, xtypes)
+        
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_highlow, headers='keys', tablefmt='psql')
@@ -767,8 +773,11 @@ def turnover(ctx, optid, opttype, optlist):
 
     xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_highlow = asset_mz_highlow.load(highlows, xtypes)
-
+    if highlows is not None:
+        df_highlow = asset_mz_highlow.load(highlows)
+    else:
+        df_highlow = asset_mz_highlow.load(highlows, xtypes)
+        
     if optlist:
 
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))

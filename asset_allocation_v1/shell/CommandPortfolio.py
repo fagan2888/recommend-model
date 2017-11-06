@@ -66,8 +66,8 @@ def portfolio(ctx, optfull, optnew, optid, optname, opttype, optreplace, optrati
         # click.echo('I was invoked without subcommand')
         if optnew:
             ctx.invoke(pos, optid=optid, optrisk=optrisk)
-            ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
+            ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
         else:
             if optfull is False:
                 if optid is not None:
@@ -75,11 +75,11 @@ def portfolio(ctx, optfull, optnew, optid, optname, opttype, optreplace, optrati
                 else:
                     tmpid = optid
                 ctx.invoke(allocate, optid=tmpid, optname=optname, opttype=opttype, optreplace=optreplace, optratio=optratio, optpool=optpool, optrisk=optrisk, turnover=optturnover)
-                ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
                 ctx.invoke(turnover, optid=optid)
+                ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
             else:
-                ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
                 ctx.invoke(turnover, optid=optid)
+                ctx.invoke(nav, optid=optid, optrisk=optrisk, optenddate=optenddate)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
@@ -345,8 +345,11 @@ def pos(ctx, optid, opttype, optlist, optrisk):
 
     xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
-
+    if portfolios is not None:
+        df_portfolio = asset_ra_portfolio.load(portfolios)
+    else:
+        df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
+        
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_portfolio, headers='keys', tablefmt='psql')
@@ -547,8 +550,11 @@ def nav(ctx, optid, opttype, optlist, optrisk, optfee, optdebug, optenddate):
 
     xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
-
+    if portfolios is not None:
+        df_portfolio = asset_ra_portfolio.load(portfolios)
+    else:
+        df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
+        
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_portfolio, headers='keys', tablefmt='psql')
@@ -649,8 +655,11 @@ def turnover(ctx, optid, opttype, optlist):
             
     xtypes = [s.strip() for s in opttype.split(',')]
 
-    df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
-
+    if portfolios is not None:
+        df_portfolio = asset_ra_portfolio.load(portfolios)
+    else:
+        df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
+        
     if optlist:
 
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))

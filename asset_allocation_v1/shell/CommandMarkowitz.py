@@ -790,7 +790,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     # 加载资产
     #
     df_asset = asset_mz_markowitz_asset.load([markowitz_id])
-    df_asset.reset_index(level=0, inplace=True)
+    df_asset.set_index(['mz_markowitz_asset_id'], inplace=True)
+
     df_asset = df_asset[['mz_upper_limit', 'mz_lower_limit', 'mz_sum1_limit', 'mz_sum2_limit']];
     df_asset = df_asset.rename(columns={'mz_upper_limit': 'upper', 'mz_lower_limit': 'lower', 'mz_sum1_limit': 'sum1', 'mz_sum2_limit': 'sum2'})
     assets = df_asset.T.to_dict()
@@ -1175,7 +1176,7 @@ def copy(ctx, optsrc, optdst, optlist):
     # copy mz_markowitz_asset
     #
     df_markowitz_asset = asset_mz_markowitz_asset.load(df_xtab['old'])
-    df_markowitz_asset.reset_index(inplace=True)
+    # df_markowitz_asset.reset_index(inplace=True)
 
     df_markowitz_asset = df_markowitz_asset.merge(df_xtab, left_on='mz_markowitz_id', right_on = 'old')
 

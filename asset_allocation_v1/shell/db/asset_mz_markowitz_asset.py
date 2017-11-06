@@ -39,7 +39,8 @@ def load(gids):
     if gids is not None:
         s = s.where(t1.c.mz_markowitz_id.in_(gids))
 
-    df = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_markowitz_asset_id'])
+    # df = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_markowitz_asset_id'])
+    df = pd.read_sql(s, db)
 
     return df
 

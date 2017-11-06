@@ -689,7 +689,7 @@ def load_asset_and_pool(gid):
             'mz_asset_type':'asset_type',
         }, inplace=True)
         df_asset['pool_id'] = df_asset['mz_asset_type']
-        # df_asset = df_asset.set_index(['asset_id'])
+        df_asset = df_asset.set_index(['asset_id'])
 
     elif xtype == 7:
         #
