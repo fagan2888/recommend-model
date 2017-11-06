@@ -170,3 +170,71 @@ def nav(ctx, optinst, optindex, optcomposite, optfund, optfundtype, optpool, opt
 
     print "export nav to file %s" % (path)
 
+
+@export.command()
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--start-id', 'optstartid', help=u'start investor id to export')
+@click.option('--end-id', 'optendid', help=u'end investor id to export')
+@click.option('--month/--no-month', 'optmonth', default=True, help=u'month return for investor')
+# @click.option('--tools', '-t', type=click.Choice(['tool1', 'tool2', 'tool3']), multiple=True)
+@click.option('--output', '-o', type=click.Path(), help=u'output file')
+@click.pass_context
+def investor_return(ctx, optlist, optstartid, optendid, optmonth, output):
+    '''run constant risk model
+    '''
+    
+    db = database.connection('asset')
+
+    sql = "SELECT is_investor_id, DATE_FORMAT(is_date, '%%Y-%%m') AS is_month,SUM(is_return) as is_return FROM `is_investor_holding` WHERE 1 "
+    if optstartid is not None:
+        sql += " AND is_investor_id >= '%s' " % optstartid
+    if optendid is not None:
+        sql += " AND is_investor_id <= '%s' " % optendid
+    sql += "GROUP BY is_investor_id, is_month"
+
+    df_result = pd.read_sql(sql, db,  index_col=['is_investor_id', 'is_month'])
+    df_result = df_result.unstack(1)
+    df_result.columns = df_result.columns.droplevel(0)
+
+    if output is not None:
+        path = output
+    else:
+        path = datapath('export-nav.csv')
+        
+    df_result.to_csv(path)
+
+    print "export nav to file %s" % (path)
+
+@export.command()
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--start-id', 'optstartid', help=u'start investor id to export')
+@click.option('--end-id', 'optendid', help=u'end investor id to export')
+@click.option('--month/--no-month', 'optmonth', default=True, help=u'month return for investor')
+# @click.option('--tools', '-t', type=click.Choice(['tool1', 'tool2', 'tool3']), multiple=True)
+@click.option('--output', '-o', type=click.Path(), help=u'output file')
+@click.pass_context
+def investor_risk_maxdrawdown(ctx, optlist, optstartid, optendid, optmonth, output):
+    '''run constant risk model
+    '''
+    
+    db = database.connection('asset')
+
+    sql = "SELECT is_investor_id, DATE_FORMAT(is_date, '%%Y-%%m') AS is_month,SUM(is_return) as is_return FROM `is_investor_holding` WHERE 1 "
+    if optstartid is not None:
+        sql += " AND is_investor_id >= '%s' " % optstartid
+    if optendid is not None:
+        sql += " AND is_investor_id <= '%s' " % optendid
+    sql += "GROUP BY is_investor_id, is_month"
+
+    df_result = pd.read_sql(sql, db,  index_col=['is_investor_id', 'is_month'])
+    df_result = df_result.unstack(1)
+    df_result.columns = df_result.columns.droplevel(0)
+
+    if output is not None:
+        path = output
+    else:
+        path = datapath('export-nav.csv')
+        
+    df_result.to_csv(path)
+
+    print "export nav to file %s" % (path)

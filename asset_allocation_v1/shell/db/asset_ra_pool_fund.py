@@ -19,7 +19,7 @@ def load(gid, reindex=None):
     if pool:
         (pool_id, category) = (gid, 0)
     else:
-        asset_id = gid % 10000000
+        asset_id = int(gid) % 10000000
         (pool_id, category) = (asset_id / 100, asset_id % 100)
 
     db = database.connection('asset')

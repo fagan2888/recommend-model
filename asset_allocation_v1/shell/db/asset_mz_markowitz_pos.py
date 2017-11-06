@@ -74,7 +74,7 @@ def load_raw(gid, included_markowitz_id=False):
         return None
     # if xtypes is not None:
     #     s = s.where(t1.c.mz_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['mz_date'])
 
     df = df.unstack().fillna(0.0)

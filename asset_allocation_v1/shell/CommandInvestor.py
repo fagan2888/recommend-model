@@ -103,7 +103,7 @@ def nav(ctx, optid, optlist, opttype, optdebug, optfee, optt0, optenddate):
     for xtype in types:
         with click.progressbar(
             df_investor.iterrows(), length=len(df_investor.index),
-                label='update nav',
+                label='update nav'.ljust(30),
                 item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
             for _, investor in bar:
                 nav_update(investor, xtype, optdebug, optfee, optt0, enddate)
@@ -183,7 +183,7 @@ def turnover(ctx, optid, optlist):
     data = []
     with click.progressbar(
             df_investor.iterrows(), length=len(df_investor.index),
-            label='calc turnover',
+            label='calc turnover'.ljust(30),
             item_show_func=lambda x:  str(x[1]['globalid']) if x else None) as bar:
         for _, investor in bar:
             turnover_update(investor)

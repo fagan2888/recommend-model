@@ -129,7 +129,7 @@ def nav(ctx, optid, optlist):
         print tabulate(df_reshape, headers='keys', tablefmt='psql')
         return 0
     
-    with click.progressbar(length=len(df_reshape), label='update nav') as bar:
+    with click.progressbar(length=len(df_reshape), label='update nav'.ljust(30)) as bar:
         for _, reshape in df_reshape.iterrows():
             bar.update(1)
             nav_update(reshape)
@@ -204,7 +204,7 @@ def pos(ctx, optid, optlist, optonline):
         print tabulate(df_reshape, headers='keys', tablefmt='psql')
         return 0
     
-    with click.progressbar(length=len(df_reshape), label='update pos') as bar:
+    with click.progressbar(length=len(df_reshape), label='update pos'.ljust(30)) as bar:
         for _, reshape in df_reshape.iterrows():
             bar.update(1)
             pos_update(reshape)

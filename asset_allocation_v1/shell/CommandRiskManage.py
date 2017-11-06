@@ -446,7 +446,7 @@ def nav(ctx, optid, optlist):
         print tabulate(df_riskmgr, headers='keys', tablefmt='psql')
         return 0
     
-    with click.progressbar(length=len(df_riskmgr), label='update nav') as bar:
+    with click.progressbar(length=len(df_riskmgr), label='update nav'.ljust(30)) as bar:
         for _, riskmgr in df_riskmgr.iterrows():
             bar.update(1)
             nav_update(riskmgr)

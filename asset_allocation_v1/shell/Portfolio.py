@@ -20,6 +20,7 @@ import scipy.optimize
 
 
 from Const import datapath
+from util.xdebug import dd
 
 logger = logging.getLogger(__name__)
 
@@ -251,7 +252,6 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
         loop_num = bootstrap_count
 
     # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
-        
     process_indexs = [[] for i in range(0, cpu_count)]
 
     #print process_indexs
@@ -261,6 +261,7 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
     random.shuffle(day_indexs)
     #print day_indexs
     day_indexs = np.array(day_indexs)
+
 
     day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
     for m in range(0, len(day_indexs)):
