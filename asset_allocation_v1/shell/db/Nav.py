@@ -146,14 +146,14 @@ class Nav(object):
     def load_tdate_and_nav(self, gids, sdate=None, edate=None):
         result = {}
         index = pd.DatetimeIndex(pd.date_range(sdate, edate))
+        db = database.connection('base')
+        tdate = Table('trade_dates', MetaData(bind=db), autoload=True)
         for xtype, v in groupby(gids, key = lambda x: x / 10000000):
             if xtype == 3:
                 #
                 # 基金资产
                 #
-                db = database.connection('base')
                 t = self.tabs.setdefault(xtype, Table('ra_fund_nav', MetaData(bind=db), autoload=True))
-
                 columns = [
                     t.c.ra_fund_id.label('ra_asset_id'), 
                     t.c.ra_nav,
@@ -162,13 +162,19 @@ class Nav(object):
                     t.c.ra_date,
                 ]
 
-                s = select(columns).where(t.c.ra_fund_id.in_(gids)).where(t.c.ra_mask.op('&')(0x01) == 0)
+                # s = select(columns).where(t.c.ra_fund_id.in_(gids)).where(t.c.ra_mask.op('&')(0x01) == 0) 
+                s = select(columns) \
+                    .select_from(t.join(tdate, t.c.ra_date == tdate.c.td_date)) \
+                    .where(t.c.ra_fund_id.in_(gids))
+                
                 if sdate is not None:
                     s = s.where(t.c.ra_date >= sdate)
                 if edate is not None:
                     s = s.where(t.c.ra_date <= edate)
  
                 df = pd.read_sql(s, db, index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
+                # if 33027398 in gids:
+                #     dd(df.loc[33027398])
 
                 # pdb.set_trace()
                 if not df.loc[df['ra_type'] == 3, 'ra_nav'].empty:
