@@ -8,6 +8,7 @@ import os
 import sys
 import click
 import time
+import itertools
 import pandas as pd
 import Const
 from Const import datapath
@@ -33,6 +34,7 @@ import CommandAnalysis
 
 from util import ProgressBar
 from util.xdebug import dd
+from db import *
 
 
 logger = logging.getLogger(__name__)
@@ -128,8 +130,9 @@ def test(ctx):
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace existed instance')
 @click.option('--riskctrl/--no-riskctrl', 'optriskctrl', default=True, help=u'no riskmgr for highlow')
 @click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
+@click.option('--id', 'optid', help=u'specify which id to run (only works for new framework)')
 @click.pass_context
-def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, opthigh, optlow, optratio, optonline, optreplace, optriskctrl, optnew):
+def run(ctx, optid, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, opthigh, optlow, optratio, optonline, optreplace, optriskctrl, optnew):
     '''run all command in batch
     '''
     if optpool:
@@ -146,17 +149,7 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
         ctx.invoke(CommandRiskManage.riskmgr, optonline=optonline)
 
     if optnew:
-        if optmarkowtiz:
-            ctx.invoke(CommandMarkowitz.markowitz, optnew=True)
-
-        if opthighlow:
-            ctx.invoke(CommandHighlow.highlow, optnew=True)
-
-        if optportfolio:
-            ctx.invoke(CommandPortfolio.portfolio, optnew=True)
-
-        if optwavelet:
-            ctx.invoke(CommandWavelet.filtering, optnew=True)
+        run_new(ctx, optid=optid, optmarkowtiz=optmarkowtiz, opthighlow=opthighlow, optportfolio=optportfolio, optwavelet=optwavelet)
 
     else:
         if optmarkowtiz:
@@ -187,6 +180,57 @@ def run(ctx, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlo
         if optwavelet:
             ctx.invoke(CommandWavelet.filtering)
 
+def run_new(ctx, optid, optmarkowtiz, opthighlow, optportfolio, optwavelet):
+    '''
+    new framework batchly
+    '''
+
+    ht = {}
+    if optid is not None:
+        gids = [s.strip() for s in optid.split(',')]
+
+        df_portfolio = asset_ra_portfolio.load(gids)
+
+        gids = gids + df_portfolio['ra_ratio_id'].tolist()
+
+        df_highlow = asset_mz_highlow.load(gids)
+
+        gids = gids + df_highlow['mz_markowitz_id'].tolist() + df_highlow['mz_high_id'].tolist() + df_highlow['mz_low_id'].tolist()
+
+        df_markowitz = asset_mz_markowitz.load(gids)
+
+        gids = gids + df_markowitz['globalid'].tolist()
+
+        gids = [x for x in list(set(gids)) if x is not None and x != ""]
+
+        gids = sorted(gids)
+
+        ht = {k:list(v) for k,v in itertools.groupby(sorted(gids), key=lambda x: x[0:x.find('.')])}
+            
+    if optmarkowtiz:
+        if ht.get('MZ') is None:
+            ctx.invoke(CommandMarkowitz.markowitz, optnew=True)
+        else:
+            tmpid =','.join(ht.get('MZ'))
+            ctx.invoke(CommandMarkowitz.markowitz, optnew=True, optid=tmpid)
+            
+    if opthighlow:
+        if ht.get('HL') is None:
+            ctx.invoke(CommandHighlow.highlow, optnew=True)
+        else:
+            tmpid =','.join(ht.get('HL'))
+            ctx.invoke(CommandHighlow.highlow, optnew=True, optid=tmpid)
+
+    if optportfolio:
+        if ht.get('PO') is None:
+            ctx.invoke(CommandPortfolio.portfolio, optnew=True)
+        else:
+            tmpid =','.join(ht.get('PO'))
+            ctx.invoke(CommandPortfolio.portfolio, optnew=True, optid=tmpid)
+
+    if optwavelet:
+        ctx.invoke(CommandWavelet.filtering, optnew=True)
+    
 @roboadvisor.command()
 @click.option('--from', 'optfrom', default=True, help=u'--from id')
 @click.option('--to', 'optto', default=True, help=u'--to id')
