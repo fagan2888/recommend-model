@@ -244,7 +244,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             data = []
             for day, row in df_ratio.iterrows():
                 for asset_id, ratio in row.iteritems():
-                    if (ratio <= 0):
+                    if (ratio <= 0.000099):
                         continue
                     # 选择基金
                     (pool_id, df_fund) = pools[asset_id]
@@ -256,6 +256,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             df_raw = pd.DataFrame(data, columns=['ra_date', 'ra_pool_id', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_ratio'])
             df_raw.set_index(['ra_date', 'ra_pool_id', 'ra_fund_id'], inplace=True)
 
+            #
+            # 可能有两个资产配置了同一个基金池
+            #
+            df_raw = df_raw.groupby(level=(0,1,2)).agg({'ra_fund_code':'first', 'ra_fund_type':'first', 'ra_fund_ratio':'sum'})
+            
             #
             # 导入数据: portfolio_alloc
             #
@@ -315,11 +320,17 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
 
 def choose_fund_avg(day, pool_id, ratio, df_fund):
     # 比例均分
+    # if day.strftime("%Y-%m-%d") == '2013-11-08' and pool_id == '11310100':
+    #     dd(df_fund)
+
     if not df_fund.empty:
         fund_ratio = ratio / len(df_fund)
     else:
         fund_ratio = 0
 
+    # if day.strftime("%Y-%m-%d") == '2013-11-08' and pool_id == '11310100':
+    #     dd([(day, pool_id, fund_id, x['ra_fund_code'], x['ra_fund_type'], fund_ratio) for fund_id, x in df_fund.iterrows()])
+        
     return [(day, pool_id, fund_id, x['ra_fund_code'], x['ra_fund_type'], fund_ratio) for fund_id, x in df_fund.iterrows()]
 
 @portfolio.command()
@@ -411,7 +422,9 @@ def pos_update(portfolio, alloc):
         return
 
     if df_raw is None:
-        return 
+        return
+
+    df_raw.sort_index(inplace=True)
     
     df_tmp = df_raw[['ra_fund_ratio']]
 
@@ -505,7 +518,7 @@ def kun(portfolio, alloc):
     data = []
     for day, row in df_ratio.iterrows():
         for asset_id, ratio in row.iteritems():
-            if (ratio <= 0):
+            if (ratio <= 0.000099):
                 continue
             # 选择基金
             #print type(asset_id), asset_id,  pools.keys()
@@ -517,6 +530,11 @@ def kun(portfolio, alloc):
     #print data
     df_raw = pd.DataFrame(data, columns=['ra_date', 'ra_pool_id', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_ratio'])
     df_raw.set_index(['ra_date', 'ra_pool_id', 'ra_fund_id'], inplace=True)
+    df_raw.sort_index(inplace=True)
+    #
+    # 可能有两个资产配置了同一个基金池
+    #
+    df_raw = df_raw.groupby(level=(0,1,2)).agg({'ra_fund_code':'first', 'ra_fund_type':'first', 'ra_fund_ratio':'sum'})
 
     #
     # 导入数据: portfolio_pos
@@ -524,7 +542,7 @@ def kun(portfolio, alloc):
     #print df_raw.head()
     df_raw.loc[df_raw['ra_fund_ratio'] < 0.00009999, 'ra_fund_ratio'] = 0 # 过滤掉过小的份额
     df_raw['ra_fund_ratio'] = df_raw['ra_fund_ratio'].round(4)            # 四舍五入到万分位
-
+ 
     return df_raw
 
 @portfolio.command()
