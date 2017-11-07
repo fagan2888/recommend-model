@@ -625,28 +625,28 @@ class TradeNav(object):
             #
             # 基金分红：派息
             #
-            
-            df = self.df_share.loc[[fund_id]]
-            #
-            # 现金分红
-            #
-            mask = (df['div_mode'] == 0)
-            if mask.any():
-                self.cash_bounused = df.loc[mask, 'amount_bonusing'].sum()
+            if fund_id in self.df_share.index.get_level_values(0):
+                df = self.df_share.loc[[fund_id]]
                 #
-                # 清除现金分红上下文
+                # 现金分红
                 #
-                df.loc[mask, 'share_bonusing']  = 0
-                df.loc[mask, 'amount_bonusing'] = 0
+                mask = (df['div_mode'] == 0)
+                if mask.any():
+                    self.cash_bounused = df.loc[mask, 'amount_bonusing'].sum()
+                    #
+                    # 清除现金分红上下文
+                    #
+                    df.loc[mask, 'share_bonusing']  = 0
+                    df.loc[mask, 'amount_bonusing'] = 0
 
-            #
-            # 红利再投, 确认红利再投份额
-            #
-            if argv['order_dividend'] in df.index.get_level_values(1):
-                df.loc[(fund_id, argv['order_dividend']), 'share'] = df.loc[(fund_id, argv['order_dividend']), 'share_buying']
-                df.loc[(fund_id, argv['order_dividend']), 'share_buying'] = 0
-            
-            self.df_share.loc[[fund_id]] = df
+                #
+                # 红利再投, 确认红利再投份额
+                #
+                if argv['order_dividend'] in df.index.get_level_values(1):
+                    df.loc[(fund_id, argv['order_dividend']), 'share'] = df.loc[(fund_id, argv['order_dividend']), 'share_buying']
+                    df.loc[(fund_id, argv['order_dividend']), 'share_buying'] = 0
+
+                self.df_share.loc[[fund_id]] = df
 
         elif op == 18:
             #
