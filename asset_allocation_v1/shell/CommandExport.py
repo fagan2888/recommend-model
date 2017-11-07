@@ -442,3 +442,67 @@ def investor_month_risk(ctx, optlist, optstartid, optendid, optmonth, output, op
         df_result.to_csv(path)
 
     print "export month_risk to file %s" % (path)
+
+
+@export.command()
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--start-id', 'optstartid', help=u'start investor id to export')
+@click.option('--end-id', 'optendid', help=u'end investor id to export')
+@click.option('--start-date', 'optstartdate', help=u'start date to export')
+@click.option('--end-date', 'optenddate', help=u'end date to export')
+# @click.option('--tools', '-t', type=click.Choice(['tool1', 'tool2', 'tool3']), multiple=True)
+@click.option('--output', '-o', type=click.Path(), help=u'output file')
+@click.option('--excel/--no-excel', 'optexcel', default=False, help=u'export excel, default is csv')
+@click.pass_context
+def investor_week_risk(ctx, optlist, optstartid, optendid, optmonth, optstartdate, optenddate, output, optexcel):
+    '''run constant risk model
+    '''
+    import sys
+    # sys.setdefaultencoding() does not exist, here!
+    reload(sys)  # Reload does the trick!
+    sys.setdefaultencoding('UTF8')
+
+    db = database.connection('asset')
+
+
+    sql = "SELECT is_investor_id , is_date, is_amount FROM `is_investor_holding` WHERE 1 "
+    if optstartid is not None:
+        sql += " AND is_investor_id >= '%s' " % optstartid
+    if optendid is not None:
+        sql += " AND is_investor_id <= '%s' " % optendid
+    if optstartdate is not None:
+        sql += " AND is_date >= '%s' " % optendid
+    if optenddate is not None:
+        sql += " AND is_date <= '%s' " % optendid
+    sql += "ORDER BY is_investor_id, is_date"
+
+
+    df_result = pd.read_sql(sql, db,  index_col=['is_investor_id', 'is_month', 'is_date'])
+    df_result = df_result.unstack('is_investor_id').pct_change().unstack('is_month').std().T.unstack('is_month') * np.sqrt(360)
+    df_result.index = df_result.index.droplevel(0)
+
+    if optexcel:
+        if output is not None:
+            path = output
+        else:
+            path = datapath('export-week_risk.xlsx')
+
+        writer = pd.ExcelWriter(path, options={'encoding':'utf-8'})
+        # df_result['is_date'] = df_result['is_date'].apply(lambda x: x.strftime("%Y-%m-%d"))
+        # df_result = df_result.rename(columns={'is_date':'日期', 'is_fund_code':'基金代码', 'ra_name':'基金名称', 'is_fund_ratio':'配置比例'})
+        # df_result.set_index(['日期', '基金代码'], inplace=True)
+        # df_result = df_result[['基金名称','配置比例']]
+        df_result = df_result.sort_index()
+        df_result.to_excel(writer, encoding='UTF-8')
+
+        # Close the Pandas Excel writer and output the Excel file.
+        writer.save()    
+    else:
+        if output is not None:
+            path = output
+        else:
+            path = datapath('export-week_risk.csv')
+
+        df_result.to_csv(path)
+
+    print "export month_risk to file %s" % (path)
