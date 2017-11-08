@@ -791,6 +791,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     # 加载资产
     #
     df_asset = asset_mz_markowitz_asset.load([markowitz_id])
+    #print df_asset
     df_asset.set_index(['mz_markowitz_asset_id'], inplace=True)
 
     df_asset = df_asset[['mz_upper_limit', 'mz_lower_limit', 'mz_sum1_limit', 'mz_sum2_limit']];

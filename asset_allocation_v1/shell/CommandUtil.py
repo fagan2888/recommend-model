@@ -375,7 +375,7 @@ def imp_markowitz(df):
     columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
     s = select(columns)
     s = s.where(markowitz_asset_t.c.mz_markowitz_id.in_(df_new.index.get_level_values(0).tolist()))
-    s = s.where(markowitz_asset_t.c.mz_markowitz_asset_id.in_(df_new.index.get_level_values(1).tolist()))
+    #s = s.where(markowitz_asset_t.c.mz_markowitz_asset_id.in_(df_new.index.get_level_values(1).tolist()))
     df_old = pd.read_sql(s, db, index_col = df_new.index.names)
     database.batch(db, markowitz_asset_t, df_new, df_old)
 
@@ -384,7 +384,7 @@ def imp_markowitz(df):
     columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
     s = select(columns)
     s = s.where(markowitz_argv_t.c.mz_markowitz_id.in_(df_new.index.get_level_values(0).tolist()))
-    s = s.where(markowitz_argv_t.c.mz_key.in_(df_new.index.get_level_values(1).tolist()))
+    #s = s.where(markowitz_argv_t.c.mz_key.in_(df_new.index.get_level_values(1).tolist()))
     df_old = pd.read_sql(s, db, index_col = df_new.index.names)
     database.batch(db, markowitz_argv_t, df_new, df_old)
 
