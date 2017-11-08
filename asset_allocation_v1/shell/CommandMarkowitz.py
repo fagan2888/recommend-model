@@ -18,16 +18,19 @@ import DBData
 import util_numpy as npu
 import Portfolio as PF
 from TimingWavelet import TimingWt
+import multiprocessing
+from multiprocessing import Manager
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_mz_markowitz, asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
+from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
+from util.xdebug import dd
 
 import traceback, code
 
@@ -35,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
+@click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.option('--name', 'optname', default=None, help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
@@ -52,19 +56,24 @@ logger = logging.getLogger(__name__)
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
-def markowitz(ctx, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
+def markowitz(ctx, optnew, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
-        if optfull is False:
-            ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optwavelet = optwavelet, optwaveletfilternum = optwaveletfilternum, short_cut=short_cut, assets=assets)
+        if optnew:
+            ctx.invoke(pos, optid=optid)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
-            ctx.invoke(nav, optid=optid)
-            ctx.invoke(turnover, optid=optid)
+            if optfull is False:
+                ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optwavelet = optwavelet, optwaveletfilternum = optwaveletfilternum, short_cut=short_cut, assets=assets)
+                ctx.invoke(nav, optid=optid)
+                ctx.invoke(turnover, optid=optid)
+            else:
+                ctx.invoke(nav, optid=optid)
+                ctx.invoke(turnover, optid=optid)
     else:
         # click.echo('I am about to invoke %s' % ctx.invoked_subcommand)
         pass
@@ -265,11 +274,11 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
             assets = {
                 '120000001':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
                 '120000002':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
-                '120000013':  {'sum1': 0.0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普500指数
-                '120000015':  {'sum1': 0.0, 'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #恒生指数修型
+                #'120000013':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #标普500指数
+                #'120000015':  {'sum1': 0.65, 'sum2' : 0,   'upper': 0.35, 'lower': 0.0}, #恒生指数修型
                 '120000014':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #黄金指数修型
-                #'ERI000002':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价恒生指数
-                #'ERI000001':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价标普500指数
+                'ERI000002':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价恒生指数
+                'ERI000001':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价标普500指数
                 # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
                 # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
                 # 120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
@@ -306,14 +315,17 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
             }
 
+    today = datetime.now()
     if optname is None:
         optname = u'马克维茨%s(实验)' % today.strftime("%m%d")
 
     bootstrap = optbootcount if optbootstrap else None
 
     if optalgo == 'average':
+        algo, risk = 1, 0.1
         df = average_days(startdate, enddate, assets)
     else:
+        algo, risk = 3, 1.0
         df = markowitz_days(
             startdate, enddate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=bootstrap, cpu_count=optcpu, wavelet = optwavelet, wavelet_filter_num = optwaveletfilternum)
@@ -327,6 +339,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     mz_markowitz        = Table('mz_markowitz', metadata, autoload=True)
+    mz_markowitz_alloc  = Table('mz_markowitz_alloc', metadata, autoload=True)
     mz_markowitz_asset  = Table('mz_markowitz_asset', metadata, autoload=True)
     mz_markowitz_pos    = Table('mz_markowitz_pos', metadata, autoload=True)
     mz_markowitz_nav    = Table('mz_markowitz_nav', metadata, autoload=True)
@@ -349,6 +362,13 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         'created_at': func.now(), 'updated_at': func.now()
     }
     mz_markowitz.insert(row).execute()
+    # 导入数据: markowitz_alloc
+    row = {
+        'globalid': optid, 'mz_markowitz_id': optid, 'mz_type':opttype,
+        'mz_name': optname, 'mz_algo': algo, 'mz_risk': risk,
+        'created_at': func.now(), 'updated_at': func.now()
+    }
+    mz_markowitz_alloc.insert(row).execute()
 
     #
     # 导入数据: markowitz_asset
