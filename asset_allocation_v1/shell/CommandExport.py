@@ -303,7 +303,7 @@ def investor_pos(ctx, optlist, optstartid, optendid, optmonth, output):
     df_investor = pd.read_sql(s, db, index_col=['globalid'])
 
     if df_investor.empty:
-        click.echo(click.style("no investor found, abort!" % (optid), fg='yellow'))
+        #click.echo(click.style("no investor found, abort!" % (optid), fg='yellow'))
         return
 
     # Create a Pandas Excel writer using XlsxWriter as the engine.
@@ -488,7 +488,7 @@ def investor_month_risk(ctx, optlist, optstartid, optendid, optmonth, output, op
 @click.option('--output', '-o', type=click.Path(), help=u'output file')
 @click.option('--excel/--no-excel', 'optexcel', default=False, help=u'export excel, default is csv')
 @click.pass_context
-def investor_week_risk(ctx, optlist, optstartid, optendid, optmonth, optstartdate, optenddate, output, optexcel):
+def investor_week_risk(ctx, optlist, optstartid, optendid, optstartdate, optenddate, output, optexcel):
     '''run constant risk model
     '''
     import sys
@@ -505,15 +505,16 @@ def investor_week_risk(ctx, optlist, optstartid, optendid, optmonth, optstartdat
     if optendid is not None:
         sql += " AND is_investor_id <= '%s' " % optendid
     if optstartdate is not None:
-        sql += " AND is_date >= '%s' " % optendid
+        sql += " AND is_date >= '%s' " % optstartdate
     if optenddate is not None:
-        sql += " AND is_date <= '%s' " % optendid
+        sql += " AND is_date <= '%s' " % optenddate
     sql += "ORDER BY is_investor_id, is_date"
 
 
-    df_result = pd.read_sql(sql, db,  index_col=['is_investor_id', 'is_month', 'is_date'])
-    df_result = df_result.unstack('is_investor_id').pct_change().unstack('is_month').std().T.unstack('is_month') * np.sqrt(360)
-    df_result.index = df_result.index.droplevel(0)
+    df_result = pd.read_sql(sql, db,  index_col=['is_investor_id', 'is_date'])
+    df_result = df_result.unstack(0).pct_change().fillna(0.0)
+    df_result = df_result.std() * (360 ** 0.5)
+
 
     if optexcel:
         if output is not None:
@@ -539,4 +540,4 @@ def investor_week_risk(ctx, optlist, optstartid, optendid, optmonth, optstartdat
 
         df_result.to_csv(path)
 
-    print "export month_risk to file %s" % (path)
+    print "export week_risk to file %s" % (path)
