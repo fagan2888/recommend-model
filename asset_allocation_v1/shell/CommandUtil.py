@@ -43,8 +43,8 @@ def imp_portfolio(ctx, optpath):
 
     all_portfolio_df = pd.read_csv(optpath.strip(), parse_dates = ['start_date', 'end_date'], dtype = {'asset_id':str})
     imp_markowitz(all_portfolio_df)
-    imp_highlow(all_portfolio_df)
-    imp_portf(all_portfolio_df)
+    #imp_highlow(all_portfolio_df)
+    #imp_portf(all_portfolio_df)
 
 
 def imp_portf(df):
@@ -255,7 +255,7 @@ def imp_highlow(df):
     df_new = highlow_alloc_df
     columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
     s = select(columns)
-    s = s.where(highlow_alloc_t.c.globalid.in_(df_new.index.tolist()))
+    s = s.where(highlow_alloc_t.c.mz_highlow_id.in_(df_new['mz_highlow_id'].ravel()))
     df_old = pd.read_sql(s, db, index_col = [df_new.index.name])
     database.batch(db, highlow_alloc_t, df_new, df_old)
 
@@ -363,9 +363,11 @@ def imp_markowitz(df):
 
 
     df_new = markowitz_alloc_df
+    #print df_new
     columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
     s = select(columns)
-    s = s.where(markowitz_alloc_t.c.globalid.in_(df_new.index.tolist()))
+    s = s.where(markowitz_alloc_t.c.mz_markowitz_id.in_(df_new['mz_markowitz_id'].ravel()))
+    #print s.compile(compile_kwargs={"literal_binds": True})
     df_old = pd.read_sql(s, db, index_col = [df_new.index.name])
     database.batch(db, markowitz_alloc_t, df_new, df_old)
 

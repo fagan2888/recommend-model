@@ -54,7 +54,7 @@ def connection(key):
     if key in uris:
         uri = uris[key]
         con = create_engine(uri)
-        # con.echo = True
+        #con.echo = True
         connections[key] = con
         return con
 
@@ -89,7 +89,9 @@ def batch(db, table, df_new, df_old, timestamp=True):
     index_delete = df_old.index.difference(df_new.index)
     index_update = df_new.index.intersection(df_old.index)
 
-
+    #print df_new.index
+    #print df_old.index
+    #print index_delete
     #
     # 我们首先计算需要更新的条目个数, 因为更新的性能很差, 所以, 如果需
     # 要更新的条目过多(>50), 则采用删除+插入的批量处理方式
@@ -119,11 +121,15 @@ def batch(db, table, df_new, df_old, timestamp=True):
         if len(df_new.index) >= 1:
             logger.info("delete %s (%5d records) and reinsert (%5d records): %s " % (table.name, len(df_old.index), len(df_new.index), df_new.index[0]))
     else:
-
         if len(index_delete):
             keys = [table.c.get(c) for c in df_new.index.names]
             for segment in chunks(index_delete.tolist(), 500):
-                table.delete(tuple_(*keys).in_(segment)).execute()
+                if len(df_update.index.names) == 1:
+                    s = table.delete(keys[0].in_(segment))
+                else:
+                    s = table.delete(tuple_(*keys).in_(segment))
+                #print s.compile(compile_kwargs={"literal_binds": True})
+                s.execute()
             #table.delete(tuple_(*keys).in_(index_delete.tolist())).execute()
 
             if len(index_delete) > 1:
