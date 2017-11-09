@@ -43,8 +43,8 @@ def imp_portfolio(ctx, optpath):
 
     all_portfolio_df = pd.read_csv(optpath.strip(), parse_dates = ['start_date', 'end_date'], dtype = {'asset_id':str})
     imp_markowitz(all_portfolio_df)
-    #imp_highlow(all_portfolio_df)
-    #imp_portf(all_portfolio_df)
+    imp_highlow(all_portfolio_df)
+    imp_portf(all_portfolio_df)
 
 
 def imp_portf(df):

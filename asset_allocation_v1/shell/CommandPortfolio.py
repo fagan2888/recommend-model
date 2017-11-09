@@ -472,8 +472,8 @@ def kun(portfolio, alloc):
     if df_ratio.empty:
         click.echo(click.style("empty highlow_pos [%s] dected, will abort!" % gid, fg="yellow"))
         return None
-        
-    #print df_ratio
+       
+
     # print df_ratio.sum(axis=1)
     if '11310100' not in df_ratio.columns:
         df_ratio['11310100'] = 1 - df_ratio.sum(axis=1)
@@ -522,6 +522,7 @@ def kun(portfolio, alloc):
                 continue
             # 选择基金
             #print type(asset_id), asset_id,  pools.keys()
+            #print pools
             (pool_id, df_fund) = pools[asset_id]
             segments = choose_fund_avg(day, pool_id, ratio, df_fund.loc[day])
             #if int(risk * 10) == 1:
@@ -542,7 +543,8 @@ def kun(portfolio, alloc):
     #print df_raw.head()
     df_raw.loc[df_raw['ra_fund_ratio'] < 0.00009999, 'ra_fund_ratio'] = 0 # 过滤掉过小的份额
     df_raw['ra_fund_ratio'] = df_raw['ra_fund_ratio'].round(4)            # 四舍五入到万分位
- 
+
+    #print df_raw
     return df_raw
 
 @portfolio.command()
@@ -597,11 +599,10 @@ def nav_update_alloc(portfolio, risks, fee, debug, enddate):
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         for _, alloc in bar:
             nav_update(alloc, fee, debug, enddate)
-
         '''
         processes = []
         for _, alloc in bar:
-            nav_update(alloc, fee, debug, enddate)
+            #nav_update(alloc, fee, debug, enddate)
             p = multiprocessing.Process(target = nav_update, args = (alloc, fee, debug, enddate,))
             processes.append(p)
             p.start()
