@@ -46,6 +46,7 @@ if __name__ == '__main__':
     print df
     '''
 
+
     dfs = []
     for i in range(0, 10):
         sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
@@ -62,11 +63,15 @@ if __name__ == '__main__':
     dfs.append(df)
     df = pd.concat(dfs, axis = 1)
     df = df[df.index >= '2016-08-01']
-    df = df[df.index <= '2017-10-18']
+    #df = df[df.index <= '2017-10-18']
     df = df / df.iloc[0]
     #print df
     df.to_csv('./tmp/online_nav.csv')
 
+
+
+
+    '''
     mdf = df.resample('M').last()
     dates = []
     dates.append(df.index[0])
@@ -102,5 +107,5 @@ if __name__ == '__main__':
     #print df
 
 
-
     #df.to_csv('./tmp/online_nav.csv')
+    '''
