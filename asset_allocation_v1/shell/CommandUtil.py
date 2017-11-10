@@ -506,3 +506,24 @@ def filter_fund_by_list_to_pool_sample(ctx, optfundtype, optinpath, optpoolid):
 @click.pass_context
 def cp(ctx, optfrom, optto, optname):
     pass
+
+
+@util.command()
+@click.option('--highlow-id', 'optid', default=True, help=u'highlow id')
+@click.option('--date', 'optdate', default=True, help=u'date')
+@click.pass_context
+def export_highlow_pos(ctx, optid, optdate):
+
+    db = database.connection('asset')
+
+    t = Table('mz_highlow_pos', MetaData(bind=db), autoload=True)
+
+    columns = [
+           t.c.mz_asset_id,
+           t.c.mz_ratio
+    ]
+
+    s = select(columns).where(t.c.mz_date == optdate.strip()).where(t.c.mz_highlow_id == optid.strip())
+    df = pd.read_sql(s, db, index_col = ['mz_asset_id'])
+
+    df.to_csv('pos.csv')

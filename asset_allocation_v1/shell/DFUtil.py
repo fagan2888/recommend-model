@@ -248,6 +248,30 @@ def filter_by_turnover(df, turnover):
                 pass
     return pd.DataFrame(result).T
 
+
+def filter_by_turnover_and_riskmgr(df, turnover):
+    result = {}
+    sr_last=None
+    for k, v in df.iterrows():
+        vv = v.fillna(0)
+        if sr_last is None:
+            result[k] = v
+            sr_last = vv
+        else:
+            xsum = (vv - sr_last).abs().sum()
+            _vv = vv.groupby(level = [0,1]).sum()
+            _sr_last = sr_last.groupby(level = [0,1]).sum()
+            _sr_last = _sr_last.loc[_vv[_vv == 0.0].index]
+            _sr_last = _sr_last[_sr_last >= 0.05]
+            if xsum >= turnover or len(_sr_last) > 0.0:
+                result[k] = v
+                sr_last = vv
+            else:
+                #print "filter by turnover:", v.to_frame('ratio')
+                pass
+    return pd.DataFrame(result).T
+
+
 def portfolio_import(df):
     pass;
 
