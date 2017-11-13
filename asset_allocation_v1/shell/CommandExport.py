@@ -274,7 +274,7 @@ def investor_pos(ctx, optlist, optstartid, optendid, optmonth, output):
 
     # Create a Pandas Excel writer using XlsxWriter as the engine.
     # writer = pd.ExcelWriter(path, engine='xlsxwriter', options={'encoding':'utf-8'})
-    writer = pd.ExcelWriter(path, options={'encoding':'utf-8'})
+    #writer = pd.ExcelWriter(path, options={'encoding':'utf-8'})
     t1 = Table('is_investor_pos', metadata, autoload=True)
 
     columns = [
@@ -315,10 +315,11 @@ def investor_pos(ctx, optlist, optstartid, optendid, optmonth, output):
         dfs.append(df_result)
 
     df_result = pd.concat(dfs)
-    df_result.to_excel(writer, encoding = 'utf-8')
+    #df_result.to_excel(writer, encoding = 'utf-8')
+    df_result.to_csv(path ,encoding = 'gbk')
 
     # Close the Pandas Excel writer and output the Excel file.
-    writer.save()    
+    #writer.save()    
     print "export pos to file %s" % (path)
 
 @export.command()
