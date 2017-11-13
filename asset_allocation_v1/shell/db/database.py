@@ -56,7 +56,7 @@ def connection(key):
 
     if key in uris:
         uri = uris[key]
-        con = create_engine(uri)
+        con = create_engine(uri).connect()
         #con.echo = True
         connections[key] = con
         return con
