@@ -726,7 +726,6 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             sr = pd.Series()
     else:
 	asset_id = re.sub('\D','',asset_id)
-	#print asset_id
         if prefix == 'AP':
             #
             # 基金池资产
@@ -805,7 +804,6 @@ def pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu, csv):
 
         
 def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
-    
     markowitz_id = alloc['globalid']
     #
     # 加载资产
