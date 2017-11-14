@@ -724,6 +724,7 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         else:
             sr = pd.Series()
     else:
+	asset_id = re.sub('\D','',asset_id)
         if prefix == 'AP':
             #
             # 基金池资产
