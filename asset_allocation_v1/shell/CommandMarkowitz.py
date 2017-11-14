@@ -717,6 +717,7 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         else:
             sr = pd.Series()
     else:
+	asset_id = re.sub('\D','',asset_id)
         if prefix == 'AP':
             #
             # 基金池资产
@@ -759,8 +760,9 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 @click.option('--start-date', 'sdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'edate', help=u'end date to calc')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
+@click.option('--csv', 'csv', default='', help=u'path of file to read')
 @click.pass_context
-def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu):
+def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu, csv):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -780,19 +782,20 @@ def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu):
         return 0
 
     for _, markowitz in df_markowitz.iterrows():
-        pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu)
-
-def pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu):
+        pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu, csv)
+        
+def pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu, csv):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
     #print df_alloc
 
     for _, alloc in df_alloc.iterrows():
-        pos_update(markowitz, alloc, optappend, sdate, edate, optcpu)
+        pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv)
 
     click.echo(click.style("markowitz allocation complement! instance id [%s]" % (markowitz['globalid']), fg='green'))
 
-def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
+        
+def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
     markowitz_id = alloc['globalid']
     #
     # 加载资产
@@ -863,6 +866,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+    elif algo == 5:
+	df = pd.read_csv(csv, index_col=0, parse_dates=[0])
+	#df.columns = map(lambda x: 'FD.'+'0'*(6-len(str(x)))+str(x), df.columns)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
