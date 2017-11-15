@@ -2,8 +2,10 @@
 
 import os
 
-rf = 0.025 / 52
-annual_rf = 0.03
+#rf = 0
+#annual_rf = 0
+rf = 0.04 / 52
+annual_rf = 0.04
 
 
 hs300_code               = '000300.SH' #沪深300
