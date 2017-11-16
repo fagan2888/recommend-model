@@ -58,5 +58,4 @@ def save(gid, df):
 
     # 更新数据库
     # print df_new.head()
-    # print df_old.head()
     database.batch(db, t2, df, df_old, timestamp=False)
