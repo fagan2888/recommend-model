@@ -599,10 +599,9 @@ def nav_update_alloc(portfolio, risks, fee, debug, enddate):
             df_alloc.iterrows(), length=len(df_alloc.index),
             label=('update nav %-9s (%s)' % (portfolio['globalid'], feestr)).ljust(30),
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
-        for _, alloc in bar:
-            nav_update(alloc, fee, debug, enddate)
+        #for _, alloc in bar:
+        #    nav_update(alloc, fee, debug, enddate)
 
-        '''
         processes = []
         for _, alloc in bar:
             #nav_update(alloc, fee, debug, enddate)
@@ -612,7 +611,6 @@ def nav_update_alloc(portfolio, risks, fee, debug, enddate):
 
         for p in processes:
             p.join()
-        '''
 
 def nav_update(alloc, fee, debug, enddate):
     alloc_id = alloc['globalid']
