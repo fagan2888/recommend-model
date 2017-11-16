@@ -208,7 +208,6 @@ def run_new(ctx, optid, optmarkowtiz, opthighlow, optportfolio, optwavelet):
 
         ht = {k:list(v) for k,v in itertools.groupby(sorted(gids), key=lambda x: x[0:x.find('.')])}
  
-    print ht
     #sys.exit(0)
     if optmarkowtiz:
         if ht.get('MZ') is None:
