@@ -353,6 +353,7 @@ def imp_markowitz(df):
     markowitz_alloc_df =  pd.DataFrame(markowitz_alloc_data, columns = markowitz_alloc_columns)
     markowitz_alloc_df =  markowitz_alloc_df.set_index(markowitz_alloc_index)
 
+    print markowitz_alloc_df.head()
     markowitz_asset_df = pd.DataFrame(markowitz_asset_data, columns = markowitz_asset_columns)
     markowitz_asset_df = markowitz_asset_df.set_index(markowitz_asset_index)
 
