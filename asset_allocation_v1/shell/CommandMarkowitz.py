@@ -858,6 +858,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
+	df.to_csv('pos.csv')
     elif algo == 3:
         df = markowitz_days(
             sdate, edate, assets,
