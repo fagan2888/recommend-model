@@ -22,6 +22,7 @@ for date in data.index:
               + str(assetid) + ',"' + datetime.datetime.strftime(date,'%Y-%m-%d') + '",' \
               + str(data.ix[date,'price']) + ',' + str(data.ix[date,'rate']) + ')'
     cur_aa.execute(command)
+    print date
 
 cur_aa.close()
 conn_aa.commit()
