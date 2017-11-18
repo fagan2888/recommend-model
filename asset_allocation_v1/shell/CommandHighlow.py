@@ -639,7 +639,9 @@ def jiao(highlow, alloc):
     # 合并持仓
     #
     df = pd.concat([df_h, df_l], axis=1)
-
+    df = df.T
+    df = df.groupby(df.index).sum()
+    df = df.T
     return df
 
 def yao(highlow, alloc):
