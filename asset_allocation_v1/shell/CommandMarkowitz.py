@@ -517,7 +517,7 @@ def average_days(start_date, end_date, assets):
     return df
 
 
-def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, wavelet = False, wavelet_filter_num = 0):
+def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, wavelet = False, wavelet_filter_num = 0, csv=''):
     '''perform markowitz asset for days
     '''
     # 加载时间轴数据
@@ -552,7 +552,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
         q = manager.Queue()
         processes = []
         for indexs in process_adjust_indexs:
-            p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num,))
+            p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num, csv,))
             processes.append(p)
             p.start()
 
@@ -570,20 +570,31 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
                 # bar.update(1)
                 logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
                 # 高风险资产配置
-                data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
+                data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num, csv)
 
     return pd.DataFrame(data).T
 
 
-def m_markowitz_day(queue, days, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
+def m_markowitz_day(queue, days, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num, csv):
     for day in days:
-        sr = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
+        sr = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num, csv)
         queue.put((day, sr))
 
 
-def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
+def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num, csv):
     '''perform markowitz for single day
     '''
+    
+    if csv != '':
+	csvdata = pd.read_csv(csv, index_col=0, parse_dates=[0])
+	dateindex = pd.Series(csvdata.index)
+	maxdate = max(dateindex[dateindex<=day])
+	nofdindex = list(csvdata.ix[maxdate,csvdata.ix[maxdate,:].isnull()].index)
+	for fdindex in nofdindex:
+	    try:
+		assets.pop(fdindex)
+	    except:
+		pass
 
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
@@ -602,6 +613,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
             data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
+    print df_inc.index[-1]
 
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 
@@ -718,6 +730,7 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             sr = pd.Series()
     else:
 	asset_id = re.sub('\D','',asset_id)
+	#print asset_id
         if prefix == 'AP':
             #
             # 基金池资产
@@ -857,19 +870,18 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
     elif algo == 2:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False, csv=csv)
 	df.to_csv('pos.csv')
     elif algo == 3:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False, csv=csv)
     elif algo == 4:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num, csv=csv)
     elif algo == 5:
-	df = pd.read_csv(csv, index_col=0, parse_dates=[0])
-	#df.columns = map(lambda x: 'FD.'+'0'*(6-len(str(x)))+str(x), df.columns)
+	df = pd.read_csv(csv, index_col=0, parse_dates=[0]).fillna(0)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
