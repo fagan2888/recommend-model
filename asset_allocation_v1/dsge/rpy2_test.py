@@ -1,8 +1,9 @@
 from rpy2 import robjects
 from rpy2.robjects import FloatVector
-from rpy2.robjects.packages import importr
+from rpy2.robjects.packages import importr,
 from rpy2.robjects import numpy2ri
 import numpy as np
+
 numpy2ri.activate()
 stats = importr('stats')
 base = importr('base')

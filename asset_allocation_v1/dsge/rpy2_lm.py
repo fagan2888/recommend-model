@@ -1,8 +1,6 @@
-#!/home/yaojiahui/anaconda2/bin/python
-# coding=utf-8
-from rpy2 import robjects
-import FloatVector
+from rpy2.robjects import FloatVector
 from rpy2.robjects.packages import importr
+from rpy2 import robjects
 stats = importr('stats')
 base = importr('base')
 
@@ -12,10 +10,11 @@ group = base.gl(2, 10, 20, labels = ["Ctl","Trt"])
 weight = ctl + trt
 
 robjects.globalenv["weight"] = weight
-robjects.globalenv["group"] = grouplm_D9 = stats.lm("weight ~ group")
+robjects.globalenv["group"] = group
+lm_D9 = stats.lm("weight ~ group")
 print(stats.anova(lm_D9))
 
 # omitting the intercept
-lm_D90 = stats.lm("weight ~ group - 1")
+lm_D90 = stats.lm("weight ~ group")
 print(base.summary(lm_D90))
 
