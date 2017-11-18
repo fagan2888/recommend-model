@@ -86,8 +86,11 @@ def load_series(code, reindex=None, begin_date=None, end_date=None):
         t1.c.ra_nav_adjusted.label('nav'),
     ]
 
+    #s = select(columns) \
+    #    .where((t1.c.ra_code == code) | (t1.c.ra_fund_id == code))
+
     s = select(columns) \
-        .where((t1.c.ra_code == code) | (t1.c.ra_fund_id == code))
+        .where(t1.c.ra_code == code)
 
     # s = select(columns).where(t1.c.ra_fund_id == id_)
     if begin_date is not None:
