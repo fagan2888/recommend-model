@@ -780,17 +780,17 @@ def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu):
 
     for _, markowitz in df_markowitz.iterrows():
         pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu)
-        
+
 def pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
     #print df_alloc
-    
+
     for _, alloc in df_alloc.iterrows():
         pos_update(markowitz, alloc, optappend, sdate, edate, optcpu)
 
     click.echo(click.style("markowitz allocation complement! instance id [%s]" % (markowitz['globalid']), fg='green'))
-        
+
 def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     markowitz_id = alloc['globalid']
     #
@@ -821,9 +821,11 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     #load df old pos
     df_pos_old = asset_mz_markowitz_pos.load_raw(markowitz_id)
-
-    if optappend and len(df_pos_old) > 0:
-        sdate = df_pos_old.index[-1]
+    #print df_pos_old.tail()
+    if len(df_pos_old) <= 4:
+        optappend = False
+    elif optappend:
+        sdate = df_pos_old.index[-4]
         df_pos_old = df_pos_old.iloc[:-1,]
     else:
         pass
@@ -851,8 +853,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
 
 
-    if optappend:
-        df = pd.concat([df_pos_old, df]).fillna(0.0)
+    #if optappend:
+    #    df = pd.concat([df_pos_old, df]).fillna(0.0)
 
 
     db = database.connection('asset')
@@ -873,12 +875,18 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     #每四周做平滑
     df = df.rolling(window = 4, min_periods = 1).mean()
+    if optappend:
+        df = df.iloc[3:,:]
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     if turnover >= 0.01:
         df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
+
+    if optappend:
+        df = pd.concat([df_pos_old, df]).fillna(0.0)
+    #print df.tail()
 
     df.index.name = 'mz_date'
     df.columns.name='mz_markowitz_asset'
