@@ -602,6 +602,11 @@ def nav_update_alloc(portfolio, risks, fee, debug, enddate):
         #for _, alloc in bar:
         #    nav_update(alloc, fee, debug, enddate)
 
+        engine = database.connection('base')
+        engine.dispose()
+        engine = database.connection('asset')
+        engine.dispose()
+
         processes = []
         for _, alloc in bar:
             #nav_update(alloc, fee, debug, enddate)
