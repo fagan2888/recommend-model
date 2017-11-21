@@ -15,6 +15,10 @@ import re
 import Const
 
 from sqlalchemy import *
+from sqlalchemy import event
+from sqlalchemy import exc
+from sqlalchemy.engine import Engine as engine
+from sqlalchemy.pool import Pool
 from util.xlist import chunks
 from util.xdebug import dd
 
@@ -35,6 +39,8 @@ import base_ra_index
 import base_ra_index_nav
 import base_exchange_rate_index_nav
 import base_exchange_rate_index
+import MySQLdb
+from DBUtils.PooledDB import PooledDB
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +65,38 @@ def connection(key):
         return con
 
     return None
+
+
+@event.listens_for(engine, "connect")
+def connect(dbapi_connection, connection_record):
+    connection_record.info['pid'] = os.getpid()
+
+
+@event.listens_for(engine, "checkout")
+def checkout(dbapi_connection, connection_record, connection_proxy):
+    pid = os.getpid()
+    if connection_record.info['pid'] != pid:
+        connection_record.connection = connection_proxy.connection = None
+        raise exc.DisconnectionError(
+            "Connection record belongs to pid %s, "
+            "attempting to check out in pid %s" %
+            (connection_record.info['pid'], pid)
+        )
+
+@event.listens_for(Pool, "checkout")
+def ping_connection(dbapi_connection, connection_record, connection_proxy):
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("SELECT 1")
+    except:
+        # optional - dispose the whole pool
+        # instead of invalidating one at a time
+        # connection_proxy._pool.dispose()
+        # raise DisconnectionError - pool will try
+        # connecting again up to three times before raising.
+        raise exc.DisconnectionError()
+        cursor.close()
+
 
 def format(df, columns=[], fmter=None, kwcolumns=[]):
     if columns and fmter:

@@ -541,6 +541,12 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
         for i in range(0, len(adjust_index)):
            process_adjust_indexs[i % count].append(adjust_index[i])
 
+
+        engine = database.connection('base')
+        engine.dispose()
+        engine = database.connection('asset')
+        engine.dispose()
+
         manager = Manager()
         q = manager.Queue()
         processes = []

@@ -148,6 +148,7 @@ def run(ctx, optid, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, op
     if optriskmgr:
         ctx.invoke(CommandRiskManage.riskmgr, optonline=optonline)
 
+
     if optnew:
         run_new(ctx, optid=optid, optmarkowtiz=optmarkowtiz, opthighlow=opthighlow, optportfolio=optportfolio, optwavelet=optwavelet)
 
@@ -206,7 +207,8 @@ def run_new(ctx, optid, optmarkowtiz, opthighlow, optportfolio, optwavelet):
         gids = sorted(gids)
 
         ht = {k:list(v) for k,v in itertools.groupby(sorted(gids), key=lambda x: x[0:x.find('.')])}
-            
+ 
+    #sys.exit(0)
     if optmarkowtiz:
         if ht.get('MZ') is None:
             ctx.invoke(CommandMarkowitz.markowitz, optnew=True)
