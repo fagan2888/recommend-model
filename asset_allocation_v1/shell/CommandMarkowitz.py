@@ -792,6 +792,7 @@ def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu, 
         pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu, csv)
         
 def pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu, csv):
+
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
     #print df_alloc
