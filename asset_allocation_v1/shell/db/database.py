@@ -67,7 +67,7 @@ def connection(key):
 
     return None
 
-'''
+
 @event.listens_for(engine, "connect")
 def connect(dbapi_connection, connection_record):
     connection_record.info['pid'] = os.getpid()
@@ -97,7 +97,6 @@ def ping_connection(dbapi_connection, connection_record, connection_proxy):
         # connecting again up to three times before raising.
         raise exc.DisconnectionError()
         cursor.close()
-'''
 
 
 def format(df, columns=[], fmter=None, kwcolumns=[]):
