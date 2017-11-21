@@ -56,3 +56,5 @@ import base_fund_fee
 import base_fund_infos
 import base_fund_split
 
+import trade_ts_order
+import trade_ts_order_fund

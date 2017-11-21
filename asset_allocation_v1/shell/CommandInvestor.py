@@ -37,6 +37,7 @@ from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
 from db import *
+from isim import *
 from util.xdebug import dd
 
 import traceback, code
@@ -209,3 +210,75 @@ def turnover_update(investor):
     total_turnover = sr_turnover.sum()
 
     return total_turnover
+
+
+@investor.command()
+@click.option('--id', 'optid', help=u'ids of investor to update')
+@click.option('--type', 'opttype', default='9', help=u'type type(8:with fee; 9:without fee')
+@click.option('--fee/--no-fee', 'optfee', default=True, help=u'specify with/without fee for type 8')
+@click.option('--t0/--no-t0', 'optt0', default=False, help=u'specify use t+0 or not for type 8')
+@click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
+@click.pass_context
+def emulate(ctx, optid, optlist, opttype, optdebug, optfee, optt0, optenddate):
+    ''' calc pool nav and inc
+    '''
+    if optid is not None:
+        investors = [s.strip() for s in optid.split(',')]
+    else:
+        if 'investor' in ctx.obj:
+            investors = [str(ctx.obj['investor'])]
+        else:
+            investors = None
+
+    # types = [int(s.strip()) for s in opttype.split(',')]
+
+    if optenddate is not None:
+        enddate = pd.to_datetime(optenddate)
+    else:
+        enddate = None
+        
+    # df_investor = asset_is_investor.load(investors)
+
+    # if optlist:
+    #     df_investor['is_name'] = df_investor['is_name'].map(lambda e: e.decode('utf-8'))
+    #     print tabulate(df_investor, headers='keys', tablefmt='psql')
+    #     return 0
+
+    # for xtype in types:
+    #     with click.progressbar(
+    #         df_investor.iterrows(), length=len(df_investor.index),
+    #             label='update nav'.ljust(30),
+    #             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
+    #         for _, investor in bar:
+    #             nav_update(investor, xtype, optdebug, optfee, optt0, enddate)
+    for investor in investors:
+        emulate_update(investor, optdebug, optfee, optt0, enddate)
+     
+# def nav_update(alloc, fee, debug):
+def emulate_update(uid, debug, optfee, optt0, enddate):
+
+    # 加载仓位信息
+    df_ts_order = trade_ts_order.load(uid, [3, 4, 6])
+
+    if df_ts_order.empty:
+        click.echo(click.style("\nswarning: empty df_ts_order for user: %s, skiped!" % (uid), fg='yellow'))
+        return
+
+    investor = Investor.Investor(df_ts_order)
+
+    df_ts_order_fund = trade_ts_order_fund.load(uid)
+    if df_ts_order_fund.empty:
+        click.echo(click.style("\nswarning: empty df_ts_order_fund for user: %s, skiped!" % (uid), fg='yellow'))
+        return
+    
+    policy = Policy.Policy(df_ts_order_fund)    
+
+    emulator = InvestorShare.InvestorShare(investor, policy)
+
+    df = emulator.run()
+    
+    dd(df)
+
+
