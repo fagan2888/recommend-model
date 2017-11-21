@@ -130,9 +130,10 @@ def test(ctx):
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace existed instance')
 @click.option('--riskctrl/--no-riskctrl', 'optriskctrl', default=True, help=u'no riskmgr for highlow')
 @click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
+@click.option('--append/--no-append', 'optappend', default=False, help=u'append pos or not')
 @click.option('--id', 'optid', help=u'specify which id to run (only works for new framework)')
 @click.pass_context
-def run(ctx, optid, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, opthigh, optlow, optratio, optonline, optreplace, optriskctrl, optnew):
+def run(ctx, optid, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, opthighlow, optportfolio, startdate, enddate, optturnoverm, optturnoverp, optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, opthigh, optlow, optratio, optonline, optreplace, optriskctrl, optnew, optappend):
     '''run all command in batch
     '''
     if optpool:
@@ -150,7 +151,7 @@ def run(ctx, optid, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, op
 
 
     if optnew:
-        run_new(ctx, optid=optid, optmarkowtiz=optmarkowtiz, opthighlow=opthighlow, optportfolio=optportfolio, optwavelet=optwavelet)
+        run_new(ctx, optid=optid, optmarkowtiz=optmarkowtiz, opthighlow=opthighlow, optportfolio=optportfolio, optwavelet=optwavelet, optappend=optappend)
 
     else:
         if optmarkowtiz:
@@ -181,7 +182,7 @@ def run(ctx, optid, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, op
         if optwavelet:
             ctx.invoke(CommandWavelet.filtering)
 
-def run_new(ctx, optid, optmarkowtiz, opthighlow, optportfolio, optwavelet):
+def run_new(ctx, optid, optmarkowtiz, opthighlow, optportfolio, optwavelet, optappend):
     '''
     new framework batchly
     '''
@@ -207,15 +208,15 @@ def run_new(ctx, optid, optmarkowtiz, opthighlow, optportfolio, optwavelet):
         gids = sorted(gids)
 
         ht = {k:list(v) for k,v in itertools.groupby(sorted(gids), key=lambda x: x[0:x.find('.')])}
- 
+
     #sys.exit(0)
     if optmarkowtiz:
         if ht.get('MZ') is None:
-            ctx.invoke(CommandMarkowitz.markowitz, optnew=True)
+            ctx.invoke(CommandMarkowitz.markowitz, optnew=True, optappend=optappend)
         else:
             tmpid =','.join(ht.get('MZ'))
-            ctx.invoke(CommandMarkowitz.markowitz, optnew=True, optid=tmpid)
-            
+            ctx.invoke(CommandMarkowitz.markowitz, optnew=True, optid=tmpid, optappend=optappend)
+
     if opthighlow:
         if ht.get('HL') is None:
             ctx.invoke(CommandHighlow.highlow, optnew=True)
