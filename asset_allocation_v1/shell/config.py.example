@@ -38,5 +38,6 @@ db_portfolio_sta = {
 
 db_asset_uri = 'mysql://root:Mofang123@localhost/asset_allocation?charset=utf8&use_unicode=0'
 db_base_uri =  'mysql://root:Mofang123@localhost/mofang?charset=utf8&use_unicode=0'
+db_mapi_uri =  'mysql://root:Mofang123@localhost/mapi?charset=utf8&use_unicode=0'
 db_caihui_uri =  'mysql://koudai:Mofang123@rdsijnrreijnrre.mysql.rds.aliyuncs.com/caihui?charset=utf8&use_unicode=0'
 db_portfolio_sta_uri = 'mysql://root:Mofang123@localhost/portfolio_statistics?charset=utf8&use_unicode=0'
