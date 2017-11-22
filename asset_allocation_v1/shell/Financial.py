@@ -31,6 +31,11 @@ def efficient_frontier_spe(return_rate, bound, day, sum1 = 0.65, sum2 = 0.45):
     gold_mean = pd.read_csv('~/recommend_model/asset_allocation_v1/dsge/view/gold_mean_view.csv', index_col = 0, parse_dates = True) 
     sp500_mean = pd.read_csv('~/recommend_model/asset_allocation_v1/dsge/view/sp500_mean_view.csv', index_col = 0, parse_dates = True) 
     hsi_mean = pd.read_csv('~/recommend_model/asset_allocation_v1/dsge/view/hsi_mean_view.csv', index_col = 0, parse_dates = True) 
+    sh300_mean = sh300_mean.rolling(20).mean()
+    zz500_mean = zz500_mean.rolling(20).mean()
+    sp500_mean = sp500_mean.rolling(20).mean()
+    hsi_mean = hsi_mean.rolling(20).mean()
+    gold_mean = gold_mean.rolling(20).mean()
     asset_mean = [
         sh300_mean.loc[:day].iloc[-1,0], 
         zz500_mean.loc[:day].iloc[-1,0], 

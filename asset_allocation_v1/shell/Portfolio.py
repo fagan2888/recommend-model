@@ -226,7 +226,6 @@ def markowitz_r_spe(funddfr, bounds, day):
             final_ws = ws[j]
             final_sharp = sharp
     #print final_risk, final_return, final_ws, final_sharp
-    print day
     return final_risk, final_return, final_ws, final_sharp
 
 def m_markowitz(queue, random_index, df_inc, bound):
