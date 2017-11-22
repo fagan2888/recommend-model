@@ -50,6 +50,8 @@ uris = {
     'caihui': config.db_caihui_uri,
     'trade': config.db_trade_uri,
     'portfolio_sta': config.db_portfolio_sta_uri,
+    #'portfolio_sta': config.db_portfolio_sta_uri,
+    'mapi': config.db_mapi_uri,
 }
 
 connections = {}
@@ -143,9 +145,6 @@ def batch(db, table, df_new, df_old, timestamp=True):
         df_update = df1.loc[masks.any(axis=1)].copy()
     else:
         df_update = pd.DataFrame(columns=df_new.columns)
-
-
-
 
     if len(df_update) > 50:
         keys = [table.c.get(c) for c in df_old.index.names]
