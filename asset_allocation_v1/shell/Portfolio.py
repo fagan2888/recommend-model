@@ -218,18 +218,15 @@ def markowitz_r_spe(funddfr, bounds, day):
 
     risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds, day)
 
-    #for j in range(0, len(risks)):
-    #    sharp = (returns[j] - rf) / risks[j]
-    #    if sharp > final_sharp:
-    #        final_risk = risks[j]
-    #        final_return = returns[j]
-    #        final_ws = ws[j]
-    #        final_sharp = sharp
-    final_risk = risks
-    final_return = returns
-    final_ws = ws
-    final_sharp = (returns - rf) / risks
-
+    for j in range(0, len(risks)):
+        sharp = (returns[j] - rf) / risks[j]
+        if sharp > final_sharp:
+            final_risk = risks[j]
+            final_return = returns[j]
+            final_ws = ws[j]
+            final_sharp = sharp
+    #print final_risk, final_return, final_ws, final_sharp
+    print day
     return final_risk, final_return, final_ws, final_sharp
 
 def m_markowitz(queue, random_index, df_inc, bound):

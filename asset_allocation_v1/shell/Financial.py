@@ -40,7 +40,7 @@ def efficient_frontier_spe(return_rate, bound, day, sum1 = 0.65, sum2 = 0.45):
     ]
     pbar = matrix(asset_mean)
     
-    with open('~/recommend_model/asset_allocation_v1/dsge/view/corr_view.json', 'r') as f:
+    with open('./dsge/view/corr_view.json', 'r') as f:
         corr = cPickle.load(f)
     while True:
         S = corr.get(day.strftime('%Y-%m-%d')) 
@@ -53,8 +53,6 @@ def efficient_frontier_spe(return_rate, bound, day, sum1 = 0.65, sum2 = 0.45):
             break
 
     S = matrix(S)
-    print '##########################################################################################################'
-    print S
     '''
 
     asset_mean = np.mean(return_rate, axis = 1)
@@ -126,8 +124,6 @@ def efficient_frontier_spe(return_rate, bound, day, sum1 = 0.65, sum2 = 0.45):
     portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
     returns    = [ dot(pbar,x) for x in portfolios ]
     risks      = [ sqrt(dot(x, S*x)) for x in portfolios ]
-    print risks, returns, portfolios
-
 
     return risks, returns, portfolios
 
