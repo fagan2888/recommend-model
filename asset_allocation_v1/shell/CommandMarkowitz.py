@@ -596,9 +596,9 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
-    return markowitz_r(df_inc, assets, bootstrap, cpu_count)
+    return markowitz_r(df_inc, assets, bootstrap, cpu_count, day)
 
-def markowitz_r(df_inc, limits, bootstrap, cpu_count):
+def markowitz_r(df_inc, limits, bootstrap, cpu_count, day):
     '''perform markowitz
     '''
     bound = []
@@ -606,7 +606,7 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         bound.append(limits[asset])
 
     if bootstrap is None:
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound, day)
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 

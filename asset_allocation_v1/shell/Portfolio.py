@@ -196,7 +196,7 @@ def markowitz_r(funddfr, bounds):
     return final_risk, final_return, final_ws, final_sharp
 
 
-def markowitz_r_spe(funddfr, bounds):
+def markowitz_r_spe(funddfr, bounds, day):
 
     rf = Const.rf
 
@@ -216,22 +216,26 @@ def markowitz_r_spe(funddfr, bounds):
         return_rate.append(funddfr[code].values)
 
 
-    risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds)
+    risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds, day)
 
-    for j in range(0, len(risks)):
-        sharp = (returns[j] - rf) / risks[j]
-        if sharp > final_sharp:
-            final_risk = risks[j]
-            final_return = returns[j]
-            final_ws = ws[j]
-            final_sharp = sharp
+    #for j in range(0, len(risks)):
+    #    sharp = (returns[j] - rf) / risks[j]
+    #    if sharp > final_sharp:
+    #        final_risk = risks[j]
+    #        final_return = returns[j]
+    #        final_ws = ws[j]
+    #        final_sharp = sharp
+    final_risk = risks
+    final_return = returns
+    final_ws = ws
+    final_sharp = (returns - rf) / risks
 
     return final_risk, final_return, final_ws, final_sharp
 
 def m_markowitz(queue, random_index, df_inc, bound):
     for index in random_index:
         tmp_df_inc = df_inc.iloc[index]
-        risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound)
+        risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound, day)
         queue.put((risk, returns, ws, sharpe))
 
 

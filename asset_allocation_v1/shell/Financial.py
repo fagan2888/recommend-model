@@ -3,6 +3,8 @@
 
 import string
 import math
+import cPickle
+import pandas as pd
 from math import sqrt
 from cvxopt import matrix
 from cvxopt.blas import dot
@@ -14,15 +16,46 @@ import cvxopt
 from cvxopt import matrix, solvers
 from numpy import isnan
 from scipy import linalg
+from datetime import timedelta
 #import pylab
 #import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
+def efficient_frontier_spe(return_rate, bound, day, sum1 = 0.65, sum2 = 0.45):
 
     solvers.options['show_progress'] = False
 
     n_asset    =     len(return_rate)
+    sh300_mean = pd.read_csv('~/recommend_model/asset_allocation_v1/dsge/view/sh300_mean_view.csv', index_col = 0, parse_dates = True) 
+    zz500_mean = pd.read_csv('~/recommend_model/asset_allocation_v1/dsge/view/zz500_mean_view.csv', index_col = 0, parse_dates = True) 
+    gold_mean = pd.read_csv('~/recommend_model/asset_allocation_v1/dsge/view/gold_mean_view.csv', index_col = 0, parse_dates = True) 
+    sp500_mean = pd.read_csv('~/recommend_model/asset_allocation_v1/dsge/view/sp500_mean_view.csv', index_col = 0, parse_dates = True) 
+    hsi_mean = pd.read_csv('~/recommend_model/asset_allocation_v1/dsge/view/hsi_mean_view.csv', index_col = 0, parse_dates = True) 
+    asset_mean = [
+        sh300_mean.loc[:day].iloc[-1,0], 
+        zz500_mean.loc[:day].iloc[-1,0], 
+        gold_mean.loc[:day].iloc[-1,0], 
+        sp500_mean.loc[:day].iloc[-1,0], 
+        hsi_mean.loc[:day].iloc[-1,0], 
+    ]
+    pbar = matrix(asset_mean)
+    
+    with open('~/recommend_model/asset_allocation_v1/dsge/view/corr_view.json', 'r') as f:
+        corr = cPickle.load(f)
+    while True:
+        S = corr.get(day.strftime('%Y-%m-%d')) 
+        if S is None:
+            day = day - timedelta(1)
+            S = corr.get(day.strftime('%Y-%m-%d')) 
+            if S is not None:
+                break
+        else:
+            break
+
+    S = matrix(S)
+    print '##########################################################################################################'
+    print S
+    '''
 
     asset_mean = np.mean(return_rate, axis = 1)
     #print asset_mean
@@ -37,6 +70,7 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
     #S = l2
 
     pbar       =     matrix(asset_mean)
+    '''
 
     #
     # 设置限制条件, 闲置条件的意思
@@ -92,6 +126,7 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
     portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
     returns    = [ dot(pbar,x) for x in portfolios ]
     risks      = [ sqrt(dot(x, S*x)) for x in portfolios ]
+    print risks, returns, portfolios
 
 
     return risks, returns, portfolios

@@ -45,15 +45,16 @@ robjects.r('''
             #var_f = predict(var2c, n.ahead = fn, ci = 0.95)
             var_f_y1 = var_f$fcst$y1[1]
             var_f_y2 = var_f$fcst$y2[1]
-            var_f_y3 = var_f$fcst$y3[1]
-            var_f_y4 = var_f$fcst$y4[1]
-            var_f_y5 = var_f$fcst$y5[1]
-            result = 1:5
+            #var_f_y3 = var_f$fcst$y3[1]
+            #var_f_y4 = var_f$fcst$y4[1]
+            #var_f_y5 = var_f$fcst$y5[1]
+            #result = 1:5
+            result = 1:2
             result[1] = var_f_y1
             result[2] = var_f_y2
-            result[3] = var_f_y3
-            result[4] = var_f_y4
-            result[5] = var_f_y5
+            #result[3] = var_f_y3
+            #result[4] = var_f_y4
+            #result[5] = var_f_y5
             
             return(result)
             }
@@ -160,6 +161,30 @@ def train_sh300_mean_days(data, fn, look_back, start_date = '2010-01-01'):
         columns = ['sh300_mean_view'])
     df.to_csv('./view/sh300_mean_view.csv', index_label = 'date')
 
+def train_sp500_gold_mean_days(data, fn, look_back, start_date = '2010-01-01'):
+    dates = data.loc[start_date:].index
+    sp500_mean_view = []
+    gold_mean_view = []
+    for date in dates:
+        tmp_train_data = \
+            data.loc[date - timedelta(look_back):date, ['sp500', 'gold']]
+        #tmp_train_data = tmp_train_data[::-20][::-1]
+        #tmp_train_data = tmp_train_data.drop_duplicates()
+        tmp_train_data = tmp_train_data.values
+        tmp_train_data_min = tmp_train_data.min(0)
+        tmp_train_data_max = tmp_train_data.max(0)
+        tmp_train_data_scaled = (tmp_train_data - tmp_train_data_min)/(tmp_train_data_max-tmp_train_data_min)
+        res = np.array(train_var(tmp_train_data_scaled, fn))
+        res = res*(tmp_train_data_max - tmp_train_data_min)+tmp_train_data_min
+        print date, res[0], res[1]
+        sp500_mean_view.append(res[0])
+        gold_mean_view.append(res[1])
+    df = pd.DataFrame(data = sp500_mean_view, index = dates, \
+        columns = ['sp500_mean_view'])
+    df = pd.DataFrame(data = gold_mean_view, index = dates, \
+        columns = ['gold_mean_view'])
+    df.to_csv('./view/sp500_mean_view.csv', index_label = 'date')
+    df.to_csv('./view/gold_mean_view.csv', index_label = 'date')
 '''
 def res_sta(data):
     view = pd.read_csv('./view/asset_mean_view.csv', index_col = 0, parse_dates = True)
@@ -181,6 +206,7 @@ if __name__ == '__main__':
     #os._exit(0)
 
     #train_mean_days(ASSETS, FORECAT_MONTH, LOOK_BACK)
-    train_sh300_mean_days(ASSETS, FORECAT_MONTH, LOOK_BACK)
+    #train_sh300_mean_days(ASSETS, FORECAT_MONTH, LOOK_BACK)
+    train_sp500_gold_mean_days(ASSETS, FORECAT_DAY, LOOK_BACK)
     #train_corr_days(ASSETS, FORECAT_DAY, LOOK_BACK)
 
