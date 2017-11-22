@@ -41,18 +41,9 @@ import base_exchange_rate_index_nav
 import base_exchange_rate_index
 import MySQLdb
 from DBUtils.PooledDB import PooledDB
+from config import uris
 
 logger = logging.getLogger(__name__)
-
-uris = {
-    'asset': config.db_asset_uri,
-    'base': config.db_base_uri,
-    'caihui': config.db_caihui_uri,
-    'trade': config.db_trade_uri,
-    'portfolio_sta': config.db_portfolio_sta_uri,
-    #'portfolio_sta': config.db_portfolio_sta_uri,
-    'mapi': config.db_mapi_uri,
-}
 
 connections = {}
 
