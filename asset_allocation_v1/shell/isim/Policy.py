@@ -91,7 +91,6 @@ class Policy(object):
         df_ts_order_fund = self.df_ts_order_fund.loc[(ts_order['ts_txn_id'], ts_order['ts_placed_date'], (30, 31, 63)), ['ts_txn_id', 'ts_uid', 'ts_portfolio_txn_id', 'ts_pay_method', 'ts_fund_code', 'ts_trade_type', 'ts_trade_status', 'ts_placed_amount', 'ts_placed_share', 'ts_placed_fee', 'ts_scheduled_at']].copy()
 
         df_ts_order_fund = df_ts_order_fund.reset_index(drop=True).set_index('ts_txn_id', drop=False)
-
         df_ts_order_fund['ts_trade_status'] = 0
         df_ts_order_fund['ts_placed_date'] = None
         df_ts_order_fund['ts_placed_time'] = None

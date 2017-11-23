@@ -231,3 +231,35 @@ class Nav(object):
 
         return result
 
+
+    def load_nav(self, code, sdate=None, edate=None):
+        db = database.connection('base')
+        #
+        # 基金资产
+        #
+        t = self.tabs.setdefault('FD', Table('ra_fund_nav', MetaData(bind=db), autoload=True))
+        columns = [
+            t.c.ra_code.label('ra_asset_id'), 
+            t.c.ra_type,
+            t.c.ra_date,
+            t.c.ra_nav,
+            t.c.ra_return_daily,
+        ]
+
+        # s = select(columns).where(t.c.ra_fund_id.in_(gids)).where(t.c.ra_mask.op('&')(0x01) == 0) 
+        s = select(columns) \
+            .where(t.c.ra_code == code) \
+            .where(t.c.ra_mask.in_([0, 2, 3]))
+        
+        if sdate is not None:
+            s = s.where(t.c.ra_date >= sdate)
+        if edate is not None:
+            s = s.where(t.c.ra_date <= edate)
+
+        df = pd.read_sql(s, db, parse_dates=['ra_date'])
+        df.set_index(['ra_date'], drop=False, inplace=True)
+
+        # if 33027398 in gids:
+        #     dd(df.loc[33027398])
+
+        return df

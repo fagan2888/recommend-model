@@ -275,7 +275,10 @@ def emulate_update(uid, debug, optfee, optt0, enddate):
     
     policy = Policy.Policy(df_ts_order_fund)
 
-    fund_rule = FundRule.FundRule()
+    sdate = investor.get_sdate()
+    edate = investor.get_edate()
+    
+    fund_rule = FundRule.FundRule(sdate, edate)
 
     emulator = Emulator.Emulator(investor, policy, fund_rule)
 
