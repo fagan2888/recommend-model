@@ -832,6 +832,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         pass
 
     if algo == 1:
+        optappend = False
         df = average_days(sdate, edate, assets)
         if 'return' in df.columns:
             df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
