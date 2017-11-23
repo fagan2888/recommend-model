@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import Investor
-import InvestorShare
+import Emulator
 import Policy
+import FundRule

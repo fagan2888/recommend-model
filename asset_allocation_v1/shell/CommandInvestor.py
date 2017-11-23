@@ -273,9 +273,11 @@ def emulate_update(uid, debug, optfee, optt0, enddate):
         click.echo(click.style("\nswarning: empty df_ts_order_fund for user: %s, skiped!" % (uid), fg='yellow'))
         return
     
-    policy = Policy.Policy(df_ts_order_fund)    
+    policy = Policy.Policy(df_ts_order_fund)
 
-    emulator = InvestorShare.InvestorShare(investor, policy)
+    fund_rule = FundRule.FundRule()
+
+    emulator = Emulator.Emulator(investor, policy, fund_rule)
 
     df = emulator.run()
     

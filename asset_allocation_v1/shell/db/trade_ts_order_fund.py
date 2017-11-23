@@ -23,6 +23,7 @@ def load(uid, xtype=None):
         t.c.ts_txn_id,
         t.c.ts_uid,
         t.c.ts_portfolio_id,
+        t.c.ts_fund_code,
         t.c.ts_pay_method,
         t.c.ts_trade_type,
         t.c.ts_trade_status,
@@ -30,11 +31,13 @@ def load(uid, xtype=None):
         t.c.ts_placed_time,
         t.c.ts_placed_amount,
         t.c.ts_placed_share,
+        t.c.ts_placed_fee,
         t.c.ts_acked_date,
         t.c.ts_acked_amount,
         t.c.ts_acked_share,
         t.c.ts_acked_fee,
         t.c.ts_portfolio_txn_id,
+        t.c.ts_scheduled_at,
     ]
 
     s = select(columns).where(t.c.ts_uid == uid)
@@ -44,7 +47,7 @@ def load(uid, xtype=None):
     # if codes is not None:
     #     s = s.where(t.c.ff_code.in_(codes))
 
-    df = pd.read_sql(s, db)
+    df = pd.read_sql(s, db, parse_dates=['ts_placed_date', 'ts_scheduled_at'])
 
     return df
 
