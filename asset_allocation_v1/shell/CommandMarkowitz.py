@@ -833,6 +833,23 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     if algo == 1:
         df = average_days(sdate, edate, assets)
+        if 'return' in df.columns:
+            df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
+        for asset in df.columns:
+            if asset.startswith('MZ'):
+                mz_pos_df = asset_mz_markowitz_pos.load_raw(asset)
+                asset_pos = df[asset]
+                dates = list(set(mz_pos_df.index | df.index))
+                dates.sort()
+                asset_pos = asset_pos.reindex(dates)
+                asset_pos.fillna(method = 'pad', inplace=True)
+                asset_pos.fillna(0.0, inplace=True)
+                mz_pos_df = mz_pos_df.mul(asset_pos, axis = 0)
+                df = df.drop(asset, axis = 1)
+                df = pd.concat([df, mz_pos_df], axis = 1, join_axes = [mz_pos_df.index])
+        df = df.T
+        df = df.groupby(df.index).sum()
+        df = df.T
     elif algo == 2:
         df = markowitz_days(
             sdate, edate, assets,
