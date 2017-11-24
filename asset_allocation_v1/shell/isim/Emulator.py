@@ -1254,7 +1254,8 @@ class Emulator(object):
         # 更新基金净值
         #
         if self.df_share is not None:
-            dd("unimplemend update nav")
+            mask = (self.df_share['ts_fund_code'] == fund_code) | self.df_share['ts_
+            dd("unimplemend update nav", self.df_share, fund_code, nav)
             
         return evs
         # #
@@ -1316,6 +1317,7 @@ class Emulator(object):
                     self.df_share.combine(df, lambda x, y: y.combine_first(x))
 
             # mask = (self.df_share_buying['
+            
         return evs
 
 
