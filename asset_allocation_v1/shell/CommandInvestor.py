@@ -284,6 +284,6 @@ def emulate_update(uid, debug, optfee, optt0, enddate):
 
     df = emulator.run()
     
-    dd(df)
+    dd("emulator completee", df)
 
 

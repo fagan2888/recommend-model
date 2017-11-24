@@ -99,13 +99,13 @@ class FundRule(object):
     
     def get_buy_ack_days(self, fund_code):
         if fund_code not in self.df_ack:
-            df_tmp = base_fund_infos.load_ack(codes=[fund_code])
+            df_tmp = base_fund_infos.load_ack2(codes=[fund_code])
             if not df_tmp.empty:
                 self.df_ack[fund_code] = df_tmp.iloc[0]
             else:
                 self.df_ack[fund_code] = pd.Series({'code':fund_code, 'buy': 0, 'redeem': 0})
         # dd(self.df_ack.loc[(self.df_ack['buy'] > 10) | (self.df_ack['redeem'] > 10) ])
-        
+        # dd(self.df_ack)
         return self.df_ack[fund_code].loc['buy']
 
     def get_nav(self, fund_code, day):
@@ -114,7 +114,7 @@ class FundRule(object):
             df = Nav.Nav().load_nav(fund_code, day, self.edate)
             self.dt_nav[fund_code] = df
         else:
-            df = self.df_nav[fund_code]
+            df = self.dt_nav[fund_code]
 
         if day in df.index:
             return df.loc[day]

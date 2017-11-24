@@ -22,6 +22,20 @@ from db import *
 logger = logging.getLogger(__name__)
 readline.parse_and_bind('tab: complete')
 
+ST_SUB = 1
+ST_REDEEM = 2
+ST_SUB_FEE = 3
+ST_REDEEM_FEE = 4
+ST_YIELD = 5
+ST_UNCARRY = 6
+ST_BONUS_OUT = 7
+ST_BONUS_IN = 8
+ST_CARRY = 9
+ST_CARRY_FORCE = 10
+ST_ADD_FORCE = 11
+ST_DEL_FORCE = 12
+
+
 def dump_orders(orders, s, die=True):
     if len(orders) > 0:
         # print "\n", s
@@ -86,38 +100,38 @@ class Emulator(object):
         #              于交易中的订单确认日期，因为订单确认日期在费率
         #              计算中没有任何实际意义。
         #
-        self.df_share = pd.DataFrame({
-            'ts_share_id': pd.Series(dtype=str),
-            'ts_fund_code': pd.Series(dtype=str),
-            'share': pd.Series(dtype=float),
-            'yield': pd.Series(dtype=float),
-            'share_buying': pd.Series(dtype=float),
-            'nav': pd.Series(dtype=float),
-            'nav_date':  pd.Series(dtype='datetime64[ns]'),
-            'ack_date':  pd.Series(dtype='datetime64[ns]'),
-            'buy_date':  pd.Series(dtype='datetime64[ns]'),
-            'share_bonusing':  pd.Series(dtype=float),
-            'amount_bonusing':  pd.Series(dtype=float),
-            'div_mode': pd.Series(dtype=int)
-        },
-            index=pd.MultiIndex(names=['fund_code','share_id'], levels=[[], []], labels=[[],[]]),
-                                     columns=['ts_share_id', 'ts_fund_code', 'share', 'yield', 'nav', 'nav_date', 'share_buying', 'buy_date', 'ack_date', 'share_bonusing', 'amount_bonusing', 'div_mode'],
-        )
+        # self.df_share =  pd.DataFrame({
+        #     'ts_order_id': pd.Series(dtype=str),
+        #     'ts_fund_code': pd.Series(dtype=str),
+        #     'ts_date':  pd.Series(dtype='datetime64[ns]'),
+        #     'ts_nav': pd.Series(dtype=float),
+        #     'ts_share': pd.Series(dtype=float),
+        #     'ts_amount': pd.Series(dtype=float),
+        #     'ts_trade_date': pd.Series(dtype='datetime64[ns]'),
+        #     'ts_acked_date': pd.Series(dtype='datetime64[ns]'),
+        #     'ts_redeemable_date': pd.Series(dtype='datetime64[ns]'),
+        # },
+        #     index=pd.MultiIndex(names=['fund_code','share_id'], levels=[[], []], labels=[[],[]]),
+        #     columns=['ts_order_id', 'ts_fund_code', 'ts_date', 'ts_nav', 'ts_share', 'ts_amount', 'ts_trade_date', 'ts_acked_date', 'ts_redeemable_date'],
+        # )
         # dd(self.df_share, self.df_share['nav'], self.df_share['nav_date'])
+        self.df_share = None
 
-        self.df_share_buying = pd.DataFrame({
-            'ts_order_id': pd.Series(dtype=str),
-            'ts_fund_code': pd.Series(dtype=str),
-            'ts_trade_date': pd.Series(dtype='datetime64[ns]'),
-            'ts_acked_date': pd.Series(dtype='datetime64[ns]'),
-            'ts_redeemable_date': pd.Series(dtype='datetime64[ns]'),
-            'ts_nav': pd.Series(dtype=float),
-            'ts_share': pd.Series(dtype=float),
-            'ts_amount': pd.Series(dtype=float),
-        },
-            index=pd.MultiIndex(names=['fund_code','order_id'], levels=[[], []], labels=[[],[]]),
-            columns=['ts_order_id', 'ts_fund_code', 'ts_trade_date', 'ts_acked_date', 'ts_redeemable_date', 'ts_nav', 'ts_share', 'ts_amount'],
-        )
+        # self.df_share_buying = pd.DataFrame({
+        #     'ts_order_id': pd.Series(dtype=str),
+        #     'ts_fund_code': pd.Series(dtype=str),
+        #     'ts_trade_date': pd.Series(dtype='datetime64[ns]'),
+        #     'ts_acked_date': pd.Series(dtype='datetime64[ns]'),
+        #     'ts_redeemable_date': pd.Series(dtype='datetime64[ns]'),
+        #     'ts_nav': pd.Series(dtype=float),
+        #     'ts_share': pd.Series(dtype=float),
+        #     'ts_amount': pd.Series(dtype=float),
+        # },
+        #     index=pd.MultiIndex(names=['fund_code','order_id'], levels=[[], []], labels=[[],[]]),
+        #     columns=['ts_order_id', 'ts_fund_code', 'ts_trade_date', 'ts_acked_date', 'ts_redeemable_date', 'ts_nav', 'ts_share', 'ts_amount'],
+        # )
+        self.df_share_buying = None
+
         #
         # 状态变量：赎回上下文：DataFrame
         #      columns        share_id, share,  nav, nav_date, ack_date
@@ -150,11 +164,13 @@ class Emulator(object):
         self.dsn = 0 # day sequenece no
         self.day = 0 # 当天日期
         self.ts = pd.to_datetime('1990-01-01')  # 当前模拟时钟
+        self.stat = {}
         
         #
         # 输出变量：历史持仓
         #
         self.dt_holding = {}
+        self.dt_stat = ()
 
         # 
         # 输出变量：订单列表，用于保存整个过程中产生的订单, 每个订单是一个字典，包含如下项目
@@ -162,7 +178,7 @@ class Emulator(object):
         # 
         self.orders = []
 
-        self.ts_order_fund = {}
+        self.df_ts_order_fund = None
 
         #
         # 输出变量：业绩归因序列
@@ -239,6 +255,9 @@ class Emulator(object):
         if edate is None:
             edate = pd.to_datetime(datetime.now().date()) - timedelta(days=1)
 
+        self.sdate = sdate
+        self.edate = edate
+        
         #
         # 初始化用到的计算数据
         #
@@ -320,8 +339,9 @@ class Emulator(object):
             argv = {}
             ev = (day + timedelta(seconds=1), 100, 0, 0, argv)
             heapq.heappush(self.events, ev)
-     
-        self.trade_date = self.df_t_plus_n.loc[sdate, "T+0"]
+
+        self.trade_date_last = None
+        self.trade_date_current = self.df_t_plus_n.loc[sdate, "T+0"]
             
         #
         # 依次处理每个事件
@@ -389,11 +409,14 @@ class Emulator(object):
             #
             # 处理组合购买
             #
-            df_ts_order_fund, ts_plan = self.policy.place_buy_order(argv)
+            ts_order_fund, ts_plan = self.policy.place_buy_order(argv)
 
-            self.ts_order_fund[order_id] = df_ts_order_fund
+            if self.df_ts_order_fund is None:
+                self.df_ts_order_fund = ts_order_fund
+            else:
+                self.df_ts_order_fund.combine(ts_order_fund, lambda x, y: y.combine_first(x))
             
-            result.extend(self.place_fund_order(df_ts_order_fund))
+            result.extend(self.place_fund_order(ts_order_fund))
             
         elif op in [30, 31, 63]:
 
@@ -626,39 +649,39 @@ class Emulator(object):
             # if dt.strftime("%Y-%m-%d") == '2016-10-10':
             #     pdb.set_trace()
         
-            #
-            # 记录持仓
-            #
-            if self.debug and self.df_share.sum().sum() > 0.000099:
-                self.dt_holding[dt] = self.df_share.copy()
-            #
-            # 记录净值
-            #
-            amount = ((self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] + self.df_share['amount_bonusing']).sum()
-            amount += (self.df_redeem['share'] * self.df_redeem['nav'] - self.df_redeem['fee']).sum() + self.cash
-            self.nav[day] = amount
-            #
-            # 记录业绩归因
-            #
-            sr_yield = self.df_share['yield'].groupby(level=0).sum()
-            sr_yield = sr_yield.loc[sr_yield.abs() > 0.00000099]
-            sr_fee_buy = pd.Series(self.dt_today_fee_buy)
-            sr_fee_redeem = pd.Series(self.dt_today_fee_redeem)
-            sr_bonus = pd.Series(self.dt_today_bonus)
+            # #
+            # # 记录持仓
+            # #
+            # if self.debug and self.df_share.sum().sum() > 0.000099:
+            #     self.dt_holding[dt] = self.df_share.copy()
+            # #
+            # # 记录净值
+            # #
+            # amount = ((self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] + self.df_share['amount_bonusing']).sum()
+            # amount += (self.df_redeem['share'] * self.df_redeem['nav'] - self.df_redeem['fee']).sum() + self.cash
+            # self.nav[day] = amount
+            # #
+            # # 记录业绩归因
+            # #
+            # sr_yield = self.df_share['yield'].groupby(level=0).sum()
+            # sr_yield = sr_yield.loc[sr_yield.abs() > 0.00000099]
+            # sr_fee_buy = pd.Series(self.dt_today_fee_buy)
+            # sr_fee_redeem = pd.Series(self.dt_today_fee_redeem)
+            # sr_bonus = pd.Series(self.dt_today_bonus)
 
-            sr_contrib = pd.concat({0:sr_yield, 1:sr_fee_buy, 2:sr_fee_redeem, 3:sr_bonus})
-            sr_contrib.index.names=['ra_return_type', 'ra_fund_code']
+            # sr_contrib = pd.concat({0:sr_yield, 1:sr_fee_buy, 2:sr_fee_redeem, 3:sr_bonus})
+            # sr_contrib.index.names=['ra_return_type', 'ra_fund_code']
             
-            self.contrib[day] = sr_contrib
+            # self.contrib[day] = sr_contrib
 
-            #print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
+            # #print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
 
-            #
-            # 删除无用持仓
-            #
-            mask = (self.df_share['share'] + self.df_share['share_buying'] + self.df_share['amount_bonusing']) < 0.000000001
-            if mask.any():
-                self.df_share.drop(self.df_share[mask].index, inplace=True)
+            # #
+            # # 删除无用持仓
+            # #
+            # mask = (self.df_share['share'] + self.df_share['share_buying'] + self.df_share['amount_bonusing']) < 0.000000001
+            # if mask.any():
+            #     self.df_share.drop(self.df_share[mask].index, inplace=True)
 
             # self.idebug(dt)
         elif op == 102:
@@ -994,23 +1017,29 @@ class Emulator(object):
         生成与当日15例行事件
         '''
         evs=[]
-        codes = set(self.df_share['ts_fund_code']).union(set(self.df_share_buying['ts_fund_code']))
+        codes = set([])
+        if self.df_share is not None:
+            codes = codes.union(set(self.df_share['ts_fund_code']))
+        if self.df_share_buying is not None:
+            codes = codes.union(set(self.df_share_buying['ts_fund_code']))
 
         for code in codes:
             nav = self.rule.get_nav(code, self.day)
             if nav is not None:
                 evs.extend(self.handle_nav_update(code, nav))
 
+
         #
         # 切换交易日
         #
         tomorrow = dt + timedelta(hours=9)
-        dd(tomorrow)
-        self.trade_date = self.df_t_plus_n.loc[tomorrow, "T+0"]
-        dd(self.trade_date)
 
+        if tomorrow <= self.edate:
+            # dd(self.df_t_plus_n)
+            self.trade_date_last = self.trade_date_current
+            self.trade_date_current = self.df_t_plus_n.loc[tomorrow, "T+0"]
         
-        pass
+        return evs
     
     def share_routine(self, dt, argv):
         '''
@@ -1027,7 +1056,8 @@ class Emulator(object):
         #
         # 清空当日收益
         #
-        self.df_share['yield'] = 0
+        if self.df_share is not None:
+            self.df_share['yield'] = 0
         self.dt_today_fee_buy = {}
         self.dt_today_fee_redeem = {}
         self.dt_today_bonus = {}
@@ -1039,7 +1069,11 @@ class Emulator(object):
         evs = []
         day = pd.to_datetime(dt.date())
 
+        #
+        # 生成3点例行事件
+        #
         evs.append((day + timedelta(hours=15), 102, 0, 0, {}))
+
         #
         # 如果当日有购买
         #
@@ -1059,6 +1093,10 @@ class Emulator(object):
         ev = (day + timedelta(hours=23, minutes=59, seconds=59), 101, 0, 0, argv)
         evs.append(ev)
 
+        #
+        # 处理当天需要确认的订单
+        #
+        evs.extend(self.handle_order_confirm(dt, argv))
 
         return evs
 
@@ -1109,12 +1147,13 @@ class Emulator(object):
             else:
                 print 'unknown command "%s"' % line
 
-    def place_fund_order(self, df_ts_order_fund):
+    def place_fund_order(self, ts_order_fund):
         #
         # 处理下单
         #
         evs = []
-        df_to_place = df_ts_order_fund.loc[(df_ts_order_fund['ts_trade_status'] == 0) & (df_ts_order_fund['ts_scheduled_at'] <= self.ts)]
+
+        df_to_place = ts_order_fund.loc[(ts_order_fund['ts_trade_status'] == 0) & (ts_order_fund['ts_scheduled_at'] <= self.ts)]
         # dd(df_ts_order_fund, df_to_place, self.ts)
         for k, v in df_to_place.iterrows():
             ev = (self.ts, v['ts_trade_type'], v['ts_txn_id'], v['ts_fund_code'], v)
@@ -1126,16 +1165,11 @@ class Emulator(object):
     def place_buy_order(self, dt, order_id, fund_code, argv):
         evs = []
         
-        df_ts_order_fund = self.ts_order_fund.get(argv['ts_portfolio_txn_id'])
-        if df_ts_order_fund is None:
-            dd("SNH: missing df_ts_order_fund for txn_id %s" % argv['ts_portfolio_txn_id'])
-            return evs
-
-        if order_id not in df_ts_order_fund.index:
+        if order_id not in self.df_ts_order_fund.index:
             dd("SNH: missng ts_order_fund in context %s " % order_id)
             return evs
 
-        if order_id in self.df_share_buying:
+        if self.df_share_buying is not None and order_id in self.df_share_buying:
             dd("buying order exists", [order_id, fund_code, argv])
             # Log::error($this->logtag.'SNH: buying order exists', [$this->buying, $e]);
             # $alert = sprintf($this->logtag."基金份额计算检测到重复购买订单:[%s]", $e['it_order_id']);
@@ -1145,16 +1179,16 @@ class Emulator(object):
         # 获取订单确认日
         #
         nr_acked_days = self.rule.get_buy_ack_days(fund_code)
-        acked_date = self.df_t_plus_n.loc[self.trade_date, "T+%d" % nr_acked_days]
+        acked_date = self.df_t_plus_n.loc[self.trade_date_current, "T+%d" % nr_acked_days]
         
         tmp = {
             'ts_trade_status': 1,
             'ts_placed_date': dt.date(),
             'ts_placed_time': dt.time(),
-            'ts_trade_date': self.trade_date,
+            'ts_trade_date': self.trade_date_current,
             'ts_acked_date': acked_date,
         }
-        df_ts_order_fund.loc[order_id, tmp.keys() ] = tmp.values()
+        self.df_ts_order_fund.loc[order_id, tmp.keys() ] = tmp.values()
 
         #
         # 购买下单时我们并不生成购买份额, 因为我们并不知道当天的净值
@@ -1162,14 +1196,17 @@ class Emulator(object):
         buying = pd.Series({
             'ts_order_id': order_id,
             'ts_fund_code': fund_code,
-            'ts_trade_date': self.trade_date,
+            'ts_trade_date': self.trade_date_current,
             'ts_acked_date': acked_date,
             'ts_redeemable_date': acked_date,
             'ts_nav': 0.0000,
             'ts_share': 0.0000,
             'ts_amount': argv['ts_placed_amount'],
         })
-        self.df_share_buying.loc[order_id] = buying 
+        if self.df_share_buying is None:
+            self.df_share_buying = pd.DataFrame([buying], index=[order_id])
+        else:
+            self.df_share_buying.loc[order_id] = buying 
         
         return evs
         #
@@ -1187,24 +1224,38 @@ class Emulator(object):
         #
         # 对订单进行预确认
         #
-        for k, df in self.ts_order_fund.iteritems():
-            mask = (df['ts_fund_code'] == fund_code) \
-                   & (df['ts_trade_status'] == 1) \
-                   & (df['ts_trade_date'] == nav['ra_date'])
-            df_order_fund = df.loc[mask]
-            #
-            # 计算基金的确认金额、份额和手续费
-            #
-            #dd(df, df_order_fund, fund_code, nav)
-            sr_fee = self.rule.get_buy_fee(fund_code, df_order_fund['ts_placed_amount'])
-            # df_order_fund['ts_acked_fee'] = sr_fee
-            # df_order_fund['ts_acked_amount'] = df_order_fund['ts_placed_amount']
-            # df_order_fund['ts_acked_share'] = ((df_order_fund['ts_acked_amount'] - df_order_fund['ts_acked_fee']) / nav['ra_nav']).round(2)
-            df.loc[mask, 'ts_acked_fee'] = sr_fee
-            df.loc[mask, 'ts_acked_amount'] = df_order_fund['ts_placed_amount']
-            
-            df.loc[mask, 'ts_acked_share'] = ((df_order_fund['ts_placed_amount'] - sr_fee) / nav['ra_nav']).round(2)
+        df = self.df_ts_order_fund
 
+        mask = (df['ts_fund_code'] == fund_code) \
+               & (df['ts_trade_status'] == 1) \
+               & (df['ts_trade_date'] == nav['ra_date'])
+        df_order_fund = df.loc[mask]
+        #
+        # 计算基金的确认金额、份额和手续费
+        #
+        #dd(df, df_order_fund, fund_code, nav)
+        sr_fee = self.rule.get_buy_fee(fund_code, df_order_fund['ts_placed_amount'])
+        df.loc[mask, 'ts_acked_fee'] = sr_fee
+        df.loc[mask, 'ts_acked_amount'] = df_order_fund['ts_placed_amount']
+        df.loc[mask, 'ts_acked_share'] = ((df_order_fund['ts_placed_amount'] - sr_fee) / nav['ra_nav']).round(2)
+        #
+        # 对份额进行预确认
+        #
+        sr_share = df.loc[mask, 'ts_acked_share']
+        self.df_share_buying.loc[sr_share.index, 'ts_share'] = sr_share
+        self.df_share_buying.loc[sr_share.index, 'ts_nav'] = nav['ra_nav']
+        #
+        # 记录购买对账单
+        #
+        self.adjust_stat(fund_code, ST_SUB, df_order_fund['ts_placed_amount'].sum(), sr_share.sum())
+        self.adjust_stat(fund_code, ST_SUB_FEE, -(sr_fee.sum()), 0)
+
+        #
+        # 更新基金净值
+        #
+        if self.df_share is not None:
+            dd("unimplemend update nav")
+            
         return evs
         # #
         # # 如果当日有分红事件
@@ -1237,5 +1288,41 @@ class Emulator(object):
         #         ev = (split_date + timedelta(hours=1), 18, 0, fund_code, argv)
         #         evs.append(ev)
 
+    def handle_order_confirm(self, dt, argv):
+        '''
+        对需要确认的订单进行确认
+        '''
+        evs = []
+
+        # pdb.set_trace()
+        if self.df_ts_order_fund is not None:
+            mask = (self.df_ts_order_fund['ts_trade_status'] == 1) \
+                   & (self.df_ts_order_fund['ts_acked_date'] == self.day)
+            df = self.df_ts_order_fund.loc[mask]
+            if not df.empty:
+                # 对订单进行确认
+                self.df_ts_order_fund.loc[mask, 'ts_trade_status'] = 6
+                # dd(df, self.df_ts_order_fund)
+        #
+        # 对持仓进行确认
+        #
+        if self.df_share_buying is not None:
+            mask = (self.df_share_buying['ts_acked_date'] == self.day)
+            df = self.df_share_buying.loc[mask]
+            if not df.empty:
+                if self.df_share is None:
+                    self.df_share = df.copy()
+                else:
+                    self.df_share.combine(df, lambda x, y: y.combine_first(x))
+
+            # mask = (self.df_share_buying['
+        return evs
 
 
+    def adjust_stat(self, code , xtype, amount, share, status = 1):
+        stat = self.stat.setdefault(code, {})
+        row = stat.setdefault(xtype, [0.00, 0.00000, 1])
+        row[0] += amount
+        row[1] += share
+        if row[2] != 0:
+            row[2] = status
