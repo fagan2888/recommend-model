@@ -358,5 +358,3 @@ class RiskManagement(object):
             result_action[day] = action
 
         return (result_pos, result_action)
-        
-        

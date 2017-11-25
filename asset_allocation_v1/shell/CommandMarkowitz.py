@@ -536,7 +536,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
     #
     s = 'perform %-12s' % label
     data = {}
-    if bootstrap is None:
+    if bootstrap is None and ( not wavelet ):
         count = multiprocessing.cpu_count() / 2
         process_adjust_indexs = [[] for i in range(0, count)]
         for i in range(0, len(adjust_index)):
@@ -602,6 +602,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
             data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
+    #print df_nav
 
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 
@@ -674,7 +675,6 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
     filtered_data = filtered_data.fillna(0.0)
     filtered_data = filtered_data[filtered_data.index >= begin_date]
     filtered_data = filtered_data.loc[reindex]
-
     return filtered_data
 
 
