@@ -35,6 +35,8 @@ ST_CARRY_FORCE = 10
 ST_ADD_FORCE = 11
 ST_DEL_FORCE = 12
 
+def xfun_last(x, y):
+    return y.combine_first(x)
 
 def dump_orders(orders, s, die=True):
     if len(orders) > 0:
@@ -1028,7 +1030,7 @@ class Emulator(object):
             if nav is not None:
                 evs.extend(self.handle_nav_update(code, nav))
 
-
+        pdb.set_trace()
         #
         # 切换交易日
         #
@@ -1254,8 +1256,9 @@ class Emulator(object):
         # 更新基金净值
         #
         if self.df_share is not None:
-            mask = (self.df_share['ts_fund_code'] == fund_code) | self.df_share['ts_
-            dd("unimplemend update nav", self.df_share, fund_code, nav)
+            mask = (self.df_share['ts_fund_code'] == fund_code) & (self.df_share['ts_share'] > 0.000099)
+            self.df_share.loc[mask, 'ts_nav'] = nav['ra_nav']
+            self.df_share.loc[mask, 'ts_date'] = self.day
             
         return evs
         # #
@@ -1314,10 +1317,12 @@ class Emulator(object):
                 if self.df_share is None:
                     self.df_share = df.copy()
                 else:
-                    self.df_share.combine(df, lambda x, y: y.combine_first(x))
+                    df['ts_date'] = pd.to_datetime('2017-11-14')
+                    df['yield'] = 0
+                    pdb.set_trace()
+                    self.df_share.combine(df, xfun_last)
+                self.df_share_buying.drop(df.index, inplace=True)
 
-            # mask = (self.df_share_buying['
-            
         return evs
 
 
