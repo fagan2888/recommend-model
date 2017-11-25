@@ -35,7 +35,7 @@ ST_CARRY_FORCE = 10
 ST_ADD_FORCE = 11
 ST_DEL_FORCE = 12
 
-def xfun_last(x, y):
+def xfun_last(x, y, ph=False):
     return y.combine_first(x)
 
 def dump_orders(orders, s, die=True):
@@ -166,7 +166,8 @@ class Emulator(object):
         self.dsn = 0 # day sequenece no
         self.day = 0 # 当天日期
         self.ts = pd.to_datetime('1990-01-01')  # 当前模拟时钟
-        self.stat = {}
+        self.df_stat = None
+        self.sr_holding_last = None
         
         #
         # 输出变量：历史持仓
@@ -373,6 +374,8 @@ class Emulator(object):
         #
         # df_result_nav = pd.Series(self.nav).to_frame('nav') 
         # dd(df_result_nav, "completed")
+        # print self.df_share
+        return self.df_share
 
     def process(self, ev):
         result = []
@@ -396,16 +399,17 @@ class Emulator(object):
             #
             # 净值更新
             #
-            if fund_code in self.df_share.index.levels[0]:
-                # if dt.strftime("%Y-%m-%d") == '2014-11-11' and fund_code == 30000237:
-                #     pdb.set_trace()
-                # df = self.df_share.query('fund_code in [%d]' % fund_code)
-                df = self.df_share.loc[self.df_share.index.get_level_values(0) == fund_code]
-                self.df_share.loc[fund_code, 'yield'] = (df['share'] + df['share_buying']) * (argv['nav'] - df['nav'])
-                self.df_share.loc[fund_code, 'nav'] = argv['nav']
-                self.df_share.loc[fund_code, 'nav_date'] = argv['nav_date']
-            else:
-                dd("SNH: fund_code not in df_share.index", fund_code, self.df_share)
+            # if fund_code in self.df_share.index.levels[0]:
+            #     # if dt.strftime("%Y-%m-%d") == '2014-11-11' and fund_code == 30000237:
+            #     #     pdb.set_trace()
+            #     # df = self.df_share.query('fund_code in [%d]' % fund_code)
+            #     df = self.df_share.loc[self.df_share.index.get_level_values(0) == fund_code]
+            #     self.df_share.loc[fund_code, 'yield'] = (df['share'] + df['share_buying']) * (argv['nav'] - df['nav'])
+            #     self.df_share.loc[fund_code, 'nav'] = argv['nav']
+            #     self.df_share.loc[fund_code, 'nav_date'] = argv['nav_date']
+            # else:
+            #     dd("SNH: fund_code not in df_share.index", fund_code, self.df_share)
+            pass
 
         if op == 3:
             #
@@ -650,7 +654,7 @@ class Emulator(object):
             day = pd.to_datetime(dt.date())
             # if dt.strftime("%Y-%m-%d") == '2016-10-10':
             #     pdb.set_trace()
-        
+            result.extend(self.record_holding(dt, argv))
             # #
             # # 记录持仓
             # #
@@ -1030,7 +1034,6 @@ class Emulator(object):
             if nav is not None:
                 evs.extend(self.handle_nav_update(code, nav))
 
-        pdb.set_trace()
         #
         # 切换交易日
         #
@@ -1058,8 +1061,6 @@ class Emulator(object):
         #
         # 清空当日收益
         #
-        if self.df_share is not None:
-            self.df_share['yield'] = 0
         self.dt_today_fee_buy = {}
         self.dt_today_fee_redeem = {}
         self.dt_today_bonus = {}
@@ -1204,9 +1205,13 @@ class Emulator(object):
             'ts_nav': 0.0000,
             'ts_share': 0.0000,
             'ts_amount': argv['ts_placed_amount'],
+            'ts_date': pd.to_datetime('2000-01-01'),
         })
         if self.df_share_buying is None:
-            self.df_share_buying = pd.DataFrame([buying], index=[order_id])
+            self.df_share_buying = pd.DataFrame([buying], index=[order_id], columns=[
+                'ts_order_id', 'ts_fund_code', 'ts_date', 'ts_nav', 'ts_share',
+                'ts_amount', 'ts_trade_date', 'ts_acked_date', 'ts_redeemable_date'
+            ])
         else:
             self.df_share_buying.loc[order_id] = buying 
         
@@ -1246,11 +1251,14 @@ class Emulator(object):
         sr_share = df.loc[mask, 'ts_acked_share']
         self.df_share_buying.loc[sr_share.index, 'ts_share'] = sr_share
         self.df_share_buying.loc[sr_share.index, 'ts_nav'] = nav['ra_nav']
+        self.df_share_buying.loc[sr_share.index, 'ts_date'] = nav['ra_date']
         #
         # 记录购买对账单
         #
         self.adjust_stat(fund_code, ST_SUB, df_order_fund['ts_placed_amount'].sum(), sr_share.sum())
-        self.adjust_stat(fund_code, ST_SUB_FEE, -(sr_fee.sum()), 0)
+        fee = sr_fee.sum()
+        if abs(fee) > 0.0099:
+            self.adjust_stat(fund_code, ST_SUB_FEE, -fee, 0)
 
         #
         # 更新基金净值
@@ -1317,19 +1325,81 @@ class Emulator(object):
                 if self.df_share is None:
                     self.df_share = df.copy()
                 else:
-                    df['ts_date'] = pd.to_datetime('2017-11-14')
-                    df['yield'] = 0
-                    pdb.set_trace()
-                    self.df_share.combine(df, xfun_last)
+                    self.df_share = df.combine_first(self.df_share)
                 self.df_share_buying.drop(df.index, inplace=True)
 
         return evs
 
+    def record_holding(self, dt, argv):
+        '''
+        记录持仓事件
+        '''
+        evs = []
+        #
+        # 记录当日持仓
+        #
+        if self.df_share is None:
+            return evs
+
+        df_share = pd.concat([self.df_share, self.df_share_buying])
+        mask = df_share['ts_share'] > 0.000099;
+        df_holding = df_share.loc[mask].groupby(['ts_fund_code']).agg({
+           'ts_nav':'first', 'ts_share':'sum'
+        })
+        df_holding['ts_amount'] = (df_holding['ts_nav'] * df_holding['ts_share']).round(2)
+
+        self.dt_holding[self.day] = df_holding
+
+        #
+        # 记录当日对账
+        #
+        #
+        # 计算日收益：
+        #
+        #    日末持仓 + (资金流出 - 资金流入) - 昨日日末持仓
+        #
+        # 也即：
+        #
+        #    日末持仓 - 资金进出结余 - 昨日日末持仓
+        #
+        sr_balance = self.df_stat['ts_stat_amount'].groupby(level=[0]).sum()  # 当日资金进出结余
+        if self.sr_holding_last is None:
+            sr_yield = df_holding['ts_amount'] - sr_balance
+        else:
+            sr_yield = df_holding['ts_amount'] - sr_balance - self.sr_holding_last
+        #
+        # 记录日收益对账单，而是要到记录日末持仓时再记录对账单
+        #
+        # [XXX] 从产品的角度，只要当日有持仓，且基金有净值，就应该有
+        # 日收益，哪怕是为0也要记录
+        #
+        
+        self.adjust_stat_sr(ST_YIELD, sr_yield);
+
+        self.sr_holding_last = df_holding['ts_amount']
+        # dd(self.df_stat, sr_balance, df_holding, sr_yield, dt)
+        
+        return evs
+
 
     def adjust_stat(self, code , xtype, amount, share, status = 1):
-        stat = self.stat.setdefault(code, {})
-        row = stat.setdefault(xtype, [0.00, 0.00000, 1])
-        row[0] += amount
-        row[1] += share
-        if row[2] != 0:
-            row[2] = status
+        sr = pd.Series({'ts_status': status, 'ts_stat_amount': amount, 'ts_stat_share': share})
+        if self.df_stat is None:
+            self.df_stat = pd.DataFrame([sr], index=[[code], [xtype]])
+            self.df_stat.index.names=['ts_fund_code', 'ts_stat_type']
+        else:
+            if (code, xtype) in self.df_stat.index:
+                self.df_stat.loc[(code, xtype), :] += sr
+            else:
+                self.df_stat.loc[(code, xtype), :] = sr
+
+    def adjust_stat_sr(self, xtype, sr):
+        df = sr.to_frame('ts_stat_amount')
+        df.index.name = 'ts_fund_code'
+        df['ts_stat_type'] = xtype
+        df['ts_stat_share'] = 0
+        df['ts_status'] = 1
+        df.set_index(['ts_stat_type'], append=True, inplace=True)
+        self.df_stat = pd.concat([self.df_stat, df]).sort_index()
+
+        
