@@ -173,7 +173,7 @@ class Emulator(object):
         # 输出变量：历史持仓
         #
         self.dt_holding = {}
-        self.dt_stat = ()
+        self.dt_stat = {}
 
         # 
         # 输出变量：订单列表，用于保存整个过程中产生的订单, 每个订单是一个字典，包含如下项目
@@ -256,7 +256,8 @@ class Emulator(object):
         sdate = self.investor.get_sdate()
         edate = self.investor.get_edate()
         if edate is None:
-            edate = pd.to_datetime(datetime.now().date()) - timedelta(days=1)
+            # edate = pd.to_datetime(datetime.now().date()) - timedelta(days=1)
+            edate = pd.to_datetime(datetime.now().date())
 
         self.sdate = sdate
         self.edate = edate
@@ -1061,6 +1062,8 @@ class Emulator(object):
         #
         # 清空当日收益
         #
+        print dt, self.df_stat
+        self.df_stat = None
         self.dt_today_fee_buy = {}
         self.dt_today_fee_redeem = {}
         self.dt_today_bonus = {}
@@ -1255,7 +1258,10 @@ class Emulator(object):
         #
         # 记录购买对账单
         #
-        self.adjust_stat(fund_code, ST_SUB, df_order_fund['ts_placed_amount'].sum(), sr_share.sum())
+        amount =  df_order_fund['ts_placed_amount'].sum()
+        share = sr_share.sum()
+        if amount > 0.0099 or share > 0.000099:
+            self.adjust_stat(fund_code, ST_SUB, amount, share)
         fee = sr_fee.sum()
         if abs(fee) > 0.0099:
             self.adjust_stat(fund_code, ST_SUB_FEE, -fee, 0)
@@ -1362,7 +1368,11 @@ class Emulator(object):
         #
         #    日末持仓 - 资金进出结余 - 昨日日末持仓
         #
-        sr_balance = self.df_stat['ts_stat_amount'].groupby(level=[0]).sum()  # 当日资金进出结余
+        if self.df_stat is None:
+            sr_balance = pd.Series(0, index=df_holding.index)
+        else:
+            sr_balance = self.df_stat['ts_stat_amount'].groupby(level=[0]).sum()  # 当日资金进出结余
+
         if self.sr_holding_last is None:
             sr_yield = df_holding['ts_amount'] - sr_balance
         else:
@@ -1376,6 +1386,8 @@ class Emulator(object):
         
         self.adjust_stat_sr(ST_YIELD, sr_yield);
 
+        self.dt_stat[self.day] = self.df_stat
+        
         self.sr_holding_last = df_holding['ts_amount']
         # dd(self.df_stat, sr_balance, df_holding, sr_yield, dt)
         
@@ -1400,6 +1412,10 @@ class Emulator(object):
         df['ts_stat_share'] = 0
         df['ts_status'] = 1
         df.set_index(['ts_stat_type'], append=True, inplace=True)
-        self.df_stat = pd.concat([self.df_stat, df]).sort_index()
+
+        if  self.df_stat is None:
+            self.df_stat = df
+        else:
+            self.df_stat = pd.concat([self.df_stat, df]).sort_index()
 
         

@@ -283,7 +283,11 @@ def emulate_update(uid, debug, optfee, optt0, enddate):
     emulator = Emulator.Emulator(investor, policy, fund_rule)
 
     df = emulator.run()
+
+    df_stat = pd.concat(emulator.dt_stat)
+    df_stat.index.names=['ts_date', 'ts_fund_code', 'ts_stat_type']
+    df_stat = df_stat.reset_index().set_index(['ts_fund_code', 'ts_date', 'ts_stat_type']).sort_index()
     
-    dd("emulator completee", df)
+    dd("emulator completee", df, df_stat)
 
 
