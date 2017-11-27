@@ -584,7 +584,9 @@ def m_markowitz_day(queue, days, lookback, assets, bootstrap, cpu_count, wavelet
 def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num, csv):
     '''perform markowitz for single day
     '''
-    
+    assets_day = assets.copy()
+
+    #传一份csv，按各期不同的资产进行配置
     if csv != '':
 	csvdata = pd.read_csv(csv, index_col=0, parse_dates=[0])
 	dateindex = pd.Series(csvdata.index)
@@ -592,7 +594,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
 	nofdindex = list(csvdata.ix[maxdate,csvdata.ix[maxdate,:].isnull()].index)
 	for fdindex in nofdindex:
 	    try:
-		assets.pop(fdindex)
+		assets_day.pop(fdindex)
 	    except:
 		pass
 
@@ -606,7 +608,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     # 加载数据
     #
     data = {}
-    for asset in assets:
+    for asset in assets_day:
         if wavelet:
             data[asset] = load_wavelet_nav_series(asset, index, begin_date, end_date, wavelet, wavelet_filter_num)
         else:
@@ -615,7 +617,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_inc  = df_nav.pct_change().fillna(0.0)
     print df_inc.index[-1]
 
-    return markowitz_r(df_inc, assets, bootstrap, cpu_count)
+    return markowitz_r(df_inc, assets_day, bootstrap, cpu_count)
 
 def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     '''perform markowitz
@@ -633,7 +635,6 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
         pd.Series(ws, index=df_inc.columns),
         pd.Series((sharpe, risk, returns), index=['sharpe','risk', 'return'])
     ])
-
     return sr_result
 
 
