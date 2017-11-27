@@ -1344,52 +1344,52 @@ class Emulator(object):
         #
         # 记录当日持仓
         #
-        if self.df_share is None:
-            return evs
+        if self.df_share is not None or self.df_share_buying is not None:
+            df_share = pd.concat([self.df_share, self.df_share_buying])
+            mask = df_share['ts_share'] > 0.000099;
+            df_holding = df_share.loc[mask].groupby(['ts_fund_code']).agg({
+               'ts_nav':'first', 'ts_share':'sum'
+            })
+            df_holding['ts_amount'] = (df_holding['ts_nav'] * df_holding['ts_share']).round(2)
 
-        df_share = pd.concat([self.df_share, self.df_share_buying])
-        mask = df_share['ts_share'] > 0.000099;
-        df_holding = df_share.loc[mask].groupby(['ts_fund_code']).agg({
-           'ts_nav':'first', 'ts_share':'sum'
-        })
-        df_holding['ts_amount'] = (df_holding['ts_nav'] * df_holding['ts_share']).round(2)
+            self.dt_holding[self.day] = df_holding
 
-        self.dt_holding[self.day] = df_holding
+            #
+            # 记录当日对账
+            #
+            #
+            # 计算日收益：
+            #
+            #    日末持仓 + (资金流出 - 资金流入) - 昨日日末持仓
+            #
+            # 也即：
+            #
+            #    日末持仓 - 资金进出结余 - 昨日日末持仓
+            #
+            if self.df_stat is None:
+                sr_balance = pd.Series(0, index=df_holding.index)
+            else:
+                sr_balance = self.df_stat['ts_stat_amount'].groupby(level=[0]).sum()  # 当日资金进出结余
 
-        #
-        # 记录当日对账
-        #
-        #
-        # 计算日收益：
-        #
-        #    日末持仓 + (资金流出 - 资金流入) - 昨日日末持仓
-        #
-        # 也即：
-        #
-        #    日末持仓 - 资金进出结余 - 昨日日末持仓
-        #
-        if self.df_stat is None:
-            sr_balance = pd.Series(0, index=df_holding.index)
-        else:
-            sr_balance = self.df_stat['ts_stat_amount'].groupby(level=[0]).sum()  # 当日资金进出结余
+            if self.sr_holding_last is None:
+                sr_yield = df_holding['ts_amount'] - sr_balance
+            else:
+                sr_yield = df_holding['ts_amount'] - sr_balance - self.sr_holding_last
+            #
+            # 记录日收益对账单，而是要到记录日末持仓时再记录对账单
+            #
+            # [XXX] 从产品的角度，只要当日有持仓，且基金有净值，就应该有
+            # 日收益，哪怕是为0也要记录
+            #
 
-        if self.sr_holding_last is None:
-            sr_yield = df_holding['ts_amount'] - sr_balance
-        else:
-            sr_yield = df_holding['ts_amount'] - sr_balance - self.sr_holding_last
-        #
-        # 记录日收益对账单，而是要到记录日末持仓时再记录对账单
-        #
-        # [XXX] 从产品的角度，只要当日有持仓，且基金有净值，就应该有
-        # 日收益，哪怕是为0也要记录
-        #
-        
-        self.adjust_stat_sr(ST_YIELD, sr_yield);
+            self.adjust_stat_sr(ST_YIELD, sr_yield);
+            
+            self.sr_holding_last = df_holding['ts_amount']
+            # dd(self.df_stat, sr_balance, df_holding, sr_yield, dt)
 
-        self.dt_stat[self.day] = self.df_stat
-        
-        self.sr_holding_last = df_holding['ts_amount']
-        # dd(self.df_stat, sr_balance, df_holding, sr_yield, dt)
+        if self.df_stat is not None:
+            mask = (self.df_stat['ts_stat_amount'].abs() > 0.0099) | (self.df_stat['ts_stat_share'].abs() > 0.000099)
+            self.dt_stat[self.day] = self.df_stat.loc[mask]
         
         return evs
 
