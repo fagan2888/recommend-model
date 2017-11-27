@@ -805,6 +805,7 @@ def pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu, csv):
 
         
 def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
+    
     markowitz_id = alloc['globalid']
     #
     # 加载资产
