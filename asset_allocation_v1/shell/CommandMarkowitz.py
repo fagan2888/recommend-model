@@ -610,7 +610,6 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
             data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
-    print df_inc.index[-1]
 
     return markowitz_r(df_inc, assets_day, bootstrap, cpu_count)
 
@@ -725,7 +724,6 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         else:
             sr = pd.Series()
     else:
-	asset_id = re.sub('\D','',asset_id)
         if prefix == 'AP':
             #
             # 基金池资产
@@ -736,6 +734,7 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             #
             # 基金资产
             #
+	    asset_id = re.sub('\D','',asset_id)
             sr = base_ra_fund_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         elif prefix == 'RS':
