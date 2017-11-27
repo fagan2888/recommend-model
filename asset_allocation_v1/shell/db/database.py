@@ -41,15 +41,9 @@ import base_exchange_rate_index_nav
 import base_exchange_rate_index
 import MySQLdb
 from DBUtils.PooledDB import PooledDB
+from config import uris
 
 logger = logging.getLogger(__name__)
-
-uris = {
-    'asset': config.db_asset_uri,
-    'base': config.db_base_uri,
-    'caihui': config.db_caihui_uri,
-    'portfolio_sta': config.db_portfolio_sta_uri,
-}
 
 connections = {}
 
@@ -142,9 +136,6 @@ def batch(db, table, df_new, df_old, timestamp=True):
         df_update = df1.loc[masks.any(axis=1)].copy()
     else:
         df_update = pd.DataFrame(columns=df_new.columns)
-
-
-
 
     if len(df_update) > 50:
         keys = [table.c.get(c) for c in df_old.index.names]
