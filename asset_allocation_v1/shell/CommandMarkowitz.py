@@ -587,16 +587,11 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     assets_day = assets.copy()
 
     #传一份csv，按各期不同的资产进行配置
-    if csv != '':
+    if csv is not None:
 	csvdata = pd.read_csv(csv, index_col=0, parse_dates=[0])
-	dateindex = pd.Series(csvdata.index)
+	dateindex = csvdata.index
 	maxdate = max(dateindex[dateindex<=day])
-	nofdindex = list(csvdata.ix[maxdate,csvdata.ix[maxdate,:].isnull()].index)
-	for fdindex in nofdindex:
-	    try:
-		assets_day.pop(fdindex)
-	    except:
-		pass
+        assets_day = { key:value for key,value in assets_day.items() if key in csvdata.loc[maxdate].dropna().index}
 
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
@@ -774,7 +769,7 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 @click.option('--start-date', 'sdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'edate', help=u'end date to calc')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
-@click.option('--csv', 'csv', default='', help=u'path of file to read')
+@click.option('--csv', 'csv', default=None, help=u'path of file to read')
 @click.pass_context
 def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu, csv):
     ''' calc pool nav and inc
@@ -810,6 +805,7 @@ def pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu, csv):
 
         
 def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
+    
     markowitz_id = alloc['globalid']
     #
     # 加载资产
