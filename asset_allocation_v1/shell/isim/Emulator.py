@@ -656,39 +656,6 @@ class Emulator(object):
             # if dt.strftime("%Y-%m-%d") == '2016-10-10':
             #     pdb.set_trace()
             result.extend(self.record_holding(dt, argv))
-            # #
-            # # 记录持仓
-            # #
-            # if self.debug and self.df_share.sum().sum() > 0.000099:
-            #     self.dt_holding[dt] = self.df_share.copy()
-            # #
-            # # 记录净值
-            # #
-            # amount = ((self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] + self.df_share['amount_bonusing']).sum()
-            # amount += (self.df_redeem['share'] * self.df_redeem['nav'] - self.df_redeem['fee']).sum() + self.cash
-            # self.nav[day] = amount
-            # #
-            # # 记录业绩归因
-            # #
-            # sr_yield = self.df_share['yield'].groupby(level=0).sum()
-            # sr_yield = sr_yield.loc[sr_yield.abs() > 0.00000099]
-            # sr_fee_buy = pd.Series(self.dt_today_fee_buy)
-            # sr_fee_redeem = pd.Series(self.dt_today_fee_redeem)
-            # sr_bonus = pd.Series(self.dt_today_bonus)
-
-            # sr_contrib = pd.concat({0:sr_yield, 1:sr_fee_buy, 2:sr_fee_redeem, 3:sr_bonus})
-            # sr_contrib.index.names=['ra_return_type', 'ra_fund_code']
-            
-            # self.contrib[day] = sr_contrib
-
-            # #print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
-
-            # #
-            # # 删除无用持仓
-            # #
-            # mask = (self.df_share['share'] + self.df_share['share_buying'] + self.df_share['amount_bonusing']) < 0.000000001
-            # if mask.any():
-            #     self.df_share.drop(self.df_share[mask].index, inplace=True)
 
             # self.idebug(dt)
         elif op == 102:
