@@ -22,6 +22,9 @@ from db import *
 logger = logging.getLogger(__name__)
 readline.parse_and_bind('tab: complete')
 
+# 1000270128
+# 1000134808
+
 ST_SUB = 1
 ST_REDEEM = 2
 ST_SUB_FEE = 3
@@ -333,7 +336,11 @@ class Emulator(object):
             self.df_t_plus_n["T+%d" % i] = self.df_t_plus_n['td_date'].shift(-i)
         self.df_t_plus_n = self.df_t_plus_n.drop('td_date', axis=1)
         self.df_t_plus_n.fillna(pd.to_datetime('2029-01-01'), inplace=True)
-        self.df_t_plus_n = self.df_t_plus_n.resample('D', fill_method='bfill')
+
+        # 调整edate, 我们只算到最后一个交易日
+        self.edate = edate = self.df_t_plus_n.index.max()
+        days = pd.date_range(sdate, edate)
+        self.df_t_plus_n = self.df_t_plus_n.reindex(days, method='bfill')
         
         #
         # 生成每日例行事件的事件
@@ -417,7 +424,7 @@ class Emulator(object):
             # 处理组合购买
             #
             ts_order_fund, ts_plan = self.policy.place_buy_order(argv)
-
+            dd(ts_order_fund)
             if self.df_ts_order_fund is None:
                 self.df_ts_order_fund = ts_order_fund
             else:

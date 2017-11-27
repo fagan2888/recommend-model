@@ -272,6 +272,8 @@ def emulate_update(uid, debug, optfee, optt0, enddate):
     if df_ts_order_fund.empty:
         click.echo(click.style("\nswarning: empty df_ts_order_fund for user: %s, skiped!" % (uid), fg='yellow'))
         return
+
+    pdb.set_trace()
     
     policy = Policy.Policy(df_ts_order_fund)
 

@@ -32,7 +32,7 @@ def load(uid, xtype):
         t.c.ts_placed_percent,
     ]
 
-    s = select(columns).where(t.c.ts_uid == uid)
+    s = select(columns).where(t.c.ts_uid == uid).where(t.c.ts_trade_status >= 0)
     if xtype is not None:
         s = s.where(t.c.ts_trade_type.in_(xtype))
 
