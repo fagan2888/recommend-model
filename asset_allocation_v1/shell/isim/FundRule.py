@@ -108,6 +108,17 @@ class FundRule(object):
         # dd(self.df_ack)
         return self.df_ack[fund_code].loc['buy']
 
+    def get_redeem_ack_days(self, fund_code):
+        if fund_code not in self.df_ack:
+            df_tmp = base_fund_infos.load_ack2(codes=[fund_code])
+            if not df_tmp.empty:
+                self.df_ack[fund_code] = df_tmp.iloc[0]
+            else:
+                self.df_ack[fund_code] = pd.Series({'code':fund_code, 'buy': 0, 'redeem': 0})
+        # dd(self.df_ack.loc[(self.df_ack['buy'] > 10) | (self.df_ack['redeem'] > 10) ])
+        # dd(self.df_ack)
+        return self.df_ack[fund_code].loc['redeem']
+    
     def get_nav(self, fund_code, day):
         if fund_code not in self.dt_nav:
             # 任何自然日所属交易日及其对应的净值序列

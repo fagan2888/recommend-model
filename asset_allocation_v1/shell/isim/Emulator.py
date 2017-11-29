@@ -136,6 +136,7 @@ class Emulator(object):
         #     columns=['ts_order_id', 'ts_fund_code', 'ts_trade_date', 'ts_acked_date', 'ts_redeemable_date', 'ts_nav', 'ts_share', 'ts_amount'],
         # )
         self.df_share_buying = None
+        self.df_share_redeeming = None
 
         #
         # 状态变量：赎回上下文：DataFrame
@@ -272,9 +273,11 @@ class Emulator(object):
         #
         # 事件类型:0:净值更新;2:赎回;7:分红;8:调仓;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;
         #         3: 组合购买
+        #         4: 组合赎回
+        #         6: 组合调仓
         #         30: 银行卡购买
         #         31: 钱包购买
-        #         100:例行事件生成;101:记录当前持仓;102:每天3点的例行事件
+        #         100:例行事件生成;101:记录当前持仓;102:每天3点的例行事件;103:每天2:50的例行事件
         #
         # 事件队列，基于heapq实现，元组来实现
         #
@@ -423,18 +426,37 @@ class Emulator(object):
             #
             # 处理组合购买
             #
-            ts_order_fund, ts_plan = self.policy.place_buy_order(argv)
-            dd(ts_order_fund)
+            ts_order_fund = self.policy.place_buy_order(dt, argv)
+
             if self.df_ts_order_fund is None:
                 self.df_ts_order_fund = ts_order_fund
             else:
+                dd(self.df_ts_order_fund, ts_order_fund, ev)
                 self.df_ts_order_fund.combine(ts_order_fund, lambda x, y: y.combine_first(x))
             
-            result.extend(self.place_fund_order(ts_order_fund))
+            result.extend(self.issue_order_place_event())
             
         elif op in [30, 31, 63]:
-
             result.extend(self.place_buy_order(dt, order_id, fund_code, argv))
+
+        elif op in [40, 41, 64]:
+            result.extend(self.place_redeem_order(dt, order_id, fund_code, argv))
+            
+        elif op == 6:
+            #
+            # 处理组合调仓
+            #
+            ts_order_fund = self.policy.place_adjust_order(dt, argv)
+            
+            if self.df_ts_order_fund is None:
+                self.df_ts_order_fund = ts_order_fund
+            else:
+                self.df_ts_order_fund = ts_order_fund.combine_first(self.df_ts_order_fund)
+                self.df_ts_order_fund['ts_uid'] = self.df_ts_order_fund['ts_uid'].astype(int)
+                self.df_ts_order_fund['ts_trade_type'] = self.df_ts_order_fund['ts_trade_type'].astype(int)
+                self.df_ts_order_fund['ts_trade_status'] = self.df_ts_order_fund['ts_trade_status'].astype(int)
+            
+            result.extend(self.issue_order_place_event())
                
         elif op == 11:
             #
@@ -671,6 +693,15 @@ class Emulator(object):
             #
             result.extend(self.routine_15pm(dt, argv))
 
+        elif op == 103:
+            #
+            # 每日02:50调仓跑批事件
+            #
+            result.extend(self.routine_0259pm(dt, argv))
+
+        else:
+            dd("unknown event", ev)
+            
         return result
 
     def make_bonus_order(self, dt, fund_code, order_share, bonus, div_mode):
@@ -1020,7 +1051,17 @@ class Emulator(object):
             self.trade_date_current = self.df_t_plus_n.loc[tomorrow, "T+0"]
         
         return evs
-    
+
+    def routine_0259pm(self, dt, argv):
+        '''
+        生成与当日15例行事件
+        '''
+        evs=[]
+
+        evs.extend(self.issue_order_place_event())
+
+        return evs
+
     def share_routine(self, dt, argv):
         '''
         生成与当日持仓相关的例行事件
@@ -1052,6 +1093,7 @@ class Emulator(object):
         #
         # 生成3点例行事件
         #
+        evs.append((day + timedelta(hours=14, minutes=59, seconds=59), 103, 0, 0, {}))
         evs.append((day + timedelta(hours=15), 102, 0, 0, {}))
 
         #
@@ -1063,9 +1105,15 @@ class Emulator(object):
         #
         # 如果当日有赎回
         #
-        redeems = self.investor.get_redeems(dt);
+        redeems = self.investor.get_redeems(day)
         evs.extend([(x['dt'], 4, 0, 0, x) for x in redeems]);
         
+        #
+        # 如果当日有调仓
+        #
+        adjusts = self.investor.get_adjusts(day)
+        evs.extend([(x['dt'], 6, 0, 0, x) for x in adjusts]);
+
         #
         # 记录持仓事件
         #
@@ -1127,24 +1175,26 @@ class Emulator(object):
             else:
                 print 'unknown command "%s"' % line
 
-    def place_fund_order(self, ts_order_fund):
+    def issue_order_place_event(self):
         #
         # 处理下单
         #
         evs = []
 
-        df_to_place = ts_order_fund.loc[(ts_order_fund['ts_trade_status'] == 0) & (ts_order_fund['ts_scheduled_at'] <= self.ts)]
-        # dd(df_ts_order_fund, df_to_place, self.ts)
-        for k, v in df_to_place.iterrows():
+        mask = (self.df_ts_order_fund['ts_trade_status'] == 0)
+        df = self.df_ts_order_fund.loc[mask]
+        # dd(df_ts_order_fund, df, self.ts)
+        for k, v in df.iterrows():
             ev = (self.ts, v['ts_trade_type'], v['ts_txn_id'], v['ts_fund_code'], v)
             evs.append(ev)
+        self.df_ts_order_fund.loc[mask, 'ts_trade_status'] = 2
 
         return evs
 
     
     def place_buy_order(self, dt, order_id, fund_code, argv):
         evs = []
-        
+
         if order_id not in self.df_ts_order_fund.index:
             dd("SNH: missng ts_order_fund in context %s " % order_id)
             return evs
@@ -1198,6 +1248,92 @@ class Emulator(object):
         #
         # self.adjust_stat(self::ST_SUB, fund_code, argv['ts_placed_amount']);
         # self.adjust_stat(self::ST_SUB_FEE, -$e['it_fee'], 0);
+
+    def place_redeem_order(self, dt, order_id, fund_code, argv):
+        evs = []
+
+        pdb.set_trace()
+        if order_id not in self.df_ts_order_fund.index:
+            dd("SNH: missng ts_order_fund in context %s " % order_id)
+            return evs
+
+        if self.df_share_redeeming is not None and order_id in self.df_share_redeeming:
+            dd("redeem order exists", [order_id, fund_code, argv])
+            # Log::error($this->logtag.'SNH: buying order exists', [$this->buying, $e]);
+            # $alert = sprintf($this->logtag."基金份额计算检测到重复购买订单:[%s]", $e['it_order_id']);
+            # SmsService::smsAlert($alert, 'kun');
+
+        #
+        # 获取订单确认日
+        #
+        nr_acked_days = self.rule.get_redeem_ack_days(fund_code)
+        acked_date = self.df_t_plus_n.loc[self.trade_date_current, "T+%d" % nr_acked_days]
+        
+        tmp = {
+            'ts_trade_status': 1,
+            'ts_placed_date': dt.date(),
+            'ts_placed_time': dt.time(),
+            'ts_trade_date': self.trade_date_current,
+            'ts_acked_date': acked_date,
+        }
+        self.df_ts_order_fund.loc[order_id, tmp.keys() ] = tmp.values()
+
+        #
+        # 从份额上扣减
+        #
+        redeeming = []
+        left = argv['ts_placed_share']
+        keys = self.df_share.loc[self.df_share['ts_fund_code'] == fund_code].index.tolist()
+        for key in keys:
+            share = self.df_share.loc[key]
+            if share['ts_share'] - left > 0.00001:
+                redeemed = left
+                self.df_share.loc[key, 'ts_share'] -= left
+                left = 0
+            else:
+                redeemed = share['ts_share']
+                left -= share['ts_share']
+                self.df_share.loc[key, 'ts_share'] = 0
+            redeeming.append((
+                order_id,                # 赎回订单号
+                share['ts_order_id'],    # 份额订单号
+                fund_code,               # 基金代码
+                redeemed,                # 赎回份额
+                self.trade_date_current, # 交易日期
+                0,                       # 交易净值
+                acked_date,              # 确认日期
+                0                        # 最新净值
+            ))
+            if left < 0.000099:
+                break
+
+        columns = ['ts_order_id', 'ts_share_id', 'ts_fund_code', 'ts_share', 'ts_trade_date', 'ts_trade_nav', 'ts_acked_date', 'ts_latest_nav']
+        df_redeeming = pd.DataFrame(redeeming, columns=columns)
+        
+                             
+        if self.df_share_redeeming is None:
+            self.df_share_redeeming = df_redeeming
+        else:
+            self.df_share_redeeming = pd.concat([self.df_share_redeeming, df_redeeming])
+                             
+        if left > 0.00001:
+            dd('SNH: insuffient share for redeem', [self.df_share, left, order_id, fund_code, argv])
+         
+        # #
+        # # 记录赎回对账单：赎回时手续费单独记录，赎回金额实际是到账金额
+        # #
+        # $amount = $e['it_amount'];
+        # if ($e['it_amount'] < 0.00001 && $e['it_share'] > 0.00001) {
+        #     $amount = round($e['it_share'] * $this->nav, 2);
+        # }
+        # // $this->stat[self::ST_REDEEM] -= $e['it_amount'];
+        # $this->adjustStat(self::ST_REDEEM, -$amount, -$e['it_share']);
+        # // $this->stat[self::ST_REDEEM_FEE] -= $e['it_fee'];
+        # if (abs($e['it_fee']) > 0.00001) {
+        #     $this->adjustStat(self::ST_REDEEM_FEE, -$e['it_fee'], 0);
+        # }
+        
+        return evs
         
 
     def handle_nav_update(self, fund_code, nav):
@@ -1205,40 +1341,75 @@ class Emulator(object):
         更新基金净值是需要一些例行的步骤
         '''
         evs = []
-        #
-        # 对订单进行预确认
-        #
         df = self.df_ts_order_fund
+        if fund_code == '000509' and nav['ra_date'] == pd.to_datetime('2017-06-26'):
+            pdb.set_trace()
 
+        #
+        # 对购买订单进行预确认
+        #
         mask = (df['ts_fund_code'] == fund_code) \
                & (df['ts_trade_status'] == 1) \
-               & (df['ts_trade_date'] == nav['ra_date'])
+               & (df['ts_trade_date'] == nav['ra_date']) \
+               & (df['ts_trade_type'].isin([30, 31, 50, 51, 63]))
         df_order_fund = df.loc[mask]
+        if not df_order_fund.empty:
+            #
+            # 计算基金的确认金额、份额和手续费
+            #
+            #dd(df, df_order_fund, fund_code, nav)
+            sr_fee = self.rule.get_buy_fee(fund_code, df_order_fund['ts_placed_amount'])
+            df.loc[mask, 'ts_trade_nav'] = nav['ra_nav']
+            df.loc[mask, 'ts_acked_fee'] = sr_fee
+            df.loc[mask, 'ts_acked_amount'] = df_order_fund['ts_placed_amount']
+            df.loc[mask, 'ts_acked_share'] = ((df_order_fund['ts_placed_amount'] - sr_fee) / nav['ra_nav']).round(2)
+            #
+            # 对份额进行预确认
+            #
+            sr_share = df.loc[mask, 'ts_acked_share']
+            self.df_share_buying.loc[sr_share.index, 'ts_share'] = sr_share
+            self.df_share_buying.loc[sr_share.index, 'ts_nav'] = nav['ra_nav']
+            self.df_share_buying.loc[sr_share.index, 'ts_date'] = nav['ra_date']
+            #
+            # 记录购买对账单
+            #
+            amount =  df_order_fund['ts_placed_amount'].sum()
+            share = sr_share.sum()
+            if amount > 0.0099 or share > 0.000099:
+                self.adjust_stat(fund_code, ST_SUB, amount, share)
+            fee = sr_fee.sum()
+            if abs(fee) > 0.0099:
+                self.adjust_stat(fund_code, ST_SUB_FEE, -fee, 0)
+
         #
-        # 计算基金的确认金额、份额和手续费
+        # 对赎回订单进行确认
         #
-        #dd(df, df_order_fund, fund_code, nav)
-        sr_fee = self.rule.get_buy_fee(fund_code, df_order_fund['ts_placed_amount'])
-        df.loc[mask, 'ts_acked_fee'] = sr_fee
-        df.loc[mask, 'ts_acked_amount'] = df_order_fund['ts_placed_amount']
-        df.loc[mask, 'ts_acked_share'] = ((df_order_fund['ts_placed_amount'] - sr_fee) / nav['ra_nav']).round(2)
-        #
-        # 对份额进行预确认
-        #
-        sr_share = df.loc[mask, 'ts_acked_share']
-        self.df_share_buying.loc[sr_share.index, 'ts_share'] = sr_share
-        self.df_share_buying.loc[sr_share.index, 'ts_nav'] = nav['ra_nav']
-        self.df_share_buying.loc[sr_share.index, 'ts_date'] = nav['ra_date']
-        #
-        # 记录购买对账单
-        #
-        amount =  df_order_fund['ts_placed_amount'].sum()
-        share = sr_share.sum()
-        if amount > 0.0099 or share > 0.000099:
-            self.adjust_stat(fund_code, ST_SUB, amount, share)
-        fee = sr_fee.sum()
-        if abs(fee) > 0.0099:
-            self.adjust_stat(fund_code, ST_SUB_FEE, -fee, 0)
+        mask = (df['ts_fund_code'] == fund_code) \
+               & (df['ts_trade_status'] == 1) \
+               & (df['ts_trade_date'] == nav['ra_date']) \
+               & (df['ts_trade_type'].isin([40, 41, 64]))
+        df_order_fund = df.loc[mask]
+        if not df_order_fund.empty:
+            df.loc[mask, 'ts_trade_nav'] = nav['ra_nav']
+            df.loc[mask, 'ts_acked_share'] = df_order_fund['ts_placed_share']
+            #
+            # 计算确认金额和手续费
+            #
+            sr_amount = df_order_fund['ts_placed_share'] * nav['ra_nav']
+            sr_fee = self.rule.get_redeem_fee(fund_code, sr_amount)
+            df.loc[mask, 'ts_acked_fee'] = sr_fee
+            df.loc[mask, 'ts_acked_amount'] = sr_amount - sr_fee
+            #
+            # 记录赎回对账单
+            #
+            df_order_fund = df.loc[mask]
+            amount =  df_order_fund['ts_acked_amount'].sum()
+            share = df_order_fund['ts_acked_share'].sum()
+            if amount > 0.0099 or share > 0.000099:
+                self.adjust_stat(fund_code, ST_REDEEM, -amount, -share)
+            fee = sr_fee.sum()
+            if abs(fee) > 0.0099:
+                self.adjust_stat(fund_code, ST_REDEEM_FEE, -fee, 0)
 
         #
         # 更新基金净值

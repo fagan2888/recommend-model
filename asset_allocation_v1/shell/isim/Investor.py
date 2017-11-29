@@ -49,19 +49,33 @@ class Investor(object):
         return None
 
     def get_buys(self, day):
-        buys = [];
+        orders = [];
 
         if day in self.df_ts_order.index:
             df_tmp = self.df_ts_order.loc[[day], :]
             for k, v in df_tmp.iterrows():
-                dt = pd.to_datetime(datetime.combine(day, v['ts_placed_time']))
+                if v['ts_trade_type'] == 3:
+                    dt = pd.to_datetime(datetime.combine(day, v['ts_placed_time']))
 
-                buy = {'dt': dt, 'ts_txn_id': v['ts_txn_id'], 'argv': v}
-                buys.append(buy)
-        return buys;
+                    order = {'dt': dt, 'ts_txn_id': v['ts_txn_id'], 'argv': v}
+                    orders.append(order)
+        return orders
 
     def get_redeems(self, day):
         redeems = [];
         return redeems;
-        
+
+    
+    def get_adjusts(self, day):
+        orders = []
+        if day in self.df_ts_order.index:
+            df_tmp = self.df_ts_order.loc[[day], :]
+            for k, v in df_tmp.iterrows():
+                if v['ts_trade_type'] == 6:
+                    dt = pd.to_datetime(datetime.combine(day, v['ts_placed_time']))
+
+                    order = {'dt': dt, 'ts_txn_id': v['ts_txn_id'], 'argv': v}
+                    orders.append(order)
+        return orders
+
     

@@ -49,7 +49,8 @@ uris = {
     'base': db_base_uri,
     'caihui': db_caihui_uri,
     'portfolio_sta': db_portfolio_sta_uri,
-    #'portfolio_sta': config.db_portfolio_sta_uri,
+    'portfolio_sta': config.db_portfolio_sta_uri,
     'mapi': db_mapi_uri,
+    'trade': db_trade_uri,
 }
 
