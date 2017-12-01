@@ -28,7 +28,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
-from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav,base_ra_stock_nav
 from util import xdict
 from util.xdebug import dd
 
@@ -517,11 +517,25 @@ def average_days(start_date, end_date, assets):
     return df
 
 
-def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, wavelet = False, wavelet_filter_num = 0):
+def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, wavelet = False, wavelet_filter_num = 0, markowitz_id = None):
     '''perform markowitz asset for days
     '''
+    df_argv = asset_mz_markowitz_argv.load([markowitz_id])
+    df_argv.reset_index(level=0, inplace=True)
+    argv = df_argv['mz_value'].to_dict()
+
+
+    lookback = int(argv.get('allocate_lookback', '26'))
+    #start_date = argv.get('start_date', '2012-07-21').strip()
+    date_type = argv.get('allocate_date_type', 'trade_day').strip()
+    adjust_period = int(argv.get('allocate_adjust_position_period', '63'))
+
+
     # 加载时间轴数据
-    index = DBData.trade_date_index(start_date, end_date=end_date)
+    if date_type == 'trade_week':
+        index = DBData.trade_date_index(start_date)
+    elif date_type == 'trade_day':
+        index = DBData.trade_day_index(start_date)
 
     # 根据调整间隔抽取调仓点
     if adjust_period:
@@ -590,6 +604,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     begin_date = index.min().strftime("%Y-%m-%d")
     end_date = index.max().strftime("%Y-%m-%d")
 
+
     #print wavelet, wavelet_filter_num
     #
     # 加载数据
@@ -601,8 +616,8 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
         else:
             data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
+    df_nav = df_nav.dropna(axis = 1)
     df_inc  = df_nav.pct_change().fillna(0.0)
-    #print df_nav
 
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 
@@ -745,6 +760,10 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
             sr = base_exchange_rate_index_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'SK':
+            df = base_ra_stock_nav.closeaf(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+            sr = df['nav']
         else:
             sr = pd.Series()
 
@@ -854,15 +873,15 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     elif algo == 2:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False, markowitz_id = markowitz_id)
     elif algo == 3:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False, markowitz_id = markowitz_id)
     elif algo == 4:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_n, markowitz_id = markowitz_id)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;

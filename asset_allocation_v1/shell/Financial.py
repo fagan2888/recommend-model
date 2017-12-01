@@ -30,6 +30,9 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
 
     cov        =     np.cov(return_rate)
 
+    #print cov.shape
+    #print np.linalg.matrix_rank(cov)
+
     S           =     matrix(cov)
     l2 = matrix(S * np.eye(l))
     l2 = l2 * 2

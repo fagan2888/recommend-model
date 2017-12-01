@@ -394,6 +394,19 @@ def imp_markowitz(df):
     #print argv_df
 
 
+
+
+@util.command()
+@click.option('--path', 'optpath', default=True, help=u'file path')
+@click.pass_context
+def import_markowitz(ctx, optpath):
+
+    markowitz_df = pd.read_csv(optpath.strip(), parse_dates = ['start_date', 'end_date'], dtype = {'asset_id':str})
+    imp_markowitz(markowitz_df)
+
+
+
+
 def find_asset_name(asset_id):
     if asset_id.strip().isdigit():
         #print int(asset_id)

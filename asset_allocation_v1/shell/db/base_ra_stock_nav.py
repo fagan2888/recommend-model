@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 #
 # base.ra_index_nav
 #
-def closeaf(globalid = None, reindex=None, begin_date=None, end_date=None, mask=None):
+def closeaf(globalid = None, reindex=None, begin_date=None, end_date=None):
     db = database.connection('base')
     metadata = MetaData(bind=db)
     t1 = Table('ra_stock_nav', metadata, autoload=True)
@@ -35,14 +35,9 @@ def closeaf(globalid = None, reindex=None, begin_date=None, end_date=None, mask=
     if globalid is not None:
         s = s.where(t1.c.globalid == globalid)
     if begin_date is not None:
-        s = s.where(t1.c.ra_date >= begin_date)
+        s = s.where(t1.c.sk_tradedate >= begin_date)
     if end_date is not None:
-        s = s.where(t1.c.ra_date <= end_date)
-    if mask is not None:
-        if hasattr(mask, "__iter__") and not isinstance(mask, str):
-            s = s.where(t1.c.ra_mask.in_(mask))
-        else:
-            s = s.where(t1.c.ra_mask == mask)
+        s = s.where(t1.c.sk_tradedate <= end_date)
 
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
