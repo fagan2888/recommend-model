@@ -22,6 +22,7 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
 
     solvers.options['show_progress'] = False
 
+
     n_asset    =     len(return_rate)
 
     asset_mean = np.mean(return_rate, axis = 1)
@@ -32,6 +33,7 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
 
     #print cov.shape
     #print np.linalg.matrix_rank(cov)
+
 
     S           =     matrix(cov)
     l2 = matrix(S * np.eye(l))

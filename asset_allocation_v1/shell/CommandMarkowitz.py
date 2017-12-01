@@ -550,7 +550,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
     #
     s = 'perform %-12s' % label
     data = {}
-    if bootstrap is None and ( not wavelet ):
+    if False and (bootstrap is None and ( not wavelet )):
         count = multiprocessing.cpu_count() / 2
         process_adjust_indexs = [[] for i in range(0, count)]
         for i in range(0, len(adjust_index)):
@@ -618,6 +618,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_nav = df_nav.dropna(axis = 1)
     df_inc  = df_nav.pct_change().fillna(0.0)
+    #print df_inc
 
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 
