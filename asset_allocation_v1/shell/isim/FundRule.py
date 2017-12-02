@@ -30,6 +30,14 @@ def calc_buy_fee(amount, df):
         fee = amount - amount / (1 + sr['ff_fee'] * 0.2) # 标准费率计算方式
     return round(fee, 2)
 
+def calc_redeem_fee(row, df):
+    sr = df.loc[df['ff_max_value'] >= row['ndays']].iloc[0]
+    if sr['ff_fee_type'] == 2: # 固定费用模式，一般是0元，持有期足够长，赎回免费
+        fee = sr['ff_fee']
+    else:
+        fee = row['ts_share'] * row['ts_trade_nav'] * sr['ff_fee']  # 标准费率计算方式
+    return fee
+    
 
 class FundRule(object):    
 
@@ -156,7 +164,7 @@ class FundRule(object):
         sr_fee = sr_amount.apply(calc_buy_fee, args=(df,))
         return sr_fee
         
-    def get_redeem_fee(self, dt, fund_code, buy_date, amount):
+    def get_redeem_fee(self, fund_code, df_redeeming, today):
         '''
         获取赎回费用
 
@@ -171,25 +179,18 @@ class FundRule(object):
         if self.optfee == False:
             return 0
         
-        if fund_code not in self.df_redeem_fee.index:
+        if fund_code not in self.dt_redeem_fee:
             df = base_fund_fee.load_redeem(codes=[fund_code])
             if df.empty:
-                df = pd.Series({})
-            self.dt_buy_fee[fund_code] = df
+                df = pd.DataFrame([(fund_code, np.inf, 0, 2)], columns=['ff_code', 'ff_max_value', 'ff_fee', 'ff_fee_type'])
+            self.dt_redeem_fee[fund_code] = df
         else:
-            df = self.dt_buy_fee[fund_code]
-
-        df = self.df_redeem_fee.loc[[fund_code], :]
+            df = self.dt_redeem_fee[fund_code]
 
         # 持有日期
-        ndays = (dt - buy_date).days
+        df_redeeming['ndays'] = (today - df_redeeming['ts_buy_date']).dt.days
+            
+        sr_fee = df_redeeming.apply(calc_redeem_fee, axis=1, args=(df,))
 
-        sr = df.loc[df['ff_max_value'] >= ndays].iloc[0]
-        if sr['ff_fee_type'] == 2: # 固定费用模式，一般是0元，持有期足够长，赎回免费
-            fee = sr['ff_fee']
-        else:
-            fee = amount * sr['ff_fee']  # 标准费率计算方式
-
-        return fee
-
+        return sr_fee
         

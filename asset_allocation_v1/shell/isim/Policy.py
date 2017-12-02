@@ -24,8 +24,9 @@ readline.parse_and_bind('tab: complete')
 
 class Policy(object):    
 
-    def __init__(self, df_ts_order_fund):
+    def __init__(self, df_ts_order, df_ts_order_fund):
 
+        self.df_ts_order = df_ts_order.set_index(['ts_txn_id'], drop=False).sort_index()
         self.df_ts_order_fund = df_ts_order_fund.set_index(['ts_portfolio_txn_id', 'ts_placed_date', 'ts_trade_type'], drop=False).sort_index()
 
         # # 赎回到账期限 记录了每个基金的到账日到底是T+n；
@@ -102,7 +103,12 @@ class Policy(object):
         df_ts_order_fund['ts_acked_share'] = 0.0000
         df_ts_order_fund['ts_acked_fee'] = 0.00
 
-        return df_ts_order_fund
+        #
+        # ts_order
+        #
+        ts_order['ts_trade_status'] = 0
+
+        return ts_order, df_ts_order_fund
 
     def is_need_adjust(self, dt):
         date = pd.to_datetime(dt.date())
@@ -113,6 +119,46 @@ class Policy(object):
         date = pd.to_datetime(dt.date())
 
         df_ts_order_fund = self.df_ts_order_fund.loc[(ts_order['ts_txn_id'], date, (30, 31, 40, 41, 50, 51, 63, 64)), ['ts_txn_id', 'ts_uid', 'ts_portfolio_txn_id', 'ts_pay_method', 'ts_fund_code', 'ts_trade_type', 'ts_trade_status', 'ts_placed_amount', 'ts_placed_share', 'ts_placed_fee', 'ts_scheduled_at']].copy()
+
+        df_ts_order_fund = df_ts_order_fund.reset_index(drop=True).set_index('ts_txn_id', drop=False)
+        df_ts_order_fund['ts_trade_status'] = 0
+        df_ts_order_fund['ts_trade_date'] = None
+        df_ts_order_fund['ts_trade_nav'] = 0.0000
+        df_ts_order_fund['ts_placed_date'] = None
+        df_ts_order_fund['ts_placed_time'] = None
+        df_ts_order_fund['ts_acked_date'] = None
+        df_ts_order_fund['ts_acked_amount'] = 0.00
+        df_ts_order_fund['ts_acked_share'] = 0.0000
+        df_ts_order_fund['ts_acked_fee'] = 0.00
+
+        #
+        # ts_order
+        #
+        ts_order['ts_trade_status'] = 0
+
+        return ts_order, df_ts_order_fund
+
+    def continue_order(self, dt, ts_txn_id):
+        pass
+
+    def check_order(self, dt, ts_txn_id):
+        if ts_txn_id in self.df_ts_order.index:
+            sr = self.df_ts_order.loc[ts_txn_id]
+            if dt > sr['ts_acked_date']:
+                return 20000
+            else:
+                return 0
+        else:
+            return 40001
+
+    def place_plan_order(self, dt, ts_txn_id, df_order_fund):
+        date = pd.to_datetime(dt.date())
+
+        pdb.set_trace()
+        df = self.df_ts_order_fund.loc[ts_txn_id]
+        mask = (df['ts_placed_date'] == date) & (df['ts_trade_type'].isin([30, 31, 40, 41, 50, 51, 63, 64])) & (~df['ts_txn_id'].isin(df_order_fund['ts_txn_id']))
+        
+        df_ts_order_fund = df.loc[mask, ['ts_txn_id', 'ts_uid', 'ts_portfolio_txn_id', 'ts_pay_method', 'ts_fund_code', 'ts_trade_type', 'ts_trade_status', 'ts_placed_amount', 'ts_placed_share', 'ts_placed_fee', 'ts_scheduled_at']].copy()
 
         df_ts_order_fund = df_ts_order_fund.reset_index(drop=True).set_index('ts_txn_id', drop=False)
         df_ts_order_fund['ts_trade_status'] = 0

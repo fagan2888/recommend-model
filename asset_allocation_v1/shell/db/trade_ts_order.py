@@ -30,6 +30,7 @@ def load(uid, xtype):
         t.c.ts_placed_time,
         t.c.ts_placed_amount,
         t.c.ts_placed_percent,
+        t.c.ts_acked_date,
     ]
 
     s = select(columns).where(t.c.ts_uid == uid).where(t.c.ts_trade_status >= 0)
@@ -39,7 +40,7 @@ def load(uid, xtype):
     # if codes is not None:
     #     s = s.where(t.c.ff_code.in_(codes))
 
-    df = pd.read_sql(s, db, parse_dates=['ts_placed_date'])
+    df = pd.read_sql(s, db, parse_dates=['ts_placed_date', 'ts_acked_date'])
 
     return df
 

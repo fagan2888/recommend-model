@@ -185,6 +185,7 @@ class Emulator(object):
         # 
         self.orders = []
 
+        self.df_ts_order = None
         self.df_ts_order_fund = None
 
         #
@@ -426,13 +427,21 @@ class Emulator(object):
             #
             # 处理组合购买
             #
-            ts_order_fund = self.policy.place_buy_order(dt, argv)
+            ts_order, ts_order_fund = self.policy.place_buy_order(dt, argv)
+            
+            if self.df_ts_order is None:
+                self.df_ts_order = pd.DataFrame([ts_order], index=[ts_order['ts_txn_id']])
+            else:
+                self.df_ts_order.loc[ts_order['ts_txn_id']] = ts_order
 
             if self.df_ts_order_fund is None:
                 self.df_ts_order_fund = ts_order_fund
             else:
                 dd(self.df_ts_order_fund, ts_order_fund, ev)
-                self.df_ts_order_fund.combine(ts_order_fund, lambda x, y: y.combine_first(x))
+                self.df_ts_order_fund = ts_order_fund.combine_first(self.df_ts_order_fund)
+                self.df_ts_order_fund['ts_uid'] = self.df_ts_order_fund['ts_uid'].astype(int)
+                self.df_ts_order_fund['ts_trade_type'] = self.df_ts_order_fund['ts_trade_type'].astype(int)
+                self.df_ts_order_fund['ts_trade_status'] = self.df_ts_order_fund['ts_trade_status'].astype(int)
             
             result.extend(self.issue_order_place_event())
             
@@ -446,8 +455,14 @@ class Emulator(object):
             #
             # 处理组合调仓
             #
-            ts_order_fund = self.policy.place_adjust_order(dt, argv)
+            pdb.set_trace()
+            ts_order, ts_order_fund = self.policy.place_adjust_order(dt, argv)
             
+            if self.df_ts_order is None:
+                self.df_ts_order = pd.DataFrame([ts_order], index=[ts_order['ts_txn_id']])
+            else:
+                self.df_ts_order.loc[ts_order['ts_txn_id']] = ts_order
+
             if self.df_ts_order_fund is None:
                 self.df_ts_order_fund = ts_order_fund
             else:
@@ -1040,6 +1055,8 @@ class Emulator(object):
             if nav is not None:
                 evs.extend(self.handle_nav_update(code, nav))
 
+        if dt == pd.to_datetime('2017-06-26 15:00:00'):
+            pdb.set_trace()
         #
         # 切换交易日
         #
@@ -1058,6 +1075,8 @@ class Emulator(object):
         '''
         evs=[]
 
+        # if dt == pd.to_datetime('2017-06-28')
+        
         evs.extend(self.issue_order_place_event())
 
         return evs
@@ -1106,13 +1125,13 @@ class Emulator(object):
         # 如果当日有赎回
         #
         redeems = self.investor.get_redeems(day)
-        evs.extend([(x['dt'], 4, 0, 0, x) for x in redeems]);
+        evs.extend([(x['dt'], 4, 0, 0, x['argv']) for x in redeems]);
         
         #
         # 如果当日有调仓
         #
         adjusts = self.investor.get_adjusts(day)
-        evs.extend([(x['dt'], 6, 0, 0, x) for x in adjusts]);
+        evs.extend([(x['dt'], 6, 0, 0, x['argv']) for x in adjusts]);
 
         #
         # 记录持仓事件
@@ -1125,6 +1144,11 @@ class Emulator(object):
         # 处理当天需要确认的订单
         #
         evs.extend(self.handle_order_confirm(dt, argv))
+
+        #
+        # 处理当天需要下单的订单
+        #
+        evs.extend(self.handle_order_continue(dt, argv))
 
         return evs
 
@@ -1241,7 +1265,7 @@ class Emulator(object):
             ])
         else:
             self.df_share_buying.loc[order_id] = buying 
-        
+
         return evs
         #
         # 记录购买对账单: 购买时记账手续费要计入购买金额(it_amount是包含手续费)
@@ -1252,7 +1276,6 @@ class Emulator(object):
     def place_redeem_order(self, dt, order_id, fund_code, argv):
         evs = []
 
-        pdb.set_trace()
         if order_id not in self.df_ts_order_fund.index:
             dd("SNH: missng ts_order_fund in context %s " % order_id)
             return evs
@@ -1302,12 +1325,13 @@ class Emulator(object):
                 self.trade_date_current, # 交易日期
                 0,                       # 交易净值
                 acked_date,              # 确认日期
-                0                        # 最新净值
+                0,                       # 最新净值
+                share['ts_trade_date'],  # 份额购买日期
             ))
             if left < 0.000099:
                 break
 
-        columns = ['ts_order_id', 'ts_share_id', 'ts_fund_code', 'ts_share', 'ts_trade_date', 'ts_trade_nav', 'ts_acked_date', 'ts_latest_nav']
+        columns = ['ts_order_id', 'ts_share_id', 'ts_fund_code', 'ts_share', 'ts_trade_date', 'ts_trade_nav', 'ts_acked_date', 'ts_latest_nav', 'ts_buy_date']
         df_redeeming = pd.DataFrame(redeeming, columns=columns)
         
                              
@@ -1342,8 +1366,8 @@ class Emulator(object):
         '''
         evs = []
         df = self.df_ts_order_fund
-        if fund_code == '000509' and nav['ra_date'] == pd.to_datetime('2017-06-26'):
-            pdb.set_trace()
+        # if fund_code == '000509' and nav['ra_date'] == pd.to_datetime('2017-06-26'):
+        #     pdb.set_trace()
 
         #
         # 对购买订单进行预确认
@@ -1392,11 +1416,19 @@ class Emulator(object):
         if not df_order_fund.empty:
             df.loc[mask, 'ts_trade_nav'] = nav['ra_nav']
             df.loc[mask, 'ts_acked_share'] = df_order_fund['ts_placed_share']
+
             #
             # 计算确认金额和手续费
             #
-            sr_amount = df_order_fund['ts_placed_share'] * nav['ra_nav']
-            sr_fee = self.rule.get_redeem_fee(fund_code, sr_amount)
+            mask2 = self.df_share_redeeming['ts_order_id'].isin(df_order_fund['ts_txn_id'])
+            self.df_share_redeeming.loc[mask2, 'ts_trade_nav'] = nav['ra_nav']
+
+            df_redeeming = self.df_share_redeeming.loc[mask2, ['ts_order_id', 'ts_share', 'ts_trade_nav', 'ts_buy_date']]
+            df_redeeming['ts_acked_fee'] = self.rule.get_redeem_fee(fund_code, df_redeeming, nav['ra_date'])
+
+            sr_fee = df_redeeming['ts_acked_fee'].groupby(by=df_redeeming['ts_order_id']).sum().round(2)
+            
+            sr_amount = (df_order_fund['ts_placed_share'] * nav['ra_nav']).round(2)
             df.loc[mask, 'ts_acked_fee'] = sr_fee
             df.loc[mask, 'ts_acked_amount'] = sr_amount - sr_fee
             #
@@ -1451,6 +1483,40 @@ class Emulator(object):
         #         ev = (split_date + timedelta(hours=1), 18, 0, fund_code, argv)
         #         evs.append(ev)
 
+        
+
+    def handle_order_continue(self, dt, argv):
+        '''
+        对需要确认的订单进行确认
+        '''
+        evs = []
+
+        #
+        # 对未完成的订单进行continue
+        #
+        if dt == pd.to_datetime('2017-06-27 00:00:01'):
+            pdb.set_trace()
+
+        if self.df_ts_order is not None:
+            ptxns = self.df_ts_order.loc[self.df_ts_order['ts_trade_status'].isin([0,1])].index.tolist()            
+
+            for ptxn in ptxns:
+                df_order_fund = self.df_ts_order_fund.loc[self.df_ts_order_fund['ts_portfolio_txn_id'] == ptxn]
+                ts_order_fund = self.policy.place_plan_order(dt, ptxn, df_order_fund)
+
+                if ts_order_fund is not None and not ts_order_fund.empty:
+                    if self.df_ts_order_fund is None:
+                        self.df_ts_order_fund = ts_order_fund
+                    else:
+                        self.df_ts_order_fund = ts_order_fund.combine_first(self.df_ts_order_fund)
+                        self.df_ts_order_fund['ts_uid'] = self.df_ts_order_fund['ts_uid'].astype(int)
+                        self.df_ts_order_fund['ts_trade_type'] = self.df_ts_order_fund['ts_trade_type'].astype(int)
+                        self.df_ts_order_fund['ts_trade_status'] = self.df_ts_order_fund['ts_trade_status'].astype(int)
+
+            evs.extend(self.issue_order_place_event())
+        
+        return evs
+
     def handle_order_confirm(self, dt, argv):
         '''
         对需要确认的订单进行确认
@@ -1466,8 +1532,17 @@ class Emulator(object):
                 # 对订单进行确认
                 self.df_ts_order_fund.loc[mask, 'ts_trade_status'] = 6
                 # dd(df, self.df_ts_order_fund)
+
         #
-        # 对持仓进行确认
+        # 更新组合订单状态
+        #
+        if self.df_ts_order is not None:
+            ptxns = self.df_ts_order.loc[self.df_ts_order['ts_trade_status'].isin([0,1])].index
+            # 需要处理更新主订单状态
+            self.update_ts_order_status(ptxns)
+    
+        #
+        # 对购买持仓进行确认
         #
         if self.df_share_buying is not None:
             mask = (self.df_share_buying['ts_acked_date'] == self.day)
@@ -1479,8 +1554,38 @@ class Emulator(object):
                     self.df_share = df.combine_first(self.df_share)
                 self.df_share_buying.drop(df.index, inplace=True)
 
+        #
+        # 对赎回持仓进行确认
+        #
+        if self.df_share_redeeming is not None:
+            mask = (self.df_share_redeeming['ts_acked_date'] == self.day)
+            df = self.df_share_redeeming.loc[mask]
+            if not df.empty:
+                self.df_share_redeeming.drop(df.index, inplace=True)
+        
         return evs
+    
+    def update_ts_order_status(self, ptxns):
+        # if self.ts.strftime("%Y-%m-%d") == '2017-04-27':
+        #     pdb.set_trace()
+        for ptxn in ptxns:
+            self.policy.continue_order(self.ts, ptxn)
 
+            ret = self.policy.check_order(self.ts, ptxn)
+            if ret == 20000:
+                is_plan_finished = 1
+                status = 6
+            elif ret == 40001:
+                is_plan_finished = -1
+                status = -1
+            else:
+                is_plan_finished = 0
+                status = 0
+
+            self.df_ts_order.loc[ptxn, 'ts_trade_status'] = status
+        
+        
+    
     def record_holding(self, dt, argv):
         '''
         记录持仓事件
