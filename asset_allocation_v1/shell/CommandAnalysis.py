@@ -200,7 +200,7 @@ def portfolio_compara(ctx, optnewid, optoldid, optfee, optstartdate, optenddate)
 
 
 @analysis.command()
-@click.option('--pool-id', 'optpool', default=True, help=u'pool id')
+@click.option('--pool-id', 'optpool', default=None, help=u'pool id')
 @click.pass_context
 def fund_pool_info(ctx, optpool):
 
@@ -233,24 +233,27 @@ def fund_pool_info(ctx, optpool):
     fund_company_df = fund_company_df.set_index(['fi_globalid'])
 
 
+    dfs = []
+    for _id in optpool.split(','):
 
+        pool_id = _id.strip()
+        pool_name = asset_ra_pool.find(pool_id)['ra_name']
+        pool_df = asset_ra_pool_fund.load(pool_id)
+        pool_df = pool_df['ra_fund_code']
+        pool_df = pool_df.reset_index()
+        pool_df = pool_df.set_index('ra_fund_id')
 
-    pool_id = optpool.strip()
-    pool_name = asset_ra_pool.find(pool_id)['ra_name']
-    pool_df = asset_ra_pool_fund.load(pool_id)
-    pool_df = pool_df['ra_fund_code']
-    pool_df = pool_df.reset_index()
-    pool_df = pool_df.set_index('ra_fund_id')
-    #print fund_company_df.head()
-    #print pool_df.head()
+        pool_fund_company_df = pd.concat([pool_df, fund_company_df], axis = 1, join_axes = [pool_df.index])
+        pool_fund_company_df = pool_fund_company_df[['ra_date','ra_fund_code','fi_name','ci_name']]
+        pool_fund_company_df['pool_name'] = pool_name
+        #print pool_fund_company_df.head()
 
+        dfs.append(pool_fund_company_df)
 
-    pool_fund_company_df = pd.concat([pool_df, fund_company_df], axis = 1, join_axes = [pool_df.index])
-    pool_fund_company_df = pool_fund_company_df[['ra_date','ra_fund_code','fi_name','ci_name']]
-    pool_fund_company_df['pool_name'] = pool_name
-    #pool_fund_company_df = pool_fund_company_df[pool_fund_company_df['ra_date'] >= '2016-10-02']
-    print pool_fund_company_df
-    pool_fund_company_df.to_csv('pool_fund_company_df.csv', encoding = 'gbk')
+    df = pd.concat(dfs)
+    print df.head()
+    df.to_csv('fund_pool.csv', encoding='gbk')
+    #pool_fund_company_df.to_csv('pool_fund_company_df.csv', encoding = 'gbk')
 
 
 
