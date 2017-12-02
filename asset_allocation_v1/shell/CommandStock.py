@@ -44,6 +44,7 @@ def stock():
     '''
     pass
 
+
 @stock.command()
 @click.option('--output', 'optoutput', default=None, help=u'output path')
 @click.pass_context
@@ -56,7 +57,7 @@ def export_navaf(ctx, optoutput):
     df = df.set_index(['date', 'globalid'])
     df = df.unstack()
     df.columns = df.columns.get_level_values(1)
-    print df.tail()
+    #print df.tail()
     if optoutput is not None:
         df.to_csv(optoutput.strip())
 
@@ -64,11 +65,57 @@ def export_navaf(ctx, optoutput):
 @stock.command()
 @click.option('--input', 'optinput', default=None, help=u'stock nav path')
 @click.pass_context
-def navaf_rnn(ctx, optinput):
+def navaf_rnn_data(ctx, optinput):
 
     nav_df = pd.read_csv(optinput.strip(), index_col = ['date'], parse_dates = ['date'])
     nav_df = nav_df.replace(0, np.nan)
-    nav_df = nav_df.fillna(method = 'pad')
-    inc_df = nav_df.pct_change().fillna(0.0)
-    print inc_df
-    inc_df.to_csv('inc.csv')
+    nav_df = nav_df.interpolate()
+    inc_df = nav_df.pct_change()
+
+    for i in range(0 ,len(inc_df)):
+        mean = inc_df.iloc[i].mean()
+        std = inc_df.iloc[i].std()
+        inc_df.iloc[i] = (inc_df.iloc[i] - mean) / std
+
+    #print inc_df
+    X = []
+    Y = []
+    interval = 60
+    for code in inc_df.columns:
+        ser = inc_df[code]
+        for i in range(interval, len(ser) - 1, interval):
+            x = ser.iloc[i - interval : i]
+            y = ser.iloc[i - interval + 1 : i + 1]
+            if len(x) <= len(x.dropna()) and len(y) <= len(y.dropna()):
+                X.append(x.ravel())
+                Y.append(y.ravel())
+
+        print code, 'Done'
+
+    with open('stock_x.csv', 'w') as f:
+        for x in X:
+            f.writelines(','.join([str(n) for n in x]) + '\n')
+        f.close()
+
+    with open('stock_y.csv', 'w') as f:
+        for y in Y:
+            f.writelines(','.join([str(n) for n in y]) + '\n')
+        f.close()
+
+@stock.command()
+@click.option('--x', 'optx', default=None, help=u'stock x path')
+@click.option('--y', 'opty', default=None, help=u'stock y path')
+@click.pass_context
+def rnn(ctx, optx, opty):
+
+    with open('stock_x.csv', 'r') as f:
+        X = f.readlines()
+        print len(X)
+
+    with open('stock_y.csv', 'r') as f:
+        Y = f.readlines()
+        print len(Y)
+
+
+
+
