@@ -20,7 +20,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool
 from util import xdict
 
 import traceback, code
@@ -199,3 +199,64 @@ def portfolio_compara(ctx, optnewid, optoldid, optfee, optstartdate, optenddate)
     print '年战胜概率', 1.0 * len(new_minus_old[new_minus_old > 0]) / len(new_minus_old)
 
 
+@analysis.command()
+@click.option('--pool-id', 'optpool', default=True, help=u'pool id')
+@click.pass_context
+def fund_pool_info(ctx, optpool):
+
+
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    fund_info_t = Table('fund_infos', metadata, autoload=True)
+    company_t = Table('company_infos', metadata, autoload=True)
+
+    fund_info = [
+            fund_info_t.c.fi_globalid,
+            fund_info_t.c.fi_code,
+            fund_info_t.c.fi_name,
+            fund_info_t.c.fi_company_id,
+    ]
+
+    fund_info_df = pd.read_sql(select(fund_info), db)
+
+    company_info = [
+            company_t.c.ci_globalid,
+            company_t.c.ci_name,
+    ]
+
+
+    company_info_df = pd.read_sql(select(company_info), db)
+
+
+    fund_company_df = pd.merge(fund_info_df, company_info_df, left_on = ['fi_company_id'], right_on = ['ci_globalid'])
+    fund_company_df = fund_company_df[['fi_globalid','fi_code', 'fi_name', 'ci_name']]
+    fund_company_df = fund_company_df.set_index(['fi_globalid'])
+
+
+
+
+    pool_id = optpool.strip()
+    pool_name = asset_ra_pool.find(pool_id)['ra_name']
+    pool_df = asset_ra_pool_fund.load(pool_id)
+    pool_df = pool_df['ra_fund_code']
+    pool_df = pool_df.reset_index()
+    pool_df = pool_df.set_index('ra_fund_id')
+    #print fund_company_df.head()
+    #print pool_df.head()
+
+
+    pool_fund_company_df = pd.concat([pool_df, fund_company_df], axis = 1, join_axes = [pool_df.index])
+    pool_fund_company_df = pool_fund_company_df[['ra_date','ra_fund_code','fi_name','ci_name']]
+    pool_fund_company_df['pool_name'] = pool_name
+    #pool_fund_company_df = pool_fund_company_df[pool_fund_company_df['ra_date'] >= '2016-10-02']
+    print pool_fund_company_df
+    pool_fund_company_df.to_csv('pool_fund_company_df.csv', encoding = 'gbk')
+
+
+
+    '''
+    fund_info_df = base_ra_fund.load()
+    fund_info_df = fund_info_df[['globalid', 'ra_code', 'ra_name']]
+    fund_info_df = fund_info_df.set_index('globalid')
+    print fund_info_df
+    '''
