@@ -52,7 +52,7 @@ class Investor(object):
             else:
                 dividend[code] = df
 
-        pdb.set_trace()
+        # pdb.set_trace()
         if carried:
             self.df_carried = pd.concat(carried).reset_index(level=1, drop=True)
         else:

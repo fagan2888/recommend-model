@@ -294,18 +294,22 @@ def emulate_update(uid, debug, optfee, optt0, enddate, optfund):
 
     df = emulator.run()
 
-    df_stat = pd.concat(emulator.dt_stat)
-    df_stat.index.names=['ts_date', 'ts_fund_code', 'ts_stat_type']
-    df_stat = df_stat.reset_index().set_index(['ts_fund_code', 'ts_date', 'ts_stat_type']).sort_index()
+    if emulator.dt_stat:
+        df_stat = pd.concat(emulator.dt_stat)
+        df_stat.index.names=['ts_date', 'ts_portfolio_id', 'ts_fund_code', 'ts_pay_method', 'ts_stat_type']
+        df_stat = df_stat.reset_index().set_index(['ts_portfolio_id', 'ts_fund_code', 'ts_pay_method', 'ts_date', 'ts_stat_type']).sort_index()
 
 
     print emulator.df_ts_order_fund
     
     print emulator.df_share
-    
-    df_share = df.groupby(['ts_fund_code']).agg({'ts_date':'max', 'ts_nav':'first', 'ts_share':'sum', 'ts_trade_date':'min', 'ts_acked_date':'min', 'ts_redeemable_date':'min'})
-    print df_share
-    
-    # dd("emulator completee", df, df_stat)
+
+    if df is not None:
+        df_share = df.groupby(['ts_fund_code']).agg({'ts_date':'max', 'ts_nav':'first', 'ts_share':'sum', 'ts_trade_date':'min', 'ts_acked_date':'min', 'ts_redeemable_date':'min'})
+        print df_share
+    else:
+        print df
+        
+    #dd("emulator completee", df, df_stat)
 
 

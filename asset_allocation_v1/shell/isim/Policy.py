@@ -89,10 +89,10 @@ class Policy(object):
     def make_empty(self):
         return  pd.DataFrame([], index=[], columns=[
             'ts_txn_id',
-            'ts_uid',
             'ts_portfolio_txn_id',
-            'ts_pay_method',
+            'ts_portfolio_id',
             'ts_fund_code',
+            'ts_pay_method',
             'ts_trade_type',
             'ts_trade_status',
             'ts_placed_amount',
@@ -125,7 +125,7 @@ class Policy(object):
         df = self.df_ts_order_fund.loc[[txn_id]]
         mask = (df['ts_placed_date'] == date) & (df['ts_trade_type'].isin((30, 31, 50, 51, 63)))
         
-        df_ts_order_fund = df.loc[mask, ['ts_txn_id', 'ts_uid', 'ts_portfolio_txn_id', 'ts_pay_method', 'ts_fund_code', 'ts_trade_type', 'ts_trade_status', 'ts_placed_amount', 'ts_placed_share', 'ts_placed_fee', 'ts_scheduled_at']].copy()
+        df_ts_order_fund = df.loc[mask, ['ts_txn_id', 'ts_portfolio_txn_id', 'ts_portfolio_id', 'ts_fund_code',  'ts_pay_method', 'ts_trade_type', 'ts_trade_status', 'ts_placed_amount', 'ts_placed_share', 'ts_placed_fee', 'ts_scheduled_at']].copy()
 
         df_ts_order_fund = df_ts_order_fund.reset_index(drop=True).set_index('ts_txn_id', drop=False)
         df_ts_order_fund['ts_trade_status'] = 0
@@ -156,7 +156,7 @@ class Policy(object):
         df = self.df_ts_order_fund.loc[[txn_id]]
         mask = (df['ts_placed_date'] == date) & (df['ts_trade_type'].isin((30, 31, 40, 41, 50, 51, 63, 64)))
         
-        df_ts_order_fund = df.loc[mask, ['ts_txn_id', 'ts_uid', 'ts_portfolio_txn_id', 'ts_pay_method', 'ts_fund_code', 'ts_trade_type', 'ts_trade_status', 'ts_placed_amount', 'ts_placed_share', 'ts_placed_fee', 'ts_scheduled_at']].copy()
+        df_ts_order_fund = df.loc[mask, ['ts_txn_id', 'ts_portfolio_txn_id', 'ts_portfolio_id', 'ts_fund_code', 'ts_pay_method', 'ts_trade_type', 'ts_trade_status', 'ts_placed_amount', 'ts_placed_share', 'ts_placed_fee', 'ts_scheduled_at']].copy()
 
         df_ts_order_fund = df_ts_order_fund.reset_index(drop=True).set_index('ts_txn_id', drop=False)
         df_ts_order_fund['ts_trade_status'] = 0
@@ -194,7 +194,7 @@ class Policy(object):
         df = self.df_ts_order_fund.loc[[ts_txn_id]]
         mask = (df['ts_placed_date'] == date) & (df['ts_trade_type'].isin([30, 31, 40, 41, 50, 51, 63, 64])) & (~df['ts_txn_id'].isin(df_order_fund['ts_txn_id']))
         
-        df_ts_order_fund = df.loc[mask, ['ts_txn_id', 'ts_uid', 'ts_portfolio_txn_id', 'ts_pay_method', 'ts_fund_code', 'ts_trade_type', 'ts_trade_status', 'ts_placed_amount', 'ts_placed_share', 'ts_placed_fee', 'ts_scheduled_at']].copy()
+        df_ts_order_fund = df.loc[mask, ['ts_txn_id', 'ts_portfolio_txn_id', 'ts_portfolio_id', 'ts_fund_code', 'ts_pay_method', 'ts_trade_type', 'ts_trade_status', 'ts_placed_amount', 'ts_placed_share', 'ts_placed_fee', 'ts_scheduled_at']].copy()
 
         df_ts_order_fund = df_ts_order_fund.reset_index(drop=True).set_index('ts_txn_id', drop=False)
         df_ts_order_fund['ts_trade_status'] = 0
