@@ -220,8 +220,9 @@ def turnover_update(investor):
 @click.option('--debug/--no-debug', 'optdebug', default=False, help=u'debug mode')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
+@click.option('--fund', 'optfund', default=None, help=u'only calc fund specified')
 @click.pass_context
-def emulate(ctx, optid, optlist, opttype, optdebug, optfee, optt0, optenddate):
+def emulate(ctx, optid, optlist, opttype, optdebug, optfee, optt0, optenddate, optfund):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -254,10 +255,10 @@ def emulate(ctx, optid, optlist, opttype, optdebug, optfee, optt0, optenddate):
     #         for _, investor in bar:
     #             nav_update(investor, xtype, optdebug, optfee, optt0, enddate)
     for investor in investors:
-        emulate_update(investor, optdebug, optfee, optt0, enddate)
+        emulate_update(investor, optdebug, optfee, optt0, enddate, optfund)
      
 # def nav_update(alloc, fee, debug):
-def emulate_update(uid, debug, optfee, optt0, enddate):
+def emulate_update(uid, debug, optfee, optt0, enddate, optfund):
 
     # 加载仓位信息
     df_ts_order = trade_ts_order.load(uid, [3, 4, 6])
@@ -266,13 +267,20 @@ def emulate_update(uid, debug, optfee, optt0, enddate):
         click.echo(click.style("\nswarning: empty df_ts_order for user: %s, skiped!" % (uid), fg='yellow'))
         return
 
-    investor = Investor.Investor(df_ts_order)
+    df_ts_dividend_fund = trade_ts_dividend_fund.load(uid)
+
+    if optfund is not None:
+        df_ts_dividend_fund = df_ts_dividend_fund.loc[df_ts_dividend_fund['ts_fund_code'] == optfund]
+
+    investor = Investor.Investor(df_ts_order, df_ts_dividend_fund)
 
     df_ts_order_fund = trade_ts_order_fund.load(uid)
     if df_ts_order_fund.empty:
         click.echo(click.style("\nswarning: empty df_ts_order_fund for user: %s, skiped!" % (uid), fg='yellow'))
         return
-
+    
+    df_ts_order_fund = df_ts_order_fund.loc[df_ts_order_fund['ts_fund_code'] == optfund]
+    
     df_ts_order_fund.loc[pd.isnull(df_ts_order_fund['ts_scheduled_at']), 'ts_scheduled_at'] = pd.to_datetime(df_ts_order_fund['ts_placed_date'].dt.strftime("%Y-%m-%d") + " " +  df_ts_order_fund['ts_placed_time'].astype(str))
 
     policy = Policy.Policy(df_ts_order, df_ts_order_fund)
@@ -289,7 +297,15 @@ def emulate_update(uid, debug, optfee, optt0, enddate):
     df_stat = pd.concat(emulator.dt_stat)
     df_stat.index.names=['ts_date', 'ts_fund_code', 'ts_stat_type']
     df_stat = df_stat.reset_index().set_index(['ts_fund_code', 'ts_date', 'ts_stat_type']).sort_index()
+
+
+    print emulator.df_ts_order_fund
     
-    dd("emulator completee", df, df_stat)
+    print emulator.df_share
+    
+    df_share = df.groupby(['ts_fund_code']).agg({'ts_date':'max', 'ts_nav':'first', 'ts_share':'sum', 'ts_trade_date':'min', 'ts_acked_date':'min', 'ts_redeemable_date':'min'})
+    print df_share
+    
+    # dd("emulator completee", df, df_stat)
 
 

@@ -137,6 +137,8 @@ class Emulator(object):
         # )
         self.df_share_buying = None
         self.df_share_redeeming = None
+        # self.df_uncarried = None
+        self.sr_uncarried = None
 
         #
         # 状态变量：赎回上下文：DataFrame
@@ -719,325 +721,6 @@ class Emulator(object):
             
         return result
 
-    def make_bonus_order(self, dt, fund_code, order_share, bonus, div_mode):
-        amount = order_share * bonus['bonus_ratio']
-        if div_mode == 1:
-            #
-            # 红利再投
-            #
-            nav, nav_date, ack_amount = bonus['bonus_nav'], bonus['bonus_nav_date'], 0
-            ack_share = amount / nav
-        else:
-            nav, nav_date, ack_share, ack_amount = 0, '0000-00-00', 0, amount
-                
-        return {
-            'order_id': self.new_order_id(),
-            'fund_code': fund_code,
-            # 'fund_code': fund_code,
-            'op': 7,
-            'place_date': bonus['dividend_date'],
-            'place_time': '15:00:00',
-            'share': order_share,
-            'amount': amount,
-            'fee': 0,
-            'nav': nav,
-            'nav_date': nav_date,
-            'ack_date': bonus['payment_date'],
-            'ack_amount': ack_amount,
-            'ack_share': ack_share,
-            'div_mode': div_mode,
-            'share_id': '0',
-        }
-
-    def adjust(self, dt, df_dst):
-        '''
-        生成调仓订单
-        '''
-        result = []
-        #
-        # 计算当前持仓的持仓比例
-        #
-        # 计算当前基金的持仓金额
-        sr_src = ((self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] + self.df_share['amount_bonusing']).groupby(level=0).sum()
-        # 计算用户总持仓金额
-        total = sr_src.sum() + (self.df_redeem['share'] * self.df_redeem['nav'] - self.df_redeem['fee']).sum() + self.cash
-        # 计算当前基金的持仓比例（金额比例）
-        df_src = (sr_src / total).to_frame('src_ratio')
-        df_src.index.name = 'ra_fund_code'
-
-        #
-        # 计算各个基金的调仓比例和调仓金额
-        #
-        df = df_src.merge(df_dst, how='outer', left_index=True, right_index=True).fillna(0)
-        df['diff_ratio'] = df['ra_fund_ratio'] - df['src_ratio']
-        df['diff_amount'] = total * df['diff_ratio']
-        # if dt.strftime("%Y-%m-%d") == '2016-09-12':
-        #     pdb.set_trace()
-
-        #
-        # 生成调仓订单。 具体地，
-        #
-        #     1. 首先生成赎回订单，针对每只基金，按照赎回费率少的优先
-        #        的方式赎回。 因为基金的最小赎回份额和最小保留份额都是
-        #        按整个基金算的，所以简单的贪心算法就可以生成最优的赎
-        #        回方案。
-        #
-        #     2. 在赎回订单到账的基础上，按照调入金额的买入比例买入。
-        #        理论上来说，这里有两种买入策略可以选择：（1）按照调入
-        #        金额的比例买入；（2）优先买入单支基金；这里选择按比例
-        #        买入，主要是考虑QDII的赎回到账时间可能会比较长（比如
-        #        T+7），那么先到账的基金优先买入A股还是货币显然会引入
-        #        比较大的差别。（由于我们不考虑最小申购金额的限制，所
-        #        以按比例买入能够更好的提现调仓的本质）。如果考虑最小
-        #        申购金额限制，可以采用能平均买入就平均，否则就买单支
-        #        的方式）
-        #
-        #     3. 为了防止购买订单碎片化，我们同一天到账的金额进行了汇
-        #        总，利用汇总的金额生成购买订单。
-        #
-        #     4. 需要考虑在途资金（也就是以前的赎回尚未到账的资金，因
-        #        为跟该赎回相关的购买订单已经被需要，所以需要重新生成），
-        #        生成方法也是根据在途资金的到账日期来下购买订单。
-        #
-
-        dt_flying = {}          # 在途资金
-
-        #
-        # 贪心算法生成赎回订单
-        #
-        for fund_code, row in df[df['diff_amount'] < 0].iterrows():
-            amount = abs(row['diff_amount'])
-            df_share_fund = self.df_share.loc[fund_code]
-            count = len(df_share_fund.index)
-            for share_id, v in df_share_fund.iterrows():
-                redeem_amount = min(amount, (v['share'] + v['share_buying']) * v['nav'])
-                redeem_share = redeem_amount / v['nav']
-                if v['share'] > 0:
-                    place_date = pd.to_datetime(dt.date())
-                    # sr['share'] -= redeem_share
-                    nav = v['nav']
-                else:
-                    place_date = v['ack_date']
-                    # sr['share_buying'] -= redeem_share
-                    nav = None
-                #
-                # 生成赎回订单
-                #
-                order = self.make_redeem_order(
-                    place_date, fund_code, redeem_share, share_id, v['buy_date'])
-                result.append(order)
-                #
-                # 记录赎回到账金额，为购买记录做准备
-                #
-                if order['ack_date'] in dt_flying:
-                    dt_flying[order['ack_date']] += order['ack_amount']
-                else:
-                    dt_flying[order['ack_date']] = order['ack_amount']
-                #
-                # 调整需要赎回的金额，看是否需要进一步赎回
-                #
-                amount -= redeem_amount
-                if amount < 0.0001:
-                    break
-
-            #
-            # 退出赎回循环，正确性检查
-            #
-            if amount >= 0.0001:
-                # logger.error("SNH: bad redeem amount, something left: fund_code: %d, total: %f, left: %f", fund_code, abs(row['diff_amount']), amount)
-                print "SNH: bad redeem amount, something left: fund_code: %d, total: %f, left: %f" % (fund_code, abs(row['diff_amount']), amount)
-                sys.exit(0)
-
-        #
-        # 统计所有赎回到账日期和到账金额(持有现金部分记为今天赎回到账)
-        #
-        if self.cash > 0.000000001:
-            today = pd.to_datetime(dt.date())
-            if today in dt_flying:
-                dt_flying[today] += self.cash
-            else:
-                dt_flying[today] = self.cash
-                
-        df_new_redeem = pd.DataFrame({'new_redeem': dt_flying})
-        df_new_redeem.index.name = 'date'
-        df_old_redeem  = (self.df_redeem['share'] * self.df_redeem['nav'] - self.df_redeem['fee']).groupby(by=self.df_redeem['ack_date']).sum().to_frame('old_redeem')
-        
-        df_flying = df_new_redeem.merge(df_old_redeem, how='outer', left_index=True, right_index=True).fillna(0)
-        df_flying['amount'] = df_flying['old_redeem'] + df_flying['new_redeem']
-
-        #
-        # 根据赎回到账日期，生成购买订单
-        #
-        # 就算不同基金的购买比例
-        sr_ratio =  df.loc[df['diff_amount'] > 0, 'diff_amount']
-        buy_total =  sr_ratio.sum()
-        if buy_total > 0:
-            sr_ratio = sr_ratio / buy_total
-            
-            # 在途资金生成购买订单
-            for day, v in df_flying.iterrows():
-                if v['amount'] < 0.000000999:
-                    continue
-                sr_buy = (sr_ratio * v['amount'])
-
-                for fund_code, amount in sr_buy.iteritems():
-                    order = self.make_buy_order(day, fund_code, amount)
-                    result.append(order)
-
-        #
-        # 返回所有订单，即调仓计划
-        #
-        dump_orders(result, "adjust date: %s" % dt.strftime("%Y-%m-%d"), False)
-        # if (dt.strftime("%Y-%m-%d") == '2017-04-21'):
-        #     dump_orders(result, "adjust date: %s" % dt.strftime("%Y-%m-%d"), True)
-        # else:
-        #     dump_orders(result, "adjust date: %s" % dt.strftime("%Y-%m-%d"), False)
-
-        return result
-                
-            
-    def make_redeem_order(self, dt, fund_code, share, share_id, buy_date):
-        (nav, nav_date) = self.get_tdate_and_nav(fund_code, dt)
-        amount = share * nav
-        fee = self.get_redeem_fee(dt, fund_code, buy_date, amount)
-        # dd(nav, nav_date, share, amount, fee)
-        
-        return {
-            'order_id': self.new_order_id(),
-            'fund_code': fund_code,
-            # 'fund_code': fund_code,
-            'op': 2,
-            'place_date': dt,
-            'place_time': '14:30:00',
-            'share': share,
-            'amount': amount,
-            'fee': fee,
-            'nav': nav,
-            'nav_date': nav_date,
-            'ack_date': self.get_redeem_ack_date(fund_code, nav_date), 
-            'ack_amount': amount - fee,
-            'ack_share': share,
-            'div_mode': 0,
-            'share_id': share_id,
-        }
-
-    def get_tdate_and_nav(self, fund_code, day):
-        '''
-        获取day对应的交易日和该交易日基金的净值。
-
-        对于国内基金，情形比较直接，无需废话。但对于QDII基金：
-
-        （1）美股基金（比如大成标普096001），购买份额确认和赎回的到账
-             的T+N采用的A股交易日，如果遇到A股交易日和美股非交易日，一
-             般这类基金会暂停申购赎回。
-
-        （2）港股基金（比如华夏恒生000071），同美股一样。也即，购买份
-             额确认和赎回的到账的T+N采用的A股交易日，如果遇到A股交易日
-             和美股非交易日，一般这类基金会暂停申购赎回。
-
-        （3）黄金基金（比如华安黄金000217），同A股一样，无需特殊处理。
-
-        '''
-        if fund_code not in self.dt_nav:
-            print "SNH: missing nav: fund_code: %d, day: %s" % (fund_code, day.strftime("%Y-%m-%d"))
-            sys.exit(0)
-
-        df_nav = self.dt_nav[fund_code]
-
-        date = pd.to_datetime(day.date())
-        max_date = df_nav.index.max() 
-        if date > max_date:
-            date = max_date
-        return df_nav.loc[date, ['ra_nav', 'ra_nav_date']]
-
-    def get_redeem_ack_date(self, fund_code, tdate):
-        '''
-        获取赎回到账的A股交易日
-
-        所有的赎回到账以A股交易日为准。目前，我们涉及的QDII基金的赎回到账是按A股交易日计。
-        '''
-
-        #
-        # 涉及到两个全局数据:
-        #   df_ack 记录了每个基金的到账日是T+n；
-        #   df_t_plus_n 记录了每个交易日的t+n是哪一天
-        #
-        if self.optt0:
-            n = 0
-        else:
-            n = 3 # 默认t+3到账
-            if fund_code in self.df_ack.index:
-                n = self.df_ack.at[fund_code, 'redeem']
-            else:
-                print "WARN: missing yingmi_to_account_time, use default(t+3): fund_code: %d" % fund_code
-
-        if tdate.strftime("%Y-%m-%d") == '2017-09-09':
-            tdate = pd.to_datetime('2017-09-11')
-        ack_date = self.df_t_plus_n.at[tdate, "T+%d" % n]
-
-        return ack_date
-
-    def make_buy_order(self, dt, fund_code, amount):
-        # if amount < 0.0000001:
-        #     pdb.set_trace()
-        # if dt.strftime("%Y-%m-%d") == '2029-01-01':
-        #     pdb.set_trace()
-        (nav, nav_date) = self.get_tdate_and_nav(fund_code, dt)
-
-        fee = self.get_buy_fee(dt, fund_code, amount)
-        ack_amount = amount - fee
-        share = ack_amount / nav
-        
-        return {
-            'order_id': self.new_order_id(),
-            'fund_code': fund_code,
-            # 'fund_code': fund_code,
-            'op': 30,
-            'place_date': nav_date,
-            'place_time': '14:30:00',
-            'share': share,
-            'amount': amount,
-            'fee': fee,
-            'nav': nav,
-            'nav_date': nav_date,
-            'ack_date': self.get_buy_ack_date(fund_code, nav_date), 
-            'ack_amount': amount - fee,
-            'ack_share': share,
-            'div_mode': 1,
-            'share_id': '0',
-        }
-
-    def get_buy_ack_date(self, fund_code, buy_date):
-        '''
-        获取购买可赎回日期
-
-        所有的可赎回日期以A股交易日为准。目前，我们涉及的QDII基金的可赎回日期是按A股交易日计。
-        '''
-        #
-        # 涉及到两个全局数据:
-        #   df_ack 记录了每个基金的可赎回是T+n；
-        #   df_t_plus_n 记录了每个交易日的t+n是哪一天
-        #
-        if self.optt0:
-            n = 0
-        else:
-            n = 2 # 默认t+2到账
-            if fund_code in self.df_ack.index:
-                n = self.df_ack.at[fund_code, 'buy']
-            else:
-                print "WARN: missing yingmi_to_confirm_time, use default(t+2): fund_code: %d" % fund_code
-
-            if np.isnan(n): # 默认为2
-                n = 2
-
-        date = pd.to_datetime(buy_date.date())
-        max_date = self.df_t_plus_n.index.max() 
-        if date > max_date:
-            date = max_date
-
-        ack_date = self.df_t_plus_n.at[date, "T+%d" % int(n)]
-
-        return ack_date
 
     def routine_15pm(self, dt, argv):
         '''
@@ -1055,8 +738,9 @@ class Emulator(object):
             if nav is not None:
                 evs.extend(self.handle_nav_update(code, nav))
 
-        if dt == pd.to_datetime('2017-06-26 15:00:00'):
-            pdb.set_trace()
+        # if dt == pd.to_datetime('2017-06-26 15:00:00'):
+        #     pdb.set_trace()
+
         #
         # 切换交易日
         #
@@ -1207,11 +891,15 @@ class Emulator(object):
 
         mask = (self.df_ts_order_fund['ts_trade_status'] == 0)
         df = self.df_ts_order_fund.loc[mask]
-        # dd(df_ts_order_fund, df, self.ts)
+        # if not df.empty:
+        #     pdb.set_trace()
         for k, v in df.iterrows():
-            ev = (self.ts, v['ts_trade_type'], v['ts_txn_id'], v['ts_fund_code'], v)
+            # ev = (self.ts, v['ts_trade_type'], v['ts_txn_id'], v['ts_fund_code'], v)
+            ev = (v['ts_scheduled_at'], v['ts_trade_type'], v['ts_txn_id'], v['ts_fund_code'], v)
             evs.append(ev)
         self.df_ts_order_fund.loc[mask, 'ts_trade_status'] = 2
+        if not df.empty:
+            pdb.set_trace()
 
         return evs
 
@@ -1228,7 +916,7 @@ class Emulator(object):
             # Log::error($this->logtag.'SNH: buying order exists', [$this->buying, $e]);
             # $alert = sprintf($this->logtag."基金份额计算检测到重复购买订单:[%s]", $e['it_order_id']);
             # SmsService::smsAlert($alert, 'kun');
-
+        pdb.set_trace()
         #
         # 获取订单确认日
         #
@@ -1447,10 +1135,80 @@ class Emulator(object):
         # 更新基金净值
         #
         if self.df_share is not None:
-            mask = (self.df_share['ts_fund_code'] == fund_code) & (self.df_share['ts_share'] > 0.000099)
-            self.df_share.loc[mask, 'ts_nav'] = nav['ra_nav']
-            self.df_share.loc[mask, 'ts_date'] = self.day
-            
+            if nav['ra_type'] != 3:
+                #
+                # 非货币基金，直接更新净值即可
+                #
+                mask = (self.df_share['ts_fund_code'] == fund_code) & (self.df_share['ts_share'] > 0.000099)
+                self.df_share.loc[mask, 'ts_nav'] = nav['ra_nav']
+                self.df_share.loc[mask, 'ts_date'] = self.day
+            else:
+                #
+                # 货币基金，需要调整基金的份额
+                #
+                mask = (self.df_share['ts_fund_code'] == fund_code) & (self.df_share['ts_share'] > 0.000099)
+                df_tmp = self.df_share.loc[mask]
+                sr_total_share = df_tmp['ts_share'].groupby(df_tmp['ts_fund_code']).sum()
+                sr_uncarried =  sr_total_share * nav['ra_return_daily'] / 10000
+                #
+                # 让策略对未结转收益进行调整
+                #
+                sr_uncarried = self.investor.get_uncarried(nav['ra_date'], fund_code, sr_uncarried)
+                df_uncarried = sr_uncarried.to_frame('ts_stat_uncarried')
+                df_uncarried['ts_date'] = nav['ra_date']
+                
+                #
+                # 记录未结转收益
+                #
+                if self.sr_uncarried is None:
+                    self.df_uncarried = df_uncarried
+                else:
+                    self.df_uncarried = pd.concat(self.df_uncarried, df_uncarried)
+
+                #
+                # 记录对账单
+                #
+                if not df_uncarried.empty:
+                    self.adjust_stat_df(ST_UNCARRY, df_uncarried[['ts_stat_uncarried']])
+
+                #
+                # 处理货币基金的收益结转
+                # 
+                # pdb.set_trace()
+                df_carried = self.investor.get_carried(nav['ra_date'], fund_code, self.df_uncarried)
+                if df_carried is not None:
+                    self.df_uncarried = None
+
+                    if not df_carried.empty:
+                        # 记录结转对账单
+                        df_tmp_stat = pd.DataFrame({
+                            'ts_stat_amount': df_carried['ts_dividend_share'],
+                            'ts_stat_share' : df_carried['ts_dividend_share'],
+                            'ts_stat_uncarried': df_carried['ts_stat_uncarried']})
+                        self.adjust_stat_df(ST_CARRY, df_tmp_stat)
+
+                        # 结转的数据单独记录份额，份额的交易日期和可赎回日期均按照0000-00-00记录
+                        for k, x in df_carried.iterrows():
+                            order_id = "%s|%s|%s" % (x['ts_portfolio_id'], x['ts_fund_code'], x['ts_pay_method'])
+                            if order_id in self.df_share.index:
+                                self.df_share.loc[order_id, 'ts_share'] += x['ts_dividend_share']
+                                self.df_share.loc[order_id, 'ts_amount'] += x['ts_dividend_share']
+                            else:
+                                day = pd.to_datetime('2000-01-01')
+                                sr = pd.Series({
+                                    'ts_order_id': order_id,
+                                    'ts_fund_code': fund_code,
+                                    'ts_date': nav['ra_date'],
+                                    'ts_nav': 1,
+                                    'ts_share': x['ts_dividend_share'],
+                                    'ts_amount': x['ts_dividend_share'],
+                                    'ts_trade_date': day,
+                                    'ts_acked_date': day,
+                                    'ts_redeemable_date': day,
+                                })
+                                self.df_share.loc[order_id] = sr
+
+
         return evs
         # #
         # # 如果当日有分红事件
@@ -1494,8 +1252,8 @@ class Emulator(object):
         #
         # 对未完成的订单进行continue
         #
-        if dt == pd.to_datetime('2017-06-27 00:00:01'):
-            pdb.set_trace()
+        # if dt == pd.to_datetime('2017-06-27 00:00:01'):
+        #     pdb.set_trace()
 
         if self.df_ts_order is not None:
             ptxns = self.df_ts_order.loc[self.df_ts_order['ts_trade_status'].isin([0,1])].index.tolist()            
@@ -1602,7 +1360,7 @@ class Emulator(object):
             })
             df_holding['ts_amount'] = (df_holding['ts_nav'] * df_holding['ts_share']).round(2)
 
-            self.dt_holding[self.day] = df_holding
+            self.dt_holding[self.day] = df_holding.copy()
 
             #
             # 记录当日对账
@@ -1620,19 +1378,26 @@ class Emulator(object):
                 sr_balance = pd.Series(0, index=df_holding.index)
             else:
                 sr_balance = self.df_stat['ts_stat_amount'].groupby(level=[0]).sum()  # 当日资金进出结余
+            df_holding['ts_balance'] = sr_balance
 
             if self.sr_holding_last is None:
-                sr_yield = df_holding['ts_amount'] - sr_balance
+                df_holding['ts_holding_last'] = 0
             else:
-                sr_yield = df_holding['ts_amount'] - sr_balance - self.sr_holding_last
+                df_holding['ts_holding_last'] = self.sr_holding_last
+
+            df_holding.fillna(0, inplace=True)
+            
+            sr_yield = df_holding['ts_amount'] - df_holding['ts_balance'] - df_holding['ts_holding_last']
+            
             #
             # 记录日收益对账单，而是要到记录日末持仓时再记录对账单
             #
             # [XXX] 从产品的角度，只要当日有持仓，且基金有净值，就应该有
             # 日收益，哪怕是为0也要记录
             #
+            df_yield = sr_yield.to_frame('ts_stat_amount')
 
-            self.adjust_stat_sr(ST_YIELD, sr_yield);
+            self.adjust_stat_df(ST_YIELD, df_yield)
             
             self.sr_holding_last = df_holding['ts_amount']
             # dd(self.df_stat, sr_balance, df_holding, sr_yield, dt)
@@ -1644,8 +1409,8 @@ class Emulator(object):
         return evs
 
 
-    def adjust_stat(self, code , xtype, amount, share, status = 1):
-        sr = pd.Series({'ts_status': status, 'ts_stat_amount': amount, 'ts_stat_share': share})
+    def adjust_stat(self, code , xtype, amount, share, uncarrid = 0):
+        sr = pd.Series({'ts_stat_amount': amount, 'ts_stat_share': share, 'ts_stat_uncarried': uncarrid})
         if self.df_stat is None:
             self.df_stat = pd.DataFrame([sr], index=[[code], [xtype]])
             self.df_stat.index.names=['ts_fund_code', 'ts_stat_type']
@@ -1655,17 +1420,22 @@ class Emulator(object):
             else:
                 self.df_stat.loc[(code, xtype), :] = sr
 
-    def adjust_stat_sr(self, xtype, sr):
-        df = sr.to_frame('ts_stat_amount')
+    def adjust_stat_df(self, xtype, df):
+        if 'ts_stat_amount' not in df.columns:
+            df['ts_stat_amount'] = 0
+        if 'ts_stat_share' not in df.columns:
+            df['ts_stat_share'] = 0
+        if 'ts_stat_uncarried' not in df.columns:
+            df['ts_stat_uncarried'] = 0
+               
         df.index.name = 'ts_fund_code'
         df['ts_stat_type'] = xtype
-        df['ts_stat_share'] = 0
-        df['ts_status'] = 1
+
         df.set_index(['ts_stat_type'], append=True, inplace=True)
 
         if  self.df_stat is None:
             self.df_stat = df
         else:
             self.df_stat = pd.concat([self.df_stat, df]).sort_index()
-
+                        
         
