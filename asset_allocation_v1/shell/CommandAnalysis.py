@@ -13,6 +13,8 @@ import time
 import logging
 import re
 import util_numpy as npu
+import MySQLdb
+import config
 
 
 from datetime import datetime, timedelta
@@ -263,3 +265,127 @@ def fund_pool_info(ctx, optpool):
     fund_info_df = fund_info_df.set_index('globalid')
     print fund_info_df
     '''
+
+
+@analysis.command()
+@click.pass_context
+def fund_online_portfolio(ctx):
+
+    conn  = MySQLdb.connect(**config.db_base)
+    conn.autocommit(True)
+
+    '''
+    sql = 'select ra_code as code from ra_fund where ra_type = 1'
+    df = pd.read_sql(sql, conn)
+    codes = ','.join(["'" + code[0] + "'" for code in df.values])
+
+    sql = 'select ra_code as code, ra_date as date, ra_nav_adjusted as nav from ra_fund_nav where ra_code in (' + codes + ')'
+
+    df = pd.read_sql(sql, conn, index_col = ['date', 'code'])
+    df = df.unstack()
+
+    df.columns = df.columns.get_level_values(1)
+    df.index.name = 'date'
+    df = df[df.index >= '2017-01-01']
+    df.to_csv('./fund_nav_ra_type1.csv')
+    '''
+
+    '''
+    df = pd.read_csv('./data/ra_fund_qdii.csv', index_col = ['code'])
+    codes = ','.join(["'" + '%06d' % code + "'" for code in df.index])
+    print codes
+
+    sql = 'select ra_code as code, ra_date as date, ra_nav_adjusted as nav from ra_fund_nav where ra_code in (' + codes + ')'
+
+    df = pd.read_sql(sql, conn, index_col = ['date', 'code'])
+    df = df.unstack()
+
+    df.columns = df.columns.get_level_values(1)
+    df.index.name = 'date'
+    df = df[df.index >= '2017-01-01']
+    df.to_csv('./fund_nav_qdii_type4.csv')
+    '''
+
+    '''
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+
+    dfs = []
+    for i in range(0, 10):
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
+        df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
+        df.columns = ['risk_' + str(i)]
+        dfs.append(df)
+
+    df = pd.concat(dfs, axis = 1)
+    df = df[df.index >= '2017-01-01']
+    df = df / df.iloc[0]
+    df.to_csv('./online_nav.csv')
+    '''
+
+    fund_df = pd.read_csv('fund_nav_ra_type1.csv', index_col = ['date'], parse_dates = ['date'])
+    qdii_df = pd.read_csv('fund_nav_qdii_type4.csv', index_col = ['date'], parse_dates = ['date'])
+    online_df = pd.read_csv('online_nav.csv', index_col = ['date'], parse_dates = ['date'])
+
+    df = pd.concat([fund_df, qdii_df, online_df], axis = 1, join_axes = [online_df.index])
+    df = df[df.index >= '2017-01-01']
+    df = df[df.index <= '2017-11-30']
+    df = df.fillna(method = 'pad')
+    df = df.dropna(axis = 1)
+    df = df / df.iloc[0]
+
+    r = df.iloc[-1] / df.iloc[0] - 1
+    #print r.head()
+    cummax_df = df.cummax()
+    drawdown_df = 1 - df / cummax_df
+    max_drawdown = drawdown_df.max()
+    #print max_drawdown.head()
+
+    dfr = df.pct_change().fillna(0.0)
+    std = dfr.std()
+
+    shape = (r - 0.03) / (std * (360 ** 0.5))
+    #print shape.head()
+
+    data = {}
+    data['r'] = r
+    data['max_drawdown'] = max_drawdown
+    data['shape'] = shape
+    df = pd.DataFrame(data)
+    #print df.head()
+
+    #df.to_csv('r_maxdrawdown_shape.csv')
+
+
+    sql = 'select ra_code, ra_volume from ra_fund'
+    volume_df = pd.read_sql(sql, conn, index_col = ['ra_code'])
+    volume_df = volume_df / (1e8)
+    #print volume_df.head()
+
+    #df = df.loc[volume_df.index]
+    df = pd.concat([df, volume_df], axis = 1, join_axes = [df.index])
+    print len(df)
+
+    #df.to_csv('r_maxdrawdown_shape_volume.csv')
+
+    sql = 'select fi_code, fi_yingmi_subscribe_status from fund_infos'
+    fund_info_df = pd.read_sql(sql, conn, index_col = ['fi_code'])
+    fund_info_df = fund_info_df[fund_info_df['fi_yingmi_subscribe_status'] == 0]
+    codes = []
+    for code in fund_info_df.index:
+        codes.append('%06d' % code)
+    fund_info_df.index = codes
+    print len(fund_info_df)
+
+    codes = []
+    for code in df.index:
+        if code in set(fund_info_df.index)
+            codes.append(code)
+    print df.index
+    print fund_info_df.index
+    df = df.iloc[df.index & fund_info_df.index]
+    print len(df)
+
+
+    #print df.head()
+    #print df.tail()
