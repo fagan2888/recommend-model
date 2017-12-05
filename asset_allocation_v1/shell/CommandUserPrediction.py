@@ -289,8 +289,8 @@ def analysis_feature(ctx):
         enc.fit(trade_type)
         trade_type_cols = ['trade_type' + str(c) for c in enc.active_features_]
         trade_type_df = pd.DataFrame(enc.transform(trade_type).toarray(), columns = trade_type_cols, index = order_group.index)
-        print order_group
-        print trade_type_df
+        #print order_group
+        #print trade_type_df
         #order_group = order_group.set_index(['ts_placed_date','ts_trade_type'])
         #trade_type_df = order_group.groupby(['ts_placed_date','ts_trade_type']).count()
         #trade_type_df = trade_type_df.set_index(['ts_placed_date'])
