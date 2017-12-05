@@ -403,15 +403,31 @@ def online_return_reason(ctx, optsdate, optedate):
     conn  = MySQLdb.connect(**config.db_asset)
     conn.autocommit(True)
 
+
+    trade_date_df = pd.read_sql('select on_date from on_online_contrib', conn, index_col = ['on_date'], parse_dates = ['on_date'])
+    #trade_date = trade_date_df.index
+    #trade_date = list(set(trade_date))
+    #trade_date.sort()
+
+    #trade_date_df = trade_date_df[trade_date_df.index < datetime.strptime(optsdate, '%Y-%m-%d').date()]
+    trade_date_df = trade_date_df[trade_date_df.index < optsdate]
+    #print trade_date_df.index[-1]
+
     gid = 800000
     sql = "SELECT on_fund_id, sum(on_return_value) FROM on_online_contrib WHERE on_online_id = %d AND on_type = 9 \
             AND on_date BETWEEN '%s' AND '%s' GROUP BY on_fund_id" % (gid, optsdate, optedate)
+
+    #print sql
     df = pd.read_sql(sql, conn, index_col = ['on_fund_id'])
 
     online_nav_ser = asset_on_online_nav.load_series(gid, 9)
 
+
+    optsdate = trade_date_df.index[-1].strftime('%Y-%m-%d')
     start_nav = online_nav_ser.loc[optsdate]
     end_nav = online_nav_ser.loc[optedate]
+
+    print optsdate, start_nav, optedate, end_nav
 
     print '月初净值 : ', start_nav
     print '月末净值 : ', end_nav
@@ -429,7 +445,7 @@ def online_return_reason(ctx, optsdate, optedate):
 
     df = pd.concat([fund_df, df], axis = 1, join_axes = [df.index])
     df.columns = ['基金代码','基金名称','收益率贡献']
-    df['收益率贡献百分比'] = df['收益率贡献'] / (end_nav / start_nav - 1)
+    df['收益率贡献百分比'] = df['收益率贡献'] / start_nav
     print df
     df.to_csv('风险10各个基金收益贡献百分比.csv', encoding = 'gbk')
 
