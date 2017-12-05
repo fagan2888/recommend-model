@@ -44,6 +44,18 @@ def get_specific_month_amount(hold_date):
                                     t.c.ds_date == hold_date)
     return rst.all()
 
+def get_aum_from_user_sta_table(hold_date):
+    """
+    从用户统计表里获取某天总的在管资产
+    :return: list
+    """
+    t = Table('user_statistics', metadata, autoload=True)
+    # Session = sessionmaker(bind=db)
+    # session = Session()
+    rst = session.query(func.SUM(t.c.us_holding_amount)).filter( \
+                                    t.c.us_date == hold_date)
+    return rst.all()
+
 def get_specific_month_hold_users(hold_date):
     """
     获取某天有持仓用户

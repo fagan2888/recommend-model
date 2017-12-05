@@ -743,7 +743,8 @@ class MonthlyStaSrrc(object):
             amount_redeem = ds_order.get_specific_month_amount(s_date, \
                 e_date, [20, 21, 30, 31], redeem_uids)[0][0]
             # 在管资产
-            amount_aum = ds_share.get_specific_month_amount(e_date)[0][0]
+            # amount_aum = ds_share.get_specific_month_amount(e_date)[0][0]
+            amount_aum = ds_share.get_aum_from_user_sta_table(e_date)[0][0]
 
             rp_user_newsub.append(newsub_num)
             rp_user_resub.append(resub_num)
