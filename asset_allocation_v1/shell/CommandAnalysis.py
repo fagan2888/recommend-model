@@ -22,7 +22,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav
 from util import xdict
 
 import traceback, code
@@ -401,3 +401,24 @@ def online_return_reason(ctx):
     conn  = MySQLdb.connect(**config.db_asset)
     conn.autocommit(True)
 
+
+#标杆组合有费率和沪深300比较
+@analysis.command()
+@click.option('--start_date', 'optsdate', default=None, help=u'start date')
+@click.option('--end_date', 'optedate', default=None, help=u'end date')
+@click.pass_context
+def online_nav(ctx, optsdate, optedate):
+
+    data = {}
+    for i in range(0, 10):
+        gid = 800000 + i
+        risk = None
+        if i == 0:
+            risk = 'risk10'
+        else:
+            risk = 'risk' + str(i)
+
+        data[risk] = asset_on_online_nav.load_series(gid, 8)
+
+    online_nav_df = pd.DataFrame(data)
+    print online_nav_df
