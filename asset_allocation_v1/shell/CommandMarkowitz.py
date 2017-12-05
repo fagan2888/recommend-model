@@ -390,7 +390,15 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    df = df.rolling(window = 4, min_periods = 1).mean()
+    smooth = 4
+    if bootstrap < 100:
+        smooth = 1
+    elif bootstrap >= 100 and bootstrap < 200:
+        smooth = 2
+    elif bootstrap >= 200:
+        smooth = 4
+
+    df = df.rolling(window = smooth, min_periods = 1).mean()
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
