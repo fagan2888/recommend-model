@@ -51,6 +51,7 @@ class FundRule(object):
         self.dt_nav = {}
         self.dt_redeem_fee = {}
         self.dt_buy_fee = {}
+        self.dt_fund_bonus = {}
         
         # 赎回到账期限 记录了每个基金的到账日到底是T+n；
         # 购买确认日期 记录了每个基金的到购买从份额确认到可以赎回需要T+n；
@@ -193,4 +194,21 @@ class FundRule(object):
         sr_fee = df_redeeming.apply(calc_redeem_fee, axis=1, args=(df,))
 
         return sr_fee
+        
+    def get_dividend_info(self, fund_code, today):
+        '''
+        获取分红信息，如果是权益登记日，则返回分红信息
+        '''
+        if fund_code not in self.dt_fund_bonus:
+            df = base_ra_fund_bonus.load(codes=[fund_code], sdate=self.sdate, edate=self.edate)
+            df = df.reset_index().set_index(['ra_record_date'], drop=False)
+            self.dt_fund_bonus[fund_code] = df
+        else:
+            df = self.dt_fund_bonus[fund_code]
+
+        if df.empty or today not in df.index:
+            return None
+
+        return df.loc[today]
+
         

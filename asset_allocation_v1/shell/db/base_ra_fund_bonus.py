@@ -36,7 +36,7 @@ def load(gids=None, codes=None, sdate=None, edate=None):
         s = s.where(t.c.ra_fund_id.in_(gids))
 
     if codes is not None:
-        s = s.where(t.c.ra_code.in_(codes))
+        s = s.where(t.c.ra_fund_code.in_(codes))
 
     if sdate is not None:
         s = s.where(t.c.ra_record_date >= sdate)

@@ -50,9 +50,14 @@ class Investor(object):
 
                 carried[code] = df
             else:
+                df = df.reset_index(drop=True).set_index(['ts_dividend_date'], drop=False)
+                nav = Nav.Nav().load_nav(code, self.sdate)
+                nav['tm1'] = nav['ra_date'].shift(1)
+                df['ts_exec_date'] = nav['tm1']
+                df.reset_index(drop=True, inplace=True)
+                
                 dividend[code] = df
 
-        # pdb.set_trace()
         if carried:
             self.df_carried = pd.concat(carried).reset_index(level=1, drop=True)
         else:
@@ -60,10 +65,11 @@ class Investor(object):
                 'ts_uid', 'ts_portfolio_id', 'ts_fund_code', 'ts_pay_method', 'ts_record_date', 'ts_dividend_date', 'ts_dividend_amount', 'ts_dividend_share', 'ts_carried_date'])
 
         if dividend:
-            self.df_dividend = pd.concat(dividend)
+            self.df_dividend = pd.concat(dividend).reset_index(level=1, drop=True)
         else:
             self.df_dividend = pd.DataFrame([], index=[], columns=[
                 'ts_uid', 'portfolio_id', 'fund_code', 'pay_method', 'record_date', 'dividend_date', 'dividend_amount', 'dividend_share'])
+        pdb.set_trace()
             
     def get_sdate(self):
         return self.sdate
@@ -120,3 +126,33 @@ class Investor(object):
             return df
         else:
             return None
+
+    def perform_dividend(self, code, day, df):
+        i_amount = df.columns.get_loc('ts_bonus_amount')
+        i_share =  df.columns.get_loc('ts_bonus_share')
+        
+        for i in xrange(0, len(df.index)):
+            sr = df.iloc[i]
+            mask = (self.df_dividend['ts_portfolio_id'] == sr['ts_portfolio_id']) & \
+                   (self.df_dividend['ts_fund_code'] == sr['ts_fund_code']) & \
+                   (self.df_dividend['ts_pay_method'] == sr['ts_pay_method']) & \
+                   (self.df_dividend['ts_exec_date'] == sr['ts_dividend_date'])
+
+            df_tmp = self.df_dividend.loc[mask]
+            if df_tmp.empty:
+                df.iloc[i, i_amount] = sr['ts_estimate_amount']
+                df.iloc[i, i_share] = (sr['ts_estimate_amount'] / sr['ts_bonus_nav']).round(2)
+            else:
+                x = df_tmp.iloc[0]
+                if x['ts_dividend_amount'] > 0.0099:
+                    # 发生现金分红的情况
+                    df.iloc[i, i_amount] = x['ts_dividend_amount']
+                    df.iloc[i, i_share] = x['ts_dividend_share']
+                    df.iloc[i, 'ts_div_mode'] = 0
+                else:
+                    df.iloc[i, i_amount] = sr['ts_estimate_amount']
+                    df.iloc[i, i_share] = x['ts_dividend_share']
+                     
+                    
+        return df
+ 

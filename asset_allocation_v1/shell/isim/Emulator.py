@@ -85,6 +85,7 @@ class Emulator(object):
         self.investor = investor
         self.policy = policy
         self.rule = rule
+        # self.ta = ta
         self.debug = debug
         self.optfee = optfee
         self.optt0 = optt0
@@ -137,6 +138,7 @@ class Emulator(object):
         # )
         self.df_share_buying = None
         self.df_share_redeeming = None
+        self.df_share_bonusing = None
         # self.df_uncarried = None
         self.sr_uncarried = None
 
@@ -693,10 +695,30 @@ class Emulator(object):
             codes = codes.union(set(self.df_share_buying['ts_fund_code']))
 
         for code in codes:
+            #
+            # 首先处理分红的权益登记
+            #
+            sr_div_info = self.rule.get_dividend_info(code, self.day)
+            if sr_div_info is not None:
+                evs.extend(self.handle_dividend_record(sr_div_info))
+            #
+            # 接下更新当日基金净值
+            #
             nav = self.rule.get_nav(code, self.day)
             if nav is not None:
                 evs.extend(self.handle_nav_update(code, nav))
 
+            #
+            # 紧跟着处理除息
+            #
+            if self.df_share_bonusing is not None \
+               and not self.df_share_bonusing.empty:
+                # 处理除息
+                evs.extend(self.handle_dividend_dividend(code))
+                # 处理派息
+                evs.extend(self.handle_dividend_payment(code))
+            
+            
         # if dt == pd.to_datetime('2017-06-26 15:00:00'):
         #     pdb.set_trace()
 
@@ -993,6 +1015,7 @@ class Emulator(object):
         # if fund_code == '000509' and nav['ra_date'] == pd.to_datetime('2017-06-26'):
         #     pdb.set_trace()
 
+        
         #
         # 对购买订单进行预确认
         #
@@ -1104,7 +1127,7 @@ class Emulator(object):
                 if self.sr_uncarried is None:
                     self.df_uncarried = df_uncarried
                 else:
-                    self.df_uncarried = pd.concat(self.df_uncarried, df_uncarried)
+                    self.df_uncarried = pd.concat([self.df_uncarried, df_uncarried])
 
                 #
                 # 记录对账单
@@ -1187,7 +1210,117 @@ class Emulator(object):
         #         ev = (split_date + timedelta(hours=1), 18, 0, fund_code, argv)
         #         evs.append(ev)
 
+    def handle_dividend_record(self, sr_div_info):
+        evs = []
+        code = sr_div_info['ra_fund_code']
+        columns = ['ts_portfolio_id', 'ts_fund_code', 'ts_pay_method', 'ts_share']
+
+        dfs = []
+        if self.df_share is not None:
+            df1 = self.df_share.loc[self.df_share['ts_fund_code'] == code]
+            dfs.append(df1[columns])
+        if self.df_share_redeeming is not None:
+            df2 = self.df_share_redeeming.loc[self.df_share_redeeming['ts_fund_code'] == code]
+            dfs.append(df2[columns])
+
+        if len(dfs) == 0:
+            return None
+        elif len(dfs) == 1:
+            df = dfs[0]
+        else:
+            df = pd.concat(dfs)
+
+        #df = df.reset_index(drop=True).set_index(columns[:3])
+        sr_bonusing = df['ts_share'].groupby([df['ts_portfolio_id'], df['ts_fund_code'], df['ts_pay_method']]).sum()
+        df_bonusing = sr_bonusing.to_frame('ts_share')
         
+        df_bonusing['ts_bonus_amount'] = 0
+        df_bonusing['ts_bonus_share'] = 0
+        df_bonusing['ts_bonus_ratio'] = sr_div_info['ra_bonus']
+        df_bonusing['ts_record_date'] = sr_div_info['ra_record_date']
+        df_bonusing['ts_dividend_date'] = sr_div_info['ra_dividend_date']
+        df_bonusing['ts_payment_date'] = sr_div_info['ra_payment_date']
+        df_bonusing['ts_bonus_nav'] = sr_div_info['ra_bonus_nav']
+        df_bonusing['ts_bonus_nav_date'] = sr_div_info['ra_bonus_nav_date']
+        df_bonusing['ts_div_mode'] = 1
+        df_bonusing['ts_estimate_amount'] = 0
+
+        df_bonusing = df_bonusing.reset_index().set_index(['ts_portfolio_id', 'ts_fund_code', 'ts_pay_method'], drop=False)
+        
+        if self.df_share_bonusing is None:
+            self.df_share_bonusing = df_bonusing
+        else:
+            self.df_share_bonusing = pd.concat([self.df_share_bonusing, df_bonusing])
+
+        return evs
+
+    def handle_dividend_dividend(self, code):
+        pdb.set_trace()
+        evs = []
+        mask = (self.df_share_bonusing['ts_fund_code'] == code) \
+               & (self.df_share_bonusing['ts_dividend_date'] == self.day)
+        df = self.df_share_bonusing.loc[mask]
+
+        #
+        # 预估分红金额
+        #
+        df['ts_estimate_amount'] = (df['ts_share'] * df['ts_bonus_ratio']).round(2)
+        df2 = self.investor.perform_dividend(code, self.day, df)
+        self.df_share_bonusing = df2.combine_first(self.df_share_bonusing)
+
+        #
+        # 记录分红支出对账单
+        #
+        df_tmp_stat = (-df2['ts_bonus_amount']).to_frame('ts_stat_amount')
+        self.adjust_stat_df(ST_BONUS_OUT, df_tmp_stat)
+
+        #
+        # 删除现金的分红的记录
+        #
+        self.df_share_bonusing.drop(df2[df2['ts_div_mode'] == 0].index, inplace=True)        
+
+        return evs
+
+    def handle_dividend_payment(self, code):
+        pdb.set_trace()
+        evs = []        
+
+        mask = (self.df_share_bonusing['ts_fund_code'] == code) \
+               & (self.df_share_bonusing['ts_bonus_nav_date'] == self.day)
+        df = self.df_share_bonusing.loc[mask]
+
+        if df.empty:
+            return evs
+
+        df_tmp_stat = df[['ts_bonus_amount', 'ts_bonus_share']]
+        df_tmp_stat.columns=['ts_stat_amount', 'ts_stat_share']
+        #
+        # 记录分红收入对账单
+        #
+        self.adjust_stat_df(ST_BONUS_IN, df_tmp_stat)
+
+        #
+        # 增加分红的份额到持仓
+        #
+        df['ts_order_id'] = df.apply(lambda x: "%s|%s|%s|%s" % (x['ts_portfolio_id'], x['ts_fund_code'], x['ts_pay_method'], x['ts_dividend_date'].strftime("%Y%m%d")), axis=1)
+        df_tmp_share = df[['ts_order_id', 'ts_bonus_share', 'ts_bonus_nav', 'ts_bonus_nav_date']]
+        df_tmp_share.columns = ['ts_order_id', 'ts_share', 'ts_nav', 'ts_date']
+        df_tmp_share['ts_trade_date'] = df_tmp_share['ts_acked_date'] = df_tmp_share['ts_redeemable_date'] = df_tmp_share['ts_date']
+        df_tmp_share['ts_amount'] = 0,
+        df_tmp_share = df_tmp_share.reset_index().set_index(['ts_order_id'], drop=False)
+        df_tmp_share = df_tmp_share[['ts_order_id', 'ts_portfolio_id', 'ts_fund_code', 'ts_pay_method', 'ts_date', 'ts_nav', 'ts_share', 'ts_amount', 'ts_trade_date', 'ts_acked_date', 'ts_redeemable_date']]
+
+        if self.df_share is None:
+            self.df_share = df_tmp_share.copy()
+        else:
+            self.df_share = df_tmp_share.combine_first(self.df_share)
+
+        #
+        # 清除分红上下文
+        #
+        self.df_share_bonusing.drop(df.index, inplace=True)
+
+        return evs    
 
     def handle_order_continue(self, dt, argv):
         '''
