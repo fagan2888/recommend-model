@@ -112,9 +112,10 @@ class Investor(object):
         
         df = self.df_carried.loc[fund_code]
         df = df.loc[df['ts_carried_date'] == day]
+        df = df.reset_index().set_index(['ts_portfolio_id', 'ts_fund_code', 'ts_pay_method'], drop=False)
 
         if not df.empty:
-            sr_uncarried = -df_uncarried['ts_stat_uncarried'].groupby(level=[0]).sum()
+            sr_uncarried = -df_uncarried['ts_stat_uncarried'].groupby(level=df_uncarried.index.names).sum()
             df['ts_stat_uncarried'] = sr_uncarried
             return df
         else:

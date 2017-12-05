@@ -1123,9 +1123,13 @@ class Emulator(object):
                     if not df_carried.empty:
                         # 记录结转对账单
                         df_tmp_stat = pd.DataFrame({
+                            'ts_portfolio_id': df_carried['ts_portfolio_id'],
+                            'ts_fund_code': df_carried['ts_fund_code'],
+                            'ts_pay_method': df_carried['ts_pay_method'],
                             'ts_stat_amount': df_carried['ts_dividend_share'],
                             'ts_stat_share' : df_carried['ts_dividend_share'],
                             'ts_stat_uncarried': df_carried['ts_stat_uncarried']})
+                        df_tmp_stat = df_tmp_stat.reset_index(drop=True).set_index(['ts_portfolio_id', 'ts_fund_code', 'ts_pay_method'])
                         self.adjust_stat_df(ST_CARRY, df_tmp_stat)
 
                         # 结转的数据单独记录份额，份额的交易日期和可赎回日期均按照0000-00-00记录
