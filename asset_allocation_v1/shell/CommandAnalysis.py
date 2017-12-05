@@ -379,7 +379,7 @@ def fund_online_portfolio(ctx):
 
     codes = []
     for code in df.index:
-        if code in set(fund_info_df.index)
+        if code in set(fund_info_df.index):
             codes.append(code)
     print df.index
     print fund_info_df.index
