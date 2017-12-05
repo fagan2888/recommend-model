@@ -395,11 +395,44 @@ def fund_online_portfolio(ctx):
 
 #线上收益归因
 @analysis.command()
+@click.option('--start-date', 'optsdate', default=None, help=u'start date')
+@click.option('--end-date', 'optedate', default=None, help=u'end date')
 @click.pass_context
-def online_return_reason(ctx):
+def online_return_reason(ctx, optsdate, optedate):
 
     conn  = MySQLdb.connect(**config.db_asset)
     conn.autocommit(True)
+
+    gid = 800000
+    sql = "SELECT on_fund_id, sum(on_return_value) FROM on_online_contrib WHERE on_online_id = %d AND on_type = 9 \
+            AND on_date BETWEEN '%s' AND '%s' GROUP BY on_fund_id" % (gid, optsdate, optedate)
+    df = pd.read_sql(sql, conn, index_col = ['on_fund_id'])
+
+    online_nav_ser = asset_on_online_nav.load_series(gid, 9)
+
+    start_nav = online_nav_ser.loc[optsdate]
+    end_nav = online_nav_ser.loc[optedate]
+
+    print '月初净值 : ', start_nav
+    print '月末净值 : ', end_nav
+    print '净值增长 : ', end_nav - start_nav
+    print '净值增长率 : ', end_nav / start_nav - 1
+
+    conn.close()
+
+    conn  = MySQLdb.connect(**config.db_base)
+    conn.autocommit(True)
+
+    globalids = ','.join([str(gid) for gid in df.index])
+    sql = 'select globalid ,ra_code, ra_name from ra_fund where globalid in (' + globalids + ')'
+    fund_df = pd.read_sql(sql, conn, index_col = ['globalid'])
+
+    df = pd.concat([fund_df, df], axis = 1, join_axes = [df.index])
+    df.columns = ['基金代码','基金名称','收益率贡献']
+    df['收益率贡献百分比'] = df['收益率贡献'] / (end_nav / start_nav - 1)
+    print df
+    df.to_csv('风险10各个基金收益贡献百分比.csv', encoding = 'gbk')
+
 
 
 #标杆组合有费率和沪深300比较
