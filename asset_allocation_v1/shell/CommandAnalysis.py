@@ -267,6 +267,7 @@ def fund_pool_info(ctx, optpool):
     '''
 
 
+#线上组合在所有偏股基金的收益回撤排名
 @analysis.command()
 @click.pass_context
 def fund_online_portfolio(ctx):
@@ -389,3 +390,14 @@ def fund_online_portfolio(ctx):
 
     #print df.head()
     #print df.tail()
+
+
+
+#线上收益归因
+@analysis.command()
+@click.pass_context
+def online_return_reason(ctx):
+
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+
