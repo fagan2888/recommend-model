@@ -173,6 +173,9 @@ def analysis_feature(ctx):
     feats = []
 
     for uid, holding_group in holding_df.groupby(holding_df.index):
+
+        print uid
+
         #print holding_group.head()
         holding_group = holding_group.reset_index()
         holding_group = holding_group.set_index(['ts_date'])
@@ -273,6 +276,7 @@ def analysis_feature(ctx):
         feat = holding_group
 
         feat['risk'] = np.nan
+        #print feat.head()
 
         #feat['180buy_num'] = np.nan
         #feat['90buy_num'] = np.nan
@@ -289,7 +293,21 @@ def analysis_feature(ctx):
         enc.fit(trade_type)
         trade_type_cols = ['trade_type' + str(c) for c in enc.active_features_]
         trade_type_df = pd.DataFrame(enc.transform(trade_type).toarray(), columns = trade_type_cols, index = order_group.index)
-        print trade_type_df
+        trade_type_df = trade_type_df.groupby(trade_type_df.index).first()
+        feat = pd.concat([feat, trade_type_df], axis = 1, join_axes = [feat.index])
+        feat[trade_type_cols] = feat[trade_type_cols].fillna(0.0)
+
+
+        for col in trade_type_cols:
+            feat[col + '_180_sum'] = feat[col].rolling(180).sum()
+            feat[col + '_90_sum'] = feat[col].rolling(90).sum()
+            feat[col + '_60_sum'] = feat[col].rolling(60).sum()
+            feat[col + '_30_sum'] = feat[col].rolling(30).sum()
+            feat[col + '_15_sum'] = feat[col].rolling(15).sum()
+            feat[col + '_7_sum'] = feat[col].rolling(7).sum()
+
+        #print feat.tail()
+        #print trade_type_df.head()
         #print order_group
         #print trade_type_df
         #order_group = order_group.set_index(['ts_placed_date','ts_trade_type'])
@@ -297,8 +315,13 @@ def analysis_feature(ctx):
         #trade_type_df = trade_type_df.set_index(['ts_placed_date'])
         #print trade_type_df
 
-        for date in dates:
+        #print order_group.head()
+        trade_type3_df = order_group[order_group['ts_trade_type'] == 3]
+        trade_type3_df = trade_type3_df[['ts_placed_amount']]
+        trade_type3_df = trade_type3_df.groupby(trade_type3_df.index).sum()
+        print trade_type3_df.head()
 
+        for date in dates:
             if date in order_group.index:
                 order_tmp = order_group.loc[date]
                 if not isinstance(order_tmp, pd.DataFrame):
@@ -310,8 +333,18 @@ def analysis_feature(ctx):
                     ts_risk = record['ts_risk']
                     if 3 == trade_type:
                         feat.loc[date, 'risk'] = ts_risk
-                #print order_tmp
 
+
+
+        feat['risk'] = feat['risk'].fillna(method = 'pad')
+
+
+        feat['risk_180'] = feat['risk'].rolling(180).mean()
+        feat['risk_90'] = feat['risk'].rolling(90).mean()
+        feat['risk_60'] = feat['risk'].rolling(60).mean()
+        feat['risk_30'] = feat['risk'].rolling(30).mean()
+        feat['risk_15'] = feat['risk'].rolling(15).mean()
+        feat['risk_7'] = feat['risk'].rolling(7).mean()
 
 
         #holding_group.index.name = 'date'
@@ -321,7 +354,13 @@ def analysis_feature(ctx):
 
 
         #print holding_order_df.head()
+        feats.append(feat)
 
+    feat_df = pd.concat(feats, axis = 1)
+
+    #print len(feat_df)
+
+    feat_df.to_csv('feat.csv')
 
 
 @user.command()
