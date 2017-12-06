@@ -324,6 +324,46 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=13):
             label_index = label_index.insert(len(label_index), index.max())
     else:
         label_index = index
+
+    '''
+    #print label_index
+    label_index = pd.DatetimeIndex([
+    #'2010-01-08',
+    '2010-04-16',
+    #'2010-07-16',
+    '2010-10-15',
+    #'2011-01-14',
+    '2011-04-15',
+    #'2011-07-15',
+    '2011-10-21',
+    #'2012-01-20',
+    '2012-04-27',
+    #'2012-07-27',
+    '2012-11-02',
+    #'2013-02-01',
+    '2013-05-10',
+    #'2013-08-09',
+    '2013-11-08',
+    #'2014-02-07',
+    '2014-05-09',
+    #'2014-08-08',
+    '2014-11-07',
+    #'2015-02-06',
+    '2015-05-08',
+    #'2015-08-07',
+    '2015-11-06',
+    #'2016-02-05',
+    '2016-05-13',
+    #'2016-08-12',
+    '2016-11-18',
+    #'2017-02-17',
+    '2017-05-19',
+    '2017-08-18',
+    '2017-11-24',
+    '2017-12-05',
+    ])
+    '''
+
     # label_index = pd.DatetimeIndex([
     #     '2010-01-08',
     #     '2010-07-09',
@@ -789,10 +829,12 @@ def corr_update_category(pool, category, lookback):
 def pool_by_corr_jensen(pool, day, lookback, limit):
 
     index = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=lookback)
+    #pool_id     = pool['id']
+    #pool_funds  = asset_ra_pool_fund.load(pool_id)
+    #print pool_funds
 
     start_date = index.min().strftime("%Y-%m-%d")
     end_date = day.strftime("%Y-%m-%d")
-
 
     ra_index_id = pool['ra_index_id']
     pool_id     = pool['id']

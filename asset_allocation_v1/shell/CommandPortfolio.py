@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 @click.option('--ratio', 'optratio', type=int, default=None, help=u'specified which ratio_id to use')
 @click.option('--pool', 'optpool', default=0, help=u'which pool to use for each asset (eg. 120000001:11110100,120000002:11110100')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
-@click.option('--turnover', 'optturnover',  type=float, default=0, help=u'fitler by turnover')
+@click.option('--turnover', 'optturnover',  type=float, default=0.4, help=u'fitler by turnover')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
 def portfolio(ctx, optfull, optnew, optid, optname, opttype, optreplace, optratio, optpool, optrisk, optturnover,optenddate):
@@ -94,6 +94,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     '''generate final portfolio
     '''
 
+    #print optid, optratio
     if optratio is None:
         if 'highlow' not in ctx.obj:
             click.echo(click.style("--ratio is required, aborted!", fg="red"))
@@ -108,6 +109,8 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         #
         # 检查id是否存在
         #
+        optid = int(optid)
+        optratio = int(optratio)
         df_existed = asset_ra_portfolio.load([str(optid * 10 + x) for x in range(0, 10)])
         if not df_existed.empty:
             s = 'portfolio instance [%s] existed' % str(optid)
