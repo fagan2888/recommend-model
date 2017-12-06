@@ -120,7 +120,7 @@ def test(ctx):
 @click.option('--turnover-markowitz', 'optturnoverm', type=float, default=0, help=u'fitler portfolio by turnover')
 @click.option('--turnover-portfolio', 'optturnoverp', type=float, default=0.4, help=u'fitler portfolio by turnover')
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
-@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
+@click.option('--train-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.option('--wavelet/--no-wavelet', 'optwavelet', default=False, help=u'use wavelet filter or not')
 @click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help=u'use wavelet filter num')
