@@ -272,23 +272,31 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
         assets = {k: v for k,v in [parse_asset(a) for a in assets]}
     else:
         if short_cut == 'high':
-            assets = {
-                '120000001':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
-                '120000002':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
-                '120000013':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普500指数
-                '120000015':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #恒生指数修型
-                '120000014':  {'sum1': 0,    'sum2' : 0, 'upper': 0.70, 'lower': 0.0}, #黄金指数修型
-                #'ERI000002':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价恒生指数
-                #'ERI000001':  {'sum1': 0.0, 'sum2' : 0.0,'upper': 0.7, 'lower': 0.0}, #人民币计价标普500指数
-                # 120000029:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #南华商品指数
-                # 120000028:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #标普高盛原油商品指数收益率
-                # 120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
-            }
+
+            with open('shell/asset_zheshang_boshi', 'r') as f:
+                zheshang_or_boshi = f.readline().strip()
+
+            if 'zheshang' == zheshang_or_boshi:
+
+                assets = {
+                    '120000001':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
+                    '120000002':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
+                    '120000013':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普500指数
+                    '120000015':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #恒生指数修型
+                    '120000014':  {'sum1': 0,    'sum2' : 0, 'upper': 0.70, 'lower': 0.0}, #黄金指数修型
+                }
+
+            elif 'boshi' == zheshang_or_boshi:
+                assets = {
+                    '120000001':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #沪深300指数修型
+                    '120000002':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70,  'lower': 0.0}, #中证500指数修型
+                    '120000013':  {'sum1': 0,    'sum2' : 0,   'upper': 0.70, 'lower': 0.0}, #标普500指数
+                }
+
             if optname is None:
                 optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
         elif short_cut == 'low':
             assets = {
-                '120000010':  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
                 '120000011':  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
             }
             if optname is None:
