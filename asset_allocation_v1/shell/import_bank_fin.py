@@ -15,7 +15,6 @@ if __name__ == '__main__':
     f_path = sys.argv[1]
     df = pd.read_csv(f_path, index_col = ['date'], parse_dates = ['date'])
 
-
     conn  = MySQLdb.connect(**config.db_base)
     cur   = conn.cursor(MySQLdb.cursors.DictCursor)
     conn.autocommit(True)
@@ -32,7 +31,7 @@ if __name__ == '__main__':
         gid = gid + 1
         code_gid_dict[code] = gid
         begin_date = df.index[0]
-        sql = "replace into fund_infos (fi_globalid, fi_code, fi_name, fi_regtime) values (%d, '%s', '%s', '%s')" % (gid, code, 'pfb_' + str(code), begin_date)
+        sql = "replace into fund_infos (fi_globalid, fi_code, fi_name, fi_regtime) values (%d, '%s', '%s', '%s')" % (gid, code, 'zheshang_fin_' + str(code), begin_date)
         print sql
         cur.execute(sql)
 
@@ -45,7 +44,7 @@ if __name__ == '__main__':
         for d in ser.index:
             v = ser.loc[d]
             sql = nav_base_sql % (gid, code, d, v, v, v, datetime.now(), datetime.now())
-            print sql
+            #print sql
             cur.execute(sql)
 
     conn.close()
