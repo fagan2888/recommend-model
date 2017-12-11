@@ -438,7 +438,7 @@ def investor_month_risk(ctx, optlist, optstartid, optendid, optmonth, output, op
     # sys.setdefaultencoding() does not exist, here!
     reload(sys)  # Reload does the trick!
     sys.setdefaultencoding('UTF8')
-    
+
     db = database.connection('asset')
 
     sql = "SELECT is_investor_id , is_date, DATE_FORMAT(is_date, '%%Y-%%m') AS is_month, is_amount FROM `is_investor_holding` WHERE 1 "
@@ -468,7 +468,7 @@ def investor_month_risk(ctx, optlist, optstartid, optendid, optmonth, output, op
         df_result.to_excel(writer, encoding='UTF-8')
 
         # Close the Pandas Excel writer and output the Excel file.
-        writer.save()    
+        writer.save()
     else:
         if output is not None:
             path = output
