@@ -24,6 +24,9 @@ from tabulate import tabulate
 from db import database, base_exchange_rate_index, base_ra_index
 from util import xdict
 from sklearn import preprocessing
+import xgboost as xgb
+from sklearn.model_selection import train_test_split
+
 
 import traceback, code
 
@@ -101,6 +104,8 @@ def export_ts_holding_nav(ctx):
 
     return df
 
+
+
 @user.command()
 @click.pass_context
 def export_ts_order(ctx):
@@ -145,8 +150,8 @@ def export_ts_order(ctx):
 def analysis_feature(ctx):
 
     #log_df = pd.read_csv('user_prediction/app_log.csv')
-    holding_df = pd.read_csv('user_prediction/ts_holding_nav.csv')
-    order_df = pd.read_csv('user_prediction/ts_order.csv')
+    holding_df = pd.read_csv('user_prediction/ts_holding_nav.csv', parse_dates = ['ts_date'])
+    order_df = pd.read_csv('user_prediction/ts_order.csv', parse_dates = ['ts_placed_date'])
 
     #print order_df.columns
     order_cols = ['ts_uid', 'ts_trade_type', 'ts_trade_status', 'ts_trade_date', 'ts_placed_date', 'ts_placed_time',
@@ -171,14 +176,22 @@ def analysis_feature(ctx):
     #print holding_order_df
 
     feats = []
-
+    uids = set()
     for uid, holding_group in holding_df.groupby(holding_df.index):
 
-        print uid
+        uids.add(uid)
+        print uid, len(uids)
+        #if len(uids) >= 100:
+        #    break
 
         #print holding_group.head()
         holding_group = holding_group.reset_index()
         holding_group = holding_group.set_index(['ts_date'])
+        start_date = holding_group.index[0]
+        end_date = holding_group.index[-1]
+        holding_group = holding_group.reindex(pd.date_range(start_date , end_date))
+        holding_group = holding_group.fillna(method = 'pad')
+
 
         if uid not in set(order_df.index):
             continue
@@ -261,14 +274,15 @@ def analysis_feature(ctx):
         holding_group['ts_15profit_diff'] = holding_group['ts_profit'].rolling(15).apply(lambda x : x[-1] - x[0])
         holding_group['ts_7profit_diff'] = holding_group['ts_profit'].rolling(7).apply(lambda x : x[-1] - x[0])
 
-        holding_group['ts_profit_holding_ratio'] = holding_group['ts_profit'] / holding_group['ts_asset']
+        #holding_group['ts_profit_holding_ratio'] = holding_group['ts_profit'] / holding_group['ts_asset']
+        #print holding_group[['ts_asset', 'ts_profit', 'ts_processing_asset']]
 
-        holding_group['ts_180profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(180).apply(lambda x : x[-1] - x[0])
-        holding_group['ts_90profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(90).apply(lambda x : x[-1] - x[0])
-        holding_group['ts_60profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(60).apply(lambda x : x[-1] - x[0])
-        holding_group['ts_30profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(30).apply(lambda x : x[-1] - x[0])
-        holding_group['ts_15profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(15).apply(lambda x : x[-1] - x[0])
-        holding_group['ts_7profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(7).apply(lambda x : x[-1] - x[0])
+        #holding_group['ts_180profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(180).apply(lambda x : x[-1] - x[0])
+        #holding_group['ts_90profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(90).apply(lambda x : x[-1] - x[0])
+        #holding_group['ts_60profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(60).apply(lambda x : x[-1] - x[0])
+        #holding_group['ts_30profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(30).apply(lambda x : x[-1] - x[0])
+        #holding_group['ts_15profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(15).apply(lambda x : x[-1] - x[0])
+        #holding_group['ts_7profit_holding_ratio_diff'] = holding_group['ts_profit_holding_ratio'].rolling(7).apply(lambda x : x[-1] - x[0])
 
         #print holding_group.tail()
         #print len(holding_group.columns)
@@ -319,7 +333,8 @@ def analysis_feature(ctx):
         trade_type3_df = order_group[order_group['ts_trade_type'] == 3]
         trade_type3_df = trade_type3_df[['ts_placed_amount']]
         trade_type3_df = trade_type3_df.groupby(trade_type3_df.index).sum()
-        print trade_type3_df.head()
+        #print trade_type3_df.head()
+
 
         for date in dates:
             if date in order_group.index:
@@ -335,36 +350,159 @@ def analysis_feature(ctx):
                         feat.loc[date, 'risk'] = ts_risk
 
 
+        feat['label'] = 0
+        redeem = order_group[order_group['ts_trade_type'] == 4]
+        buy    = order_group[order_group['ts_trade_type'] == 3]
+        #print feat.index
+        #print redeem.index
+
+        if len(buy) > 0:
+            for buy_date in buy.index:
+                feat_date_list = list(feat.index)
+                if buy_date > feat.index[-1]:
+                    feat_date_list.append(buy_date)
+                elif buy_date < feat.index[0]:
+                    buy_date = feat.index[0]
+                #print uid
+                #print feat_date_list
+                #print buy_date
+                buy_index = feat_date_list.index(buy_date)
+                start_index = max(0, buy_index - 7)
+                feat.label.iloc[start_index:buy_index] = 1
+
+
+        if len(redeem) > 0:
+            for redeem_date in redeem.index:
+                feat_date_list = list(feat.index)
+                if redeem_date > feat.index[-1]:
+                    feat_date_list.append(redeem_date)
+                elif redeem_date < feat.index[0]:
+                    redeem_date = feat.index[0]
+                redeem_index = feat_date_list.index(redeem_date)
+                start_index = max(0, redeem_index - 7)
+                feat.label.iloc[start_index:redeem_index] = 2
+
 
         feat['risk'] = feat['risk'].fillna(method = 'pad')
 
-
-        feat['risk_180'] = feat['risk'].rolling(180).mean()
-        feat['risk_90'] = feat['risk'].rolling(90).mean()
-        feat['risk_60'] = feat['risk'].rolling(60).mean()
-        feat['risk_30'] = feat['risk'].rolling(30).mean()
-        feat['risk_15'] = feat['risk'].rolling(15).mean()
-        feat['risk_7'] = feat['risk'].rolling(7).mean()
+        feat['risk_180_mean'] = feat['risk'].rolling(180).mean()
+        feat['risk_90_mean'] = feat['risk'].rolling(90).mean()
+        feat['risk_60_mean'] = feat['risk'].rolling(60).mean()
+        feat['risk_30_mean'] = feat['risk'].rolling(30).mean()
+        feat['risk_15_mean'] = feat['risk'].rolling(15).mean()
+        feat['risk_7_mean'] = feat['risk'].rolling(7).mean()
 
 
         #holding_group.index.name = 'date'
         #order_group.index.name = 'date'
         #print holding_group.index
         #print order_group.index
-
+        #print feat.columns
 
         #print holding_order_df.head()
         feats.append(feat)
 
-    feat_df = pd.concat(feats, axis = 1)
+    feat_df = pd.concat(feats, axis = 0)
+    feat_df.index.name = 'ts_date'
 
     #print len(feat_df)
 
-    feat_df.to_csv('feat.csv')
+    feat_df.to_csv('./user_prediction/feat.csv')
+
 
 
 @user.command()
 @click.option('--featurefile', 'optfeaturefile', default=True, help=u'feature file path')
 @click.pass_context
-def xgboost(ctx):
-    pass
+def xgboost(ctx, optfeaturefile):
+
+    feat_df = pd.read_csv(optfeaturefile.strip(), index_col = ['ts_date'], parse_dates = ['ts_date'])
+
+    train_df = feat_df[feat_df.index <= '2017-10-31']
+    test_df  = feat_df[feat_df.index > '2017-10-31']
+
+    y = train_df['label'].ravel()
+    X = train_df.drop(['label'], axis = 1).values
+
+    train_X, val_X, train_y, val_y = train_test_split(X, y, test_size = 0.2, random_state = 13243)
+
+    test_X = test_df.drop(['label'], axis = 1).values
+    test_y = test_df['label'].ravel()
+
+
+    xg_train = xgb.DMatrix(train_X, label=train_y, missing = np.nan)
+    xg_val = xgb.DMatrix(val_X, label=val_y, missing = np.nan)
+    xg_test = xgb.DMatrix(test_X,  missing = np.nan)
+
+
+    params = {}
+    # use softmax multi-class classification
+    params['objective'] = 'multi:softmax'
+    # scale weight of positive examples
+    params['eta'] = 0.1
+    params['max_depth'] = 10
+    #params['silent'] = 1
+    params['nthread'] = 60
+    params['num_class'] = 3
+    params['eval_metric'] = 'mlogloss'
+    #params['min_child_weight'] = 3
+    #params['lambda'] = 100
+    #params['gamma'] = 0.1
+    #params['subsample'] = 1
+    #params['colsample_bytree'] = 1
+    #params['rate_drop'] = 0.1
+    #params['skip_drop'] = 0.5
+    #params['scale_pos_weight'] = float(np.sum(train_y == 0)) / np.sum(train_y==1)
+    params['seed'] = 103
+
+
+    watchlist = [(xg_train,'train'), (xg_val,'val')]
+    num_round = 1000
+    clf = xgb.train(params, xg_train, num_round, watchlist, early_stopping_rounds = 50)
+
+
+    # get prediction
+    pred = clf.predict(xg_test)
+    print np.sum(pred)
+    print np.sum(test_y)
+    print pred
+    error_rate = 1.0 * np.sum(pred != test_y) / test_y.shape[0]
+    print('Test error using softmax = {}'.format(error_rate))
+
+
+
+
+@user.command()
+@click.option('--drawdown-ratio', 'optdrawdownratio', default=True, help=u'drawdown ratio')
+@click.pass_context
+def drawdown_user(ctx, optdrawdownratio):
+
+    holding_df = pd.read_csv('user_prediction/ts_holding_nav.csv', index_col = ['ts_uid'])
+    holding_df = holding_df[['ts_date','ts_nav']]
+    #print holding_df.tail()
+    uids = []
+    drawdowns = []
+    for uid, group in holding_df.groupby(holding_df.index):
+        group = group.reset_index()
+        group = group[['ts_date','ts_nav']]
+        group = group.set_index(['ts_date'])
+
+        if group.index[-1] < '2017-12-07':
+            continue
+        group['cummax'] = group['ts_nav'].cummax()
+        group['drawdown'] = 1.0 - group['ts_nav'] / group['cummax']
+        current_drawdown = group['drawdown'][-1]
+        if current_drawdown >= float(optdrawdownratio.strip()):
+            print uid, current_drawdown
+            uids.append(uid)
+            drawdowns.append(current_drawdown)
+
+    drawdown_df = pd.DataFrame(drawdowns, index = uids)
+    #print len(uids)
+    user_account_info_df = pd.read_csv('user_prediction/user_account_infos.csv', index_col = ['uid'])
+    #print user_account_info_df
+
+    drawdown_user_account_info_df = pd.concat([user_account_info_df, drawdown_df], axis = 1, join_axes = [drawdown_df.index])
+    #print drawdown_user_account_info_df
+    drawdown_user_account_info_df.to_csv('drawdown_user_account_info_df.csv', encoding='gbk')
+    #print group.tail()
