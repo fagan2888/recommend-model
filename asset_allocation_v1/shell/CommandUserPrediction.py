@@ -26,6 +26,7 @@ from util import xdict
 from sklearn import preprocessing
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
+import lightgbm as lgb
 
 
 import traceback, code
@@ -468,6 +469,66 @@ def xgboost(ctx, optfeaturefile):
     print pred
     error_rate = 1.0 * np.sum(pred != test_y) / test_y.shape[0]
     print('Test error using softmax = {}'.format(error_rate))
+
+
+@user.command()
+@click.option('--featurefile', 'optfeaturefile', default=True, help=u'feature file path')
+@click.pass_context
+def lightgbm(ctx, optfeaturefile):
+
+    feat_df = pd.read_csv(optfeaturefile.strip(), index_col = ['ts_date'], parse_dates = ['ts_date'])
+
+    train_df = feat_df[feat_df.index <= '2017-10-31']
+    test_df  = feat_df[feat_df.index > '2017-10-31']
+
+    train_y = train_df['label'].ravel()
+    train_X = train_df.drop(['label'], axis = 1).values
+    test_y = test_df['label'].ravel()
+    test_X = test_df.drop(['label'], axis = 1).values
+
+    #train_X, val_X, train_y, val_y = train_test_split(X, y, test_size = 0.2, random_state = 13243)
+
+    lgb_train = lgb.Dataset(train_X, train_y, free_raw_data=False)
+    lgb_test = lgb.Dataset(test_X, test_y, reference=lgb_train, free_raw_data=False)
+
+    params = {
+            'task': 'train',
+            'boosting_type': 'dart',
+            'objective': 'binary',
+            #'metric': {'auc'},
+            'learning_rate': 0.1,
+            'num_leaves': 112,
+            'max_depth': 9,
+            'min_data_in_leaf': 82,
+            'min_sum_hessian_in_leaf': 1e-3,
+            'feature_fraction': 0.8,
+            'bagging_fraction': 0.8,
+            'bagging_freq': 5,
+            'min_gain_to_split':0,
+            #'lambda_l1': 50,
+            #'lambda_l2': 130,
+            'max_bin': 255,
+            'drop_rate': 0.1,
+            'skip_drop': 0.5,
+            #'max_drop': 50,
+            'nthread': 64,
+            'verbose': -1,
+            #'scale_pos_weight':weight
+            }
+
+
+    cvresult = lgb.cv(params, lgb_train, num_boost_round=1000, nfold=5, metrics='auc',
+                    early_stopping_rounds=50, seed=123,verbose_eval=True)
+    best_round = len(cvresult['auc-mean'])
+    print 'best_num_boost_round: %d' % best_round
+    gbm = lgb.train(params, lgb_train, num_boost_round=best_round, verbose_eval=False,valid_sets=[lgb_train,lgb_test])
+    train_pre = gbm.predict(train_X)
+    test_pre = gbm.predict(test_X)
+    print "\nModel Report"
+    print "AUC Score(Train): %f" % roc_auc_score(train_y, train_pre)
+    print "AUC Score(Test) : %f" % roc_auc_score(test_y, test_pre)
+    #return roc_auc_score(test_y, test_pre)
+    return gbm
 
 
 
