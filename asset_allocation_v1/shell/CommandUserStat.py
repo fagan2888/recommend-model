@@ -112,7 +112,6 @@ def user_label(ctx):
     ds_order_columns = [
                 ds_order_t.c.ds_uid,
                 ds_order_t.c.ds_placed_date,
-                ds_order_t.c.ds_amount,
             ]
 
     s = select(ds_order_columns).where(ds_order_t.c.ds_trade_type == 10)
@@ -200,4 +199,7 @@ def user_label(ctx):
     #print a_month_not_buy_df
     click_buy_not_buy_df = pd.concat([user_account_df.loc[click_buy], user_holding_asset.loc[click_buy], ds_order_df.loc[click_buy]], axis = 1)
     click_redeem_not_redeem_df = pd.concat([user_account_df.loc[click_redeem], user_holding_asset.loc[click_redeem], ds_order_df.loc[click_redeem]], axis = 1)
-    print click_redeem_not_redeem_df
+    #print click_redeem_not_redeem_df
+    a_month_not_buy_df.to_csv('a_month_not_buy.csv', encoding='gbk')
+    click_buy_not_buy_df.to_csv('click_buy_not_buy.csv', encoding='gbk')
+    click_redeem_not_redeem_df.to_csv('click_redeem_not_redeem.csv', encoding='gbk')
