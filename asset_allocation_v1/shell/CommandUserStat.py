@@ -134,15 +134,12 @@ def user_label(ctx):
             #buy
             if record['lr_ref'] == 2013 and record['lr_ctrl'] == 4:
                 if uid not in ts_order_buy_uids:
-                    print uid, record['lr_date'], 'click buy not buy'
                     click_buy.append(uid)
             elif record['lr_page'] == 2006 and record['lr_ctrl'] == 4:
                 if uid not in ts_order_buy_uids:
-                    print uid, record['lr_date'], 'click buy not buy'
                     click_buy.append(uid)
             elif record['lr_page'] == 2013 and record['lr_ctrl'] == 6:
                 if uid not in ts_order_redeem_uids:
-                    print uid, record['lr_date'], 'click redeem not redeem'
                     click_redeem.append(uid)
 
     print len(click_buy)
