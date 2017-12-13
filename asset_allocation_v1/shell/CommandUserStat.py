@@ -73,6 +73,7 @@ def user_label(ctx):
     s = select(ts_share_fund_columns)
     ts_share_fund_df = pd.read_sql(s, db, index_col = ['ts_uid'])
     user_holding_asset = ts_share_fund_df.groupby(ts_share_fund_df.index).sum()
+    user_holding_asset = user_holding_asset[user_holding_asset['ts_amount'] >= 10.0]
 
 
     db = database.connection('base')
@@ -84,6 +85,7 @@ def user_label(ctx):
 
 
     db = database.connection('trade')
+    metadata = MetaData(bind=db)
     ts_order_t = Table('ts_order', metadata, autoload=True)
 
     ts_order_columns = [
@@ -101,6 +103,24 @@ def user_label(ctx):
     ts_order_redeem_uids = set(ts_order_df[ts_order_df['ts_trade_type'] == 4].index)
     #print ts_order_buy_uids
     #print ts_order_redeem_uids
+
+
+    db = database.connection('portfolio_sta')
+    metadata = MetaData(bind=db)
+    ds_order_t = Table('ds_order_pdate', metadata, autoload=True)
+
+    ds_order_columns = [
+                ds_order_t.c.ds_uid,
+                ds_order_t.c.ds_placed_date,
+                ds_order_t.c.ds_amount,
+            ]
+
+    s = select(ds_order_columns).where(ds_order_t.c.ds_trade_type == 10)
+    ds_order_df = pd.read_sql(s, db, index_col = ['ds_uid'], parse_dates = ['ds_placed_date'])
+    #print ds_order_df
+    #print ts_order_buy_uids
+    #print ts_order_redeem_uids
+
 
 
     db = database.connection('tongji')
@@ -142,14 +162,42 @@ def user_label(ctx):
                 if uid not in ts_order_redeem_uids:
                     click_redeem.append(uid)
 
-    print len(click_buy)
-    print len(click_redeem)
+    #print len(click_buy)
+    #print len(click_redeem)
 
 
-    '''
-    for record in click_buy:
-        uid = record[0]
-        date = record[1]
+    db = database.connection('trade')
 
-        print uid, date
-    '''
+    ts_order_columns = [
+                ts_order_t.c.ts_uid,
+                ts_order_t.c.ts_trade_type,
+                ts_order_t.c.ts_placed_date,
+                ts_order_t.c.ts_placed_amount,
+                ts_order_t.c.ts_placed_percent,
+            ]
+
+
+
+
+    start_date = (datetime.now() - timedelta(35)).strftime('%Y-%m-%d')
+    #print start_date
+    s = select(ts_order_columns).where( (ts_order_t.c.ts_trade_type == 3) | (ts_order_t.c.ts_trade_type == 4) ).where((ts_order_t.c.ts_trade_status == 1) | (ts_order_t.c.ts_trade_status == 5) | (ts_order_t.c.ts_trade_status == 6)).where(ts_order_t.c.ts_placed_date >= start_date)
+    ts_order_df = pd.read_sql(s, db, index_col = ['ts_uid'], parse_dates = ['ts_placed_date'])
+
+
+    filter_uids = set()
+    for uid , group in ts_order_df.groupby(ts_order_df.index):
+        tmp_group = group[group['ts_trade_type'] == 3]
+        last_record = group.iloc[-1]
+        if last_record['ts_trade_type'] == 4 and last_record['ts_placed_percent'] == 1.0:
+            filter_uids.add(uid)
+        if len(tmp_group) > 0:
+            filter_uids.add(uid)
+
+    a_month_not_buy = set(user_holding_asset.index).difference(filter_uids)
+
+    a_month_not_buy_df = pd.concat([user_account_df.loc[a_month_not_buy], user_holding_asset.loc[a_month_not_buy], ds_order_df.loc[a_month_not_buy]], axis = 1)
+    #print a_month_not_buy_df
+    click_buy_not_buy_df = pd.concat([user_account_df.loc[click_buy], user_holding_asset.loc[click_buy], ds_order_df.loc[click_buy]], axis = 1)
+    click_redeem_not_redeem_df = pd.concat([user_account_df.loc[click_redeem], user_holding_asset.loc[click_redeem], ds_order_df.loc[click_redeem]], axis = 1)
+    print click_redeem_not_redeem_df
