@@ -7,6 +7,7 @@ import sys
 sys.path.append('shell')
 import click
 import pandas as pd
+import random
 import numpy as np
 import os
 import time
@@ -27,6 +28,10 @@ from sklearn import preprocessing
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
 import lightgbm as lgb
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report
 
 
 import traceback, code
@@ -218,6 +223,14 @@ def analysis_feature(ctx):
         dates = holding_group.index
         holding_group['ts_r'] = holding_group['ts_nav'].pct_change().fillna(0.0)
 
+        holding_group['ts_drawdown'] = 1 - holding_group['ts_nav'] / holding_group['ts_nav'].cummax()
+        holding_group['ts_drawdown_180diff'] = holding_group['ts_drawdown'].rolling(180).apply(lambda x : x[-1] - x[0])
+        holding_group['ts_drawdown_90diff'] = holding_group['ts_drawdown'].rolling(90).apply(lambda x : x[-1] - x[0])
+        holding_group['ts_drawdown_60diff'] = holding_group['ts_drawdown'].rolling(60).apply(lambda x : x[-1] - x[0])
+        holding_group['ts_drawdown_30diff'] = holding_group['ts_drawdown'].rolling(30).apply(lambda x : x[-1] - x[0])
+        holding_group['ts_drawdown_15diff'] = holding_group['ts_drawdown'].rolling(15).apply(lambda x : x[-1] - x[0])
+        holding_group['ts_drawdown_7diff']  = holding_group['ts_drawdown'].rolling(7).apply(lambda x : x[-1] - x[0])
+
         holding_group['ts_180r'] = holding_group['ts_r'].rolling(180).sum()
         holding_group['ts_90r'] = holding_group['ts_r'].rolling(90).sum()
         holding_group['ts_60r'] = holding_group['ts_r'].rolling(60).sum()
@@ -357,6 +370,7 @@ def analysis_feature(ctx):
         #print feat.index
         #print redeem.index
 
+        '''
         if len(buy) > 0:
             for buy_date in buy.index:
                 feat_date_list = list(feat.index)
@@ -370,7 +384,7 @@ def analysis_feature(ctx):
                 buy_index = feat_date_list.index(buy_date)
                 start_index = max(0, buy_index - 7)
                 feat.label.iloc[start_index:buy_index] = 1
-
+        '''
 
         if len(redeem) > 0:
             for redeem_date in redeem.index:
@@ -381,7 +395,7 @@ def analysis_feature(ctx):
                     redeem_date = feat.index[0]
                 redeem_index = feat_date_list.index(redeem_date)
                 start_index = max(0, redeem_index - 7)
-                feat.label.iloc[start_index:redeem_index] = 2
+                feat.label.iloc[start_index:redeem_index] = 1
 
 
         feat['risk'] = feat['risk'].fillna(method = 'pad')
@@ -477,58 +491,112 @@ def xgboost(ctx, optfeaturefile):
 def lightgbm(ctx, optfeaturefile):
 
     feat_df = pd.read_csv(optfeaturefile.strip(), index_col = ['ts_date'], parse_dates = ['ts_date'])
+    #feat_df.loc[feat_df.label == 1, 'label'] = 0
+    #feat_df.loc[feat_df.label == 2, 'label'] = 1
+    feat_df = feat_df.drop(['ts_uid'], axis = 1)
 
     train_df = feat_df[feat_df.index <= '2017-10-31']
     test_df  = feat_df[feat_df.index > '2017-10-31']
 
-    train_y = train_df['label'].ravel()
-    train_X = train_df.drop(['label'], axis = 1).values
-    test_y = test_df['label'].ravel()
-    test_X = test_df.drop(['label'], axis = 1).values
+
+    train_df = train_df.reset_index()
+    negative_train_df = train_df[train_df.label == 0]
+    positive_train_df = train_df[train_df.label == 1]
+    positive_index = positive_train_df.index.ravel()
+    negative_index = negative_train_df.index.ravel()
+    random.shuffle(negative_index)
+    negative_index = negative_index[0: len(negative_index) / 10]
+    train_index = np.append(negative_index, positive_index)
+    train_df = train_df.iloc[train_index]
+    train_df = train_df.set_index(['ts_date'])
+
+
+    train_y = train_df['label']
+    train_X = train_df.drop(['label'], axis = 1)
+    test_y = test_df['label']
+    test_X = test_df.drop(['label'], axis = 1)
 
     #train_X, val_X, train_y, val_y = train_test_split(X, y, test_size = 0.2, random_state = 13243)
 
     lgb_train = lgb.Dataset(train_X, train_y, free_raw_data=False)
-    lgb_test = lgb.Dataset(test_X, test_y, reference=lgb_train, free_raw_data=False)
+    #lgb_test = lgb.Dataset(test_X, test_y, reference=lgb_train, free_raw_data=False)
 
     params = {
             'task': 'train',
-            'boosting_type': 'dart',
+            'boosting_type': 'gbdt',
             'objective': 'binary',
-            #'metric': {'auc'},
-            'learning_rate': 0.1,
-            'num_leaves': 112,
-            'max_depth': 9,
-            'min_data_in_leaf': 82,
-            'min_sum_hessian_in_leaf': 1e-3,
-            'feature_fraction': 0.8,
-            'bagging_fraction': 0.8,
-            'bagging_freq': 5,
-            'min_gain_to_split':0,
-            #'lambda_l1': 50,
+            'metric': {'binary_logloss'},
+            'learning_rate': 0.05,
+            #'num_leaves': 112,
+            #'max_depth': 9,
+            #'min_data_in_leaf': 82,
+            #'min_sum_hessian_in_leaf': 1e-3,
+            #'feature_fraction': 0.8,
+            #'bagging_fraction': 0.8,
+            #'bagging_freq': 5,
+            #'min_gain_to_split':0,
+            #'lambda_l1': 100,
             #'lambda_l2': 130,
-            'max_bin': 255,
-            'drop_rate': 0.1,
-            'skip_drop': 0.5,
+            #'max_bin': 255,
+            #'drop_rate': 0.5,
+            #'skip_drop': 0.5,
             #'max_drop': 50,
-            'nthread': 64,
+            'nthread': 32,
             'verbose': -1,
+            'is_unbalance' : True,
             #'scale_pos_weight':weight
+            #'device' : 'gpu',
+            #'gpu_platform_id': 0,
+            #'gpu_device_id' : 0,
+            #"max_bin" : 63,
             }
 
 
-    cvresult = lgb.cv(params, lgb_train, num_boost_round=1000, nfold=5, metrics='auc',
-                    early_stopping_rounds=50, seed=123,verbose_eval=True)
-    best_round = len(cvresult['auc-mean'])
+    cvresult = lgb.cv(params, lgb_train, num_boost_round=100000, nfold=5, shuffle = True,
+                    early_stopping_rounds=50,  categorical_feature=['risk'],seed=123, verbose_eval=True)
+    best_round = len(cvresult['binary_logloss-mean'])
     print 'best_num_boost_round: %d' % best_round
-    gbm = lgb.train(params, lgb_train, num_boost_round=best_round, verbose_eval=False,valid_sets=[lgb_train,lgb_test])
+    gbm = lgb.train(params, lgb_train, num_boost_round=best_round, verbose_eval=False)
     train_pre = gbm.predict(train_X)
     test_pre = gbm.predict(test_X)
-    print "\nModel Report"
-    print "AUC Score(Train): %f" % roc_auc_score(train_y, train_pre)
-    print "AUC Score(Test) : %f" % roc_auc_score(test_y, test_pre)
-    #return roc_auc_score(test_y, test_pre)
+    #print "\nModel Report"
+    #print "AUC Score(Train): %f" % roc_auc_score(train_y, train_pre)
+    #print "AUC Score(Test) : %f" % roc_auc_score(test_y, test_pre)
+
+
+    train_pre[train_pre > 0.5] = 1
+    train_pre[train_pre <= 0.5] = 0
+    print confusion_matrix(train_y, train_pre)
+
+    test_pre[test_pre > 0.5] = 1
+    test_pre[test_pre <= 0.5] = 0
+    print confusion_matrix(test_y, test_pre)
+
+    print classification_report(test_y, test_pre)
+
+    #print('Feature names:', gbm.feature_name())
+    #print('Feature importances:', list(gbm.feature_importance()))
+    #print len(test_y[test_y == 1]), len(test_y)
+    #print len(test_pre[test_pre == 1]), len(test_pre)
+
+
+    feature_importance_df = pd.DataFrame(gbm.feature_importance(), index = gbm.feature_name(), columns = ['value'])
+    #print feature_importance_df
+    feature_importance_df.to_csv('feature_importance.csv')
+
+
+    '''
+    uids = set(test_df.ts_uid.ravel())
+    redeem_uids = set()
+    predict_redeem_uids = set()
+    test_y = test_y.ravel()
+    for i in range(0, len(test_y))
+        if test_y[i] == 1:
+    '''
+    #for i in range(0 ,len(test_y)):
+
     return gbm
+
 
 
 
