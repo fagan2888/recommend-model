@@ -367,7 +367,7 @@ class MonthlyStaRetention(object):
     def __init__(self):
         self.retention_type = {100:0, 101:1, 102:2, 103:3, 104:4, 105:5, \
                                 106:6, 107:7, 108:8, 109:9, 110:10, 111:11, \
-                                112:12, 113:13}
+                                112:12, 113:13, 114:14, 115:15, 116:16}
         # 开始有交易的时间
         self.start_date = ds_order.get_min_date()
         # 当前交易时间
@@ -380,8 +380,8 @@ class MonthlyStaRetention(object):
         month_list = getBetweenMonth(self.start_date, self.end_date)
         # 为得到old_df
         dates_list = []
-        if len(month_list) >= 15:
-            month_list = month_list[-15:]
+        if len(month_list) >= 20:
+            month_list = month_list[-20:]
         for month_tube in month_list:
             m_index = month_list.index(month_tube)
             cur_date = datetime.date(month_tube[0], month_tube[1], 1)
@@ -777,11 +777,11 @@ class MonthlyStaSrrc(object):
 
 
 if __name__ == "__main__":
-    obj = MonthlyStaApportion()
-    obj.incremental_update()
+    # obj = MonthlyStaApportion()
+    # obj.incremental_update()
     obj_reten = MonthlyStaRetention()
     obj_reten.handle()
-    obj_rolling = MonthlyStaRolling()
-    obj_rolling.handle()
-    obj_srrc = MonthlyStaSrrc()
-    obj_srrc.handle()
+    # obj_rolling = MonthlyStaRolling()
+    # obj_rolling.handle()
+    # obj_srrc = MonthlyStaSrrc()
+    # obj_srrc.handle()
