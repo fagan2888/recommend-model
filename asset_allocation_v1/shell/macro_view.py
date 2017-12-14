@@ -1,5 +1,6 @@
 #!/home/yaojiahui/anaconda2/bin/python
 # coding=utf-8
+import os
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -7,23 +8,34 @@ from ipdb import set_trace
 
 
 def re_view():
-    #re_sales = pd.read_csv('macro_data/re_area.csv', index_col = 0, parse_dates = True)
-    re_sales = pd.read_csv('macro_data/re_price.csv', index_col = 0, parse_dates = True)
+    #re_price = pd.read_csv('macro_data/re_area.csv', index_col = 0, parse_dates = True)
+    re_price = pd.read_csv('macro_data/re_price.csv', index_col = 0, parse_dates = True)
+    re_sales = pd.read_csv('macro_data/re_sales.csv', index_col = 0, parse_dates = True)
+    re_price = re_price.diff(1).dropna()
     re_sales = re_sales.diff(1).dropna()
+    re_sales = re_sales.reindex(re_price.index)
+    re_sales = re_sales.fillna(method = 'pad')
+    re_sales = re_sales.fillna(0.0)
+
     re_views = []
-    for sale in re_sales.iloc[:, 0]:
-        if sale < 0:
-            re_views.append(1)
-        else:
-            re_views.append(-4)
-    re_sales['re_view'] = re_views
-    re_sales = re_sales.resample('m').fillna(method = 'pad')
+    for price, sales in zip(re_price.iloc[:, 0], re_sales.iloc[:, 0]):
+        #if price < 0:
+        #    re_views.append(1)
+        #else:
+        #    re_views.append(-4)
+        tmp_price_view = 1 if price < 0 else (-4)
+        tmp_sales_view = 2 if sales < 0 else (-0.5)
+        tmp_view = tmp_price_view + tmp_sales_view
+        re_views.append(tmp_view)
+
+    re_price['re_view'] = re_views
+    re_price = re_price.resample('m').fillna(method = 'pad')
     new_index = []
-    for day in re_sales.index:
+    for day in re_price.index:
         new_index.append(day+timedelta(15))
-    re_sales.index = new_index
-    #re_sales.to_csv('view/re_view.csv')
-    return re_sales
+    re_price.index = new_index
+    #re_price.to_csv('view/re_view.csv')
+    return re_price.re_view
 
 
 def ir_view():
@@ -58,19 +70,70 @@ def ir_view():
         #    ir_views.append(0)
 
     ir['ir_view'] = ir_views
-    return ir
+    return ir.ir_view
 
+def eps_view():
+    eps = pd.read_csv('macro_data/eps.csv', index_col = 0, parse_dates = True)
+    eps = reindex_eps(eps)
+    eps = eps.diff().dropna()
+    eps = eps.resample('m').fillna(method = 'pad')
+    #eps_views = []
+    #dates = eps.index
+    #eps['eps_view'] = np.sign(eps.eps)
+
+    return eps
+
+def pe_view():
+    pe = pd.read_csv('macro_data/pe.csv', index_col = 0, parse_dates = True)
+    bfid = pd.read_csv('macro_data/bfid.csv', index_col = 0, parse_dates = True)
+
+    pe = pe.resample('m').last()
+    pe_bfid = pd.merge(bfid, pe, left_index = True, right_index = True, how = 'left')
+    pe_bfid['pe_ttm_inv'] *= 100
+    pe_bfid['erp'] = pe_bfid['bfid'] - pe_bfid['pe_ttm_inv']
+
+    eps = eps_view()
+    eps['eps_chg'] = eps.eps.rolling(13).apply(lambda x:(x[-1]-x[0])/x[0])
+    pe_bfid_eps = pd.merge(pe_bfid, eps, left_index = True, right_index = True, how = 'inner')
+    pe_bfid_eps = pe_bfid_eps.dropna()
+
+    pe_bfid_eps['view'] = pe_bfid_eps['erp'] + pe_bfid_eps['eps_chg']
+    pe_bfid_eps['view'] = np.sign(pe_bfid_eps['view']) * 2
+    
+    return pe_bfid_eps.view
+
+
+def reindex_eps(eps):
+    eps = eps.resample('3m').last()
+    dates = eps.index
+    redates = []
+    for date in dates:
+        if date.month == 12:
+            tmp_date = date + timedelta(90)
+        elif date.month == 3:
+            tmp_date = date + timedelta(30)
+        elif date.month == 6:
+            tmp_date = date + timedelta(60)
+        elif date.month == 9:
+            tmp_date = date + timedelta(30)
+
+        redates.append(tmp_date)
+    eps.index = redates
+    #eps = eps.resample('m').fillna(method = 'pad')
+    return eps
 
 def macro_view():
     rev = re_view()
     irv = ir_view()
+    pev = pe_view()
     dates = irv.index
     macro_views = []
     for day in dates:
-        tmp_rev = rev[rev.index <= day].values[-1, -1]
-        tmp_irv = irv[irv.index <= day].values[-1, -1]
-        macro_views.append(tmp_rev+tmp_irv)
-    result_df = pd.DataFrame(data = macro_views, columns = ['macro_view'], index = dates)     
+        tmp_rev = rev[rev.index <= day].values[-1]
+        tmp_irv = irv[irv.index <= day].values[-1]
+        tmp_pev = pev[pev.index <= day].values[-1]
+        macro_views.append(tmp_rev+tmp_irv+tmp_pev)
+    result_df = pd.DataFrame(data = macro_views, columns = ['macro_view'], index = dates)
     result_df.to_csv('view/macro_view.csv', index_label = 'date')
 
     return result_df
@@ -79,4 +142,7 @@ if __name__ == '__main__':
     #rev = re_view('macro_data/re_price.csv')
     #print rev['2015']
     #ir_view()
+
+#    eps_view()
+#    pe_view()
     macro_view()
