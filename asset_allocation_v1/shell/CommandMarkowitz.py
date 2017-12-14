@@ -31,6 +31,7 @@ from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_resh
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
+from ipdb import set_trace
 
 import traceback, code
 
@@ -46,7 +47,7 @@ logger = logging.getLogger(__name__)
 @click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
-@click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
+@click.option('--lookback', type=int, default=27, help=u'howmany weeks to lookback')
 @click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
 @click.option('--turnover', 'optturnover', type=float, default=0, help=u'fitler by turnover')
 @click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
@@ -537,6 +538,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
     s = 'perform %-12s' % label
     data = {}
     if bootstrap is None:
+    #if False and bootstrap is None:
         count = multiprocessing.cpu_count() / 2
         process_adjust_indexs = [[] for i in range(0, count)]
         for i in range(0, len(adjust_index)):
@@ -601,9 +603,20 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
         else:
             data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
-    df_inc  = df_nav.pct_change().fillna(0.0)
+    #df_inc  = df_nav.pct_change().fillna(0.0)
+    df_inc  = df_nav.pct_change().dropna()
+    sz_view = load_view('view/macro_view.csv', day)
+    #df_inc.iloc[:, [0, 1]] += 0.01*np.sign(sz_view)
+    df_inc.iloc[:, [0, 1]] += 0.01*(sz_view)
 
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
+
+def load_view(path, day):
+    view = pd.read_csv(path, index_col = 0, parse_dates = True)
+    tmp_view = view[view.index <= day] 
+    tmp_view = tmp_view.values[-1, -1]
+#    print tmp_view
+    return tmp_view
 
 def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     '''perform markowitz
@@ -1210,6 +1223,4 @@ def copy(ctx, optsrc, optdst, optlist):
     df_markowitz_asset = df_markowitz_asset.set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
 
     asset_mz_markowitz_asset.save(df_xtab['globalid'], df_markowitz_asset)
-
-
 
