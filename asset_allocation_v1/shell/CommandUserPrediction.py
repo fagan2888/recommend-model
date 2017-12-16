@@ -288,17 +288,22 @@ def m_analysis_feature(queue, uid_set, holding_df, order_df):
         #feat['7buy_num'] = np.nan
 
 
-        #order_group = order_group.reset_index()
-        enc = preprocessing.OneHotEncoder()
-        trade_type = order_group['ts_trade_type'].ravel()
-        trade_type = trade_type.reshape(len(trade_type), 1)
-        enc.fit(trade_type)
-        trade_type_cols = ['trade_type' + str(c) for c in enc.active_features_]
-        trade_type_df = pd.DataFrame(enc.transform(trade_type).toarray(), columns = trade_type_cols, index = order_group.index)
-        trade_type_df = trade_type_df.groupby(trade_type_df.index).first()
+        order_group = order_group.reset_index()
+        order_group = order_group.set_index(['ts_placed_date', 'ts_placed_time'])
+        trade_type_cols = ['trade_type2', 'trade_type3', 'trade_type4', 'trade_type5', 'trade_type6', 'trade_type7', 'trade_type8']
+        trade_type_df = order_group[trade_type_cols]
+        trade_type_df = trade_type_df.groupby(level = [0, 1]).first()
+        #print trade_type_df
+        trade_type_df = trade_type_df.reset_index()
+        trade_type_df = trade_type_df.drop(['ts_placed_time'], axis = 1)
+        trade_type_df = trade_type_df.set_index(['ts_placed_date'])
+        trade_type_df = trade_type_df.groupby(trade_type_df.index).sum()
+        #print trade_type_df
         feat = pd.concat([feat, trade_type_df], axis = 1, join_axes = [feat.index])
         feat[trade_type_cols] = feat[trade_type_cols].fillna(0.0)
 
+        order_group = order_group.reset_index()
+        order_group = order_group.set_index(['ts_placed_date'])
 
         for col in trade_type_cols:
             feat[col + '_180_sum'] = feat[col].rolling(180).sum()
@@ -307,21 +312,6 @@ def m_analysis_feature(queue, uid_set, holding_df, order_df):
             feat[col + '_30_sum'] = feat[col].rolling(30).sum()
             feat[col + '_15_sum'] = feat[col].rolling(15).sum()
             feat[col + '_7_sum'] = feat[col].rolling(7).sum()
-
-        #print feat.tail()
-        #print trade_type_df.head()
-        #print order_group
-        #print trade_type_df
-        #order_group = order_group.set_index(['ts_placed_date','ts_trade_type'])
-        #trade_type_df = order_group.groupby(['ts_placed_date','ts_trade_type']).count()
-        #trade_type_df = trade_type_df.set_index(['ts_placed_date'])
-        #print trade_type_df
-
-        #print order_group.head()
-        trade_type3_df = order_group[order_group['ts_trade_type'] == 3]
-        trade_type3_df = trade_type3_df[['ts_placed_amount']]
-        trade_type3_df = trade_type3_df.groupby(trade_type3_df.index).sum()
-        #print trade_type3_df.head()
 
 
         for date in dates:
@@ -405,6 +395,23 @@ def analysis_feature(ctx):
                             'ts_placed_amount','ts_placed_percent', 'ts_acked_amount', 'ts_risk']
     order_df = order_df[order_cols]
     order_df = order_df.dropna()
+
+    enc = preprocessing.OneHotEncoder()
+    trade_type = order_df['ts_trade_type'].ravel()
+    trade_type = trade_type.reshape(len(trade_type), 1)
+    enc.fit(trade_type)
+    trade_type_cols = ['trade_type' + str(c) for c in enc.active_features_]
+    trade_type_df = pd.DataFrame(enc.transform(trade_type).toarray(), columns = trade_type_cols, index = order_df.index)
+    #print order_df.tail()
+    #print trade_type_df.tail()
+
+    order_df = pd.concat([order_df, trade_type_df], axis = 1, join_axes = [order_df.index])
+    #print order_df.head()
+    #print order_df.tail()
+    #holding_group[trade_type_cols] = holding_group[trade_type_cols].fillna(0.0)
+
+
+
     order_df = order_df.set_index(['ts_uid'])
     #print 1000262865 in set(order_df.index)
     #order_df = order_df[order_df['ts_trade_status'] > 0]
@@ -422,6 +429,7 @@ def analysis_feature(ctx):
 
     #holding_order_df = pd.concat([holding_df, order_df], axis = 1, join_axes = [holding_df.index])
     #print holding_order_df
+
 
     count = multiprocessing.cpu_count() / 2
     #count = 1
@@ -525,8 +533,8 @@ def lightgbm(ctx, optfeaturefile):
     #feat_df.loc[feat_df.label == 2, 'label'] = 1
     feat_df = feat_df.drop(['ts_uid'], axis = 1)
 
-    train_df = feat_df[feat_df.index <= '2017-12-01']
-    test_df  = feat_df[feat_df.index > '2017-12-01']
+    train_df = feat_df[feat_df.index <= '2017-11-30']
+    test_df  = feat_df[feat_df.index > '2017-11-30']
 
     train_df = train_df.reset_index()
     negative_train_df = train_df[train_df.label == 0]
