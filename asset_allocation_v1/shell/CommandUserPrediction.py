@@ -14,6 +14,8 @@ import time
 import logging
 import re
 import util_numpy as npu
+import multiprocessing
+from multiprocessing import Manager
 
 
 from datetime import datetime, timedelta
@@ -102,11 +104,11 @@ def export_ts_holding_nav(ctx):
     uid_d = 1000000154
     uid_u = 1999999999
 
-    s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u)
+    s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u).where(t.c.ts_date < (datetime.now() - timedelta(1)).strftime('%Y-%m-%d'))
     df = pd.read_sql(s, db)
 
-    print df.head()
-    df.to_csv('ts_holding_nav.csv')
+    print df.tail()
+    df.to_csv('./user_prediction/ts_holding_nav.csv')
 
     return df
 
@@ -127,7 +129,6 @@ def export_ts_order(ctx):
         t.c.ts_portfolio_id,
         t.c.ts_trade_type,
         t.c.ts_trade_status,
-        t.c.ts_trade_date,
         t.c.ts_placed_date,
         t.c.ts_placed_time,
         t.c.ts_placed_amount,
@@ -141,50 +142,22 @@ def export_ts_order(ctx):
     uid_d = 1000000154
     uid_u = 1999999999
 
-    s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u)
+    s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u).where(t.c.ts_placed_date < (datetime.now() - timedelta(1)).strftime('%Y-%m-%d'))
     df = pd.read_sql(s, db)
 
-    print df.head()
-    df.to_csv('ts_order.csv')
+    print df.tail()
+    df.to_csv('./user_prediction/ts_order.csv')
 
     return df
 
 
-@user.command()
-#@click.option('--logfile', 'optlogfile', default=True, help=u'logfile path')
-@click.pass_context
-def analysis_feature(ctx):
 
-    #log_df = pd.read_csv('user_prediction/app_log.csv')
-    holding_df = pd.read_csv('user_prediction/ts_holding_nav.csv', parse_dates = ['ts_date'])
-    order_df = pd.read_csv('user_prediction/ts_order.csv', parse_dates = ['ts_placed_date'])
+def m_analysis_feature(queue, uid_set, holding_df, order_df):
 
-    #print order_df.columns
-    order_cols = ['ts_uid', 'ts_trade_type', 'ts_trade_status', 'ts_trade_date', 'ts_placed_date', 'ts_placed_time',
-                            'ts_placed_amount','ts_placed_percent', 'ts_acked_amount', 'ts_risk']
-    order_df = order_df[order_cols]
-    order_df = order_df.dropna()
-    order_df = order_df.set_index(['ts_uid'])
-    #order_df = order_df[order_df['ts_trade_status'] > 0]
-    order_df = order_df[order_df['ts_trade_type'] < 7]
-    order_df = order_df[order_df['ts_acked_amount'] >= 100]
-    #order_df = order_df[order_df['ts_trade_type'] == 4]
-    #order_df = order_df['ts_invest_plan_id']
-    #print order_df
-
-
-    holding_cols = ['ts_uid', 'ts_date', 'ts_nav', 'ts_share', 'ts_asset', 'ts_processing_asset', 'ts_profit']
-    holding_df = holding_df[holding_cols]
-    holding_df = holding_df.set_index(['ts_uid'])
-    #print holding_df.head()
-
-    #holding_order_df = pd.concat([holding_df, order_df], axis = 1, join_axes = [holding_df.index])
-    #print holding_order_df
-
-    feats = []
     uids = set()
     for uid, holding_group in holding_df.groupby(holding_df.index):
-
+        if uid not in set(uid_set):
+            continue
         uids.add(uid)
         print uid, len(uids)
         #if len(uids) >= 100:
@@ -202,11 +175,11 @@ def analysis_feature(ctx):
         if uid not in set(order_df.index):
             continue
         order_group = order_df.loc[uid]
+
         if not isinstance(order_group, pd.DataFrame):
             order_group = order_group.to_frame().T
         order_group = order_group.reset_index()
         order_group = order_group.set_index(['ts_placed_date'])
-        #print order_group
         order_dates = list(order_group.index)
         order_dates.sort()
         order_group = order_group.loc[order_dates]
@@ -216,9 +189,8 @@ def analysis_feature(ctx):
         holding_group = holding_group[holding_group.index >= start_date]
         end_date = order_dates[-1]
         if 4 in order_group.loc[end_date, 'ts_trade_type'].ravel():
-            holding_group = holding_group[holding_group.index <= end_date]
+            holding_group = holding_group[holding_group.index < end_date]
 
-        #print holding_group.tail(10)
 
         dates = holding_group.index
         holding_group['ts_r'] = holding_group['ts_nav'].pct_change().fillna(0.0)
@@ -288,6 +260,8 @@ def analysis_feature(ctx):
         holding_group['ts_15profit_diff'] = holding_group['ts_profit'].rolling(15).apply(lambda x : x[-1] - x[0])
         holding_group['ts_7profit_diff'] = holding_group['ts_profit'].rolling(7).apply(lambda x : x[-1] - x[0])
 
+
+        #print holding_group.tail()
         #holding_group['ts_profit_holding_ratio'] = holding_group['ts_profit'] / holding_group['ts_asset']
         #print holding_group[['ts_asset', 'ts_profit', 'ts_processing_asset']]
 
@@ -407,15 +381,71 @@ def analysis_feature(ctx):
         feat['risk_15_mean'] = feat['risk'].rolling(15).mean()
         feat['risk_7_mean'] = feat['risk'].rolling(7).mean()
 
-
         #holding_group.index.name = 'date'
         #order_group.index.name = 'date'
         #print holding_group.index
         #print order_group.index
         #print feat.columns
 
-        #print holding_order_df.head()
-        feats.append(feat)
+        queue.put(feat)
+
+
+
+@user.command()
+#@click.option('--logfile', 'optlogfile', default=True, help=u'logfile path')
+@click.pass_context
+def analysis_feature(ctx):
+
+    #log_df = pd.read_csv('user_prediction/app_log.csv')
+    holding_df = pd.read_csv('user_prediction/ts_holding_nav.csv', parse_dates = ['ts_date'])
+    order_df = pd.read_csv('user_prediction/ts_order.csv', parse_dates = ['ts_placed_date'])
+
+    #print order_df.columns
+    order_cols = ['ts_uid', 'ts_trade_type', 'ts_trade_status', 'ts_placed_date', 'ts_placed_time',
+                            'ts_placed_amount','ts_placed_percent', 'ts_acked_amount', 'ts_risk']
+    order_df = order_df[order_cols]
+    order_df = order_df.dropna()
+    order_df = order_df.set_index(['ts_uid'])
+    #print 1000262865 in set(order_df.index)
+    #order_df = order_df[order_df['ts_trade_status'] > 0]
+    order_df = order_df[order_df['ts_trade_type'] < 7]
+    #print 1000262865 in set(order_df.index)
+    #order_df = order_df[order_df['ts_trade_type'] == 4]
+    #order_df = order_df['ts_invest_plan_id']
+    #print order_df
+
+
+    holding_cols = ['ts_uid', 'ts_date', 'ts_nav', 'ts_share', 'ts_asset', 'ts_processing_asset', 'ts_profit']
+    holding_df = holding_df[holding_cols]
+    holding_df = holding_df.set_index(['ts_uid'])
+    #print holding_df.head()
+
+    #holding_order_df = pd.concat([holding_df, order_df], axis = 1, join_axes = [holding_df.index])
+    #print holding_order_df
+
+    count = multiprocessing.cpu_count() / 2
+    #count = 1
+    uids = list(set(holding_df.index))
+    process_uid_indexs = [[] for i in range(0, count)]
+    for i in range(0, len(uids)):
+       process_uid_indexs[i % count].append(uids[i])
+
+
+    manager = Manager()
+    q = manager.Queue()
+    processes = []
+    for indexs in process_uid_indexs:
+        p = multiprocessing.Process(target = m_analysis_feature, args = (q, indexs, holding_df, order_df))
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
+
+    feats = []
+    for m in range(0, q.qsize()):
+        record = q.get(m)
+        feats.append(record)
 
     feat_df = pd.concat(feats, axis = 0)
     feat_df.index.name = 'ts_date'
@@ -495,9 +525,8 @@ def lightgbm(ctx, optfeaturefile):
     #feat_df.loc[feat_df.label == 2, 'label'] = 1
     feat_df = feat_df.drop(['ts_uid'], axis = 1)
 
-    train_df = feat_df[feat_df.index <= '2017-10-31']
-    test_df  = feat_df[feat_df.index > '2017-10-31']
-
+    train_df = feat_df[feat_df.index <= '2017-12-01']
+    test_df  = feat_df[feat_df.index > '2017-12-01']
 
     train_df = train_df.reset_index()
     negative_train_df = train_df[train_df.label == 0]
@@ -526,17 +555,17 @@ def lightgbm(ctx, optfeaturefile):
             'boosting_type': 'gbdt',
             'objective': 'binary',
             'metric': {'binary_logloss'},
-            'learning_rate': 0.05,
+            'learning_rate': 0.03,
             #'num_leaves': 112,
             #'max_depth': 9,
             #'min_data_in_leaf': 82,
             #'min_sum_hessian_in_leaf': 1e-3,
-            #'feature_fraction': 0.8,
-            #'bagging_fraction': 0.8,
+            'feature_fraction': 0.8,
+            'bagging_fraction': 0.8,
             #'bagging_freq': 5,
             #'min_gain_to_split':0,
             #'lambda_l1': 100,
-            #'lambda_l2': 130,
+            #'lambda_l2': 1,
             #'max_bin': 255,
             #'drop_rate': 0.5,
             #'skip_drop': 0.5,
@@ -595,8 +624,48 @@ def lightgbm(ctx, optfeaturefile):
     '''
     #for i in range(0 ,len(test_y)):
 
+    gbm.save_model('lightgbm.txt')
+
     return gbm
 
+
+
+@user.command()
+@click.option('--featurefile', 'optfeaturefile', default=True, help=u'feature file path')
+@click.option('--modelfile', 'optmodelfile', default=True, help=u'model file path')
+@click.pass_context
+def lightgbm_test(ctx, optfeaturefile, optmodelfile):
+
+
+    feat_df = pd.read_csv(optfeaturefile.strip(), index_col = ['ts_date'], parse_dates = ['ts_date'])
+    #feat_df.loc[feat_df.label == 1, 'label'] = 0
+    #feat_df.loc[feat_df.label == 2, 'label'] = 1
+
+    #feat_df = feat_df.drop(['ts_uid'], axis = 1)
+    test_df  = feat_df[feat_df.index >= '2017-12-12']
+    test_df  = test_df[test_df.index < '2017-12-13']
+    print len(test_df)
+    #print test_df
+
+    #print test_df.to_csv('test.csv')
+    uids = test_df['ts_uid'].ravel()
+    test_df = test_df.drop(['ts_uid'], axis = 1)
+
+    test_y = test_df['label'].ravel()
+    test_X = test_df.drop(['label'], axis = 1)
+
+    bst = lgb.Booster(model_file=optmodelfile.strip())  #init model
+    test_pre = bst.predict(test_X)
+    #print len(test_pre)
+
+    redeem_uids = []
+
+    for i in range(0, len(test_pre)):
+        if test_pre[i] >= 0.5:
+            print uids[i]
+            redeem_uids.append(uids[i])
+
+    print redeem_uids
 
 
 
