@@ -605,18 +605,37 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_nav = pd.DataFrame(data).fillna(method='pad')
     #df_inc  = df_nav.pct_change().fillna(0.0)
     df_inc  = df_nav.pct_change().dropna()
-    sz_view = load_view('view/macro_view.csv', day)
+    sz_view, rot_view = load_view('view/macro_view.csv', 'view/rot_view.csv', day)
     #df_inc.iloc[:, [0, 1]] += 0.01*np.sign(sz_view)
-    df_inc.iloc[:, [0, 1]] += 0.01*(sz_view)
+
+    '''
+    #add view to sh300
+    df_inc.iloc[:, [0]] += 0.005*(sz_view)
+    #add view to zz500
+    df_inc.iloc[:, [1]] += 0.002*(sz_view)
+    '''
+    
+    view_weight = 1
+    sh300_mean, zz500_mean = np.abs(df_inc.mean(0)[:2])
+    #df_inc.iloc[:, [0]] += np.sign(sz_view)*sh300_mean*view_weight
+    #df_inc.iloc[:, [1]] += np.sign(sz_view)*zz500_mean*view_weight
+    df_inc.iloc[:, [0]] += sh300_mean*(sz_view)
+    df_inc.iloc[:, [1]] += zz500_mean*(sz_view)
+
 
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 
-def load_view(path, day):
-    view = pd.read_csv(path, index_col = 0, parse_dates = True)
-    tmp_view = view[view.index <= day] 
-    tmp_view = tmp_view.values[-1, -1]
-#    print tmp_view
-    return tmp_view
+def load_view(macro_path, rot_path, day):
+    macro_view = pd.read_csv(macro_path, index_col = 0, parse_dates = True)
+    macro_view = macro_view[macro_view.index <= day] 
+    macro_view = macro_view.macro_view.values[-1]
+#    print macro_view
+
+    rot_view = pd.read_csv(rot_path, index_col = 0, parse_dates = True)
+    rot_view = rot_view[rot_view.index <= day] 
+    rot_view = rot_view.rot_view.values[-1]
+    
+    return macro_view, rot_view
 
 def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     '''perform markowitz
