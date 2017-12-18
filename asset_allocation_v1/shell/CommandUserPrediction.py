@@ -53,7 +53,7 @@ def user(ctx):
 @click.pass_context
 def export_app_log(ctx):
 
-    db_tongji_uri =  'mysql://root:Mofang123@127.0.0.1/tmp_tongji?charset=utf8&use_unicode=0'
+    db_tongji_uri =  'mysql://root:Mofang123@127.0.0.1/tongji?charset=utf8&use_unicode=0'
     db = create_engine(db_tongji_uri)
     metadata = MetaData(bind=db)
 
@@ -70,13 +70,13 @@ def export_app_log(ctx):
     ]
 
     uid_d = 1000000154
-    uid_u = 1999999999
+    uid_u = 1899999999
 
-    s = select(columns).where(t.c.lr_uid >= uid_d).where(t.c.lr_uid <= uid_u)
+    s = select(columns).where(t.c.lr_uid >= uid_d).where(t.c.lr_uid <= uid_u).where(t.c.lr_date >= '2016-08-01')
     df = pd.read_sql(s, db)
 
     print df.head()
-    df.to_csv('app_log.csv')
+    df.to_csv('user_prediction/app_log.csv')
 
     return df
 
@@ -102,9 +102,11 @@ def export_ts_holding_nav(ctx):
     ]
 
     uid_d = 1000000154
-    uid_u = 1999999999
+    uid_u = 1899999999
 
-    s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u).where(t.c.ts_date < (datetime.now() - timedelta(1)).strftime('%Y-%m-%d'))
+    s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u)
+    #s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u).where(t.c.ts_date < (datetime.now() - timedelta(1)).strftime('%Y-%m-%d'))
+    #s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u).where(t.c.ts_date < (datetime.now() - timedelta(7)).strftime('%Y-%m-%d'))
     df = pd.read_sql(s, db)
 
     print df.tail()
@@ -140,9 +142,11 @@ def export_ts_order(ctx):
     ]
 
     uid_d = 1000000154
-    uid_u = 1999999999
+    uid_u = 1899999999
 
-    s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u).where(t.c.ts_placed_date < (datetime.now() - timedelta(1)).strftime('%Y-%m-%d'))
+    s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u)
+    #s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u).where(t.c.ts_placed_date < (datetime.now() - timedelta(1)).strftime('%Y-%m-%d'))
+    #s = select(columns).where(t.c.ts_uid >= uid_d).where(t.c.ts_uid <= uid_u).where(t.c.ts_placed_date < (datetime.now() - timedelta(7)).strftime('%Y-%m-%d'))
     df = pd.read_sql(s, db)
 
     print df.tail()
@@ -152,7 +156,7 @@ def export_ts_order(ctx):
 
 
 
-def m_analysis_feature(queue, uid_set, holding_df, order_df):
+def m_analysis_feature(queue, uid_set, holding_df, order_df, log_df):
 
     uids = set()
     for uid, holding_group in holding_df.groupby(holding_df.index):
@@ -185,6 +189,26 @@ def m_analysis_feature(queue, uid_set, holding_df, order_df):
         order_group = order_group.loc[order_dates]
 
         start_date = order_dates[0]
+
+        if uid not in set(log_df.index):
+            continue
+        log_group = log_df.loc[uid]
+        if not isinstance(log_group, pd.DataFrame):
+            log_group = log_group.to_frame().T
+        if len(log_group) <= 1:
+            continue
+        log_group = log_group.reset_index()
+        log_group = log_group.set_index(['lr_date'])
+        log_dates = list(log_group.index)
+        log_dates.sort()
+        log_group = log_group.loc[log_dates]
+        log_group = log_group[log_group.index >= start_date]
+
+        #print log_group.columns
+        log_group = log_group.drop(['lr_uid' , 'lr_time', 'lr_page', 'lr_ctrl', 'lr_ref', 'lr_ev','lr_ts'], axis = 1)
+        log_group = log_group.groupby(log_group.index).sum()
+        #print log_group.head()
+
 
         holding_group = holding_group[holding_group.index >= start_date]
         end_date = order_dates[-1]
@@ -334,7 +358,6 @@ def m_analysis_feature(queue, uid_set, holding_df, order_df):
         #print feat.index
         #print redeem.index
 
-        '''
         if len(buy) > 0:
             for buy_date in buy.index:
                 feat_date_list = list(feat.index)
@@ -342,13 +365,11 @@ def m_analysis_feature(queue, uid_set, holding_df, order_df):
                     feat_date_list.append(buy_date)
                 elif buy_date < feat.index[0]:
                     buy_date = feat.index[0]
-                #print uid
-                #print feat_date_list
-                #print buy_date
                 buy_index = feat_date_list.index(buy_date)
-                start_index = max(0, buy_index - 7)
+                if buy_index < 7:
+                    continue
+                start_index = buy_index - 7
                 feat.label.iloc[start_index:buy_index] = 1
-        '''
 
         if len(redeem) > 0:
             for redeem_date in redeem.index:
@@ -359,7 +380,7 @@ def m_analysis_feature(queue, uid_set, holding_df, order_df):
                     redeem_date = feat.index[0]
                 redeem_index = feat_date_list.index(redeem_date)
                 start_index = max(0, redeem_index - 7)
-                feat.label.iloc[start_index:redeem_index] = 1
+                feat.label.iloc[start_index:redeem_index] = 2
 
 
         feat['risk'] = feat['risk'].fillna(method = 'pad')
@@ -370,6 +391,36 @@ def m_analysis_feature(queue, uid_set, holding_df, order_df):
         feat['risk_30_mean'] = feat['risk'].rolling(30).mean()
         feat['risk_15_mean'] = feat['risk'].rolling(15).mean()
         feat['risk_7_mean'] = feat['risk'].rolling(7).mean()
+
+
+        log_group = log_group.reindex(feat.index).fillna(0.0)
+
+        for col in log_group.columns:
+            log_group[col + '_180_sum'] = log_group[col].rolling(180).sum()
+            log_group[col + '_90_sum'] = log_group[col].rolling(90).sum()
+            log_group[col + '_60_sum'] = log_group[col].rolling(60).sum()
+            log_group[col + '_30_sum'] = log_group[col].rolling(30).sum()
+            log_group[col + '_15_sum'] = log_group[col].rolling(15).sum()
+            log_group[col + '_7_sum'] = log_group[col].rolling(7).sum()
+
+            log_group[col + '_180_mean'] = log_group[col].rolling(180).mean()
+            log_group[col + '_90_mean'] = log_group[col].rolling(90).mean()
+            log_group[col + '_60_mean'] = log_group[col].rolling(60).mean()
+            log_group[col + '_30_mean'] = log_group[col].rolling(30).mean()
+            log_group[col + '_15_mean'] = log_group[col].rolling(15).mean()
+            log_group[col + '_7_mean'] = log_group[col].rolling(7).mean()
+
+            log_group[col + '_180_std'] = log_group[col].rolling(180).std()
+            log_group[col + '_90_std'] = log_group[col].rolling(90).std()
+            log_group[col + '_60_std'] = log_group[col].rolling(60).std()
+            log_group[col + '_30_std'] = log_group[col].rolling(30).std()
+            log_group[col + '_15_std'] = log_group[col].rolling(15).std()
+            log_group[col + '_7_std'] = log_group[col].rolling(7).std()
+
+
+        feat = pd.concat([feat, log_group], axis = 1, join_axes = [feat.index])
+
+        #print feat.tail()
 
         #holding_group.index.name = 'date'
         #order_group.index.name = 'date'
@@ -386,6 +437,7 @@ def m_analysis_feature(queue, uid_set, holding_df, order_df):
 @click.pass_context
 def analysis_feature(ctx):
 
+
     #log_df = pd.read_csv('user_prediction/app_log.csv')
     holding_df = pd.read_csv('user_prediction/ts_holding_nav.csv', parse_dates = ['ts_date'])
     order_df = pd.read_csv('user_prediction/ts_order.csv', parse_dates = ['ts_placed_date'])
@@ -395,6 +447,39 @@ def analysis_feature(ctx):
                             'ts_placed_amount','ts_placed_percent', 'ts_acked_amount', 'ts_risk']
     order_df = order_df[order_cols]
     order_df = order_df.dropna()
+
+
+
+
+    '''
+    order_uids = list(set(order_df['ts_uid']))
+    redeem_uids = []
+    not_redeem_uids = []
+    for uid in order_uids:
+        uid_order_df = order_df[order_df['ts_uid'] == uid]
+        if 4 in set(uid_order_df['ts_trade_type']):
+            redeem_uids.append(uid)
+        else:
+            not_redeem_uids.append(uid)
+
+    print len(redeem_uids)
+    print len(not_redeem_uids)
+    '''
+
+
+
+    log_cols = ['lr_uid', 'lr_date' , 'lr_time' , 'lr_page' , 'lr_ctrl' , 'lr_ref', 'lr_ev', 'lr_ts']
+    log_df = pd.read_csv('user_prediction/app_log.csv', parse_dates = ['lr_date'])
+    log_df = log_df[log_cols]
+    log_df['lr_ctrl'] = log_df['lr_ctrl'].replace(-1, 200)
+    #log_df = log_df.set_index(['lr_uid'])
+
+    #print len(log_df)
+    log_df = log_df[log_df['lr_uid'].isin(set(order_df['ts_uid']))]
+    #print len(log_df)
+    #print len(log.columns)
+    print len(set(log_df['lr_uid']))
+
 
     enc = preprocessing.OneHotEncoder()
     trade_type = order_df['ts_trade_type'].ravel()
@@ -409,7 +494,6 @@ def analysis_feature(ctx):
     #print order_df.head()
     #print order_df.tail()
     #holding_group[trade_type_cols] = holding_group[trade_type_cols].fillna(0.0)
-
 
 
     order_df = order_df.set_index(['ts_uid'])
@@ -430,6 +514,39 @@ def analysis_feature(ctx):
     #holding_order_df = pd.concat([holding_df, order_df], axis = 1, join_axes = [holding_df.index])
     #print holding_order_df
 
+    #print set(log_df['lr_page'])
+    #print set(log_df['lr_ctrl'])
+    #print set(log_df['lr_ref'])
+    #print set(log_df['lr_ev'])
+
+    enc = preprocessing.OneHotEncoder()
+    page = log_df['lr_page'].ravel()
+    page = page.reshape(len(page), 1)
+    enc.fit(page)
+    page_cols = ['lr_page' + str(c) for c in enc.active_features_]
+    page_df = pd.DataFrame(enc.transform(page).toarray(), columns = page_cols, index = log_df.index)
+
+    enc = preprocessing.OneHotEncoder()
+    ctrl = log_df['lr_ctrl'].ravel()
+    ctrl = ctrl.reshape(len(ctrl), 1)
+    enc.fit(ctrl)
+    ctrl_cols = ['lr_ctrl' + str(c) for c in enc.active_features_]
+    ctrl_df = pd.DataFrame(enc.transform(ctrl).toarray(), columns = ctrl_cols, index = log_df.index)
+
+    enc = preprocessing.OneHotEncoder()
+    ref = log_df['lr_ref'].ravel()
+    ref = ref.reshape(len(ref), 1)
+    enc.fit(ref)
+    ref_cols = ['lr_ref' + str(c) for c in enc.active_features_]
+    ref_df = pd.DataFrame(enc.transform(ref).toarray(), columns = ref_cols, index = log_df.index)
+
+    log_df = pd.concat([log_df, page_df, ctrl_df, ref_df], axis = 1, join_axes = [log_df.index])
+    #print log_df.tail()
+    log_df = log_df.set_index('lr_uid')
+
+
+    print 'LOG ORDER HOLDING PAGE ctrl ref DONE'
+    time.sleep(10)
 
     count = multiprocessing.cpu_count() / 2
     #count = 1
@@ -443,7 +560,7 @@ def analysis_feature(ctx):
     q = manager.Queue()
     processes = []
     for indexs in process_uid_indexs:
-        p = multiprocessing.Process(target = m_analysis_feature, args = (q, indexs, holding_df, order_df))
+        p = multiprocessing.Process(target = m_analysis_feature, args = (q, indexs, holding_df, order_df, log_df))
         processes.append(p)
         p.start()
 
@@ -534,16 +651,17 @@ def lightgbm(ctx, optfeaturefile):
     feat_df = feat_df.drop(['ts_uid'], axis = 1)
 
     train_df = feat_df[feat_df.index <= '2017-11-30']
-    test_df  = feat_df[feat_df.index > '2017-11-30']
+    test_df  = feat_df[feat_df.index > '2017-12-07']
 
     train_df = train_df.reset_index()
     negative_train_df = train_df[train_df.label == 0]
-    positive_train_df = train_df[train_df.label == 1]
+    positive_train_df = train_df[(train_df.label == 1) | (train_df.label == 2)]
     positive_index = positive_train_df.index.ravel()
     negative_index = negative_train_df.index.ravel()
     random.shuffle(negative_index)
     negative_index = negative_index[0: len(negative_index) / 10]
     train_index = np.append(negative_index, positive_index)
+    random.shuffle(train_index)
     train_df = train_df.iloc[train_index]
     train_df = train_df.set_index(['ts_date'])
 
@@ -561,9 +679,10 @@ def lightgbm(ctx, optfeaturefile):
     params = {
             'task': 'train',
             'boosting_type': 'gbdt',
-            'objective': 'binary',
-            'metric': {'binary_logloss'},
-            'learning_rate': 0.03,
+            'objective': 'multiclass',
+            'num_class' : 3,
+            'metric': {'multi_logloss'},
+            'learning_rate': 0.3,
             #'num_leaves': 112,
             #'max_depth': 9,
             #'min_data_in_leaf': 82,
@@ -575,38 +694,43 @@ def lightgbm(ctx, optfeaturefile):
             #'lambda_l1': 100,
             #'lambda_l2': 1,
             #'max_bin': 255,
-            #'drop_rate': 0.5,
+            #'drop_rate': 0.2,
             #'skip_drop': 0.5,
             #'max_drop': 50,
             'nthread': 32,
             'verbose': -1,
-            'is_unbalance' : True,
+            #'is_unbalance' : True,
             #'scale_pos_weight':weight
             #'device' : 'gpu',
             #'gpu_platform_id': 0,
             #'gpu_device_id' : 0,
-            #"max_bin" : 63,
+            "max_bin" : 255,
+            'data_random_seed': 963,
             }
 
 
     cvresult = lgb.cv(params, lgb_train, num_boost_round=100000, nfold=5, shuffle = True,
-                    early_stopping_rounds=50,  categorical_feature=['risk'],seed=123, verbose_eval=True)
-    best_round = len(cvresult['binary_logloss-mean'])
+                    early_stopping_rounds=200,  categorical_feature=['risk'],seed=123, verbose_eval=True)
+    #print cvresult
+    best_round = len(cvresult['multi_logloss-mean'])
     print 'best_num_boost_round: %d' % best_round
     gbm = lgb.train(params, lgb_train, num_boost_round=best_round, verbose_eval=False)
     train_pre = gbm.predict(train_X)
     test_pre = gbm.predict(test_X)
+    train_pre = np.argmax(train_pre, axis = 1)
+    test_pre = np.argmax(test_pre, axis = 1)
+    #print train_pre
     #print "\nModel Report"
     #print "AUC Score(Train): %f" % roc_auc_score(train_y, train_pre)
     #print "AUC Score(Test) : %f" % roc_auc_score(test_y, test_pre)
 
 
-    train_pre[train_pre > 0.5] = 1
-    train_pre[train_pre <= 0.5] = 0
+    #train_pre[train_pre > 0.5] = 1
+    #train_pre[train_pre <= 0.5] = 0
     print confusion_matrix(train_y, train_pre)
 
-    test_pre[test_pre > 0.5] = 1
-    test_pre[test_pre <= 0.5] = 0
+    #test_pre[test_pre > 0.5] = 1
+    #test_pre[test_pre <= 0.5] = 0
     print confusion_matrix(test_y, test_pre)
 
     print classification_report(test_y, test_pre)
