@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 @click.group(invoke_without_command=True)
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
 @click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
+@click.option('--append/--no-append', 'optappend', default=False, help=u'append pos or not')
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.option('--name', 'optname', default=None, help=u'specify markowitz name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
@@ -56,14 +57,14 @@ logger = logging.getLogger(__name__)
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
-def markowitz(ctx, optnew, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
+def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid)
+            ctx.invoke(pos, optid=optid, optappend=optappend)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -541,6 +542,12 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
         for i in range(0, len(adjust_index)):
            process_adjust_indexs[i % count].append(adjust_index[i])
 
+
+        engine = database.connection('base')
+        engine.dispose()
+        engine = database.connection('asset')
+        engine.dispose()
+
         manager = Manager()
         q = manager.Queue()
         processes = []
@@ -579,6 +586,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     '''
     assets_day = assets.copy()
 
+<<<<<<< HEAD
     #传一份csv，按各期不同的资产进行配置，需要在表中首行写个一年前的日期再传入
     if csv != '':
 	csvdata = pd.read_csv(csv, index_col=0, parse_dates=[0])
@@ -590,6 +598,14 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
 		assets_day.pop(fdindex)
 	    except:
 		pass
+=======
+    #传一份csv，按各期不同的资产进行配置
+    if csv is not None:
+	csvdata = pd.read_csv(csv, index_col=0, parse_dates=[0])
+	dateindex = csvdata.index
+	maxdate = max(dateindex[dateindex<=day])
+        assets_day = { key:value for key,value in assets_day.items() if key in csvdata.loc[maxdate].dropna().index}
+>>>>>>> 9614cb1c4d8033562b01b86c8867cff2e5a7ccb2
 
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
@@ -724,7 +740,10 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             sr = pd.Series()
     else:
 	asset_id = re.sub('\D','',asset_id)
+<<<<<<< HEAD
 	#print asset_id
+=======
+>>>>>>> 9614cb1c4d8033562b01b86c8867cff2e5a7ccb2
         if prefix == 'AP':
             #
             # 基金池资产
@@ -735,6 +754,7 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             #
             # 基金资产
             #
+	    asset_id = re.sub('\D','',asset_id)
             sr = base_ra_fund_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         elif prefix == 'RS':
@@ -767,7 +787,11 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 @click.option('--start-date', 'sdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'edate', help=u'end date to calc')
 @click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
+<<<<<<< HEAD
 @click.option('--csv', 'csv', default='', help=u'path of file to read')
+=======
+@click.option('--csv', 'csv', default=None, help=u'path of file to read')
+>>>>>>> 9614cb1c4d8033562b01b86c8867cff2e5a7ccb2
 @click.pass_context
 def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu, csv):
     ''' calc pool nav and inc
@@ -792,14 +816,19 @@ def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu, 
         pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu, csv)
         
 def pos_update_alloc(markowitz, optrisk, optappend, sdate, edate, optcpu, csv):
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9614cb1c4d8033562b01b86c8867cff2e5a7ccb2
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
     #print df_alloc
-    
+
     for _, alloc in df_alloc.iterrows():
         pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv)
 
     click.echo(click.style("markowitz allocation complement! instance id [%s]" % (markowitz['globalid']), fg='green'))
+
         
 def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
     markowitz_id = alloc['globalid']
@@ -831,15 +860,35 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
 
     #load df old pos
     df_pos_old = asset_mz_markowitz_pos.load_raw(markowitz_id)
-
-    if optappend and len(df_pos_old) > 0:
-        sdate = df_pos_old.index[-1]
+    #print df_pos_old.tail()
+    if len(df_pos_old) <= 4:
+        optappend = False
+    elif optappend:
+        sdate = df_pos_old.index[-4]
         df_pos_old = df_pos_old.iloc[:-1,]
     else:
         pass
 
     if algo == 1:
+        optappend = False
         df = average_days(sdate, edate, assets)
+        if 'return' in df.columns:
+            df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
+        for asset in df.columns:
+            if asset.startswith('MZ'):
+                mz_pos_df = asset_mz_markowitz_pos.load_raw(asset)
+                asset_pos = df[asset]
+                dates = list(set(mz_pos_df.index | df.index))
+                dates.sort()
+                asset_pos = asset_pos.reindex(dates)
+                asset_pos.fillna(method = 'pad', inplace=True)
+                asset_pos.fillna(0.0, inplace=True)
+                mz_pos_df = mz_pos_df.mul(asset_pos, axis = 0)
+                df = df.drop(asset, axis = 1)
+                df = pd.concat([df, mz_pos_df], axis = 1, join_axes = [mz_pos_df.index])
+        df = df.T
+        df = df.groupby(df.index).sum()
+        df = df.T
     elif algo == 2:
         df = markowitz_days(
             sdate, edate, assets,
@@ -864,8 +913,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
         df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
 
 
-    if optappend:
-        df = pd.concat([df_pos_old, df]).fillna(0.0)
+    #if optappend:
+    #    df = pd.concat([df_pos_old, df]).fillna(0.0)
 
 
     db = database.connection('asset')
@@ -885,16 +934,26 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu, csv):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
+<<<<<<< HEAD
     if algo ==5:
 	pass
     else:
 	df = df.rolling(window = 4, min_periods = 1).mean()
+=======
+    df = df.rolling(window = 4, min_periods = 1).mean()
+    if optappend:
+        df = df.iloc[3:,:]
+>>>>>>> 9614cb1c4d8033562b01b86c8867cff2e5a7ccb2
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     if turnover >= 0.01:
         df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
+
+    if optappend:
+        df = pd.concat([df_pos_old, df]).fillna(0.0)
+    #print df.tail()
 
     df.index.name = 'mz_date'
     df.columns.name='mz_markowitz_asset'

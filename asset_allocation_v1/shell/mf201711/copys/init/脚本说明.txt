@@ -1,0 +1,20 @@
+二、数据标准化
+new_validcode.py：合法股票筛选 ###加参数：是否滤ST #0/1
+new_normalizer.py：将数据从cleanedData中正态化至cleanedData_standarded
+
+三、股票因子筛选
+new_singleFactorTest.py：单因子分层测试，另计算各期股票池 ###加参数：分层层数 #5/10/20
+/factorTestResult/layeredconcat.py：汇总单因子测试结果 ##相应改代码
+factorIndex.py：计算股票因子指数 ###加参数：分层层数 #5/10/20
+
+四、基金因子筛选
+fundFactorValue.py：计算基金因子暴露值
+/new_funddata/validfund.py：合法基金筛选 ###加4个参数 #stdlimit[2/2/0],alphakind[1~9]
+new_fundPool-Terminal.py：计算筛选基金池
+netprice-Terminal.py：回测基金池净值
+
+五、因子股票基金配置
+/factorTestResult/alloMethod_corrMean/effblockist.py：股票净值回测
+/factorTestResult/alloMethod_corrMean/fundpricelookback.py：基金净值、股票换手率回测
+
+### start.py：统筹以上脚本

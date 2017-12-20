@@ -601,6 +601,14 @@ def nav_update_alloc(portfolio, risks, fee, debug, enddate):
             item_show_func=lambda x: str(x[1]['globalid']) if x else None) as bar:
         #for _, alloc in bar:
         #    nav_update(alloc, fee, debug, enddate)
+<<<<<<< HEAD
+=======
+
+        engine = database.connection('base')
+        engine.dispose()
+        engine = database.connection('asset')
+        engine.dispose()
+>>>>>>> 9614cb1c4d8033562b01b86c8867cff2e5a7ccb2
 
         processes = []
         for _, alloc in bar:

@@ -48,7 +48,7 @@ uris = {
     'asset': config.db_asset_uri,
     'base': config.db_base_uri,
     'caihui': config.db_caihui_uri,
-    #'portfolio_sta': config.db_portfolio_sta_uri,
+    'portfolio_sta': config.db_portfolio_sta_uri,
 }
 
 connections = {}
@@ -98,7 +98,10 @@ def ping_connection(dbapi_connection, connection_record, connection_proxy):
         cursor.close()
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9614cb1c4d8033562b01b86c8867cff2e5a7ccb2
 def format(df, columns=[], fmter=None, kwcolumns=[]):
     if columns and fmter:
         for column in columns:
