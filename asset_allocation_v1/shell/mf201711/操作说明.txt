@@ -1,0 +1,117 @@
+所有脚本及策略参数文件、数据表均保存在 /home/huyang/MF1710 目录下。
+
+
+一、建表
+对应配置文件在 /home/huyang/koudai-asset/database/migrate/ 下，包含mf_sk或mf_skfd的文件即为建表对应的php文件。
+*mf_sk_paras.php：股票因子策略参数表
+*mf_sk_factors.php：股票因子列表
+*mf_sk_factorvalue.php：股票原始因子值表
+*mf_sk_factorvalue_std.php：股票标准化因子值表
+*mf_sk_layers.php：股票分层收益表
+*mf_sk_stdata.php：股票st处理信息表
+*mf_skfd_paras.php：股票基金因子策略参数表
+*mf_skfd_position.php：股票基金的股票持仓比例表
+*mf_skfd_marketreport.php：股票基金行情报告数据表（即规模和机构持仓比例）
+*mf_skfd_derivereport.php：股票基金衍生报告数据表
+*mf_skfd_factorfundpool.php：股票基金单因子基金池表
+
+执行：
+cd /home/huyang/koudai-asset/
+php artisan migrate
+
+
+二、导入因子列表及因子策略
+因子列表及因子策略均已写为csv格式，即：
+mf_sk_factors.csv：因子列表
+mf_sk_paras.csv：股票因子策略参数，目前有策略MF.000010及MF.000020，分别为当前所采用的股票因子策略，及当前所采用的基金因子策略对应的股票因子策略（为控制基金策略的换手率，二者参数并不一致）
+mf_skfd_paras.csv：基金因子策略参数，目前仅有策略MF.100010，即目前所用基金策略
+
+对应脚本：
+mf_shifter.py，用于将对应csv表格中数据写入对应数据库
+
+执行：
+cd /home/MF1710/
+python mf_shifter.py mf_sk_factors
+python mf_shifter.py mf_sk_paras
+python mf_shifter.py mf_skfd_paras
+
+
+三、导入目前无法自动同步的股票及基金数据（包括股票财报因子数据）
+目前为能够进行后续计算，导入的是保存于本地的过时数据表，无法自动同步。该部分数据分为Wind数据及财汇数据。
+财汇数据之后可以于数据库中建表通过财汇导出，实现自动同步。
+Wind数据目前只能由Wind手动导出，且其数据规范与目前所导入的数据表不同（目前导入的数据表已经过季度化等处理），故之后仍需于数据库中建表保存从万得下载后直接导入的原始数据，再另写程序处理为当前所用的数据格式。
+这部分的脚本，当数据库完善后，其功能可以使用其它脚本替代，无需维护。
+mf_sk_stdata.csv：股票st处理信息表（财汇数据）
+mf_skfd_position.csv：基金的股票持仓表（财汇数据）
+mf_fundcode.csv：财汇基金内部代码对应表（财汇数据）
+mf_stockcode.csv：财汇股票内部代码对应表（财汇数据）
+mf_sharp_y.csv：基金一年期夏普比率表（财汇数据）
+mf_sharp_2y.csv：基金两年期夏普比率表（财汇数据）
+mf_sharp_5y.csv：基金五年期夏普比率表（财汇数据）
+mf_jenson_y.csv：基金一年期詹森比率表（财汇数据）
+mf_jenson_2y.csv：基金两年期詹森比率表（财汇数据）
+mf_jenson_5y.csv：基金五年期詹森比率表（财汇数据）
+mf_sortino_y.csv：基金一年期索提诺比率表（财汇数据）
+mf_sortino_2y.csv：基金两年期索提诺比率表（财汇数据）
+mf_sortino_5y.csv：基金五年期索提诺比率表（财汇数据）
+/home/huyang/MultiFactors201710/cleanedData/ 下，各股票财报因子对应的csv数据表（Wind数据）
+
+对应脚本：
+mf_skfdposition_shifter.py，用于（在对应内部代码基础上）导入基金的股票持仓数据
+mf_skfdmarket_shifter.py，用于导入基金的规模和机构持仓比例数据
+mf_skfdderive_shifter.py，用于导入基金的各种比率等衍生业绩数据
+mf_datashifter.py，用于导入股票的财报数据
+mf_datashifter_start.py，用于以多进程方式启动mf_datashifter.py，带一个启动的进程数参数
+
+执行：
+python mf_shifter.py mf_sk_stdata
+python mf_skfdposition_shifter.py （读取数据时间较长，个把小时）
+python mf_skfdmarket_shifter.py （10分钟）
+python mf_skfdderive_shifter.py （个把小时）
+python mf_datashifter_start.py 10 （同时启动10个进程，速度可以缩短在几分钟之内完成）
+
+
+四、根据目前自动同步的股票行情数据计算这一部分的因子值
+该步执行完成后，mf_sk_factorvalue表中将存有完整的股票因子数据。
+
+对应脚本：
+mf_dataloader.py，用于根据股票因子列表中的公式，从mofang库读取股票行情数据，计算对应行情因子值
+mf_dataloader_start.py，用于以多进程方式启动mf_dataloader.py，带一个启动的进程数参数
+
+执行：
+python mf_dataloader_start.py 20 （速度较慢，建议尽可能多开，如20或30。需要约1小时）
+
+
+五、计算标准化因子值
+该步将mf_sk_factorvalue表中的原始因子值，根据股票因子策略所要求的合法股票范围，转化为各时期上的标准化因子值，存在mf_sk_factorvalue_std表。
+
+对应脚本：mf_normalizer.py
+执行：python mf_normalizer.py （因启用多进程，可能会因数据库连接中断等报错，请帮助确认）
+
+
+六、计算股票因子分层秩相关系数（股票的单因子检验）
+该步根据股票因子策略所要求的分层数，计算各时期上各因子的分层秩相关系数，存于mf_sk_layers表。
+
+对应脚本：mf_singleFactorTest.py
+执行：python mf_singleFactorTest.py
+
+
+七、计算股票因子策略净值
+根据股票因子策略所要求的因子筛选条件，计算出各策略各时期所选因子，配置对应层次的股票后生成一个MZ.配置，执行robotadvisor将其净值显示于bae后台；同时生成以各因子策略所选出的各时期上前四名因子构建因子基金，同样以MZ.配置的方式显示于bae后台。但因目前robotadvisor的框架不支持将股票（SK.*）作为所配置的资产，这些净值目前尚未能算出，需要先进行该框架的修改。
+
+对应脚本：mf_factorfund.py
+执行：python mf_factorfund.py
+
+
+八、计算股票基金单因子基金池
+通过各股票标准化因子值、各期基金的股票持仓，以及各基金策略所要求的合法基金范围，计算出各基金策略下各期各只基金的各因子数值，并根据各因子上基金因子数值的排序，根据各基金策略所要求的单期单因子基金池规模及二级池的放松条件，筛选出各基金策略各期各因子的单因子基金池，保存于mf_skfd_factorfundpool表。
+
+对应脚本：mf_skfd_fundpool.py
+执行：python mf_skfd_fundpool.py
+
+
+九、计算基金因子策略净值
+根据基金因子策略所对应的股票因子策略所要求的因子筛选条件，计算出各策略各时期所选因子，配置该基金因子策略所算得的各因子各期的单因子基金池，生成一个MZ.配置，执行robotadvisor将其净值显示于bae后台。
+
+对应脚本：mf_skfd_mfasset.py
+执行：python mf_skfd_mfasset.py

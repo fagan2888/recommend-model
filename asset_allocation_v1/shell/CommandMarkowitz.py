@@ -579,7 +579,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     '''
     assets_day = assets.copy()
 
-    #传一份csv，按各期不同的资产进行配置
+    #传一份csv，按各期不同的资产进行配置，需要在表中首行写个一年前的日期再传入
     if csv != '':
 	csvdata = pd.read_csv(csv, index_col=0, parse_dates=[0])
 	dateindex = pd.Series(csvdata.index)
