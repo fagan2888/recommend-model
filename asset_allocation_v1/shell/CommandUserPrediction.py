@@ -710,8 +710,6 @@ def xgboost(ctx, optfeaturefile):
     print classification_report(xg_test.get_label(), test_pre)
 
 
-
-
     feat_df = pd.read_hdf(optfeaturefile.strip(), mode = 'r')
     test_df  = feat_df[feat_df.index > '2017-12-01']
 
@@ -719,6 +717,7 @@ def xgboost(ctx, optfeaturefile):
     test_user['predict'] =  test_pre
 
 
+    print test_user.index[-1]
     rebuy = set(test_user.ts_uid[test_user.label == 1])
     predict_rebuy = set(test_user.ts_uid[test_user.predict == 1])
     print len(rebuy), len(predict_rebuy), len(rebuy & predict_rebuy)
@@ -732,7 +731,6 @@ def xgboost(ctx, optfeaturefile):
 
     print 'redeem presicion : ', 1.0 * len(redeem & predict_redeem) / len(predict_redeem)
     print 'redeem recall : ', 1.0 * len(redeem & predict_redeem) / len(redeem)
-
 
     return
 
