@@ -612,14 +612,19 @@ def log_ctrl(log_df):
     return log_df
 
 
+
 @user.command()
 @click.option('--featurefile', 'optfeaturefile', default=True, help=u'feature file path')
 @click.pass_context
 def xgboost(ctx, optfeaturefile):
 
+
     '''
     feat_df = pd.read_hdf(optfeaturefile.strip(), mode = 'r')
     feat_df = feat_df.drop(['ts_uid'], axis = 1)
+
+    feat_df.label[feat_df.label == 1] = 0
+    feat_df.label[feat_df.label == 2] = 1
 
     train_df = feat_df[feat_df.index <= '2017-10-30']
     val_df  = feat_df[(feat_df.index > '2017-11-07') & (feat_df.index <= '2017-12-01')]
@@ -627,16 +632,15 @@ def xgboost(ctx, optfeaturefile):
 
     train_df = train_df.reset_index()
     negative_train_df = train_df[train_df.label == 0]
-    positive_train_df = train_df[(train_df.label == 1) | (train_df.label == 2)]
+    positive_train_df = train_df[train_df.label == 1]
     positive_index = positive_train_df.index.ravel()
     negative_index = negative_train_df.index.ravel()
     random.shuffle(negative_index)
-    negative_index = negative_index[0: len(negative_index) / 5]
+    negative_index = negative_index[0: len(negative_index) / 4]
     train_index = np.append(negative_index, positive_index)
     random.shuffle(train_index)
     train_df = train_df.iloc[train_index]
     train_df = train_df.set_index(['ts_date'])
-
 
     train_y = train_df['label'].values
     train_X = train_df.drop(['label'], axis = 1).values
@@ -657,53 +661,60 @@ def xgboost(ctx, optfeaturefile):
     sys.exit(0)
     '''
 
-
     xg_train = xgb.DMatrix('./user_prediction/train.xgb')
     xg_val = xgb.DMatrix('./user_prediction/val.xgb')
     xg_test = xgb.DMatrix('./user_prediction/test.xgb')
 
+
     params = {}
     # use softmax multi-class classification
-    params['objective'] = 'multi:softmax'
+    params['objective'] = 'binary:logistic'
     #params['booster'] = 'gbtree'
     # scale weight of positive examples
-    params['eta'] = 0.1
-    params['max_depth'] = 9
+    params['eta'] = 0.01
+    params['max_depth'] = 3
     params['silent'] = 1
     params['nthread'] = 32
-    params['num_class'] = 3
-    params['eval_metric'] = 'mlogloss'
+    #params['num_class'] = 3
+    params['eval_metric'] = 'logloss'
     #params['min_child_weight'] = 3
-    params['lambda'] = 1
+    #params['lambda'] = 100
+    params['alpha'] = 10000
     #params['gamma'] = 0.1
-    #params['subsample'] = 0.5
-    #params['colsample_bytree'] = 0.5
+    params['subsample'] = 0.5
+    params['colsample_bytree'] = 0.5
     #params['rate_drop'] = 0.2
     #params['skip_drop'] = 0.5
-    #params['scale_pos_weight'] = float(np.sum(train_y == 0)) / np.sum(train_y==1)
+    params['scale_pos_weight'] = float(np.sum(xg_train.get_label() == 0)) / np.sum(xg_train.get_label() == 1)
     #params['seed'] = 103
-    #params['tree_method'] = 'gpu_hist'
-    #params['gpu_id'] = 0
+    params['tree_method'] = 'gpu_hist'
+    params['gpu_id'] = 0
     params['max_bin'] = 32
     #params['predictor'] = 'cpu_predictor'
     #params['verbose'] = 0
 
 
-    #watchlist = [(xg_train,'train'), (xg_val,'val')]
-    #num_round = 2000
-    #clf = xgb.train(params, xg_train, num_round, watchlist, early_stopping_rounds = 50)
-    #best_ntree_limit = clf.best_ntree_limit
+    watchlist = [(xg_train,'train'), (xg_val,'val')]
+    num_round = 100000
+    clf = xgb.train(params, xg_train, num_round, watchlist, early_stopping_rounds = 50)
+    best_ntree_limit = clf.best_ntree_limit
 
 
-    #importance = clf.get_fscore()
-    #clf.save_model('./user_prediction/xgboost.model')
+    importance = clf.get_fscore()
+    clf.save_model('./user_prediction/xgboost.model')
     clf = xgb.Booster(params)
     clf.load_model('./user_prediction/xgboost.model')
 
+
     #train_pre = clf.predict(xg_train, ntree_limit=best_ntree_limit)
     #test_pre = clf.predict(xg_test, ntree_limit=best_ntree_limit)
-    train_pre = clf.predict(xg_train, ntree_limit=408)
-    test_pre = clf.predict(xg_test, ntree_limit=408)
+    threshold = 0.5
+    train_pre = clf.predict(xg_train, ntree_limit=best_ntree_limit)
+    train_pre[train_pre > threshold] = 1
+    train_pre[train_pre <= threshold] = 0
+    test_pre = clf.predict(xg_test, ntree_limit=best_ntree_limit)
+    test_pre[test_pre > threshold] = 1
+    test_pre[test_pre <= threshold] = 0
     print confusion_matrix(xg_train.get_label(), train_pre)
     print classification_report(xg_train.get_label(), train_pre)
     print confusion_matrix(xg_test.get_label(), test_pre)
@@ -717,6 +728,7 @@ def xgboost(ctx, optfeaturefile):
     test_user['predict'] =  test_pre
 
 
+    '''
     print test_user.index[-1]
     rebuy = set(test_user.ts_uid[test_user.label == 1])
     predict_rebuy = set(test_user.ts_uid[test_user.predict == 1])
@@ -724,10 +736,12 @@ def xgboost(ctx, optfeaturefile):
 
     print 'rebuy presicion : ', 1.0 * len(rebuy & predict_rebuy) / len(predict_rebuy)
     print 'rebuy recall : ', 1.0 * len(rebuy & predict_rebuy) / len(rebuy)
+    '''
 
-    redeem = set(test_user.ts_uid[test_user.label == 2])
-    predict_redeem = set(test_user.ts_uid[test_user.predict == 2])
-    print len(redeem), len(predict_redeem), len(redeem & predict_redeem)
+
+    redeem = set(test_user.ts_uid[test_user.label == 1])
+    predict_redeem = set(test_user.ts_uid[test_user.predict == 1])
+    print len(set(test_user.ts_uid)), len(redeem), len(predict_redeem), len(redeem & predict_redeem)
 
     print 'redeem presicion : ', 1.0 * len(redeem & predict_redeem) / len(predict_redeem)
     print 'redeem recall : ', 1.0 * len(redeem & predict_redeem) / len(redeem)
@@ -736,224 +750,36 @@ def xgboost(ctx, optfeaturefile):
 
 
 
-@user.command()
-@click.option('--featurefile', 'optfeaturefile', default=True, help=u'feature file path')
-@click.pass_context
-def lightgbm(ctx, optfeaturefile):
-
-    feat_df = pd.read_csv(optfeaturefile.strip(), index_col = ['ts_date'], parse_dates = ['ts_date'], nrows = 10)
-    dtype = {}
-    drop_cols = []
-    for col in feat_df.columns:
-        if col.startswith('lr_page'):
-            dtype[col] = np.float16
-        elif col.startswith('ts_drawdown'):
-            dtype[col] = np.float16
-        elif col.startswith('ts_r'):
-            dtype[col] = np.float16
-        elif col.startswith('ts_share'):
-            dtype[col] = np.float32
-        elif col.startswith('ts_asset'):
-            dtype[col] = np.float32
-        elif col.startswith('ts_profit'):
-            dtype[col] = np.float32
-        elif col.startswith('trade_type'):
-            dtype[col] = np.float16
-        elif col.startswith('risk'):
-            dtype[col] = np.float16
-        elif col.startswith('lr_action'):
-            dtype[col] = np.float16
-        elif col.startswith('lr_ref'):
-            dtype[col] = np.float16
-    feat_df = pd.read_csv(optfeaturefile.strip(), index_col = ['ts_date'], parse_dates = ['ts_date'], dtype = dtype)
-    #feat_df = feat_df.drop(drop_cols, axis = 1)
-    #print feat_df.info()
-    #feat_df.loc[feat_df.label == 1, 'label'] = 0
-    #feat_df.loc[feat_df.label == 2, 'label'] = 1
-    feat_df = feat_df.drop(['ts_uid'], axis = 1)
-
-
-    train_df = feat_df[feat_df.index <= '2017-11-30']
-    test_df  = feat_df[feat_df.index > '2017-12-07']
-
-    train_df = train_df.reset_index()
-    negative_train_df = train_df[train_df.label == 0]
-    positive_train_df = train_df[(train_df.label == 1) | (train_df.label == 2)]
-    positive_index = positive_train_df.index.ravel()
-    negative_index = negative_train_df.index.ravel()
-    random.shuffle(negative_index)
-    negative_index = negative_index[0: len(negative_index) / 10]
-    train_index = np.append(negative_index, positive_index)
-    random.shuffle(train_index)
-    train_df = train_df.iloc[train_index]
-    train_df = train_df.set_index(['ts_date'])
-
-    train_y = train_df['label']
-    train_X = train_df.drop(['label'], axis = 1)
-    test_y = test_df['label']
-    test_X = test_df.drop(['label'], axis = 1)
-
-    train_X, val_X, train_y, val_y = train_test_split(train_X, train_y, test_size = 0.2, random_state = 13243)
-
-    lgb_train = lgb.Dataset(train_X, train_y, free_raw_data=False)
-    lgb_val = lgb.Dataset(val_X, val_y, reference=lgb_train, free_raw_data=False)
-
-    params = {
-            'task': 'train',
-            'boosting_type': 'gbdt',
-            'objective': 'multiclass',
-            'num_class' : 3,
-            'metric': {'multi_logloss'},
-            'learning_rate': 0.1,
-            #'num_leaves': 112,
-            #'max_depth': 9,
-            #'min_data_in_leaf': 82,
-            #'min_sum_hessian_in_leaf': 1e-3,
-            'feature_fraction': 0.8,
-            'bagging_fraction': 0.8,
-            #'bagging_freq': 5,
-            #'min_gain_to_split':0,
-            #'lambda_l1': 100,
-            #'lambda_l2': 1,
-            #'max_bin': 255,
-            #'drop_rate': 0.2,
-            #'skip_drop': 0.5,
-            #'max_drop': 50,
-            'nthread': 32,
-            'verbose': -1,
-            #'is_unbalance' : True,
-            #'scale_pos_weight':weight
-            'device' : 'gpu',
-            'gpu_platform_id': 0,
-            'gpu_device_id' : 0,
-            "max_bin" : 63,
-            'data_random_seed': 963,
-            }
-
-
-    gbm = lgb.train(params, lgb_train, valid_sets=[lgb_val], num_boost_round=100000,
-                    early_stopping_rounds=200,  categorical_feature=['risk'], verbose_eval=True)
-    #print cvresult
-    #best_round = len(cvresult['multi_logloss-mean'])
-    #best_round = gbm.best_iteration_
-    #print 'best_num_boost_round: %d' % best_round
-    #gbm = lgb.train(params, lgb_train, num_boost_round=best_round, verbose_eval=False)
-    train_pre = gbm.predict(train_X)
-    test_pre = gbm.predict(test_X)
-    train_pre = np.argmax(train_pre, axis = 1)
-    test_pre = np.argmax(test_pre, axis = 1)
-    #print train_pre
-    #print "\nModel Report"
-    #print "AUC Score(Train): %f" % roc_auc_score(train_y, train_pre)
-    #print "AUC Score(Test) : %f" % roc_auc_score(test_y, test_pre)
-
-
-    #train_pre[train_pre > 0.5] = 1
-    #train_pre[train_pre <= 0.5] = 0
-    print confusion_matrix(train_y, train_pre)
-    #test_pre[test_pre > 0.5] = 1
-    #test_pre[test_pre <= 0.5] = 0
-    print confusion_matrix(test_y, test_pre)
-    print classification_report(test_y, test_pre)
-
-    #print('Feature names:', gbm.feature_name())
-    #print('Feature importances:', list(gbm.feature_importance()))
-    #print len(test_y[test_y == 1]), len(test_y)
-    #print len(test_pre[test_pre == 1]), len(test_pre)
-
-
-    feature_importance_df = pd.DataFrame(gbm.feature_importance(), index = gbm.feature_name(), columns = ['value'])
-    #print feature_importance_df
-    feature_importance_df.to_csv('feature_importance.csv')
-
-
-    '''
-    uids = set(test_df.ts_uid.ravel())
-    redeem_uids = set()
-    predict_redeem_uids = set()
-    test_y = test_y.ravel()
-    for i in range(0, len(test_y))
-        if test_y[i] == 1:
-    '''
-    #for i in range(0 ,len(test_y)):
-
-    gbm.save_model('lightgbm.txt')
-
-    return gbm
+def logpredobj(preds, dtrain):
+    labels = dtrain.get_label()
+    preds = 1.0 / (1.0 + np.exp(-preds))
+    grad = preds - labels
+    hess = preds * (1.0 - preds)
+    return grad, hess
 
 
 
-@user.command()
-@click.option('--featurefile', 'optfeaturefile', default=True, help=u'feature file path')
-@click.option('--modelfile', 'optmodelfile', default=True, help=u'model file path')
-@click.pass_context
-def lightgbm_test(ctx, optfeaturefile, optmodelfile):
+def recall(preds, dtrain):
 
+    preds[preds > 0.5] = 1
+    preds[preds <= 0.5] = 0
+    labels = dtrain.get_label()
 
-    feat_df = pd.read_csv(optfeaturefile.strip(), index_col = ['ts_date'], parse_dates = ['ts_date'])
-    #feat_df.loc[feat_df.label == 1, 'label'] = 0
-    #feat_df.loc[feat_df.label == 2, 'label'] = 1
+    positive = 0
+    pred_true_positive = 0
 
-    #feat_df = feat_df.drop(['ts_uid'], axis = 1)
-    test_df  = feat_df[feat_df.index >= '2017-12-12']
-    test_df  = test_df[test_df.index < '2017-12-13']
-    print len(test_df)
-    #print test_df
+    i = 0
+    while i < len(labels) - 7:
+        if labels[i] == 1:
+            if preds[i:i + 7].sum() > 1.0:
+                pred_true_positive = pred_true_positive + 1
+            positive = positive + 1
+            i = i + 7
+        else:
+            i = i + 1
 
-    #print test_df.to_csv('test.csv')
-    uids = test_df['ts_uid'].ravel()
-    test_df = test_df.drop(['ts_uid'], axis = 1)
+    #print real_redeem
+    #print float(sum(labels != preds)) / len(labels)
+    #return 'error', float(sum(labels != preds)) / len(labels)
 
-    test_y = test_df['label'].ravel()
-    test_X = test_df.drop(['label'], axis = 1)
-
-    bst = lgb.Booster(model_file=optmodelfile.strip())  #init model
-    test_pre = bst.predict(test_X)
-    #print len(test_pre)
-
-    redeem_uids = []
-
-    for i in range(0, len(test_pre)):
-        if test_pre[i] >= 0.5:
-            print uids[i]
-            redeem_uids.append(uids[i])
-
-    print redeem_uids
-
-
-
-
-@user.command()
-@click.option('--drawdown-ratio', 'optdrawdownratio', default=True, help=u'drawdown ratio')
-@click.pass_context
-def drawdown_user(ctx, optdrawdownratio):
-
-    holding_df = pd.read_csv('user_prediction/ts_holding_nav.csv', index_col = ['ts_uid'])
-    holding_df = holding_df[['ts_date','ts_nav']]
-    #print holding_df.tail()
-    uids = []
-    drawdowns = []
-    for uid, group in holding_df.groupby(holding_df.index):
-        group = group.reset_index()
-        group = group[['ts_date','ts_nav']]
-        group = group.set_index(['ts_date'])
-
-        if group.index[-1] < '2017-12-07':
-            continue
-        group['cummax'] = group['ts_nav'].cummax()
-        group['drawdown'] = 1.0 - group['ts_nav'] / group['cummax']
-        current_drawdown = group['drawdown'][-1]
-        if current_drawdown >= float(optdrawdownratio.strip()):
-            print uid, current_drawdown
-            uids.append(uid)
-            drawdowns.append(current_drawdown)
-
-    drawdown_df = pd.DataFrame(drawdowns, index = uids)
-    #print len(uids)
-    user_account_info_df = pd.read_csv('user_prediction/user_account_infos.csv', index_col = ['uid'])
-    #print user_account_info_df
-
-    drawdown_user_account_info_df = pd.concat([user_account_info_df, drawdown_df], axis = 1, join_axes = [drawdown_df.index])
-    #print drawdown_user_account_info_df
-    drawdown_user_account_info_df.to_csv('drawdown_user_account_info_df.csv', encoding='gbk')
-    #print group.tail()
+    return 'recall', 1.0 * pred_true_positive / positive
