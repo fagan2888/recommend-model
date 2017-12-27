@@ -46,3 +46,5 @@ class ra_stock(Base):
     created_at = Column(DateTime)
 
 
+
+
