@@ -178,7 +178,7 @@ def user_label(ctx):
 
 
 
-    start_date = (datetime.now() - timedelta(35)).strftime('%Y-%m-%d')
+    start_date = (datetime.now() - timedelta(15)).strftime('%Y-%m-%d')
     #print start_date
     s = select(ts_order_columns).where( (ts_order_t.c.ts_trade_type == 3) | (ts_order_t.c.ts_trade_type == 4) ).where((ts_order_t.c.ts_trade_status == 1) | (ts_order_t.c.ts_trade_status == 5) | (ts_order_t.c.ts_trade_status == 6)).where(ts_order_t.c.ts_placed_date >= start_date)
     ts_order_df = pd.read_sql(s, db, index_col = ['ts_uid'], parse_dates = ['ts_placed_date'])
@@ -203,3 +203,95 @@ def user_label(ctx):
     a_month_not_buy_df.to_csv('a_month_not_buy.csv', encoding='gbk')
     click_buy_not_buy_df.to_csv('click_buy_not_buy.csv', encoding='gbk')
     click_redeem_not_redeem_df.to_csv('click_redeem_not_redeem.csv', encoding='gbk')
+
+
+@user_stat.command()
+@click.pass_context
+def user_label20171227(ctx):
+
+
+    holding_nav = pd.read_csv('user_prediction/ts_holding_nav.csv')
+    holding_uids = set(holding_nav.ts_uid)
+
+    app_log = pd.read_csv('user_prediction/app_log.csv', index_col = ['lr_date'], parse_dates = ['lr_date'])
+    app_log = app_log[app_log.lr_uid.isin(holding_uids)]
+    app_cols = ['lr_uid', 'lr_time', 'lr_ts']
+    app_log = app_log[app_cols]
+    app_log = app_log[app_log.index >= '2017-09-27']
+    app_log.lr_ts = app_log.lr_ts / 1000
+
+
+    app_log = app_log.reset_index()
+    app_log = app_log.set_index(['lr_uid'])
+
+    recent_week_user = []
+    uids = []
+    freq_num = []
+
+    for uid, group in app_log.groupby(app_log.index):
+
+        #if uid % 10 != 3:
+        #    continue
+
+        group = group.reset_index()
+        group = group.set_index('lr_date')
+
+        if len(group) <= 0:
+            continue
+        else:
+            tmp_group = group[group.index <= '2017-12-20']
+            if len(tmp_group) == 0:
+                recent_week_user.append(uid)
+
+        groupw1 = group[group.index >= '2017-12-20']
+        groupw2 = group[group.index < '2017-12-20']
+        groupw2 = groupw2[groupw2.index >= '2017-12-13']
+
+        numw1 = 0
+        for date, g in groupw1.groupby(groupw1.index):
+            start_t = 0
+            for t in g.lr_ts:
+                if t - start_t >= 60 * 30:
+                    numw1 += 1
+                start_t = t
+
+        numw2 = 0
+        for date, g in groupw2.groupby(groupw2.index):
+            start_t = 0
+            for t in g.lr_ts:
+                if t - start_t >= 60 * 30:
+                    numw2 += 1
+                start_t = t
+
+        uids.append(uid)
+        print uid, len(uids)
+        freq_num.append([numw1, numw2])
+
+
+
+
+    freq_num_df = pd.DataFrame(freq_num, index = uids, columns = ['w1', 'w2'])
+
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+
+    user_account_infos_t = Table('user_account_infos', metadata, autoload=True)
+
+    user_account_columns = [
+                    user_account_infos_t.c.ua_uid,
+                    user_account_infos_t.c.ua_phone,
+                    user_account_infos_t.c.ua_name,
+                    user_account_infos_t.c.ua_service_id,
+            ]
+
+    s = select(user_account_columns)
+
+    user_account_df = pd.read_sql(s, db, index_col = ['ua_uid'])
+
+
+    recent_user_df = user_account_df.loc[recent_week_user]
+    recent_user_df.to_csv('recent_week_user.csv', encoding='gbk')
+
+    freq_num_df = pd.concat([freq_num_df, user_account_df], axis = 1, join_axes = [freq_num_df.index])
+    freq_num_df.to_csv('freq_num.csv', encoding='gbk')
