@@ -1,20 +1,13 @@
 #coding=utf8
 
 
-from sqlalchemy import MetaData, Table, select, func
-from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime
-import pandas as pd
+from sqlalchemy import Column, String, Integer, Text, Date, DateTime, Float
 import logging
-import database
 from sqlalchemy.ext.declarative import declarative_base
-from dateutil.parser import parse
-
 
 logger = logging.getLogger(__name__)
 
-
 Base = declarative_base()
-
 
 class stock_factor(Base):
 
@@ -32,19 +25,15 @@ class stock_factor(Base):
     created_at = Column(DateTime)
 
 
-class ra_stock(Base):
 
-    __tablename__ = 'ra_stock'
+class stock_factor_value(Base):
 
-    globalid = Column(String, primary_key = True)
-    sk_code = Column(String)
-    sk_name = Column(String)
-    sk_secode = Column(String)
+    __tablename__ = 'stock_factor_value'
 
+    stock_id = Column(String, primary_key = True)
+    sf_id = Column(String, primary_key = True)
+    trade_date = Column(String, primary_key = True)
+    factor_value = Column(Float)
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
-
-
-
-
