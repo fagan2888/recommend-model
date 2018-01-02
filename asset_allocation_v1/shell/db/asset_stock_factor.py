@@ -37,3 +37,16 @@ class stock_factor_value(Base):
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
+
+
+class stock_factor_stock_valid(Base):
+
+    __tablename__ = 'stock_factor_stock_valid'
+
+    stock_id = Column(String, primary_key = True)
+    secode   = Column(String)
+    trade_date = Column(String, primary_key = True)
+    valid = Column(Integer)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)

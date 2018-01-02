@@ -38,6 +38,9 @@ def sf(ctx):
 @sf.command()
 @click.pass_context
 def compute_stock_factor(ctx):
+
+    #print stock_st()
+    #stock_valid()
     ln_price_df = ln_price_factor()
     #highlow_price_factor()
     #relative_strength_factor()
@@ -79,7 +82,7 @@ def insert_factor_info(ctx, optfilepath):
     session.commit()
     session.close()
 
-
+#所有股票代码
 def all_stock_info():
 
     engine = database.connection('base')
@@ -92,6 +95,18 @@ def all_stock_info():
     return all_stocks
 
 
+def all_stock_listdate():
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    all_stocks = pd.read_sql(session.query(ra_stock.globalid, ra_stock.sk_secode, ra_stock.sk_listdate).statement, session.bind, index_col = ['sk_secode'])
+    session.commit()
+    session.close()
+
+    return all_stocks
+
+#st股票表
 def stock_st():
 
     all_stocks = all_stock_info()
@@ -110,9 +125,6 @@ def stock_st():
     return st_stocks
 
 
-def stock_validate():
-    return
-
 
 #取有因子值的最后一个日期
 def stock_factor_last_date(sf_id, stock_id):
@@ -127,7 +139,7 @@ def stock_factor_last_date(sf_id, stock_id):
     session.close()
 
     if result == None:
-        return datetime(1900,1,1)
+        return datetime(1990,1,1)
     else:
         return result[0]
 
@@ -157,25 +169,132 @@ def ln_price_factor():
 
     ln_price_df = pd.DataFrame(data)
 
+
+    #ln_price_df = valid_stock_filter(ln_price_df)
     ln_price_df = normalized(ln_price_df)
     update_factor_value(sf_id, ln_price_df)
 
     return ln_price_df
 
 
+@sf.command()
+@click.pass_context
 #股票合法性表
-def stock_valid_table():
+def insert_stock_valid(ctx):
+
+    all_stocks = all_stock_info()
+    st_stocks = stock_st()
+    list_date = all_stock_listdate()
+    #print list_date.head()
+    list_date.sk_listdate = list_date.sk_listdate + timedelta(365)
+    #print list_date.head()
+
+    #print all_stocks
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_qt_skdailyprice.tradedate, tq_qt_skdailyprice.secode ,tq_qt_skdailyprice.tclose).filter(tq_qt_skdailyprice.secode.in_(all_stocks.index)).statement
+    #print sql
+
+    #过滤停牌股票
+    quotation = pd.read_sql(sql, session.bind , index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']).replace(0.0, np.nan)
+    quotation = quotation.unstack()
+    quotation.columns = quotation.columns.droplevel(0)
+    session.commit()
+    session.close()
+
+    #60个交易日内需要有25个交易日未停牌
+    quotation_count = quotation.rolling(60).count()
+    quotation[quotation_count < 25] = np.nan
+
+
+    #过滤st股票
+    for i in range(0, len(st_stocks)):
+        secode = st_stocks.index[i]
+        record = st_stocks.iloc[i]
+        selecteddate = record.selecteddate
+        outdate = record.outdate
+        if secode in set(quotation.columns):
+            #print secode, selecteddate, outdate
+            quotation.loc[selecteddate:outdate, secode] = np.nan
+
+    #过滤上市未满一年股票
+    for secode in list_date.index:
+        if secode in set(quotation.columns):
+            #print secode, list_date.loc[secode, 'sk_listdate']
+            quotation.loc[:list_date.loc[secode, 'sk_listdate'], secode] = np.nan
+
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    for date in quotation.index:
+        print date
+        for secode in quotation.columns:
+            globalid = all_stocks.loc[secode, 'globalid']
+            value = quotation.loc[date, secode]
+            if np.isnan(value):
+                continue
+            valid = 1.0
+            stock_valid = stock_factor_stock_valid()
+            stock_valid.stock_id = globalid
+            stock_valid.secode = secode
+            stock_valid.trade_date = date
+            stock_valid.valid = valid
+
+            session.merge(stock_valid)
+
+        session.commit()
+
+    session.close()
+    #print np.sum(np.sum(pd.isnull(quotation)))
+    #print np.sum(np.sum(~pd.isnull(quotation)))
 
     pass
+
+
+
+#过滤掉不合法股票
+def valid_stock_filter(factor_df):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    for stock_id in factor_df.columns:
+        sql = session.query(stock_factor_stock_valid.trade_date, stock_factor_stock_valid.valid).filter(stock_factor_stock_valid.stock_id == stock_id).statement
+        valid_df = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
+        valid_df = valid_df[valid_df.valid == 1]
+        print valid_df
+        if len(factor_df) == 0:
+            facto_df.stock_id = np.nan
+        else:
+            factor_df[stock_id][~factor_df.index.isin(valid_df.index)] = np.nan
+
+    print factor_df[factor_df != np.nan]
+    #print record
+
+    session.commit()
+    session.close()
+
+    return factor_df
 
 
 #归一化
 def normalized(factor_df):
 
-    print factor_df.head()
-    factor_mean = factor_df.mean(axis = 1)
-    print factor_mean.head()
-    factor_std  = factor_df.mean(axis = 1)
+    factor_median = factor_df.median(axis = 1)
+    factor_std  = factor_df.std(axis = 1)
+    factor_std = factor_std.dropna()#一行中只有一个数据，则没有标准差，std后为nan
+
+    factor_median = factor_median.loc[factor_std.index]
+    factor_df = factor_df.loc[factor_std.index]
+
+    factor_df = factor_df.sub(factor_median, axis = 0)
+    factor_df = factor_df.div(factor_std, axis = 0)
+
+    factor_df[factor_df > 5]  = 5
+    factor_df[factor_df < -5] = -5
 
     return factor_df
 
@@ -254,6 +373,16 @@ def highlow_price_factor():
     highlow_price_3m_df = pd.DataFrame(data_3m)
     highlow_price_1m_df = pd.DataFrame(data_1m)
 
+    #highlow_price_12m_df = valid_stock_filter(highlow_price_12m_df)
+    #highlow_price_6m_df = valid_stock_filter(highlow_price_6m_df)
+    #highlow_price_3m_df = valid_stock_filter(highlow_price_3m_df)
+    #highlow_price_1m_df = valid_stock_filter(highlow_price_1m_df)
+
+    highlow_price_12m_df = normalized(highlow_price_12m_df)
+    highlow_price_6m_df = normalized(highlow_price_6m_df)
+    highlow_price_3m_df = normalized(highlow_price_3m_df)
+    highlow_price_1m_df = normalized(highlow_price_1m_df)
+
     update_factor_value('SF.000015', highlow_price_12m_df)
     update_factor_value('SF.000018', highlow_price_6m_df)
     update_factor_value('SF.000017', highlow_price_3m_df)
@@ -274,7 +403,7 @@ def relative_strength_factor():
     data_6m = {}
     data_3m = {}
     data_1m = {}
-    data    = {}
+    data_12m= {}
 
     for i in range(0, len(all_stocks.index) - 3300):
         secode = all_stocks.index[i]
@@ -282,7 +411,7 @@ def relative_strength_factor():
         print globalid, secode
         last_date = stock_factor_last_date(sf_id, globalid) - timedelta(10)
         last_date = last_date.strftime('%Y%m%d')
-        sql = session.query(tq_sk_yieldindic.tradedate, tq_sk_yieldindic.Yield, tq_sk_yieldindic.yieldm, tq_sk_yieldindic.yield3m, tq_sk_yieldindic.yield6m).filter(tq_sk_yieldindic.secode == secode).filter(tq_sk_yieldindic.tradedate >= last_date).statement
+        sql = session.query(tq_sk_yieldindic.tradedate, tq_sk_yieldindic.yieldy, tq_sk_yieldindic.yieldm, tq_sk_yieldindic.yield3m, tq_sk_yieldindic.yield6m).filter(tq_sk_yieldindic.secode == secode).filter(tq_sk_yieldindic.tradedate >= last_date).statement
         quotation = pd.read_sql(sql, session.bind , index_col = ['tradedate'], parse_dates = ['tradedate'])
         quotation = quotation.sort_index()
         quotation = quotation / 100.0
@@ -290,7 +419,7 @@ def relative_strength_factor():
         data_6m[globalid] = quotation.yield6m
         data_3m[globalid] = quotation.yield3m
         data_1m[globalid] = quotation.yieldm
-        data[globalid] = quotation.Yield
+        data_12m[globalid] = quotation.yieldy
 
     session.commit()
     session.close()
@@ -298,7 +427,22 @@ def relative_strength_factor():
     relative_strength_6m_df = pd.DataFrame(data_6m)
     relative_strength_3m_df = pd.DataFrame(data_3m)
     relative_strength_1m_df = pd.DataFrame(data_1m)
-    relative_strength_df = pd.DataFrame(data_1m)
+    relative_strength_12m_df = pd.DataFrame(data_12m)
+
+    #relative_strength_12m_df = valid_stock_filter(relative_strength_12m_df)
+    #relative_strength_6m_df = valid_stock_filter(relative_strength_6m_df)
+    #relative_strength_3m_df = valid_stock_filter(relative_strength_3m_df)
+    #relative_strength_1m_df = valid_stock_filter(relative_strength_1m_df)
+
+    relative_strength_12m_df = normalized(relative_strength_12m_df)
+    relative_strength_6m_df = normalized(relative_strength_6m_df)
+    relative_strength_3m_df = normalized(relative_strength_3m_df)
+    relative_strength_1m_df = normalized(relative_strength_1m_df)
+
+    update_factor_value('SF.000035', relative_strength_12m_df)
+    update_factor_value('SF.000038', relative_strength_6m_df)
+    update_factor_value('SF.000037', relative_strength_3m_df)
+    update_factor_value('SF.000036', relative_strength_1m_df)
 
     return relative_strength_df, relative_strength_1m_df, relative_strength_3m_df, relative_strength_6m_df
 
@@ -350,7 +494,22 @@ def std_factor():
     std_3m_df = pd.DataFrame(data_3m)
     std_1m_df = pd.DataFrame(data_1m)
 
-    print std_12m_df.tail()
+
+    #std_12m_df = valid_stock_filter(std_12m_df)
+    #std_6m_df = valid_stock_filter(std_6m_df)
+    #std_3m_df = valid_stock_filter(std_3m_df)
+    #std_1m_df = valid_stock_filter(std_1m_df)
+
+    std_12m_df = normalized(std_12m_df)
+    std_6m_df = normalized(std_6m_df)
+    std_3m_df = normalized(std_3m_df)
+    std_1m_df = normalized(std_1m_df)
+
+    update_factor_value('SF.000047', std_12m_df)
+    update_factor_value('SF.000050', std_6m_df)
+    update_factor_value('SF.000049', std_3m_df)
+    update_factor_value('SF.000048', std_1m_df)
+
 
     return std_1m_df, std_3m_df, std_6m_df, std_12m_df
 
@@ -402,7 +561,22 @@ def trade_volumn_factor():
     amount_3m_df = pd.DataFrame(data_3m)
     amount_1m_df = pd.DataFrame(data_1m)
 
-    print amount_12m_df.tail()
+
+    #amount_12m_df = valid_stock_filter(amount_12m_df)
+    #amount_6m_df = valid_stock_filter(amount_6m_df)
+    #amount_3m_df = valid_stock_filter(amount_3m_df)
+    #amount_1m_df = valid_stock_filter(amount_1m_df)
+
+    amount_12m_df = normalized(amount_12m_df)
+    amount_6m_df = normalized(amount_6m_df)
+    amount_3m_df = normalized(amount_3m_df)
+    amount_1m_df = normalized(amount_1m_df)
+
+    update_factor_value('SF.000051', amount_12m_df)
+    update_factor_value('SF.000054', amount_6m_df)
+    update_factor_value('SF.000053', amount_3m_df)
+    update_factor_value('SF.000052', amount_1m_df)
+
 
     return amount_1m_df, amount_3m_df, amount_6m_df, amount_12m_df
 
@@ -449,7 +623,20 @@ def turn_rate_factor():
     turnrate_3m_df = pd.DataFrame(data_3m)
     turnrate_1m_df = pd.DataFrame(data_1m)
 
-    print turnrate_1m_df.tail()
+    #turnrate_12m_df = valid_stock_filter(turnrate_12m_df)
+    #turnrate_6m_df = valid_stock_filter(turnrate_6m_df)
+    #turnrate_3m_df = valid_stock_filter(turnrate_3m_df)
+    #turnrate_1m_df = valid_stock_filter(turnrate_1m_df)
+
+    turnrate_12m_df = normalized(turnrate_12m_df)
+    turnrate_6m_df = normalized(turnrate_6m_df)
+    turnrate_3m_df = normalized(turnrate_3m_df)
+    turnrate_1m_df = normalized(turnrate_1m_df)
+
+    update_factor_value('SF.000055', turnrate_12m_df)
+    update_factor_value('SF.000058', turnrate_6m_df)
+    update_factor_value('SF.000057', turnrate_3m_df)
+    update_factor_value('SF.000056', turnrate_1m_df)
 
     return turnrate_1m_df, turnrate_3m_df, turnrate_6m_df, turnrate_12m_df
 
@@ -497,4 +684,21 @@ def weighted_strength_factor():
     weighted_strength_3m_df = pd.DataFrame(data_3m)
     weighted_strength_1m_df = pd.DataFrame(data_1m)
 
+    #weighted_strength_12m_df = valid_stock_filter(weighted_strength_12m_df)
+    #weighted_strength_6m_df = valid_stock_filter(weighted_strength_6m_df)
+    #weighted_strength_3m_df = valid_stock_filter(weighted_strength_3m_df)
+    #weighted_strength_1m_df = valid_stock_filter(weighted_strength_1m_df)
+
+    weighted_strength_12m_df = normalized(weighted_strength_12m_df)
+    weighted_strength_6m_df = normalized(weighted_strength_6m_df)
+    weighted_strength_3m_df = normalized(weighted_strength_3m_df)
+    weighted_strength_1m_df = normalized(weighted_strength_1m_df)
+
+    update_factor_value('SF.000059', weighted_strength_12m_df)
+    update_factor_value('SF.000062', weighted_strength_6m_df)
+    update_factor_value('SF.000061', weighted_strength_3m_df)
+    update_factor_value('SF.000060', weighted_strength_1m_df)
+
     return weighted_strength_1m_df, weighted_strength_3m_df, weighted_strength_6m_df, weighted_strength_12m_df
+
+
