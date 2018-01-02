@@ -40,7 +40,7 @@ import base_ra_index_nav
 import base_exchange_rate_index_nav
 import base_exchange_rate_index
 import MySQLdb
-from DBUtils.PooledDB import PooledDB
+#from DBUtils.PooledDB import PooledDB
 from config import uris
 
 logger = logging.getLogger(__name__)
