@@ -153,7 +153,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
         if len(index_delete):
             keys = [table.c.get(c) for c in df_new.index.names]
             for segment in chunks(index_delete.tolist(), 500):
-                if len(df_update.index.names) == 1:
+                if len(df_new.index.names) == 1:
                     s = table.delete(keys[0].in_(segment))
                 else:
                     s = table.delete(tuple_(*keys).in_(segment))
