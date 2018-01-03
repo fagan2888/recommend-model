@@ -1,7 +1,7 @@
 #coding=utf8
 
 from sqlalchemy import MetaData, Table, select, func, desc, asc
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Query
 import pandas as pd
 import datetime
 import logging
@@ -15,37 +15,22 @@ metadata = MetaData(bind=db)
 Session = sessionmaker(bind=db)
 session = Session()
 def get_min_date():
-    t = Table('wechat_messages', metadata, autoload=True)
-    rst = session.query(t).order_by(asc(t.c.wm_date)).first()
+    t = Table('wechat_keywords', metadata, autoload=True)
+    rst = session.query(t).order_by(asc(t.c.wk_date)).first()
     if rst is None:
         return rst
-    return rst.wm_date
+    return rst.wk_date
 
 def get_max_date():
     """
     为了增量更新获取当前所属月份（最新）
     """
-    t = Table('wechat_messages', metadata, autoload=True)
-    rst = session.query(t).order_by(desc(t.c.wm_date)).first()
+    t = Table('wechat_keywords', metadata, autoload=True)
+    rst = session.query(t).order_by(desc(t.c.wk_date)).first()
     if rst is None:
         return rst
-    return rst.wm_date
+    return rst.wk_date
 
-def get_interval_data(s_date, e_date):
-    """
-    得到所属月份数据
-    :param dates: list, 所属月份列表
-    :return: df
-    """
-    t = Table('wechat_messages', metadata, autoload=True)
-    columns = [
-        t.c.wm_content,
-    ]
-    rst = session.query(t.c.wm_content).filter( \
-        t.c.wm_date >= s_date, \
-        t.c.wm_date < e_date, \
-        )
-    return rst.all()
 
 def get_old_data(cur_date):
     """
@@ -53,7 +38,7 @@ def get_old_data(cur_date):
     :param dates: list, 所属月份列表
     :return: df
     """
-    t = Table('wechat_messages', metadata, autoload=True)
+    t = Table('wechat_keywords', metadata, autoload=True)
     columns = [
         #func.max(t.c.ds_trade_date).label('newest_date')
         t.c.wk_date,
@@ -61,14 +46,19 @@ def get_old_data(cur_date):
         t.c.wk_times,
         t.c.wk_type,
     ]
-    rst = session.query(columns).filter( \
+    rst = session.query(
+        t.c.wk_date, \
+        t.c.wk_keywords, \
+        t.c.wk_times, \
+        t.c.wk_type).filter( \
         t.c.wk_date == cur_date)
+    # rst = session.query(t).filter( \
+    #     t.c.wk_date == cur_date)
     return rst.all()
 
 def batch(df_new, df_old):
-    t = Table('rpt_srrc_rolling', metadata, autoload=True)
-    fmt_columns = ['rp_user_redeem_ratio', 'rp_user_resub_ratio', \
-                'rp_amount_redeem_ratio', 'rp_amount_resub_ratio']
+    t = Table('wechat_keywords', metadata, autoload=True)
+    fmt_columns = []
     fmt_precision = 4
     if not df_new.empty:
         df_new = database.number_format(df_new, fmt_columns, fmt_precision)
