@@ -170,7 +170,7 @@ def ln_price_factor():
     ln_price_df = pd.DataFrame(data)
 
 
-    #ln_price_df = valid_stock_filter(ln_price_df)
+    ln_price_df = valid_stock_filter(ln_price_df)
     ln_price_df = normalized(ln_price_df)
     update_factor_value(sf_id, ln_price_df)
 
@@ -230,6 +230,7 @@ def insert_stock_valid(ctx):
     session = Session()
     for date in quotation.index:
         print date
+        records = []
         for secode in quotation.columns:
             globalid = all_stocks.loc[secode, 'globalid']
             value = quotation.loc[date, secode]
@@ -242,8 +243,10 @@ def insert_stock_valid(ctx):
             stock_valid.trade_date = date
             stock_valid.valid = valid
 
-            session.merge(stock_valid)
+            records.append(stock_valid)
+            #session.merge(stock_valid)
 
+        session.add_all(records)
         session.commit()
 
     session.close()
@@ -285,6 +288,7 @@ def normalized(factor_df):
 
     factor_median = factor_df.median(axis = 1)
     factor_std  = factor_df.std(axis = 1)
+    factor_mean  = factor_df.mean(axis = 1)
     factor_std = factor_std.dropna()#一行中只有一个数据，则没有标准差，std后为nan
 
     factor_median = factor_median.loc[factor_std.index]
