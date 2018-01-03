@@ -41,6 +41,7 @@ import base_exchange_rate_index_nav
 import base_exchange_rate_index
 import MySQLdb
 from config import uris
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
     index_insert = df_new.index.difference(df_old.index)
     index_delete = df_old.index.difference(df_new.index)
     index_update = df_new.index.intersection(df_old.index)
-
+    #dd(df_new.head(),df_old.head())
     #print df_new.index
     #print df_old.index
     #print index_delete
@@ -152,7 +153,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
         if len(index_delete):
             keys = [table.c.get(c) for c in df_new.index.names]
             for segment in chunks(index_delete.tolist(), 500):
-                if len(df_update.index.names) == 1:
+                if len(df_new.index.names) == 1:
                     s = table.delete(keys[0].in_(segment))
                 else:
                     s = table.delete(tuple_(*keys).in_(segment))
