@@ -825,10 +825,12 @@ def ln_capital_factor():
     return
 
 
+
 @sf.command()
 @click.pass_context
 def compute_stock_factor_layer_rankcorr(ctx):
 
+    '''
     sf_ids = ['SF.000001','SF.000002', 'SF.000015', 'SF.000016','SF.000017','SF.000018', 'SF.000035', 'SF.000036', 'SF.000037', 'SF.000038', 
             'SF.000047','SF.000048','SF.000049','SF.000050','SF.000051','SF.000052','SF.000053','SF.000054','SF.000055','SF.000056',
             'SF.000057','SF.000058','SF.000059','SF.000060','SF.000061','SF.000062',
@@ -839,8 +841,8 @@ def compute_stock_factor_layer_rankcorr(ctx):
     pool.map(stock_factor_layer_spearman, sf_ids)
     pool.close()
     pool.join()
-
-    #stock_factor_layer_spearman('SF.000001')
+    '''
+    stock_factor_layer_spearman('SF.000001')
 
     return
 
@@ -860,22 +862,17 @@ def stock_factor_layer_spearman(sf_id):
 
     sql = session.query(stock_factor_value.stock_id, stock_factor_value.trade_date, stock_factor_value.factor_value).filter(stock_factor_value.sf_id == sf_id).statement
     factor_value_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'stock_id'], parse_dates = ['trade_date'])
-    factor_valud_df = factor_value_df.unstack()
+    factor_value_df = factor_value_df.unstack()
 
     session.commit()
     session.close()
 
-    engine = database.connection('caihui')
-    Session = sessionmaker(bind=engine)
-    session = Session()
 
-
-    rankcorrs = []
-    dates = []
+    layer_dates = []
     layers = []
 
-    for date in factor_valud_df.index:
-        ser = factor_valud_df.loc[date]
+    for date in factor_value_df.index:
+        ser = factor_value_df.loc[date]
         ser = ser.dropna()
         ser.index = ser.index.droplevel(0)
         ser = ser.sort_values(ascending = False)
@@ -889,11 +886,25 @@ def stock_factor_layer_spearman(sf_id):
         ser_df = ser_df.reset_index()
         ser_df = ser_df.set_index(['sk_secode'])
 
+        #print ser_df
         layers.append(ser_df)
+        layer_dates.append(date)
 
+
+    rankcorrdates = []
+    rankcorrs = []
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    for i in range(0, len(layer_dates) - 1):
+        layer_date = layer_dates[i]
+        yield_date = layer_dates[i + 1]
+        ser_df = layers[i]
 
         #print date
-        sql = session.query(tq_sk_yieldindic.secode, tq_sk_yieldindic.yieldm).filter(tq_sk_yieldindic.tradedate == date.strftime('%Y%m%d')).statement
+        sql = session.query(tq_sk_yieldindic.secode, tq_sk_yieldindic.yieldm).filter(tq_sk_yieldindic.tradedate == yield_date.strftime('%Y%m%d')).statement
         yieldm_df = pd.read_sql(sql, session.bind, index_col = ['secode']) / 100
         yieldm_df = pd.concat([ser_df, yieldm_df], axis = 1, join_axes = [ser_df.index])
         yieldm_df = yieldm_df[['order', 'yieldm']]
@@ -905,12 +916,13 @@ def stock_factor_layer_spearman(sf_id):
         yieldm_df = yieldm_df.drop(['sk_secode'])
         order_yieldm_df = yieldm_df.groupby(yieldm_df.index).mean()
         order_yieldm = order_yieldm_df.yieldm
-        #print order_yieldm
+        #print order_yieldm.ravel()
+        #print order_yieldm.index.ravel()
         spearmanr = -1.0 * stats.stats.spearmanr(order_yieldm, order_yieldm.index)[0]
-        print sf_id, date, spearmanr
+        print sf_id, layer_date, spearmanr
 
         rankcorrs.append(spearmanr)
-        dates.append(date)
+        rankcorrdates.append(layer_date)
 
     session.commit()
     session.close()
@@ -920,27 +932,29 @@ def stock_factor_layer_spearman(sf_id):
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    for i in range(0, len(dates)):
+    for i in range(0, len(rankcorrdates)):
 
         factor_rankcorr = stock_factor_rankcorr()
         factor_rankcorr.sf_id = sf_id
-        factor_rankcorr.trade_date = dates[i]
+        factor_rankcorr.trade_date = rankcorrdates[i]
         factor_rankcorr.rankcorr = rankcorrs[i]
 
         session.merge(factor_rankcorr)
 
 
+    for i in range(0, len(layer_dates)):
+
         layer_df = layers[i]
+
         for order, group in layer_df.groupby(layer_df.order):
             json_stock_ids = json.dumps(list(group.stock_id.ravel()))
 
             factor_layer = stock_factor_layer()
             factor_layer.sf_id = sf_id
-            factor_layer.trade_date = dates[i]
+            factor_layer.trade_date = layer_dates[i]
             factor_layer.layer = order
             factor_layer.stock_ids = json_stock_ids
             session.merge(factor_layer)
-
 
     session.commit()
     session.close()
@@ -948,4 +962,26 @@ def stock_factor_layer_spearman(sf_id):
     return
 
 
+@sf.command()
+@click.pass_context
+def select_stock_factor_layer(ctx):
 
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(stock_factor_rankcorr.sf_id, stock_factor_rankcorr.trade_date, stock_factor_rankcorr.rankcorr).statement
+    rankcorr_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'sf_id'], parse_dates = ['trade_date'])
+    rankcorr_df = rankcorr_df.unstack()
+    rankcorr_df.columns = rankcorr_df.columns.droplevel(0)
+
+    #print df.tail(20)
+    rankcorr_df = rankcorr_df.rolling(14).mean()
+    rankcorr_abs_df = abs(rankcorr_df)
+
+    #for i in df.tail(1):
+    #    print i, df.tail(1)[i]
+
+
+
+    return
