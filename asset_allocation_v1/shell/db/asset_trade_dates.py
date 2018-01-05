@@ -6,6 +6,10 @@ import logging
 import database
 from dateutil.parser import parse
 import sys
+
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime, Float
+from sqlalchemy.ext.declarative import declarative_base
+
 logger = logging.getLogger(__name__)
 def load_trade_dates():
     db = database.connection('asset')
@@ -21,3 +25,15 @@ def load_trade_dates():
     s = s.order_by(t.c.td_date.asc())
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
     return df
+
+
+
+Base = declarative_base()
+
+
+class trade_dates(Base):
+
+    __tablename__ = 'trade_dates'
+
+    td_date = Column(Date, primary_key = True)
+    td_type = Column(Integer)

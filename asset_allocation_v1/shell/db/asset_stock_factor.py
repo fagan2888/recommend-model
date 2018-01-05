@@ -50,3 +50,28 @@ class stock_factor_stock_valid(Base):
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
+
+
+class stock_factor_rankcorr(Base):
+
+    __tablename__ = 'stock_factor_rankcorr'
+
+    sf_id = Column(String, primary_key = True)
+    trade_date = Column(Date, primary_key = True)
+    rankcorr = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+class stock_factor_layer(Base):
+
+    __tablename__ = 'stock_factor_layer'
+
+    sf_id = Column(String, primary_key = True)
+    trade_date = Column(Date, primary_key = True)
+    layer = Column(Integer, primary_key = True)
+    stock_ids = Column(Text)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
