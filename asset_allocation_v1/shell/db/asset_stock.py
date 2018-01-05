@@ -93,6 +93,7 @@ class tq_sk_yieldindic(Base):
     yieldm  = Column(Float)
     yield3m  = Column(Float)
     yield6m  = Column(Float)
+    yieldy  = Column(Float)
 
     turnrate  = Column(Float)
     turnratem  = Column(Float)
