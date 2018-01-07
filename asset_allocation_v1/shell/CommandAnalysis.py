@@ -606,3 +606,24 @@ def fund_yield(ctx):
     df = pd.concat(dfs, axis = 1)
     print df
     df.to_csv('df.csv')
+
+#线上风险10和portfolio有费率数据月度收益率
+@analysis.command()
+@click.pass_context
+def online_portfolio_month_nav(ctx):
+    ser = asset_on_online_nav.load_series(800000, 8)
+    ser = ser.groupby(ser.index.strftime('%Y-%m')).last()
+    online_ser = ser.pct_change()
+ 
+    ser = asset_ra_portfolio_nav.load_series('PO.000030', 8)
+    ser = ser.groupby(ser.index.strftime('%Y-%m')).last()
+    portfolio_ser = ser.pct_change()
+
+    data = {}
+    data['online'] = online_ser
+    data['po.000030'] = portfolio_ser
+
+    df = pd.DataFrame(data)
+
+    df.to_csv('线上新模型有费率和标杆组合风险10有费率每月收益率.csv')
+>>>>>>> 线上模型和标杆组合月度收益率
