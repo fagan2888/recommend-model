@@ -975,13 +975,18 @@ def select_stock_factor_layer(ctx):
     rankcorr_df = rankcorr_df.unstack()
     rankcorr_df.columns = rankcorr_df.columns.droplevel(0)
 
-    #print df.tail(20)
     rankcorr_df = rankcorr_df.rolling(14).mean()
     rankcorr_abs_df = abs(rankcorr_df)
 
+    for date in rankcorr_abs_df.index:
+        rankcorr_abs = rankcorr_abs_df.loc[date]
+        rankcorr_abs = rankcorr_abs.sort_values(ascending = False)
+        for index in rankcorr_abs.index[0:5]:
+            rankcorr = rankcorr_df.loc[date, index]
+            print date, index, rankcorr
+
+
     #for i in df.tail(1):
     #    print i, df.tail(1)[i]
-
-
 
     return
