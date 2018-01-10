@@ -30,9 +30,7 @@ class ra_stock(Base):
 
 class tq_sk_specialtrade(Base):
 
-
     __tablename__ = 'tq_sk_specialtrade'
-
 
     id = Column(Integer, primary_key = True)
     secode = Column(String)
@@ -100,4 +98,3 @@ class tq_sk_yieldindic(Base):
     turnrate3m  = Column(Float)
     turnrate6m  = Column(Float)
     turnratey  = Column(Float)
-
