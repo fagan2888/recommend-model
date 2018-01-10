@@ -75,3 +75,15 @@ class stock_factor_layer(Base):
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
+
+
+class stock_factor_nav(Base):
+
+    __tablename__ = 'stock_factor_nav'
+
+    sf_id = Column(String, primary_key = True)
+    trade_date = Column(Date, primary_key = True)
+    nav = Column(Integer)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
