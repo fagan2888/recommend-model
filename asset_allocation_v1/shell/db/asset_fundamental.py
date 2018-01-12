@@ -37,6 +37,7 @@ class t_macro_rlestindex(Base):
     index_gc = Column(Float)
     entrydate = Column(Date)
 
+
 class tq_ix_finindex(Base):
 
     __tablename__ = 'tq_ix_finindex'
@@ -45,6 +46,7 @@ class tq_ix_finindex(Base):
     secode = Column(Integer)
     publishdate = Column(Integer)
     epscut = Column(Float)
+
 
 class t_macro_qgdp(Base):
 
@@ -55,6 +57,7 @@ class t_macro_qgdp(Base):
     nmonth = Column(Integer)
     value = Column(Float)
 
+
 class tq_qt_cbdindex(Base):
 
     __tablename__ = 'tq_qt_cbdindex'
@@ -63,3 +66,21 @@ class tq_qt_cbdindex(Base):
     tradedate = Column(Integer)
     secode = Column(Float)
     avgmktcapmatyield = Column(Float)
+
+
+class mc_social_finance(Base):
+
+    __tablename__ = 'mc_social_finance'
+
+    globalid = Column(String, primary_key = True)
+    mc_sf_date = Column(Date, primary_key = True)
+    mc_sf_value = Column(Integer)
+
+
+class mc_real_estate(Base):
+
+    __tablename__ = 'mc_real_estate'
+
+    globalid = Column(String, primary_key = True)
+    mc_re_date = Column(Date, primary_key = True)
+    mc_re_value = Column(Float)
