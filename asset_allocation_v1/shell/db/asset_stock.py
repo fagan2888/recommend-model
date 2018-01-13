@@ -22,6 +22,7 @@ class ra_stock(Base):
     sk_code = Column(String)
     sk_name = Column(String)
     sk_secode = Column(String)
+    sk_compcode = Column(String)
     sk_listdate = Column(Date)
 
     updated_at = Column(DateTime)
@@ -32,7 +33,7 @@ class tq_sk_specialtrade(Base):
 
     __tablename__ = 'tq_sk_specialtrade'
 
-    id = Column(Integer, primary_key = True)
+    ID = Column(Integer, primary_key = True)
     secode = Column(String)
     selectedtype = Column(Integer)
     selecteddate = Column(String)
@@ -43,7 +44,7 @@ class tq_sk_dquoteindic(Base):
 
     __tablename__ = 'tq_sk_dquoteindic'
 
-    id = Column(Integer, primary_key = True)
+    ID = Column(Integer, primary_key = True)
     secode = Column(String)
     symbol = Column(String)
     tradedate = Column(Date)
@@ -61,7 +62,7 @@ class tq_qt_skdailyprice(Base):
 
     __tablename__ = 'tq_qt_skdailyprice'
 
-    id = Column(Integer, primary_key = True)
+    ID = Column(Integer, primary_key = True)
     secode = Column(String)
     symbol = Column(String)
     tradedate = Column(Date)
@@ -81,7 +82,7 @@ class tq_sk_yieldindic(Base):
 
     __tablename__ = 'tq_sk_yieldindic'
 
-    id = Column(Integer, primary_key = True)
+    ID = Column(Integer, primary_key = True)
     secode = Column(String)
     symbol = Column(String)
     tradedate = Column(Date)
@@ -98,3 +99,71 @@ class tq_sk_yieldindic(Base):
     turnrate3m  = Column(Float)
     turnrate6m  = Column(Float)
     turnratey  = Column(Float)
+
+
+class tq_fin_proindicdata(Base):
+
+    __tablename__ = 'tq_fin_proindicdata'
+
+    ID = Column(Integer, primary_key = True)
+
+    compcode = Column(String)
+    firstpublishdate = Column(Date)
+    enddate = Column(Date)
+    naps = Column(Float)
+    taturnrt = Column(Float)
+    currentrt = Column(Float)
+    cashrt = Column(Float)
+    roa = Column(Float)
+    roediluted = Column(Float)
+    sgpmargin = Column(Float)
+    npcut = Column(Float)
+    reporttype = Column(Integer)
+
+class tq_fin_proindicdatasub(Base):
+
+    __tablename__ = 'tq_fin_proindicdatasub'
+
+    ID = Column(Integer, primary_key = True)
+
+    compcode = Column(String)
+    firstpublishdate = Column(Date)
+    enddate = Column(Date)
+    grossprofit = Column(Float)
+    reporttype = Column(Integer)
+
+
+class tq_sk_finindic(Base):
+
+    __tablename__ = 'tq_sk_finindic'
+
+    ID = Column(Integer, primary_key = True)
+
+    symbol = Column(String)
+    secode = Column(String)
+    tradedate = Column(Date)
+
+    pettm = Column(Float)
+    pettmnpaaei = Column(Float)
+
+
+class tq_sk_shareholdernum(Base):
+
+    __tablename__ = 'tq_sk_shareholdernum'
+
+    ID = Column(Integer, primary_key = True)
+
+    compcode = Column(String)
+    publishdate = Column(Date)
+    updatedate = Column(Date)
+    enddate = Column(Date)
+
+    totalshamt = Column(Float)
+    totalshrto = Column(Float)
+    totalshare = Column(Float)
+
+    askshamt = Column(Float)
+
+    aholdproportionpacc = Column(Float)
+    aproportiongrq = Column(Float)
+    aproportiongrhalfyear = Column(Float)
