@@ -35,10 +35,13 @@ def mt(ctx):
 @click.pass_context
 def macro_view(ctx, startdate, enddate):
     backtest_interval = pd.date_range(startdate, enddate)
-    #rev = re_view(backtest_interval)
-    #irv = ir_view(backtest_interval)
-    epsv = eps_view()
-    set_trace()
+    rev = re_view(backtest_interval)
+    irv = ir_view(backtest_interval)
+    epsv = eps_view(backtest_interval)
+
+    mv = pd.concat([rev, irv, epsv], 1)
+    mv['mv'] = mv['rev'] + mv['irv'] + mv['epsv']
+    mv.to_csv('data/mv.csv', index_label = 'date')
 
 
 def re_view(bt_int):
@@ -59,11 +62,11 @@ def re_view(bt_int):
         m1_diff = rev.loc[day, 'm1_diff']
 
         if (repy_diff > 0) and (m1_diff > 0):
-            re_views.append(-4)
+            re_views.append(-3)
         elif (repy_diff < 0) and (m1_diff < 0):
-            re_views.append(2)
-        elif (repy_diff > 0) and (m1_diff < 0):
-            re_views.append(-2)
+            re_views.append(4)
+#        elif (repy_diff > 0) and (m1_diff < 0):
+#            re_views.append(0)
         else:
             re_views.append(0)
 
@@ -92,7 +95,7 @@ def ir_view(bt_int):
 
     ir_views = []
     ir = ir.reindex(bt_int).fillna(method = 'pad')
-    for day in dates:
+    for day in bt_int:
         sf_m2_diff = ir.loc[day, 'sf_m2_diff']
         ytm_diff = ir.loc[day, 'ytm_diff']
         if (sf_m2_diff > 0) and (ytm_diff > 0):
@@ -107,12 +110,15 @@ def ir_view(bt_int):
     return irv
 
 
-def eps_view():
+def eps_view(bt_int):
     eps_mean = load_eps_mean()
-    ngdp = load_ngdp_yoy()
-    set_trace()
+    #ngdp = load_ngdp_yoy()
+    epsv = eps_mean.resample('d').last().fillna(method = 'pad')
+    epsv['epsv'] = np.sign(epsv.epscut)*3
+    epsv = epsv.loc[:, ['epsv']]
+    epsv = epsv.reindex(bt_int).fillna(method = 'pad').fillna(0.0)
 
-    return 0
+    return epsv
 
 
 def load_m1_yoy():
@@ -146,9 +152,9 @@ def load_m1_yoy():
     for day in dates:
         redates.append(day + timedelta(15))
 
-    today = datetime.today()
-    if redates[-1] > today:
-        redates[-1] = today
+   # today = datetime.today()
+   # if redates[-1] > today:
+   #     redates[-1] = today
     m1_yoy.index = redates
 
     m1_yoy = m1_yoy.loc[:, ['growthrate_m1']]
@@ -185,9 +191,9 @@ def load_m2_yoy():
     for day in dates:
         redates.append(day + timedelta(15))
 
-    today = datetime.today()
-    if redates[-1] > today:
-        redates[-1] = today
+   # today = datetime.today()
+   # if redates[-1] > today:
+   #     redates[-1] = today
     m2_yoy.index = redates
 
 #    m2_yoy.to_csv('data/m2.csv', index_label = 'date')
@@ -225,9 +231,9 @@ def load_m2_value():
     for day in dates:
         redates.append(day + timedelta(15))
 
-    today = datetime.today()
-    if redates[-1] > today:
-        redates[-1] = today
+   # today = datetime.today()
+   # if redates[-1] > today:
+   #     redates[-1] = today
     m2_value.index = redates
 
     m2_value = m2_value.loc[:, ['value_m2']]
@@ -276,6 +282,9 @@ def load_eps_mean():
         index_col=['publishdate'],
         parse_dates=['publishdate'])
 
+    session.commit()
+    session.close()
+
     eps_mean = eps_mean.sort_index()
     eps_mean = eps_mean.resample('m').last().fillna(method='pad')
     eps_mean = eps_mean.pct_change(12)
@@ -296,9 +305,9 @@ def load_eps_mean():
 
         redates.append(tmp_date)
 
-    today = datetime.today()
-    if redates[-1] > today:
-        redate[-1] = today
+   # today = datetime.today()
+   # if redates[-1] > today:
+   #     redate[-1] = today
     eps_mean.index = redates
 
     return eps_mean
@@ -314,6 +323,9 @@ def load_ngdp_yoy():
         t_macro_qgdp.nmonth,
         t_macro_qgdp.value).statement
     ngdp = pd.read_sql(sql, session.bind)
+
+    session.commit()
+    session.close()
 
     dates = []
     for y, m in zip(ngdp.nyear.values, ngdp.nmonth.values):
@@ -339,11 +351,16 @@ def load_10Y_bond_ytm():
         tq_qt_cbdindex.tradedate,
         tq_qt_cbdindex.avgmktcapmatyield,
     ).filter(tq_qt_cbdindex.secode == 2070011252).statement
+
     ytm = pd.read_sql(
         sql,
         session.bind,
         index_col=['tradedate'],
         parse_dates=['tradedate'])
+
+    session.commit()
+    session.close()
+
     ytm.columns = ['ytm']
 
     ytm = ytm.sort_index()
@@ -362,11 +379,15 @@ def load_social_finance():
         mc_social_finance.mc_sf_value,
     ).filter(mc_social_finance.globalid == 'MC.SF0001').statement
 
+
     sf = pd.read_sql(
         sql,
         session.bind,
         index_col=['mc_sf_date'],
         parse_dates=['mc_sf_date'])
+
+    session.commit()
+    session.close()
     sf = sf.sort_index()
 
     dates = sf.index
@@ -374,9 +395,9 @@ def load_social_finance():
     for day in dates:
         redates.append(day + timedelta(15))
 
-    today = datetime.today()
-    if redates[-1] > today:
-        redates[-1] = today
+   # today = datetime.today()
+   # if redates[-1] > today:
+   #     redates[-1] = today
     sf.index = redates
 
     sf.columns = ['sf']
@@ -400,6 +421,8 @@ def load_re_price_yoy():
         index_col = ['mc_re_date'],
         parse_dates = ['mc_re_date'],
         )
+    session.commit()
+    session.close()
     repy = repy.sort_index()
 
     dates = repy.index
@@ -407,9 +430,9 @@ def load_re_price_yoy():
     for day in dates:
         redates.append(day + timedelta(15))
 
-    today = datetime.today()
-    if redates[-1] > today:
-        redates[-1] = today
+   # today = datetime.today()
+   # if redates[-1] > today:
+   #     redates[-1] = today
     repy.index = redates
 
     repy.columns = ['repy']
