@@ -603,7 +603,24 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
+    sz_view = load_view('data/mv.csv', day)
+    #view_weight = 1
+    sh300_mean, zz500_mean = np.abs(df_inc.mean(0)[:2])
+    #df_inc.iloc[:, [0]] += np.sign(sz_view)*sh300_mean*view_weight
+    #df_inc.iloc[:, [1]] += np.sign(sz_view)*zz500_mean*view_weight
+    df_inc.iloc[:, [0]] += sh300_mean*(sz_view)
+    df_inc.iloc[:, [1]] += zz500_mean*(sz_view)
+
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
+
+
+def load_view(macro_path, day):
+    macro_view = pd.read_csv(macro_path, index_col = 0, parse_dates = True)
+    macro_view = macro_view[macro_view.index <= day] 
+    macro_view = macro_view.mv.values[-1]
+
+    return macro_view
+
 
 def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     '''perform markowitz

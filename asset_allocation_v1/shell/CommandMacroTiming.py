@@ -41,6 +41,7 @@ def macro_view(ctx, startdate, enddate):
 
     mv = pd.concat([rev, irv, epsv], 1)
     mv['mv'] = mv['rev'] + mv['irv'] + mv['epsv']
+    mv = mv.loc[:, ['mv']]
     mv.to_csv('data/mv.csv', index_label = 'date')
 
 
