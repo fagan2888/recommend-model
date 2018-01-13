@@ -59,7 +59,17 @@ def compute_stock_factor(ctx):
     pool.join()
     '''
 
-    highlow_price_factor()
+    #highlow_price_factor()
+    #bp_factor()
+    #asset_turnover_factor()
+    #current_ratio_factor()
+    #cash_ratio_factor()
+    #pe_ttm_factor()
+    #roa_factor()
+    #roe_factor()
+    #grossprofit_factor()
+    #profit_factor()
+    holder_factor()
 
     return
 
@@ -101,7 +111,7 @@ def all_stock_info():
     engine = database.connection('base')
     Session = sessionmaker(bind=engine)
     session = Session()
-    all_stocks = pd.read_sql(session.query(ra_stock.globalid, ra_stock.sk_secode).statement, session.bind, index_col = ['sk_secode'])
+    all_stocks = pd.read_sql(session.query(ra_stock.globalid, ra_stock.sk_secode, ra_stock.sk_compcode, ra_stock.sk_name).statement, session.bind, index_col = ['sk_secode'])
     session.commit()
     session.close()
 
@@ -155,6 +165,7 @@ def stock_factor_last_date(sf_id, stock_id):
     else:
         return result[0]
 
+
 #股价因子
 def ln_price_factor():
 
@@ -191,11 +202,475 @@ def ln_price_factor():
     return
 
 
+#计算财报因子
+def financial_report_data(fr_df, name):
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    all_stocks = all_stocks.reset_index()
+    all_stocks = all_stocks.set_index('sk_compcode')
+
+    #print naps_df
+    #过滤未上市时的报表信息
+    groups = []
+    for compcode, group in fr_df.groupby(fr_df.index):
+        listdate = all_stocks.loc[compcode, 'sk_listdate']
+        group = group[group.enddate > listdate]
+        groups.append(group)
+    fr_df = pd.concat(groups, axis = 0)
+
+
+    #根据公布日期，选最近的月收盘交易日
+    month_last_trade_dates = month_last_day()
+    firstpublishdates = fr_df.firstpublishdate.ravel()
+    trans_firstpublishdate = []
+    for firstpublishdate in firstpublishdates:
+        greater_month_last_trade_dates = month_last_trade_dates[month_last_trade_dates >= firstpublishdate]
+        if len(greater_month_last_trade_dates) == 0:
+            trans_firstpublishdate.append(np.nan)
+        else:
+            trans_firstpublishdate.append(greater_month_last_trade_dates[0])
+    fr_df.firstpublishdate = trans_firstpublishdate
+    fr_df = fr_df.dropna()
+
+    fr_df = fr_df.reset_index()
+    fr_df = fr_df.set_index(['firstpublishdate','compcode'])
+    fr_df = fr_df.sort_index()
+    #过滤掉两个季报一起公布的情况，比如有的公司年报和一季报一起公布
+    fr_df = fr_df.groupby(level = [0, 1]).last()
+
+
+    fr_df = fr_df[[name]]
+    fr_df = fr_df.unstack()
+    fr_df.columns = fr_df.columns.droplevel(0)
+    #向后填充四个月度
+    fr_df = fr_df.fillna(method = 'pad', limit = 4)
+
+    compcode_globalid = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
+    fr_df = fr_df.rename(columns = compcode_globalid)
+
+    return fr_df
+
+
+#计算季度累计数据
+def quarter_aggregate(df, name):
+
+    records = []
+    for compcode, group in df.groupby(df.index):
+        #print group
+        group = group.sort_values('enddate', ascending = True)
+        group = group.reset_index()
+        group = group.set_index(['enddate'])
+        for year, year_group in group.groupby(group.index.strftime('%Y')):
+            #如果数据不是从年份的一季度开始，则过滤掉这一年
+            if year_group.index[0].strftime('%m%d') != '0331':
+                continue
+            year_group[name] = year_group[name].rolling(window = 2, min_periods = 1).apply(lambda x: x[1] - x[0] if len(x) > 1 else x[0])
+            records.append(year_group)
+
+    df = pd.concat(records, axis = 0)
+    df = df.reset_index()
+    df = df.set_index(['compcode'])
+
+    return df
+
+
 #bp因子
 def bp_factor():
 
     all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
     sf_id = 'SF.000005'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_fin_proindicdata.enddate ,tq_fin_proindicdata.firstpublishdate, tq_fin_proindicdata.compcode, tq_fin_proindicdata.reporttype ,tq_fin_proindicdata.naps).filter(tq_fin_proindicdata.reporttype == 3).filter(tq_fin_proindicdata.compcode.in_(all_stocks.sk_compcode)).statement
+    naps_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+
+    naps_df = financial_report_data(naps_df, 'naps')
+
+    sql = session.query(tq_qt_skdailyprice.tradedate, tq_qt_skdailyprice.secode ,tq_qt_skdailyprice.tclose).filter(tq_qt_skdailyprice.tradedate.in_(naps_df.index.strftime('%Y%m%d'))).statement
+    tclose_df = pd.read_sql(sql, session.bind, index_col = ['tradedate','secode'], parse_dates = ['tradedate']).replace(0.0, np.nan)
+    tclose_df = tclose_df.unstack()
+    tclose_df.columns = tclose_df.columns.droplevel(0)
+
+    compcode_globalid = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
+    secode_globalid = dict(zip(all_stocks.sk_secode.ravel(), all_stocks.globalid.ravel()))
+
+    tclose_df = tclose_df.rename(columns = secode_globalid)
+    columns = list(set(naps_df.columns) & set(tclose_df.columns))
+
+    naps_df = naps_df[columns]
+    tclose_df = tclose_df[columns]
+
+    bp_df = naps_df / tclose_df
+
+    bp_df = valid_stock_filter(bp_df)
+    bp_df = normalized(bp_df)
+    update_factor_value(sf_id, bp_df)
+
+    session.commit()
+    session.close()
+
+    return
+
+'''
+#资产周转率因子
+def asset_turnover_factor():
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    sf_id = 'SF.000003'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_fin_proindicdata.enddate ,tq_fin_proindicdata.firstpublishdate, tq_fin_proindicdata.compcode, tq_fin_proindicdata.reporttype ,tq_fin_proindicdata.taturnrt).filter(tq_fin_proindicdata.reporttype == 3).filter(tq_fin_proindicdata.compcode.in_(all_stocks.sk_compcode)).statement
+    turnover_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+
+    turnover_df = financial_report_data(turnover_df, 'taturnrt')
+
+    turnover_df = valid_stock_filter(turnover_df)
+    turnover_df = normalized(turnover_df)
+    update_factor_value(sf_id, turnover_df)
+
+    session.commit()
+    session.close()
+
+    return
+'''
+
+
+#流动比率因子
+def current_ratio_factor():
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    sf_id = 'SF.000007'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_fin_proindicdata.enddate ,tq_fin_proindicdata.firstpublishdate, tq_fin_proindicdata.compcode, tq_fin_proindicdata.reporttype ,tq_fin_proindicdata.currentrt).filter(tq_fin_proindicdata.reporttype == 3).filter(tq_fin_proindicdata.compcode.in_(all_stocks.sk_compcode)).statement
+    current_ratio_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+
+    current_ratio_df = financial_report_data(current_ratio_df, 'currentrt')
+
+    current_ratio_df = valid_stock_filter(current_ratio_df)
+    current_ratio_df = normalized(current_ratio_df)
+    update_factor_value(sf_id, current_ratio_df)
+
+    session.commit()
+    session.close()
+
+    return
+
+
+#现金比率因子
+def cash_ratio_factor():
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    sf_id = 'SF.000007'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_fin_proindicdata.enddate ,tq_fin_proindicdata.firstpublishdate, tq_fin_proindicdata.compcode, tq_fin_proindicdata.reporttype ,tq_fin_proindicdata.cashrt).filter(tq_fin_proindicdata.reporttype == 3).filter(tq_fin_proindicdata.compcode.in_(all_stocks.sk_compcode)).statement
+    cash_ratio_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+
+    cash_ratio_df = financial_report_data(cash_ratio_df, 'cashrt')
+
+    cash_ratio_df = valid_stock_filter(cash_ratio_df)
+    cash_ratio_df = normalized(cash_ratio_df)
+    update_factor_value(sf_id, cash_ratio_df)
+
+    session.commit()
+    session.close()
+
+    return
+
+
+#市盈率因子
+def pe_ttm_factor():
+
+    all_stocks = all_stock_info()
+    sf_id = 'SF.000009'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    data_pe_ttm = {}
+    data_pe_ttm_cut = {}
+    for i in range(0, len(all_stocks.index)):
+        secode = all_stocks.index[i]
+        globalid = all_stocks.loc[secode, 'globalid']
+        print 'ep', globalid, secode
+        last_date = stock_factor_last_date(sf_id, globalid) - timedelta(10)
+        last_date = last_date.strftime('%Y%m%d')
+        sql = session.query(tq_sk_finindic.tradedate, tq_sk_finindic.pettm, tq_sk_finindic.pettmnpaaei).filter(and_(tq_sk_finindic.secode == secode, tq_sk_finindic.tradedate >= last_date)).statement
+        quotation = pd.read_sql(sql, session.bind , index_col = ['tradedate'], parse_dates = ['tradedate']).replace(0.0, np.nan)
+        if len(quotation) == 0:
+            continue
+        quotation = quotation.sort_index()
+        quotation = 1.0 / quotation
+        data_pe_ttm[globalid] = quotation.pettm
+        data_pe_ttm_cut[globalid] = quotation.pettmnpaaei
+
+    session.commit()
+    session.close()
+
+    ep_df = pd.DataFrame(data_pe_ttm)
+    ep_cut_df = pd.DataFrame(data_pe_ttm_cut)
+
+
+    ep_df = ep_df.loc[ep_df.index & month_last_day()] #取每月最后一个交易日的因子值
+    ep_df = valid_stock_filter(ep_df) #过滤掉不合法的因子值
+    ep_df = normalized(ep_df) #因子值归一化
+    update_factor_value(sf_id, ep_df) #因子值存入数据库
+
+
+    sf_id = 'SF.000010'
+    ep_cut_df = ep_cut_df.loc[ep_cut_df.index & month_last_day()] #取每月最后一个交易日的因子值
+    ep_cut_df = valid_stock_filter(ep_cut_df) #过滤掉不合法的因子值
+    ep_cut_df = normalized(ep_cut_df) #因子值归一化
+    update_factor_value(sf_id, ep_cut_df) #因子值存入数据库
+
+    return
+
+
+
+#roa因子
+def roa_factor():
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    sf_id = 'SF.000039'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_fin_proindicdata.enddate ,tq_fin_proindicdata.firstpublishdate, tq_fin_proindicdata.compcode, tq_fin_proindicdata.reporttype ,tq_fin_proindicdata.roa).filter(tq_fin_proindicdata.reporttype == 3).filter(tq_fin_proindicdata.compcode.in_(all_stocks.sk_compcode)).statement
+    roa_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+
+    roa_df = quarter_aggregate(roa_df, 'roa')
+    roa_df = financial_report_data(roa_df, 'roa')
+
+    roa_df = valid_stock_filter(roa_df)
+    roa_df = normalized(roa_df)
+    update_factor_value(sf_id, roa_df)
+
+
+    '''
+    sf_id = 'SF.000040'
+    roa_ttm_df = valid_stock_filter(roa_ttm_df)
+    roa_ttm_df = normalized(roa_ttm_df)
+    update_factor_value(sf_id, roa_ttm_df)
+    '''
+
+    session.commit()
+    session.close()
+
+    return
+
+
+
+#roe因子
+def roe_factor():
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    sf_id = 'SF.000041'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_fin_proindicdata.enddate ,tq_fin_proindicdata.firstpublishdate, tq_fin_proindicdata.compcode, tq_fin_proindicdata.reporttype ,tq_fin_proindicdata.roediluted).filter(tq_fin_proindicdata.reporttype == 3).filter(tq_fin_proindicdata.compcode.in_(all_stocks.sk_compcode)).statement
+    roe_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+
+    roe_df = quarter_aggregate(roe_df, 'roediluted')
+    roe_df = financial_report_data(roe_df, 'roediluted')
+
+    roe_df = valid_stock_filter(roe_df)
+    roe_df = normalized(roe_df)
+    update_factor_value(sf_id, roe_df)
+
+
+    '''
+    sf_id = 'SF.000042'
+    roe_ttm_df = valid_stock_filter(roe_ttm_df)
+    roe_ttm_df = normalized(roe_ttm_df)
+    update_factor_value(sf_id, roe_ttm_df)
+    '''
+
+    session.commit()
+    session.close()
+
+    return
+
+
+
+#毛利率因子
+def grossprofit_factor():
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    sf_id = 'SF.000013'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_fin_proindicdata.enddate ,tq_fin_proindicdata.firstpublishdate, tq_fin_proindicdata.compcode, tq_fin_proindicdata.reporttype ,tq_fin_proindicdata.sgpmargin).filter(tq_fin_proindicdata.reporttype == 3).filter(tq_fin_proindicdata.compcode.in_(all_stocks.sk_compcode)).statement
+    grossprofit_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+    grossprofit_df = financial_report_data(grossprofit_df, 'sgpmargin')
+
+    print grossprofit_df.iloc[:,0:15]
+
+
+    '''
+    sql = session.query(tq_fin_proindicdatasub.enddate ,tq_fin_proindicdatasub.firstpublishdate, tq_fin_proindicdatasub.compcode, tq_fin_proindicdatasub.reporttype ,tq_fin_proindicdatasub.grossprofit).filter(tq_fin_proindicdatasub.reporttype == 3).filter(tq_fin_proindicdatasub.compcode.in_(all_stocks.sk_compcode)).statement
+    grossprofit_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+    grossprofit_df = financial_report_data(grossprofit_df, 'grossprofit')
+
+    print '---------------------------'
+    print grossprofit_df.iloc[:,0:15]
+    sys.exit(0)
+    grossprofit_df = valid_stock_filter(grossprofit_df)
+    grossprofit_df = normalized(grossprofit_df)
+    update_factor_value(sf_id, grossprofit_df)
+    '''
+
+    grossprofit_df = valid_stock_filter(grossprofit_df)
+    grossprofit_df = normalized(grossprofit_df)
+    update_factor_value(sf_id, grossprofit_df)
+
+    session.commit()
+    session.close()
+
+    return
+
+
+#户均持股比例因子
+def holder_factor():
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    sf_id = 'SF.000013'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_sk_shareholdernum.enddate ,tq_sk_shareholdernum.publishdate, tq_sk_shareholdernum.compcode, tq_sk_shareholdernum.askshamt ,tq_sk_shareholdernum.aholdproportionpacc ,tq_sk_shareholdernum.aproportiongrq, tq_sk_shareholdernum.aproportiongrhalfyear).filter(tq_sk_shareholdernum.compcode.in_(all_stocks.sk_compcode)).statement
+    holder_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['publishdate', 'enddate'])
+
+    holder_df = holder_df.rename(columns={'publishdate':'firstpublishdate'})
+
+    aholdproportionpacc_holder_df = holder_df[['enddate', 'firstpublishdate', 'aholdproportionpacc']]
+    aproportiongrq_holder_df = holder_df[['enddate', 'firstpublishdate', 'aproportiongrq']]
+    aproportiongrhalfyear_holder_df = holder_df[['enddate', 'firstpublishdate', 'aproportiongrhalfyear']]
+    #print holder_df.head()
+
+    aholdproportionpacc_holder_df = financial_report_data(aholdproportionpacc_holder_df, 'aholdproportionpacc')
+    aproportiongrq_holder_df = financial_report_data(aproportiongrq_holder_df, 'aproportiongrq')
+    aproportiongrhalfyear_holder_df = financial_report_data(aproportiongrhalfyear_holder_df, 'aproportiongrhalfyear')
+
+    sf_id = 'SF.000019'
+    aholdproportionpacc_holder_df = valid_stock_filter(aholdproportionpacc_holder_df)
+    aholdproportionpacc_holder_df = normalized(aholdproportionpacc_holder_df)
+    update_factor_value(sf_id, aholdproportionpacc_holder_df)
+
+    sf_id = 'SF.000021'
+    aproportiongrq_holder_df = valid_stock_filter(aproportiongrq_holder_df)
+    aproportiongrq_holder_df = normalized(aproportiongrq_holder_df)
+    update_factor_value(sf_id, aproportiongrq_holder_df)
+
+    sf_id = 'SF.000020'
+    aproportiongrhalfyear_holder_df = valid_stock_filter(aproportiongrhalfyear_holder_df)
+    aproportiongrhalfyear_holder_df = normalized(aproportiongrhalfyear_holder_df)
+    update_factor_value(sf_id, aproportiongrhalfyear_holder_df)
+
+    session.commit()
+    session.close()
+
+    return
+
+
+def fcfp_factor()
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    sf_id = 'SF.000013'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+
+
+'''
+#扣非净利润
+def profit_factor():
+
+    all_stocks = all_stock_info()
+    stock_listdate = all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    sf_id = 'SF.000013'
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_fin_proindicdata.enddate ,tq_fin_proindicdata.firstpublishdate, tq_fin_proindicdata.compcode, tq_fin_proindicdata.reporttype ,tq_fin_proindicdata.npcut).filter(tq_fin_proindicdata.reporttype == 3).filter(tq_fin_proindicdata.compcode.in_(all_stocks.sk_compcode)).statement
+    profit_growth_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+
+    #print profit_growth_df
+
+    for compcode, group in profit_growth_df.groupby(profit_growth_df.index):
+        #print group
+        group = group.sort_values('enddate', ascending = True)
+
+
+    profit_growth_df = financial_report_data(profit_growth_df, 'sgpmargin')
+
+    profit_df = valid_stock_filter(profit_growth_df)
+    profit_df = normalized(profit_growth_df)
+    update_factor_value(sf_id, profit_growth_df)
+
+    session.commit()
+    session.close()
+
+    return
+'''
 
 
 
@@ -428,7 +903,6 @@ def highlow_price_factor():
     highlow_price_6m_df = valid_stock_filter(highlow_price_6m_df)
     highlow_price_3m_df = valid_stock_filter(highlow_price_3m_df)
     highlow_price_1m_df = valid_stock_filter(highlow_price_1m_df)
-
 
     highlow_price_12m_df = normalized(highlow_price_12m_df)
     highlow_price_6m_df = normalized(highlow_price_6m_df)
@@ -972,6 +1446,7 @@ def stock_factor_layer_spearman(sf_id):
     session.close()
 
     return
+
 
 
 @sf.command()
