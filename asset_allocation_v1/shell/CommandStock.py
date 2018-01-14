@@ -32,6 +32,9 @@ from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav,
 from util import xdict
 from util.xdebug import dd
 from mxnet import nd
+from db.asset_stock import *
+from sqlalchemy import *
+from sqlalchemy.orm import sessionmaker
 
 import traceback, code
 
@@ -116,6 +119,38 @@ def rnn(ctx, optx, opty):
         Y = f.readlines()
         print len(Y)
 
+#所有股票代码
+def all_stock_info():
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    all_stocks = pd.read_sql(session.query(ra_stock.globalid, ra_stock.sk_secode, ra_stock.sk_compcode, ra_stock.sk_name).statement, session.bind, index_col = ['sk_secode'])
+    session.commit()
+    session.close()
+
+    return all_stocks
+
+
+@stock.command()
+@click.pass_context
+def stock_wavelet(ctx):
+
+    all_stocks = all_stock_info()
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    for i in range(0, len(all_stocks.index)):
+        secode = all_stocks.index[i]
+        globalid = all_stocks.loc[secode, 'globalid']
+        sql = session.query(tq_sk_dquoteindic.tradedate, tq_sk_dquoteindic.tcloseaf).filter(tq_sk_dquoteindic.secode == secode).statement
+        quotation = pd.read_sql(sql, session.bind , index_col = ['tradedate'], parse_dates = ['tradedate'])
+        sr = quotation.tcloseaf
+        wt = TimingWt(sr)
+        filtered_data = wt.wavefilter(sr, 2)
+        filtered_data = filtered_data.fillna(0.0)
+        print filtered_data
 
 
 
