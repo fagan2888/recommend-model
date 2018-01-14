@@ -118,6 +118,7 @@ class tq_fin_proindicdata(Base):
     roediluted = Column(Float)
     sgpmargin = Column(Float)
     npcut = Column(Float)
+    fcff = Column(Float)
     reporttype = Column(Integer)
 
 class tq_fin_proindicdatasub(Base):
