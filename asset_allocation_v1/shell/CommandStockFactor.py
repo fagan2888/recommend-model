@@ -69,7 +69,8 @@ def compute_stock_factor(ctx):
     #roe_factor()
     #grossprofit_factor()
     #profit_factor()
-    holder_factor()
+    #holder_factor()
+    fcfp_factor()
 
     return
 
@@ -622,7 +623,7 @@ def holder_factor():
     return
 
 
-def fcfp_factor()
+def fcfp_factor():
 
     all_stocks = all_stock_info()
     stock_listdate = all_stock_listdate()[['sk_listdate']]
@@ -634,6 +635,17 @@ def fcfp_factor()
     Session = sessionmaker(bind=engine)
     session = Session()
 
+    sql = session.query(tq_fin_proindicdata.enddate ,tq_fin_proindicdata.firstpublishdate, tq_fin_proindicdata.compcode, tq_fin_proindicdata.fcff).filter(tq_fin_proindicdata.reporttype == 3).filter(tq_fin_proindicdata.compcode.in_(all_stocks.sk_compcode)).statement
+    fcff_df = pd.read_sql(sql, session.bind, index_col = ['compcode'], parse_dates = ['firstpublishdate', 'enddate'])
+
+    fcff_df = fcff_df.iloc[0:1000,]
+    fcff_df = financial_report_data(fcff_df, 'fcff')
+    print fcff_df.iloc[:,0:15]
+
+    session.commit()
+    session.close()
+
+    return
 
 
 '''
