@@ -51,14 +51,12 @@ def compute_stock_factor(ctx):
 
 
     #ln_capital_factor()
-    '''
-    factor_funcs = [ln_capital_factor, ln_price_factor, highlow_price_factor, relative_strength_factor, std_factor, trade_volumn_factor, turn_rate_factor, weighted_strength_factor]
-    pool = Pool(7)
+    #factor_funcs = [ln_capital_factor, ln_price_factor, highlow_price_factor, relative_strength_factor, std_factor, trade_volumn_factor, turn_rate_factor, weighted_strength_factor]
+    factor_funcs = [bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor]
+    pool = Pool(10)
     pool.map(call_factor_func, factor_funcs)
     pool.close()
     pool.join()
-    '''
-
     #highlow_price_factor()
     #bp_factor()
     #asset_turnover_factor()
@@ -70,7 +68,7 @@ def compute_stock_factor(ctx):
     #grossprofit_factor()
     #profit_factor()
     #holder_factor()
-    fcfp_factor()
+    #fcfp_factor()
 
     return
 
@@ -242,12 +240,16 @@ def financial_report_data(fr_df, name):
     #过滤掉两个季报一起公布的情况，比如有的公司年报和一季报一起公布
     fr_df = fr_df.groupby(level = [0, 1]).last()
 
-
     fr_df = fr_df[[name]]
     fr_df = fr_df.unstack()
     fr_df.columns = fr_df.columns.droplevel(0)
+
+    #扩展到每个月最后一个交易日
+    fr_df = fr_df.loc[month_last_day()]
+
     #向后填充四个月度
     fr_df = fr_df.fillna(method = 'pad', limit = 4)
+
 
     compcode_globalid = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
     fr_df = fr_df.rename(columns = compcode_globalid)
@@ -301,8 +303,8 @@ def bp_factor():
     tclose_df = tclose_df.unstack()
     tclose_df.columns = tclose_df.columns.droplevel(0)
 
-    compcode_globalid = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
-    secode_globalid = dict(zip(all_stocks.sk_secode.ravel(), all_stocks.globalid.ravel()))
+    compcode_globalid = dict(zip(all_stocks.sk_compcode.ravel(), all_stocks.globalid.ravel()))
+    secode_globalid = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
 
     tclose_df = tclose_df.rename(columns = secode_globalid)
     columns = list(set(naps_df.columns) & set(tclose_df.columns))
@@ -421,7 +423,7 @@ def pe_ttm_factor():
     for i in range(0, len(all_stocks.index)):
         secode = all_stocks.index[i]
         globalid = all_stocks.loc[secode, 'globalid']
-        print 'ep', globalid, secode
+        #print 'ep', globalid, secode
         last_date = stock_factor_last_date(sf_id, globalid) - timedelta(10)
         last_date = last_date.strftime('%Y%m%d')
         sql = session.query(tq_sk_finindic.tradedate, tq_sk_finindic.pettm, tq_sk_finindic.pettmnpaaei).filter(and_(tq_sk_finindic.secode == secode, tq_sk_finindic.tradedate >= last_date)).statement
@@ -1326,20 +1328,19 @@ def ln_capital_factor():
 @click.pass_context
 def compute_stock_factor_layer_rankcorr(ctx):
 
-    '''
     sf_ids = ['SF.000001','SF.000002', 'SF.000015', 'SF.000016','SF.000017','SF.000018', 'SF.000035', 'SF.000036', 'SF.000037', 'SF.000038', 
             'SF.000047','SF.000048','SF.000049','SF.000050','SF.000051','SF.000052','SF.000053','SF.000054','SF.000055','SF.000056',
-            'SF.000057','SF.000058','SF.000059','SF.000060','SF.000061','SF.000062',
+            'SF.000057','SF.000058','SF.000059','SF.000060','SF.000061','SF.000062','SF.000005','SF.000007','SF.000009','SF.000019','SF.000020',
+            'SF.000021','SF.000039','SF.000041',
             ]
 
 
-    pool = Pool(10)
+    pool = Pool(20)
     pool.map(stock_factor_layer_spearman, sf_ids)
     pool.close()
     pool.join()
-    '''
 
-    stock_factor_layer_spearman('SF.000001')
+    #stock_factor_layer_spearman('SF.000041')
 
     return
 
@@ -1467,7 +1468,8 @@ def compute_stock_factor_index(ctx):
 
     sf_ids = ['SF.000001','SF.000002', 'SF.000015', 'SF.000016','SF.000017','SF.000018', 'SF.000035', 'SF.000036', 'SF.000037', 'SF.000038', 
             'SF.000047','SF.000048','SF.000049','SF.000050','SF.000051','SF.000052','SF.000053','SF.000054','SF.000055','SF.000056',
-            'SF.000057','SF.000058','SF.000059','SF.000060','SF.000061','SF.000062',
+            'SF.000057','SF.000058','SF.000059','SF.000060','SF.000061','SF.000062','SF.000005','SF.000007','SF.000009','SF.000019','SF.000020',
+            'SF.000021','SF.000039','SF.000041',
             ]
 
 
@@ -1476,6 +1478,7 @@ def compute_stock_factor_index(ctx):
     pool.close()
     pool.join()
 
+    #stock_factor_index('SF.000041')
     return
 
 
@@ -1496,7 +1499,8 @@ def stock_factor_index(sf_id):
     rankcorr_df.columns = rankcorr_df.columns.droplevel(0)
 
     rankcorr_df = rankcorr_df.rolling(14).mean()
-
+    sf_rankcorr = rankcorr_df[sf_id]
+    #print sf_rankcorr
 
     #获取每期选因子的哪端
     stock_factor_pos = {}
@@ -1510,6 +1514,8 @@ def stock_factor_index(sf_id):
         date_index = month_last_trade_dates.index(date)
         stock_date = month_last_trade_dates[date_index + 1]
         record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == sf_id, stock_factor_layer.layer == layer, stock_factor_layer.trade_date == stock_date)).first()
+        if record is None:
+            continue
         stock_factor_pos[stock_date] = json.loads(record[0])
 
     globalid_secode_dict = dict(zip(all_stocks.index.ravel(), all_stocks.sk_secode.ravel()))
@@ -1566,34 +1572,118 @@ def stock_factor_index(sf_id):
     return
 
 
-
 @sf.command()
 @click.pass_context
 def select_stock_factor_layer(ctx):
+
+    all_stocks = all_stock_info()
+    all_stocks = all_stocks.reset_index()
+    all_stocks = all_stocks.set_index('globalid')
 
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
 
+    factor_type = session.query(stock_factor.sf_id, stock_factor.sf_kind).all()
+    factor_type_dict = {}
+    for record in factor_type:
+        factor_type_dict[record[0]] = record[1]
+    #print factor_type_dict
+
     sql = session.query(stock_factor_rankcorr.sf_id, stock_factor_rankcorr.trade_date, stock_factor_rankcorr.rankcorr).statement
     rankcorr_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'sf_id'], parse_dates = ['trade_date'])
+
     rankcorr_df = rankcorr_df.unstack()
     rankcorr_df.columns = rankcorr_df.columns.droplevel(0)
 
-    rankcorr_df = rankcorr_df.rolling(14).mean()
+    rankcorr_df = rankcorr_df.rolling(14).mean().iloc[14:,]
     rankcorr_abs_df = abs(rankcorr_df)
 
+    stock_pos = {}
+    factor_pos = {}
     for date in rankcorr_abs_df.index:
         rankcorr_abs = rankcorr_abs_df.loc[date]
         rankcorr_abs = rankcorr_abs.sort_values(ascending = False)
-        for index in rankcorr_abs.index[0:5]:
-            rankcorr = rankcorr_df.loc[date, index]
-            if rankcorr >= 0:
-                print date, index, 0
-            else:
-                print date, index, 4
 
-    #for i in df.tail(1):
-    #    print i, df.tail(1)[i]
+        date_stocks = stock_pos.setdefault(date, [])
+        date_factors = factor_pos.setdefault(date, [])
+
+        has_type = set()
+        for index in rankcorr_abs.index:
+            rankcorr = rankcorr_df.loc[date, index]
+            layer = None
+            if rankcorr >= 0:
+                layer = 0
+            else:
+                layer = 4
+
+            record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == index,stock_factor_layer.trade_date == date,
+                                    stock_factor_layer.layer == layer)).first()
+
+            if record is None:
+                continue
+
+            factor_type = factor_type_dict[index]
+            if factor_type in has_type:
+                continue
+            else:
+                has_type.add(factor_type)
+
+            date_stocks.extend(json.loads(record[0]))
+            date_factors.append([index, layer])
+
+            if len(date_factors) >= 5:
+                break
+
+    factor_pos_df = pd.DataFrame(factor_pos).T
+    print factor_pos_df
+
+    #计算每期股票的仓位
+    globalid_secode_dict = dict(zip(all_stocks.index.ravel(), all_stocks.sk_secode.ravel()))
+    dates = list(stock_pos.keys())
+    dates.sort()
+    stock_pos_df = pd.DataFrame(0, index = dates, columns = all_stocks.index)
+    for date in dates:
+        stocks = stock_pos[date]
+        stocks = list(set(stocks))
+        record = stock_pos_df.loc[date]
+        record[record.index.isin(stocks)] = 1.0 / len(stocks)
+        stock_pos_df.loc[date] = record
+    stock_pos_df = stock_pos_df.rename(columns = globalid_secode_dict)
+
+    session.commit()
+    session.close()
+
+
+    caihui_engine = database.connection('caihui')
+    caihui_Session = sessionmaker(bind=caihui_engine)
+    caihui_session = caihui_Session()
+
+    sql = caihui_session.query(tq_sk_yieldindic.tradedate, tq_sk_yieldindic.secode ,tq_sk_yieldindic.Yield).filter(tq_sk_yieldindic.tradedate >= stock_pos_df.index[0].strftime('%Y%m%d')).statement
+    stock_yield_df = pd.read_sql(sql, caihui_session.bind, index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']) / 100.0
+    stock_yield_df = stock_yield_df.unstack()
+    stock_yield_df.columns = stock_yield_df.columns.droplevel(0)
+    secodes = list(set(stock_pos_df.columns) & set(stock_yield_df.columns))
+    stock_pos_df = stock_pos_df[secodes]
+    stock_yield_df = stock_yield_df[secodes]
+
+    caihui_session.commit()
+    caihui_session.close()
+
+    stock_pos_df = stock_pos_df.reindex(stock_yield_df.index).fillna(method = 'pad')
+    stock_pos_df = stock_pos_df.shift(1).fillna(0.0)
+
+    factor_yield_df = stock_pos_df * stock_yield_df
+    factor_yield_df = factor_yield_df.sum(axis = 1)
+    factor_yield_df = factor_yield_df[factor_yield_df.index >= '2006-06-01']
+    #print factor_yield_df.index
+    factor_nav_df = (1 + factor_yield_df).cumprod()
+
+    factor_nav_df = factor_nav_df.to_frame()
+    factor_nav_df.index.name = 'date'
+    factor_nav_df.columns = ['nav']
+    #print factor_nav_df
+    factor_nav_df.to_csv('factor_nav.csv')
+    #print factor_nav_df.index[-1], factor_nav_df.iloc[-1]
 
     return
