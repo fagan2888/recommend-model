@@ -33,6 +33,7 @@ from util import xdict
 from util.xdebug import dd
 
 import traceback, code
+from ipdb import set_trace
 
 logger = logging.getLogger(__name__)
 
@@ -513,6 +514,21 @@ def average_days(start_date, end_date, assets):
     df = pd.DataFrame(data)
 
     df.index = pd.to_datetime(df.index)
+
+    add_view = True
+    if add_view:
+        irv = pd.read_csv('data/irv.csv', index_col = 0, parse_dates = True)
+        #irv = irv.rolling(30).mean().fillna(0.0)
+        #irv = irv.rolling(30).apply(lambda x: 1 if all(x > 0) else 0).fillna(0.0)
+        irv = irv.rolling(50).apply(lambda x: 1 if sum(x) > 10 else 0).fillna(0.0)
+        #irv = irv.rolling(5).mean().fillna(0.0)
+        llz_weight = irv.irv.apply(lambda x: 0.5 if x > 0 else 0.0)
+        xyz_weight = llz_weight
+        hb_weight = 1 - llz_weight - xyz_weight
+        total_weight = pd.concat([llz_weight, xyz_weight, hb_weight], 1)
+        total_weight.columns = ['120000010', '120000011', '120000039']
+        df = total_weight
+
 
     return df
 

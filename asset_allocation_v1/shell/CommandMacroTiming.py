@@ -43,6 +43,7 @@ def macro_view(ctx, startdate, enddate):
     mv['mv'] = mv['rev'] + mv['irv'] + mv['epsv']
     mv = mv.loc[:, ['mv']]
     mv.to_csv('data/mv.csv', index_label = 'date')
+    irv.to_csv('data/irv.csv', index_label = 'date')
 
 
 def re_view(bt_int):
@@ -429,7 +430,7 @@ def load_re_price_yoy():
     dates = repy.index
     redates= []
     for day in dates:
-        redates.append(day + timedelta(15))
+        redates.append(day + timedelta(18))
 
    # today = datetime.today()
    # if redates[-1] > today:
