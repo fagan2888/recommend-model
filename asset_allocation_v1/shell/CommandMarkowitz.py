@@ -615,7 +615,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_inc.iloc[:, [1]] += 0.002*(sz_view)
     '''
     
-    view_weight = 1
+    #view_weight = 1
     sh300_mean, zz500_mean = np.abs(df_inc.mean(0)[:2])
     #df_inc.iloc[:, [0]] += np.sign(sz_view)*sh300_mean*view_weight
     #df_inc.iloc[:, [1]] += np.sign(sz_view)*zz500_mean*view_weight
