@@ -119,6 +119,7 @@ class tq_fin_proindicdata(Base):
     sgpmargin = Column(Float)
     npcut = Column(Float)
     fcff = Column(Float)
+    fcfe = Column(Float)
     reporttype = Column(Integer)
 
 class tq_fin_proindicdatasub(Base):
