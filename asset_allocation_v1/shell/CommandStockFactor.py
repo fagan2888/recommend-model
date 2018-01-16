@@ -149,7 +149,6 @@ def stock_factor_index(ctx):
     return
 
 
-
 @sf.command()
 @click.pass_context
 def select_stock_factor_layer(ctx):
