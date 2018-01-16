@@ -742,8 +742,16 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             sr = base_ra_index_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         elif prefix == 'ER':
-
+            #
+            # 人民币计价的指数资产
+            #
             sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'SK':
+            #
+            # 股票资产
+            #
+            sr = asset_stock.load_stock_nav_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         else:
             sr = pd.Series()
@@ -863,6 +871,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+    elif algo == 5:
+        print 'multi factor pos'
+        df = pd.DataFrame()
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
