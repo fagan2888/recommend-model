@@ -32,8 +32,9 @@ def mt(ctx):
 @mt.command()
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help=u'start date to calc')
+@click.option('--viewid', 'viewid', default='MC.VW0001', help=u'macro timing view id')
 @click.pass_context
-def macro_view_update(ctx, startdate, enddate):
+def macro_view_update(ctx, startdate, enddate, viewid):
     backtest_interval = pd.date_range(startdate, enddate)
     rev = re_view(backtest_interval)
     irv = ir_view(backtest_interval)
@@ -44,7 +45,7 @@ def macro_view_update(ctx, startdate, enddate):
     #mv = mv.loc[:, ['mv']]
 
     today = datetime.now()
-    mv_view_id = np.repeat('MC.VW0001', len(mv))
+    mv_view_id = np.repeat(viewid, len(mv))
     mv_date = mv.index
     mv_inc = mv.mv.values
     created_at = np.repeat(today, len(mv))
@@ -57,12 +58,25 @@ def macro_view_update(ctx, startdate, enddate):
     union_mv['mc_inc'] = mv_inc
     union_mv['created_at'] = created_at
     union_mv['updated_at'] = updated_at
-    union_mv_df = pd.DataFrame(union_mv)
-    union_mv_df.set_index(['mc_date'])
+    union_mv_df = pd.DataFrame(union_mv, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
+    df_new = union_mv_df.set_index(['mc_date'])
 
     db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('mc_view_strength', metadata, autoload = True)
+    columns = [
+        t.c.mc_view_id,
+        t.c.mc_date,
+        t.c.mc_inc,
+        t.c.created_at,
+        t.c.updated_at,
+    ]
+    s = select(columns, (t.c.mc_view_id == viewid))
+    df_old = pd.read_sql(s, db, index_col = ['mc_date'], parse_dates = ['mc_date'])
+    set_trace()
+    database.batch(db, t, df_new, df_old, timestamp = False)
 
-    union_mv_df.to_sql('mc_view_strength', db, index = True, if_exists = 'append', chunksize = 500)
+    #union_mv_df.to_sql('mc_view_strength', db, index = True, if_exists = 'append', chunksize = 500)
 
     #macro_view_update(mv, irv)
     #mv.to_csv('data/mv.csv', index_label = 'date')
