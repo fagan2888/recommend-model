@@ -11,6 +11,7 @@ fi
 if [ "$1" = "1" ];then
 echo "calculating macro view ..."
 time python shell/roboadvisor.py mt macro_view_update
+time python shell/roboadvisor.py mt bond_view_update
 echo "macro view completion!"
 fi
 

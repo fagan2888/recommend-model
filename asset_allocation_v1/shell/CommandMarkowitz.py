@@ -517,12 +517,13 @@ def average_days(start_date, end_date, assets):
 
     add_view = True
     if add_view:
-        irv = pd.read_csv('data/irv.csv', index_col = 0, parse_dates = True)
+        irv = asset_mc_view.load_view_strength('MC.VW0002')
+        #irv = pd.read_csv('data/irv.csv', index_col = 0, parse_dates = True)
         #irv = irv.rolling(30).mean().fillna(0.0)
         #irv = irv.rolling(30).apply(lambda x: 1 if all(x > 0) else 0).fillna(0.0)
         irv = irv.rolling(60).apply(lambda x: 1 if sum(x) > 10 else 0).fillna(0.0)
         #irv = irv.rolling(5).mean().fillna(0.0)
-        xyz_weight = irv.irv.apply(lambda x: 0.5 if x > 0 else 0.0)
+        xyz_weight = irv.mc_inc.apply(lambda x: 0.5 if x > 0 else 0.0)
         llz_weight = xyz_weight
         hb_weight = 1 - llz_weight - xyz_weight
         total_weight = pd.concat([llz_weight, xyz_weight, hb_weight], 1)
@@ -619,13 +620,16 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
-    sz_view = load_newest_view('data/mv.csv', day)
-    #view_weight = 1
-    sh300_mean, zz500_mean = np.abs(df_inc.mean(0)[:2])
-    #df_inc.iloc[:, [0]] += np.sign(sz_view)*sh300_mean*view_weight
-    #df_inc.iloc[:, [1]] += np.sign(sz_view)*zz500_mean*view_weight
-    df_inc.iloc[:, [0]] += sh300_mean*(sz_view)
-    df_inc.iloc[:, [1]] += zz500_mean*(sz_view)
+    add_view = True
+    if add_view:
+        view_level = 0.1
+        sz_view = load_newest_view('data/mv.csv', day)
+        #view_weight = 1
+        sh300_mean, zz500_mean = np.abs(df_inc.mean(0)[:2])
+        #df_inc.iloc[:, [0]] += np.sign(sz_view)*sh300_mean*view_weight
+        #df_inc.iloc[:, [1]] += np.sign(sz_view)*zz500_mean*view_weight
+        df_inc.iloc[:, [0]] += sh300_mean*(sz_view)*view_level
+        df_inc.iloc[:, [1]] += zz500_mean*(sz_view)*view_level
 
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 

@@ -140,7 +140,12 @@ def batch(db, table, df_new, df_old, timestamp=True):
     if len(df_update) > 50:
         keys = [table.c.get(c) for c in df_old.index.names]
         for segment in chunks(df_old.index.tolist(), 500):
-            table.delete(tuple_(*keys).in_(segment)).execute()
+            if len(df_update.index.names) == 1:
+                s = table.delete(keys[0].in_(segment))
+            else:
+                s = table.delete(tuple_(*keys).in_(segment))
+
+            s.execute()
 
         if timestamp:
             df_new['updated_at'] = df_new['created_at'] = datetime.now()

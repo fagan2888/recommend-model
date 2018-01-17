@@ -59,7 +59,7 @@ def macro_view_update(ctx, startdate, enddate, viewid):
     union_mv['created_at'] = created_at
     union_mv['updated_at'] = updated_at
     union_mv_df = pd.DataFrame(union_mv, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
-    df_new = union_mv_df.set_index(['mc_date'])
+    df_new = union_mv_df.set_index(['mc_view_id','mc_date'])
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -72,8 +72,7 @@ def macro_view_update(ctx, startdate, enddate, viewid):
         t.c.updated_at,
     ]
     s = select(columns, (t.c.mc_view_id == viewid))
-    df_old = pd.read_sql(s, db, index_col = ['mc_date'], parse_dates = ['mc_date'])
-    set_trace()
+    df_old = pd.read_sql(s, db, index_col = ['mc_view_id', 'mc_date'], parse_dates = ['mc_date'])
     database.batch(db, t, df_new, df_old, timestamp = False)
 
     #union_mv_df.to_sql('mc_view_strength', db, index = True, if_exists = 'append', chunksize = 500)
@@ -82,7 +81,46 @@ def macro_view_update(ctx, startdate, enddate, viewid):
     #mv.to_csv('data/mv.csv', index_label = 'date')
     #irv.to_csv('data/irv.csv', index_label = 'date')
     #sz = base_ra_index_nav.load_series('120000016') 
-    #set_trace()
+
+@mt.command()
+@click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
+@click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help=u'start date to calc')
+@click.option('--viewid', 'viewid', default='MC.VW0002', help=u'macro timing view id')
+@click.pass_context
+def bond_view_update(ctx, startdate, enddate, viewid):
+    backtest_interval = pd.date_range(startdate, enddate)
+    mv = ir_view(backtest_interval)
+
+    today = datetime.now()
+    mv_view_id = np.repeat(viewid, len(mv))
+    mv_date = mv.index
+    mv_inc = mv.irv.values
+    created_at = np.repeat(today, len(mv))
+    updated_at = np.repeat(today, len(mv))
+    #df_inc_value = np.column_stack([mv_view_id, mv_date, mv_inc, created_at, updated_at])
+    #df_inc = pd.DataFrame(df_inc_value, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
+    union_mv = {}
+    union_mv['mc_view_id'] = mv_view_id
+    union_mv['mc_date'] = mv_date
+    union_mv['mc_inc'] = mv_inc
+    union_mv['created_at'] = created_at
+    union_mv['updated_at'] = updated_at
+    union_mv_df = pd.DataFrame(union_mv, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
+    df_new = union_mv_df.set_index(['mc_view_id', 'mc_date'])
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('mc_view_strength', metadata, autoload = True)
+    columns = [
+        t.c.mc_view_id,
+        t.c.mc_date,
+        t.c.mc_inc,
+        t.c.created_at,
+        t.c.updated_at,
+    ]
+    s = select(columns, (t.c.mc_view_id == viewid))
+    df_old = pd.read_sql(s, db, index_col = ['mc_view_id', 'mc_date'], parse_dates = ['mc_date'])
+    database.batch(db, t, df_new, df_old, timestamp = False)
 
 
 def re_view(bt_int):
