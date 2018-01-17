@@ -8,19 +8,19 @@ from datetime import datetime, timedelta
 from ipdb import set_trace
 
 def cal_diff():
-    pf = asset_on_online_nav.load_series('800000', 8, begin_date = '2017-01-01')
-    pf = pd.DataFrame(pf, index = pf.index)
+    #pf = asset_on_online_nav.load_series('800000', 8, begin_date = '2017-01-01')
+    #pf = pd.DataFrame(pf, index = pf.index)
 
-    fp = asset_on_online_fund.load_fund_pos('800000')
+    fp = asset_on_online_fund.load_fund_pos('800000', ['11202', '11205'])
     fp = fp.reset_index()
     fp = fp.set_index('on_date')
-    pos = fp['2016-12']
+    pos = fp.loc['2017-01-12']
     fund_ids = pos.on_fund_id.values
     fund_poses = pos.on_fund_ratio.values
 
     nav = None
     for id_, pos in zip(fund_ids, fund_poses):
-        nav_fund= base_ra_fund_nav.load_daily('2016-12-30', '2017-12-29', [id_])
+        nav_fund= base_ra_fund_nav.load_daily('2017-01-27', '2017-02-06', [id_])
         if  nav is None:
             nav = nav_fund.values.ravel()*pos
         else:
@@ -28,9 +28,7 @@ def cal_diff():
 
     set_trace()
 
-
-
-    return pf
+    return nav
 
 
 if __name__ == '__main__':

@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 #     return df
 
-def load_fund_pos(gid):
+def load_fund_pos(gid, xtypes = None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('on_online_fund', metadata, autoload=True)
@@ -69,8 +69,8 @@ def load_fund_pos(gid):
         s = s.where(t1.c.on_online_id == gid)
     else:
         return None
-    # if xtypes is not None:
-    #     s = s.where(t1.c.on_type.in_(xtypes))
+    if xtypes is not None:
+        s = s.where(t1.c.on_fund_type.in_(xtypes))
     
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['on_date'])
 
