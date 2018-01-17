@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from ipdb import set_trace
 
 import config
-from db import database, asset_trade_dates
+from db import database, asset_trade_dates, base_ra_index_nav, asset_mc_view
 from db.asset_fundamental import *
 from calendar import monthrange
 from datetime import datetime, timedelta
@@ -33,7 +33,7 @@ def mt(ctx):
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help=u'start date to calc')
 @click.pass_context
-def macro_view(ctx, startdate, enddate):
+def macro_view_update(ctx, startdate, enddate):
     backtest_interval = pd.date_range(startdate, enddate)
     rev = re_view(backtest_interval)
     irv = ir_view(backtest_interval)
@@ -41,9 +41,33 @@ def macro_view(ctx, startdate, enddate):
 
     mv = pd.concat([rev, irv, epsv], 1)
     mv['mv'] = mv['rev'] + mv['irv'] + mv['epsv']
-    mv = mv.loc[:, ['mv']]
-    mv.to_csv('data/mv.csv', index_label = 'date')
-    irv.to_csv('data/irv.csv', index_label = 'date')
+    #mv = mv.loc[:, ['mv']]
+
+    today = datetime.now()
+    mv_view_id = np.repeat('MC.VW0001', len(mv))
+    mv_date = mv.index
+    mv_inc = mv.mv.values
+    created_at = np.repeat(today, len(mv))
+    updated_at = np.repeat(today, len(mv))
+    #df_inc_value = np.column_stack([mv_view_id, mv_date, mv_inc, created_at, updated_at])
+    #df_inc = pd.DataFrame(df_inc_value, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
+    union_mv = {}
+    union_mv['mc_view_id'] = mv_view_id
+    union_mv['mc_date'] = mv_date
+    union_mv['mc_inc'] = mv_inc
+    union_mv['created_at'] = created_at
+    union_mv['updated_at'] = updated_at
+    union_mv_df = pd.DataFrame(union_mv)
+
+    db = database.connection('asset')
+
+    union_mv_df.to_sql('mc_view_strength', db, index = False, if_exists = 'append', chunksize = 500)
+
+    #macro_view_update(mv, irv)
+    #mv.to_csv('data/mv.csv', index_label = 'date')
+    #irv.to_csv('data/irv.csv', index_label = 'date')
+    #sz = base_ra_index_nav.load_series('120000016') 
+    #set_trace()
 
 
 def re_view(bt_int):
@@ -114,6 +138,7 @@ def ir_view(bt_int):
 
 def eps_view(bt_int):
     eps_mean = load_eps_mean()
+    ngdp = load_ngdp_yoy()
     #ngdp = load_ngdp_yoy()
     epsv = eps_mean.resample('d').last().fillna(method = 'pad')
     epsv['epsv'] = np.sign(epsv.epscut)*3
@@ -152,7 +177,7 @@ def load_m1_yoy():
     dates = m1_yoy.index
     redates = []
     for day in dates:
-        redates.append(day + timedelta(15))
+        redates.append(day + timedelta(18))
 
    # today = datetime.today()
    # if redates[-1] > today:
@@ -311,6 +336,7 @@ def load_eps_mean():
    # if redates[-1] > today:
    #     redate[-1] = today
     eps_mean.index = redates
+    eps_mean.to_csv('data/eps_mean.csv', index_label = 'date')
 
     return eps_mean
 
@@ -340,6 +366,13 @@ def load_ngdp_yoy():
     ngdp = ngdp.resample('m').last().fillna(method='pad')
     ngdp['ngdp_yoy'] = ngdp.value.pct_change(12)
     ngdp = ngdp.dropna()
+
+    dates = ngdp.index
+    redates = []
+    for day in dates:
+        redates.append(dates + timedelta(15))
+    ngdp.index = redates
+    ngdp.to_csv('data/ngdp.csv', index_label = 'date')
 
     return ngdp
 

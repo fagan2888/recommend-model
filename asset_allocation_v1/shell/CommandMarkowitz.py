@@ -26,7 +26,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
-from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
+from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav, asset_mc_view
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
@@ -520,10 +520,10 @@ def average_days(start_date, end_date, assets):
         irv = pd.read_csv('data/irv.csv', index_col = 0, parse_dates = True)
         #irv = irv.rolling(30).mean().fillna(0.0)
         #irv = irv.rolling(30).apply(lambda x: 1 if all(x > 0) else 0).fillna(0.0)
-        irv = irv.rolling(50).apply(lambda x: 1 if sum(x) > 10 else 0).fillna(0.0)
+        irv = irv.rolling(60).apply(lambda x: 1 if sum(x) > 10 else 0).fillna(0.0)
         #irv = irv.rolling(5).mean().fillna(0.0)
-        llz_weight = irv.irv.apply(lambda x: 0.5 if x > 0 else 0.0)
-        xyz_weight = llz_weight
+        xyz_weight = irv.irv.apply(lambda x: 0.5 if x > 0 else 0.0)
+        llz_weight = xyz_weight
         hb_weight = 1 - llz_weight - xyz_weight
         total_weight = pd.concat([llz_weight, xyz_weight, hb_weight], 1)
         total_weight.columns = ['120000010', '120000011', '120000039']
@@ -619,7 +619,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
-    sz_view = load_view('data/mv.csv', day)
+    sz_view = load_newest_view('data/mv.csv', day)
     #view_weight = 1
     sh300_mean, zz500_mean = np.abs(df_inc.mean(0)[:2])
     #df_inc.iloc[:, [0]] += np.sign(sz_view)*sh300_mean*view_weight
@@ -630,10 +630,11 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 
 
-def load_view(macro_path, day):
-    macro_view = pd.read_csv(macro_path, index_col = 0, parse_dates = True)
-    macro_view = macro_view[macro_view.index <= day] 
-    macro_view = macro_view.mv.values[-1]
+def load_newest_view(macro_path, day):
+    #macro_view = pd.read_csv(macro_path, index_col = 0, parse_dates = True)
+    macro_view = asset_mc_view.load_view_strength('MC.VW0001')
+    macro_view = macro_view[macro_view.index <= day]
+    macro_view = macro_view.values[-1, 0]
 
     return macro_view
 
