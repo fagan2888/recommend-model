@@ -58,10 +58,11 @@ def macro_view_update(ctx, startdate, enddate):
     union_mv['created_at'] = created_at
     union_mv['updated_at'] = updated_at
     union_mv_df = pd.DataFrame(union_mv)
+    union_mv_df.set_index(['mc_date'])
 
     db = database.connection('asset')
 
-    union_mv_df.to_sql('mc_view_strength', db, index = False, if_exists = 'append', chunksize = 500)
+    union_mv_df.to_sql('mc_view_strength', db, index = True, if_exists = 'append', chunksize = 500)
 
     #macro_view_update(mv, irv)
     #mv.to_csv('data/mv.csv', index_label = 'date')
