@@ -42,43 +42,10 @@ def sf(ctx):
     pass
 
 
-def call_factor_func(f):
-    return f()
-
-
-@sf.command()
-@click.pass_context
-def stock_factor_value(ctx):
-
-
-    #ln_capital_factor()
-    factor_funcs = [ln_capital_factor, ln_price_factor, highlow_price_factor, relative_strength_factor, std_factor, trade_volumn_factor, turn_rate_factor, weighted_strength_factor, bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
-    #factor_funcs = [bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor]
-    pool = Pool(16)
-    pool.map(call_factor_func, factor_funcs)
-    pool.close()
-    pool.join()
-
-    #highlow_price_factor()
-    #bp_factor()
-    #asset_turnover_factor()
-    #current_ratio_factor()
-    #cash_ratio_factor()
-    #pe_ttm_factor()
-    #roa_factor()
-    #roe_factor()
-    #grossprofit_factor()
-    #profit_factor()
-    #holder_factor()
-    fcfp_factor()
-
-    return
-
-
 @sf.command()
 @click.option('--filepath', 'optfilepath', help=u'stock factor infos')
 @click.pass_context
-def insert_factor_info(ctx, optfilepath):
+def factor_info(ctx, optfilepath):
     '''insert factor info
     '''
     sf_df = pd.read_csv(optfilepath.strip())
@@ -106,6 +73,44 @@ def insert_factor_info(ctx, optfilepath):
     session.commit()
     session.close()
 
+
+def call_factor_func(f):
+    return f()
+
+
+@sf.command()
+@click.pass_context
+def stock_factor_value(ctx):
+
+
+    ln_capital_factor()
+    #factor_funcs = [ln_capital_factor, ln_price_factor, highlow_price_factor, relative_strength_factor, std_factor, trade_volumn_factor, turn_rate_factor, weighted_strength_factor, bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
+    #pool = Pool(16)
+    #pool.map(call_factor_func, factor_funcs)
+    #pool.close()
+    #pool.join()
+
+    #highlow_price_factor()
+    #bp_factor()
+    #asset_turnover_factor()
+    #current_ratio_factor()
+    #cash_ratio_factor()
+    #pe_ttm_factor()
+    #roa_factor()
+    #roe_factor()
+    #grossprofit_factor()
+    #profit_factor()
+    #holder_factor()
+    #fcfp_factor()
+
+    return
+
+@sf.command()
+@click.pass_context
+def stock_valid(ctx):
+
+    stock_factor_util.compute_stock_valid()
+    return
 
 
 @sf.command()
