@@ -29,6 +29,7 @@ import math
 import scipy.stats as stats
 import json
 from stock_factor import *
+import functools
 
 
 logger = logging.getLogger(__name__)
@@ -83,12 +84,13 @@ def call_factor_func(f):
 def stock_factor_value(ctx):
 
 
-    ln_capital_factor()
-    #factor_funcs = [ln_capital_factor, ln_price_factor, highlow_price_factor, relative_strength_factor, std_factor, trade_volumn_factor, turn_rate_factor, weighted_strength_factor, bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
-    #pool = Pool(16)
-    #pool.map(call_factor_func, factor_funcs)
-    #pool.close()
-    #pool.join()
+    #bp_factor()
+    factor_funcs = [ln_capital_factor, ln_price_factor, highlow_price_factor, relative_strength_factor, std_factor, trade_volumn_factor, turn_rate_factor, weighted_strength_factor, bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
+    #factor_funcs = [bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
+    pool = Pool(16)
+    pool.map(call_factor_func, factor_funcs)
+    pool.close()
+    pool.join()
 
     #highlow_price_factor()
     #bp_factor()
@@ -123,9 +125,12 @@ def stock_factor_layer_rankcorr(ctx):
             'SF.000021','SF.000039','SF.000041',
             ]
 
-
+    #for i in range(0, len(sf_ids)):
+    #    sf_id = sf_ids[i]
+    #    print sf_id
+    #compute_stock_factor_layer_spearman(5, 'SF.000005')
     pool = Pool(20)
-    pool.map(compute_stock_factor_layer_spearman, sf_ids)
+    pool.map(functools.partial(compute_stock_factor_layer_spearman, 5), sf_ids)
     pool.close()
     pool.join()
 
