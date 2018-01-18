@@ -6,6 +6,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import calendar
 from sqlalchemy import *
+import time
 
 from db import database, Nav
 from util.xdebug import dd
@@ -61,6 +62,7 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     #    2. 对于调仓日, 先计算收益率, 然后再调仓
     #
     df_result = pd.DataFrame(index=df.index, columns=df.columns)
+    data = {}
     for day,row in df.iterrows():
         # 如果不是第一天, 首先计算当前资产收益
         if day != start_date:
@@ -74,12 +76,22 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
                 assets_s = assets_s.sum() * df_position.loc[day]
 
         # 日末各个基金持仓情况
+        data[day] = assets_s.copy()
+        '''
+        print time.time()
+        print len(assets_s)
+        print assets_s.tail()
+        print df_result.loc[day].tail()
         df_result.loc[day] = assets_s
+        print time.time()
+        print '-----------------------'
+        '''
+    df_result = pd.DataFrame(data).T
 
     #
     # 计算资产组合净值
     #
-    df_result.insert(0, result_col, df_result.sum(axis=1))               
+    df_result.insert(0, result_col, df_result.sum(axis=1))  
 
     return df_result
 
