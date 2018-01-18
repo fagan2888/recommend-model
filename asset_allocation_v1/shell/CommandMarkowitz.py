@@ -620,23 +620,30 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
+    hs300_mean, zz500_mean = np.abs(df_inc.mean(0)[:2])
     add_view = True
+    add_view_respectively = False
+
     if add_view:
         view_level = 0.1
-        sz_view = load_newest_view('data/mv.csv', day)
-        #view_weight = 1
-        sh300_mean, zz500_mean = np.abs(df_inc.mean(0)[:2])
-        #df_inc.iloc[:, [0]] += np.sign(sz_view)*sh300_mean*view_weight
-        #df_inc.iloc[:, [1]] += np.sign(sz_view)*zz500_mean*view_weight
-        df_inc.iloc[:, [0]] += sh300_mean*(sz_view)*view_level
+        sz_view = load_newest_view('MC.VW0001', day)
+        df_inc.iloc[:, [0]] += hs300_mean*(sz_view)*view_level
         df_inc.iloc[:, [1]] += zz500_mean*(sz_view)*view_level
+
+    if add_view_respectively:
+        view_level = 0.05
+        hs300_view = load_newest_view('MC.VW0003', day)
+        zz500_view = load_newest_view('MC.VW0004', day)
+        df_inc.iloc[:, [0]] += hs300_mean*(hs300_view)*view_level
+        df_inc.iloc[:, [1]] += zz500_mean*(zz500_view)*view_level
+
 
     return markowitz_r(df_inc, assets, bootstrap, cpu_count)
 
 
-def load_newest_view(macro_path, day):
+def load_newest_view(view_id, day):
     #macro_view = pd.read_csv(macro_path, index_col = 0, parse_dates = True)
-    macro_view = asset_mc_view.load_view_strength('MC.VW0001')
+    macro_view = asset_mc_view.load_view_strength(view_id)
     macro_view = macro_view[macro_view.index <= day]
     macro_view = macro_view.values[-1, 0]
 

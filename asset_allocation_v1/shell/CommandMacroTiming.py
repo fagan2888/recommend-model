@@ -33,12 +33,13 @@ def mt(ctx):
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help=u'start date to calc')
 @click.option('--viewid', 'viewid', default='MC.VW0001', help=u'macro timing view id')
+@click.option('--index', 'idx', default='sz', help=u'macro timing view id')
 @click.pass_context
-def macro_view_update(ctx, startdate, enddate, viewid):
+def macro_view_update(ctx, startdate, enddate, viewid, idx):
     backtest_interval = pd.date_range(startdate, enddate)
     rev = re_view(backtest_interval)
     irv = ir_view(backtest_interval)
-    epsv = eps_view(backtest_interval)
+    epsv = eps_view(backtest_interval, idx)
 
     mv = pd.concat([rev, irv, epsv], 1)
     mv['mv'] = mv['rev'] + mv['irv'] + mv['epsv']
@@ -189,9 +190,9 @@ def ir_view(bt_int):
     return irv
 
 
-def eps_view(bt_int):
-    eps_mean = load_eps_mean()
-    ngdp = load_ngdp_yoy()
+def eps_view(bt_int, idx):
+    eps_mean = load_eps_mean(idx)
+    #ngdp = load_ngdp_yoy()
     #ngdp = load_ngdp_yoy()
     epsv = eps_mean.resample('d').last().fillna(method = 'pad')
     epsv['epsv'] = np.sign(epsv.epscut)*3
@@ -348,13 +349,19 @@ def load_re_index():
     return re_index
 
 
-def load_eps_mean():
+def load_eps_mean(idx):
 
+    index_secode = {
+        'sz': 2070000005,
+        'hs300': 2070000060,
+        'zz500': 2070000187,
+    }
+    secode = index_secode[idx]
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
     session = Session()
     sql = session.query(tq_ix_finindex.publishdate, tq_ix_finindex.epscut)\
-        .filter(tq_ix_finindex.secode == 2070000005)\
+        .filter(tq_ix_finindex.secode == secode)\
         .statement
     eps_mean = pd.read_sql(
         sql,
