@@ -7,6 +7,7 @@ import pandas as pd
 import logging
 import database
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 from dateutil.parser import parse
 
 
@@ -176,7 +177,7 @@ class tq_sk_shareholdernum(Base):
 
 def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
-    engine = database.connection('asset')
+    engine = database.connection('base')
     Session = sessionmaker(bind=engine)
     session = Session()
     record = session.query(ra_stock.sk_secode).filter(ra_stock.globalid == asset_id).first()
@@ -189,11 +190,10 @@ def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None
     session = Session()
     sql = session.query(tq_sk_dquoteindic.tradedate ,tq_sk_dquoteindic.tcloseaf).filter(tq_sk_dquoteindic.secode == secode)
     if begin_date is not None:
-        s = s.filter(tq_sk_dquoteindic.tradedate >= begin_date)
+        sql = sql.filter(tq_sk_dquoteindic.tradedate >= begin_date.strftime('%Y%m%d'))
     if end_date is not None:
-        s = s.filter(tq_sk_dquoteindic.tradedate <= end_date)
-    df = pd.read_sql(sql.statement, session.bind, index_col = ['date'], parse_dates=['date'])
-    df = pd.read_sql(sql, session.bind, index_col=['tradedate'], parse_dates=['date'])
+        sql = sql.filter(tq_sk_dquoteindic.tradedate <= end_date.strftime('%Y%m%d'))
+    df = pd.read_sql(sql.statement, session.bind, index_col=['tradedate'], parse_dates=['tradedate'])
     if reindex is not None:
         df = df.reindex(reindex, method='pad')
     ser = df.tcloseaf

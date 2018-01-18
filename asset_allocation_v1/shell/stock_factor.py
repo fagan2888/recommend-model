@@ -1177,7 +1177,6 @@ def compute_stock_factor_layer_spearman(layer_num, sf_id):
     return
 
 
-
 #计算股票因子指数
 def compute_stock_factor_index(sf_id):
 
@@ -1207,7 +1206,7 @@ def compute_stock_factor_index(sf_id):
         if rankcorr >= 0:
             layer = 0
         else:
-            layer = 4
+            layer = 9
         date_index = month_last_trade_dates.index(date)
         stock_date = month_last_trade_dates[date_index + 1]
         record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == sf_id, stock_factor_layer.layer == layer, stock_factor_layer.trade_date == stock_date)).first()
@@ -1266,3 +1265,206 @@ def compute_stock_factor_index(sf_id):
     session.close()
 
     return
+
+
+def compute_rankcorr_multi_factor():
+
+    all_stocks = stock_util.all_stock_info()
+    all_stocks = all_stocks.reset_index()
+    all_stocks = all_stocks.set_index('globalid')
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    factor_type = session.query(stock_factor.sf_id, stock_factor.sf_kind).all()
+    factor_type_dict = {}
+    for record in factor_type:
+        factor_type_dict[record[0]] = record[1]
+    #print factor_type_dict
+
+    sql = session.query(stock_factor_rankcorr.sf_id, stock_factor_rankcorr.trade_date, stock_factor_rankcorr.rankcorr).statement
+    rankcorr_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'sf_id'], parse_dates = ['trade_date'])
+
+    rankcorr_df = rankcorr_df.unstack()
+    rankcorr_df.columns = rankcorr_df.columns.droplevel(0)
+
+    rankcorr_df = rankcorr_df.rolling(14).mean().iloc[14:,]
+    rankcorr_abs_df = abs(rankcorr_df)
+
+    stock_pos = {}
+    factor_pos = {}
+    for date in rankcorr_abs_df.index:
+        rankcorr_abs = rankcorr_abs_df.loc[date]
+        rankcorr_abs = rankcorr_abs.sort_values(ascending = False)
+
+        date_stocks = stock_pos.setdefault(date, [])
+        date_factors = factor_pos.setdefault(date, [])
+
+        has_type = set()
+        for index in rankcorr_abs.index:
+            rankcorr = rankcorr_df.loc[date, index]
+            layer = None
+            if rankcorr >= 0:
+                layer = 0
+            else:
+                layer = 9
+
+            record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == index,stock_factor_layer.trade_date == date,
+                                    stock_factor_layer.layer == layer)).first()
+
+            if record is None:
+                continue
+
+            factor_type = factor_type_dict[index]
+            if factor_type in has_type:
+                continue
+            else:
+                has_type.add(factor_type)
+
+            date_stocks.extend(json.loads(record[0]))
+            date_factors.append([index, layer])
+
+            if len(date_factors) >= 5:
+                break
+
+    factor_pos_df = pd.DataFrame(factor_pos).T
+    #print factor_pos_df
+
+
+    #计算每期股票的仓位
+    globalid_secode_dict = dict(zip(all_stocks.index.ravel(), all_stocks.sk_secode.ravel()))
+    dates = list(stock_pos.keys())
+    dates.sort()
+    stock_pos_df = pd.DataFrame(0, index = dates, columns = all_stocks.index)
+    for date in dates:
+        stocks = stock_pos[date]
+        stocks = list(set(stocks))
+        record = stock_pos_df.loc[date]
+        record[record.index.isin(stocks)] = 1.0 / len(stocks)
+        stock_pos_df.loc[date] = record
+    stock_pos_df = stock_pos_df.rename(columns = globalid_secode_dict)
+
+    session.commit()
+    session.close()
+
+
+    caihui_engine = database.connection('caihui')
+    caihui_Session = sessionmaker(bind=caihui_engine)
+    caihui_session = caihui_Session()
+
+    sql = caihui_session.query(tq_sk_yieldindic.tradedate, tq_sk_yieldindic.secode ,tq_sk_yieldindic.Yield).filter(tq_sk_yieldindic.tradedate >= stock_pos_df.index[0].strftime('%Y%m%d')).statement
+    stock_yield_df = pd.read_sql(sql, caihui_session.bind, index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']) / 100.0
+    stock_yield_df = stock_yield_df.unstack()
+    stock_yield_df.columns = stock_yield_df.columns.droplevel(0)
+    secodes = list(set(stock_pos_df.columns) & set(stock_yield_df.columns))
+    stock_pos_df = stock_pos_df[secodes]
+    stock_yield_df = stock_yield_df[secodes]
+
+    caihui_session.commit()
+    caihui_session.close()
+
+    stock_pos_df = stock_pos_df.reindex(stock_yield_df.index).fillna(method = 'pad')
+    stock_pos_df = stock_pos_df.shift(1).fillna(0.0)
+
+    factor_yield_df = stock_pos_df * stock_yield_df
+    factor_yield_df = factor_yield_df.sum(axis = 1)
+    factor_yield_df = factor_yield_df[factor_yield_df.index >= '2006-06-01']
+    #print factor_yield_df.index
+    factor_nav_df = (1 + factor_yield_df).cumprod()
+
+    factor_nav_df = factor_nav_df.to_frame()
+    factor_nav_df.index.name = 'date'
+    factor_nav_df.columns = ['nav']
+    #print factor_nav_df
+    factor_nav_df.to_csv('factor_nav.csv')
+    #print factor_nav_df.index[-1], factor_nav_df.iloc[-1]
+
+    return
+
+
+
+def compute_rankcorr_multi_factor_pos():
+
+    all_stocks = stock_util.all_stock_info()
+    all_stocks = all_stocks.reset_index()
+    all_stocks = all_stocks.set_index('globalid')
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    factor_type = session.query(stock_factor.sf_id, stock_factor.sf_kind).all()
+    factor_type_dict = {}
+    for record in factor_type:
+        factor_type_dict[record[0]] = record[1]
+    #print factor_type_dict
+
+    sql = session.query(stock_factor_rankcorr.sf_id, stock_factor_rankcorr.trade_date, stock_factor_rankcorr.rankcorr).statement
+    rankcorr_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'sf_id'], parse_dates = ['trade_date'])
+
+    rankcorr_df = rankcorr_df.unstack()
+    rankcorr_df.columns = rankcorr_df.columns.droplevel(0)
+
+    rankcorr_df = rankcorr_df.rolling(14).mean().iloc[14:,]
+    rankcorr_abs_df = abs(rankcorr_df)
+
+    stock_pos = {}
+    factor_pos = {}
+    for date in rankcorr_abs_df.index:
+        rankcorr_abs = rankcorr_abs_df.loc[date]
+        rankcorr_abs = rankcorr_abs.sort_values(ascending = False)
+
+        date_stocks = stock_pos.setdefault(date, [])
+        date_factors = factor_pos.setdefault(date, [])
+
+        has_type = set()
+        for index in rankcorr_abs.index:
+            rankcorr = rankcorr_df.loc[date, index]
+            layer = None
+            if rankcorr >= 0:
+                layer = 0
+            else:
+                layer = 9
+
+            record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == index,stock_factor_layer.trade_date == date,
+                                    stock_factor_layer.layer == layer)).first()
+
+            if record is None:
+                continue
+
+            factor_type = factor_type_dict[index]
+            if factor_type in has_type:
+                continue
+            else:
+                has_type.add(factor_type)
+
+            date_stocks.extend(json.loads(record[0]))
+            date_factors.append([index, layer])
+
+            if len(date_factors) >= 5:
+                break
+
+    factor_pos_df = pd.DataFrame(factor_pos).T
+    #print factor_pos_df
+
+
+    #计算每期股票的仓位
+    dates = list(stock_pos.keys())
+    dates.sort()
+    stock_pos_df = pd.DataFrame(0, index = dates, columns = all_stocks.index)
+    for date in dates:
+        stocks = stock_pos[date]
+        stocks = list(stocks)
+        stocks_num = 1.0 * len(stocks)
+        for st_id in stocks:
+           stock_pos_df.loc[date, st_id] = stocks.count(st_id) / stocks_num
+
+    session.commit()
+    session.close()
+
+    return stock_pos_df
+
+
+
+

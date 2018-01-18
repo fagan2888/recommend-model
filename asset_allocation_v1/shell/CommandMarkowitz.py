@@ -25,12 +25,14 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
+from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos,asset_stock
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
+import stock_factor
 
 import traceback, code
 
@@ -872,8 +874,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
     elif algo == 5:
-        print 'multi factor pos'
-        df = pd.DataFrame()
+        df = stock_factor.compute_rankcorr_multi_factor_pos()
+        print df.head()
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -1010,10 +1012,9 @@ def nav_update(markowitz, alloc):
         data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
-
     # 计算复合资产净值
-    df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
 
+    df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
     df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'mz_nav'}).copy()
     df_result.index.name = 'mz_date'
     df_result['mz_inc'] = df_result['mz_nav'].pct_change().fillna(0.0)
