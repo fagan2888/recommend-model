@@ -152,7 +152,7 @@ def stock_factor_index(ctx):
     pool.close()
     pool.join()
 
-    #stock_factor_index('SF.000041')
+    #compute_stock_factor_index('SF.000041')
     return
 
 

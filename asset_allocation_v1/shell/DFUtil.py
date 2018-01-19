@@ -77,15 +77,10 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
 
         # 日末各个基金持仓情况
         data[day] = assets_s.copy()
-        '''
-        print time.time()
-        print len(assets_s)
-        print assets_s.tail()
-        print df_result.loc[day].tail()
-        df_result.loc[day] = assets_s
-        print time.time()
-        print '-----------------------'
-        '''
+
+        #3000只股票，这个语句执行一下需要20s，不知道为啥
+        #df_result.loc[day] = assets_s
+
     df_result = pd.DataFrame(data).T
 
     #

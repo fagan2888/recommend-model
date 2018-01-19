@@ -874,8 +874,11 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
     elif algo == 5:
-        df = stock_factor.compute_rankcorr_multi_factor_pos()
-        print df.head()
+        rank = argv['rank']
+        if rank.isdigit():
+            df = stock_factor.compute_rankcorr_multi_factor_pos(string.atoi(rank.strip()))
+        else:
+            df = stock_factor.compute_rankcorr_multi_factor_pos()
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
