@@ -1137,7 +1137,7 @@ def compute_stock_factor_layer_spearman(layer_num, sf_id):
         logger.info( str(sf_id) + '\t' + str(layer_date) + '\t' + str(spearmanr) )
 
         rankcorrs.append(spearmanr)
-        rankcorrdates.append(layer_date)
+        rankcorrdates.append(yield_date)
 
     session.commit()
     session.close()
@@ -1203,16 +1203,11 @@ def compute_stock_factor_index(sf_id):
     sf_rankcorr = rankcorr_df[sf_id]
     for date in sf_rankcorr.index.tolist():
         rankcorr = sf_rankcorr.loc[date]
-        if rankcorr >= 0:
-            layer = 0
-        else:
-            layer = 9
-        date_index = month_last_trade_dates.index(date)
-        stock_date = month_last_trade_dates[date_index + 1]
-        record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == sf_id, stock_factor_layer.layer == layer, stock_factor_layer.trade_date == stock_date)).first()
+        layer = 0 if rankcorr >= 0 else 9
+        record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == sf_id, stock_factor_layer.layer == layer, stock_factor_layer.trade_date == date)).first()
         if record is None:
             continue
-        stock_factor_pos[stock_date] = json.loads(record[0])
+        stock_factor_pos[date] = json.loads(record[0])
 
     globalid_secode_dict = dict(zip(all_stocks.index.ravel(), all_stocks.sk_secode.ravel()))
 
@@ -1304,11 +1299,7 @@ def compute_rankcorr_multi_factor():
         has_type = set()
         for index in rankcorr_abs.index:
             rankcorr = rankcorr_df.loc[date, index]
-            layer = None
-            if rankcorr >= 0:
-                layer = 0
-            else:
-                layer = 9
+            layer = 0 if rankcorr >= 0 else 9
 
             record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == index,stock_factor_layer.trade_date == date,
                                     stock_factor_layer.layer == layer)).first()
@@ -1383,8 +1374,7 @@ def compute_rankcorr_multi_factor():
     return
 
 
-
-def compute_rankcorr_multi_factor_pos():
+def compute_rankcorr_multi_factor_pos(rank_num = None):
 
     all_stocks = stock_util.all_stock_info()
     all_stocks = all_stocks.reset_index()
@@ -1409,6 +1399,7 @@ def compute_rankcorr_multi_factor_pos():
     rankcorr_df = rankcorr_df.rolling(14).mean().iloc[14:,]
     rankcorr_abs_df = abs(rankcorr_df)
 
+
     stock_pos = {}
     factor_pos = {}
     for date in rankcorr_abs_df.index:
@@ -1418,20 +1409,19 @@ def compute_rankcorr_multi_factor_pos():
         date_stocks = stock_pos.setdefault(date, [])
         date_factors = factor_pos.setdefault(date, [])
 
-        has_type = set()
-        for index in rankcorr_abs.index:
-            rankcorr = rankcorr_df.loc[date, index]
-            layer = None
-            if rankcorr >= 0:
-                layer = 0
-            else:
-                layer = 9
+        start_num = 0 if rank_num is None else rank_num
 
+        has_type = set()
+        for i in range(start_num, len(rankcorr_abs.index)):
+            index = rankcorr_abs.index[i]
+            rankcorr = rankcorr_df.loc[date, index]
+            layer = 0 if rankcorr >= 0 else 9
             record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == index,stock_factor_layer.trade_date == date,
                                     stock_factor_layer.layer == layer)).first()
 
             if record is None:
                 continue
+
 
             factor_type = factor_type_dict[index]
             if factor_type in has_type:
@@ -1442,6 +1432,8 @@ def compute_rankcorr_multi_factor_pos():
             date_stocks.extend(json.loads(record[0]))
             date_factors.append([index, layer])
 
+            if rank_num is not None:
+                break
             if len(date_factors) >= 5:
                 break
 
@@ -1460,11 +1452,8 @@ def compute_rankcorr_multi_factor_pos():
         for st_id in stocks:
            stock_pos_df.loc[date, st_id] = stocks.count(st_id) / stocks_num
 
+
     session.commit()
     session.close()
 
     return stock_pos_df
-
-
-
-
