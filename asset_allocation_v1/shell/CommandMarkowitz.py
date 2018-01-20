@@ -1199,7 +1199,7 @@ def copy(ctx, optsrc, optdst, optlist):
     df_xtab = df_markowitz_alloc[['globalid', 'old']].copy()
 
     df_markowitz_alloc.drop(['old'], axis=1, inplace=True)
-    
+
     df_markowitz_alloc.set_index(['globalid'], inplace=True)
     asset_mz_markowitz_alloc.save(optdst, df_markowitz_alloc)
 
@@ -1229,6 +1229,3 @@ def copy(ctx, optsrc, optdst, optlist):
     df_markowitz_asset = df_markowitz_asset.set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
 
     asset_mz_markowitz_asset.save(df_xtab['globalid'], df_markowitz_asset)
-
-
-
