@@ -33,6 +33,7 @@ import CommandUtil
 import CommandAnalysis
 import CommandImport
 import CommandStockFactor
+import CommandBarraStockFactor
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -248,7 +249,6 @@ def cp(ctx, optfrom, optto, optname):
     pass
 
 
-
 if __name__=='__main__':
     model.add_command(CommandModelRisk.risk)
     nav.add_command(CommandNavStock.stock)
@@ -271,4 +271,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandAnalysis.analysis)
     roboadvisor.add_command(CommandImport.import_command)
     roboadvisor.add_command(CommandStockFactor.sf)
+    roboadvisor.add_command(CommandBarraStockFactor.bsf)
     roboadvisor(obj={})
