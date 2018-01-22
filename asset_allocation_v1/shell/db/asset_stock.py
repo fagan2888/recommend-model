@@ -150,6 +150,7 @@ class tq_sk_finindic(Base):
 
     pettm = Column(Float)
     pettmnpaaei = Column(Float)
+    pb = Column(Float)
 
 
 class tq_sk_shareholdernum(Base):

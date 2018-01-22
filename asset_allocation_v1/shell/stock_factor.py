@@ -1422,12 +1422,11 @@ def compute_rankcorr_multi_factor_pos(rank_num = None):
             if record is None:
                 continue
 
-
             factor_type = factor_type_dict[index]
-            if factor_type in has_type:
-                continue
-            else:
-                has_type.add(factor_type)
+            #if factor_type in has_type:
+            #    continue
+            #else:
+            #    has_type.add(factor_type)
 
             date_stocks.extend(json.loads(record[0]))
             date_factors.append([index, layer])
