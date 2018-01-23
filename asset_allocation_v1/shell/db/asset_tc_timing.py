@@ -52,3 +52,8 @@ def max_id_between(min_id, max_id):
     s = select([func.max(t.c.globalid).label('maxid')]).where(t.c.globalid.between(min_id, max_id))
 
     return s.execute().scalar()
+
+
+if __name__ == '__main__':
+    data = load(['21110100'])
+    print data

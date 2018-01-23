@@ -68,7 +68,7 @@ def signal(ctx, optid, optlist, optonline):
 
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
         return 0
-    
+
     with click.progressbar(length=len(df_timing), label='update signal'.ljust(30)) as bar:
         for _, timing in df_timing.iterrows():
             bar.update(1)
@@ -76,7 +76,8 @@ def signal(ctx, optid, optlist, optonline):
                 signal_update_gftd(timing)
             elif timing['tc_method'] == 3:
                 signal_update_hmm(timing)
-
+            elif timing['tc_method'] == 5:
+                signal_update_macro(timing)
 
 
 def signal_update_hmm(timing):
@@ -127,6 +128,43 @@ def signal_update_hmm(timing):
     # 更新数据库
     database.batch(db, t3, df_new, df_old, timestamp=False)
     return 0
+
+def signal_update_macro(timing):
+
+    timing_id = timing['globalid']
+    #yesterday = (datetime.now() - timedelta(days=1))
+
+    #sdate = timing['tc_begin_date'].strftime("%Y-%m-%d")
+    #edate = yesterday.strftime("%Y-%m-%d")
+
+    #trade_dates = base_trade_dates.load_trade_dates(sdate, edate).index
+    df_new = asset_mc_view.load_view_strength(timing_id)
+    df_new = df_new.resample('W-FRI').last()
+    #df_new = df_new.set_index(trade_dates).fillna(method = 'pad').dropna()
+    df_new = df_new.reset_index()
+    df_new['tc_timing_id'] = 'MC.VW0001' 
+    df_new['tc_date'] = df_new['mc_date']
+    df_new['tc_signal'] = df_new['mc_inc'].apply(lambda x: 1 if x > 0 else -1)
+    df_new['tc_strength'] = df_new['mc_inc']
+    df_new = df_new.drop(['mc_date', 'mc_inc'], axis = 1)
+    df_new = df_new.set_index(['tc_timing_id', 'tc_date'])
+
+    db = database.connection('asset')
+
+    # 更新tc_timing_signal
+    t = Table('tc_timing_signal', MetaData(bind=db), autoload=True)
+    columns = [
+        t.c.tc_timing_id,
+        t.c.tc_date,
+        t.c.tc_signal,
+        t.c.tc_strength,
+    ]
+    s = select(columns, (t.c.tc_timing_id == timing_id))
+    df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
+
+    database.batch(db, t, df_new, df_old, timestamp = False)
+    return 0
+
 
 
 def signal_update_gftd(timing):
