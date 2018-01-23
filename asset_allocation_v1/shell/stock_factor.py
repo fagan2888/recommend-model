@@ -1177,6 +1177,7 @@ def compute_stock_factor_layer_spearman(layer_num, sf_id):
     return
 
 
+
 #计算股票因子指数
 def compute_stock_factor_index(sf_id):
 
@@ -1393,12 +1394,15 @@ def compute_rankcorr_multi_factor_pos(rank_num = None):
     sql = session.query(stock_factor_rankcorr.sf_id, stock_factor_rankcorr.trade_date, stock_factor_rankcorr.rankcorr).statement
     rankcorr_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'sf_id'], parse_dates = ['trade_date'])
 
+
     rankcorr_df = rankcorr_df.unstack()
     rankcorr_df.columns = rankcorr_df.columns.droplevel(0)
-
+    print rankcorr_df
+    rankcorr_df.to_csv('rank_corr.csv')
     rankcorr_df = rankcorr_df.rolling(14).mean().iloc[14:,]
+    rankcorr_df.to_csv('rank_corr_rolling.csv')
     rankcorr_abs_df = abs(rankcorr_df)
-
+    sys.exit(0)
 
     stock_pos = {}
     factor_pos = {}
@@ -1436,8 +1440,16 @@ def compute_rankcorr_multi_factor_pos(rank_num = None):
             if len(date_factors) >= 5:
                 break
 
+
     factor_pos_df = pd.DataFrame(factor_pos).T
-    #print factor_pos_df
+
+    for i in range(0 ,len(factor_pos_df)):
+        print factor_pos_df.index[i],
+        for sf_id in factor_pos_df.iloc[i]:
+            sf_id, layer = sf_id[0], sf_id[1]
+            name = session.query(stock_factor.sf_name).filter(stock_factor.sf_id == sf_id).first()
+            print name, layer,
+        print
 
 
     #计算每期股票的仓位
@@ -1454,5 +1466,8 @@ def compute_rankcorr_multi_factor_pos(rank_num = None):
 
     session.commit()
     session.close()
+
+
+
 
     return stock_pos_df
