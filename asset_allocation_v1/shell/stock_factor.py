@@ -1263,6 +1263,91 @@ def compute_stock_factor_index(sf_id):
     return
 
 
+#计算股票因子指数
+def compute_stock_factor_minus_index(sf_id):
+
+    all_stocks = stock_util.all_stock_info()
+    all_stocks = all_stocks.reset_index()
+    all_stocks = all_stocks.set_index('globalid')
+    month_last_trade_dates = stock_factor_util.month_last_day().tolist()
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+
+    #获取每期选因子的两端
+    sql = session.query(stock_factor_rankcorr.sf_id, stock_factor_rankcorr.trade_date, stock_factor_rankcorr.rankcorr).statement
+    rankcorr_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'sf_id'], parse_dates = ['trade_date'])
+    rankcorr_df = rankcorr_df.unstack()
+    rankcorr_df.columns = rankcorr_df.columns.droplevel(0)
+
+
+    stock_factor_positive_pos = {}
+    stock_factor_negative_pos = {}
+    sf_rankcorr = rankcorr_df[sf_id]
+    for date in sf_rankcorr.index.tolist():
+        rankcorr = sf_rankcorr.loc[date]
+        positive_record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == sf_id, stock_factor_layer.layer == 0, stock_factor_layer.trade_date == date)).first()
+        negative_record = session.query(stock_factor_layer.stock_ids).filter(and_(stock_factor_layer.sf_id == sf_id, stock_factor_layer.layer == 9, stock_factor_layer.trade_date == date)).first()
+        if positive_record is None or negative_record is None:
+            continue
+        stock_factor_positive_pos[date] = json.loads(positive_record[0])
+        stock_factor_negative_pos[date] = json.loads(negative_record[0])
+
+    globalid_secode_dict = dict(zip(all_stocks.index.ravel(), all_stocks.sk_secode.ravel()))
+
+
+    #计算每期股票的仓位
+    dates = list(stock_factor_positive_pos.keys())
+    dates.sort()
+    stock_factor_pos_df = pd.DataFrame(0, index = dates, columns = all_stocks.index)
+    for date in dates:
+        positive_stocks = stock_factor_positive_pos[date]
+        negative_stocks = stock_factor_negative_pos[date]
+        record = stock_factor_pos_df.loc[date]
+        record[record.index.isin(positive_stocks)] = 1.0 / len(record.index)
+        record[record.index.isin(negative_stocks)] = -1.0 / len(record.index)
+        stock_factor_pos_df.loc[date] = record
+    stock_factor_pos_df = stock_factor_pos_df.rename(columns = globalid_secode_dict)
+
+
+    #计算因子指数
+    caihui_engine = database.connection('caihui')
+    caihui_Session = sessionmaker(bind=caihui_engine)
+    caihui_session = caihui_Session()
+
+    sql = caihui_session.query(tq_sk_yieldindic.tradedate, tq_sk_yieldindic.secode ,tq_sk_yieldindic.Yield).filter(tq_sk_yieldindic.tradedate >= stock_factor_pos_df.index[0].strftime('%Y%m%d')).statement
+    stock_yield_df = pd.read_sql(sql, caihui_session.bind, index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']) / 100.0
+    stock_yield_df = stock_yield_df.unstack()
+    stock_yield_df.columns = stock_yield_df.columns.droplevel(0)
+    secodes = list(set(stock_factor_pos_df.columns) & set(stock_yield_df.columns))
+    stock_factor_pos_df = stock_factor_pos_df[secodes]
+    stock_yield_df = stock_yield_df[secodes]
+    caihui_session.commit()
+    caihui_session.close()
+
+
+    stock_factor_pos_df = stock_factor_pos_df.reindex(stock_yield_df.index).fillna(method = 'pad')
+    stock_factor_pos_df = stock_factor_pos_df.shift(1).fillna(0.0)
+
+    factor_yield_df = stock_factor_pos_df * stock_yield_df
+    factor_yield_df = factor_yield_df.sum(axis = 1)
+    factor_yield_df = factor_yield_df[factor_yield_df.index >= '2000-01-01']
+    factor_nav_df = (1 + factor_yield_df).cumprod()
+    factor_nav_df = factor_nav_df.to_frame()
+    factor_nav_df.columns = [sf_id]
+
+    print factor_nav_df.tail()
+
+    session.commit()
+    session.close()
+
+    return factor_nav_df
+
+
+
+
 def compute_rankcorr_multi_factor():
 
     all_stocks = stock_util.all_stock_info()

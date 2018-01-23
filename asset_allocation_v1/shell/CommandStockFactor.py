@@ -158,6 +158,32 @@ def stock_factor_index(ctx):
 
 @sf.command()
 @click.pass_context
+def stock_factor_minus_index(ctx):
+
+
+    sf_ids = ['SF.000001','SF.000002', 'SF.000015', 'SF.000016','SF.000017','SF.000018', 'SF.000035', 'SF.000036', 'SF.000037', 'SF.000038',
+            'SF.000047','SF.000048','SF.000049','SF.000050','SF.000051','SF.000052','SF.000053','SF.000054','SF.000055','SF.000056',
+            'SF.000057','SF.000058','SF.000059','SF.000060','SF.000061','SF.000062','SF.000005','SF.000007','SF.000009','SF.000019','SF.000020',
+            'SF.000021','SF.000039','SF.000041',
+            ]
+
+
+    pool = Pool(16)
+    results = pool.map(compute_stock_factor_minus_index, sf_ids)
+    pool.close()
+    pool.join()
+
+
+    factor_nav_df = pd.concat(results, axis = 1)
+    factor_nav_df.to_csv('factor_nav_df.csv')
+    print factor_nav_df.tail()
+    return
+
+
+
+
+@sf.command()
+@click.pass_context
 def rankcorr_multi_factor(ctx):
 
     compute_rankcorr_multi_factor_pos()
