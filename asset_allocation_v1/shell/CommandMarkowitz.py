@@ -31,6 +31,7 @@ from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_resh
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
+from ipdb import set_trace
 
 import traceback, code
 
@@ -219,6 +220,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @click.argument('assets', nargs=-1)
 @click.pass_context
 def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, short_cut, optalgo, assets):
+    print optalgo
     '''calc high low model markowitz
     '''
 
@@ -673,7 +675,7 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
     filtered_data = wt.wavefilter(sr, wavelet_filter_num)
     filtered_data = filtered_data.fillna(0.0)
     filtered_data = filtered_data[filtered_data.index >= begin_date]
-    filtered_data = filtered_data.loc[reindex]
+    #filtered_data = filtered_data.loc[reindex]
 
     return filtered_data
 
@@ -863,6 +865,12 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+    elif algo == 6:
+        asset = assets.keys()[0]
+        df = load_wavelet_nav_series(asset, begin_date = sdate, wavelet = True, wavelet_filter_num = 2)
+        df = df.to_frame()
+        df.columns = [asset]
+        df[asset] = 1.0
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -992,7 +1000,8 @@ def nav_update(markowitz, alloc):
 
     data = {}
     for asset_id in df_pos.columns:
-        data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
+        data[asset_id] = load_wavelet_nav_series(asset_id, begin_date = min_date, end_date = max_date, wavelet = True, wavelet_filter_num = 2)
+        #data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
