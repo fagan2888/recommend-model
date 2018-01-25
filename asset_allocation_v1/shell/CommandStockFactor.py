@@ -84,13 +84,13 @@ def call_factor_func(f):
 def stock_factor_value(ctx):
 
 
-    #bp_factor()
-    factor_funcs = [ln_capital_factor, ln_price_factor, highlow_price_factor, relative_strength_factor, std_factor, trade_volumn_factor, turn_rate_factor, weighted_strength_factor, bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
+    bp_factor()
+    #factor_funcs = [ln_capital_factor, ln_price_factor, highlow_price_factor, relative_strength_factor, std_factor, trade_volumn_factor, turn_rate_factor, weighted_strength_factor, bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
     #factor_funcs = [bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
-    pool = Pool(16)
-    pool.map(call_factor_func, factor_funcs)
-    pool.close()
-    pool.join()
+    #pool = Pool(16)
+    #pool.map(call_factor_func, factor_funcs)
+    #pool.close()
+    #pool.join()
 
     #highlow_price_factor()
     #bp_factor()
@@ -104,6 +104,7 @@ def stock_factor_value(ctx):
     #profit_factor()
     #holder_factor()
     #fcfp_factor()
+
 
     return
 
@@ -173,13 +174,11 @@ def stock_factor_minus_index(ctx):
     pool.close()
     pool.join()
 
-
     factor_nav_df = pd.concat(results, axis = 1)
     factor_nav_df.to_csv('factor_nav_df.csv')
     print factor_nav_df.tail()
+
     return
-
-
 
 
 @sf.command()
@@ -187,3 +186,28 @@ def stock_factor_minus_index(ctx):
 def rankcorr_multi_factor(ctx):
 
     compute_rankcorr_multi_factor_pos()
+
+
+@sf.command()
+@click.pass_context
+def stock_layer_factor_index_corr(ctx):
+
+    sf_ids = ['SF.000001','SF.000002', 'SF.000015', 'SF.000016','SF.000017','SF.000018', 'SF.000035', 'SF.000036', 'SF.000037', 'SF.000038',
+            'SF.000047','SF.000048','SF.000049','SF.000050','SF.000051','SF.000052','SF.000053','SF.000054','SF.000055','SF.000056',
+            'SF.000057','SF.000058','SF.000059','SF.000060','SF.000061','SF.000062','SF.000005','SF.000007','SF.000009','SF.000019','SF.000020',
+            'SF.000021','SF.000039','SF.000041',
+            ]
+
+    pool = Pool(16)
+    results = pool.map(compute_stock_layer_factor_index_corr, sf_ids)
+    pool.close()
+    pool.join()
+
+    factor_nav_df = pd.concat(results, axis = 1)
+    #print factor_nav_df.tail()
+    factor_nav_df.to_csv('factor_layer_nav.csv')
+    factor_nav_df_inc = factor_nav_df.pct_change()
+    factor_nav_df_inc_corr = factor_nav_df_inc.corr()
+    factor_nav_df_inc_corr.to_csv('factor_layer_corr.csv')
+
+    return
