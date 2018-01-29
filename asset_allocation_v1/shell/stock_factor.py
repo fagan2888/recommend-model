@@ -1574,6 +1574,20 @@ def compute_rankcorr_multi_factor_pos(rank_num = None):
     factor_nav_df = pd.read_csv('factor_layer_nav.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
 
     factor_pos_df = pd.DataFrame(factor_pos).T
+    factor_names = []
+    for date in factor_pos_df.index:
+        names = []
+        for sf_id in factor_pos_df.loc[date]:
+            sf_id, layer = sf_id[0], sf_id[1]
+            record = session.query(stock_factor.sf_name).filter(stock_factor.sf_id == sf_id).first()
+            print date, sf_id, record[0], layer
+            names.append([record[0], layer])
+        factor_names.append(names)
+
+    factor_name_df = pd.DataFrame(factor_names, index = factor_pos_df.index)
+    factor_name_df.to_csv('factor_name.csv')
+    print factor_name_df
+
     dates = factor_pos_df.index[20:]
     stock_pos_df = pd.DataFrame(0, index = dates, columns = all_stocks.index)
     for date in dates:
