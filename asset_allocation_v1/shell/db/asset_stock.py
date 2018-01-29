@@ -25,6 +25,7 @@ class ra_stock(Base):
     sk_secode = Column(String)
     sk_compcode = Column(String)
     sk_listdate = Column(Date)
+    sk_swlevel1code = Column(String)
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
@@ -151,6 +152,20 @@ class tq_sk_finindic(Base):
     pettm = Column(Float)
     pettmnpaaei = Column(Float)
     pb = Column(Float)
+
+
+class tq_sk_sharestruchg(Base):
+
+    __tablename__ = 'tq_sk_sharestruchg'
+
+    ID = Column(Integer, primary_key = True)
+
+    compcode = Column(String)
+    publishdate = Column(Date)
+    begindate = Column(Date)
+    enddate = Column(Date)
+
+    fcircaamt = Column(Float)
 
 
 class tq_sk_shareholdernum(Base):
