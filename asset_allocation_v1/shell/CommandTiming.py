@@ -142,7 +142,9 @@ def signal_update_macro(timing):
     df_new = df_new.resample('W-FRI').last()
     #df_new = df_new.set_index(trade_dates).fillna(method = 'pad').dropna()
     df_new = df_new.reset_index()
-    df_new['tc_timing_id'] = 'MC.VW0001' 
+    from ipdb import set_trace
+    #set_trace()
+    df_new['tc_timing_id'] = timing.globalid
     df_new['tc_date'] = df_new['mc_date']
     df_new['tc_signal'] = df_new['mc_inc'].apply(lambda x: 1 if x > 0 else -1)
     df_new['tc_strength'] = df_new['mc_inc']
@@ -161,6 +163,7 @@ def signal_update_macro(timing):
     ]
     s = select(columns, (t.c.tc_timing_id == timing_id))
     df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
+    #set_trace()
 
     database.batch(db, t, df_new, df_old, timestamp = False)
     return 0

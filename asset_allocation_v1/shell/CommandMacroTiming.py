@@ -133,6 +133,7 @@ def sp_view_update(ctx, startdate, enddate, viewid):
     backtest_interval = pd.date_range(startdate, enddate)
     mv = cal_view()
     mv = mv.resample('d').last().fillna(method = 'pad')
+    mv = mv.rolling(30).mean().dropna()
 
     today = datetime.now()
     mv_view_id = np.repeat(viewid, len(mv))
