@@ -22,7 +22,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
 from util import xdict
 
 import traceback, code
@@ -493,3 +493,27 @@ def online_portfolio_month_nav(ctx):
     df = pd.DataFrame(data)
 
     df.to_csv('线上新模型有费率和标杆组合风险10有费率每月收益率.csv')
+
+
+
+#线上风险10权益类资产被动管理型基金占比
+@analysis.command()
+@click.pass_context
+def passive_fund_ratio(ctx):
+
+
+    passive_funds = set()
+    for line in open('./data/passive_fund.csv','r').readlines():
+        passive_funds.add(line.strip()[0:6])
+
+
+    funds = asset_on_online_fund.load(800000)
+    funds.on_fund_type = funds.on_fund_type.astype(str)
+    for date, group in funds.groupby(funds.index):
+        group = group[(group.on_fund_type == 11101) | (group.on_fund_type == 11102) | (group.on_fund_type == 11202) | (group.on_fund_type == 11205)]
+        print group['on_fund_code'] in passive_funds
+        #print group[group.on_fund_code in passive_funds]
+    return
+
+
+
