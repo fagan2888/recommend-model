@@ -74,7 +74,7 @@ class mc_social_finance(Base):
 
     globalid = Column(String, primary_key = True)
     mc_sf_date = Column(Date, primary_key = True)
-    mc_sf_value = Column(Integer)
+    mc_sf_value = Column(Float)
 
 
 class mc_real_estate(Base):
@@ -84,3 +84,11 @@ class mc_real_estate(Base):
     globalid = Column(String, primary_key = True)
     mc_re_date = Column(Date, primary_key = True)
     mc_re_value = Column(Float)
+
+class mc_us_indicator(Base):
+
+    __tablename__ = 'mc_us_indicator'
+
+    globalid = Column(String, primary_key = True)
+    mc_us_date = Column(Date, primary_key = True)
+    mc_us_value = Column(Float)

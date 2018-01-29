@@ -124,6 +124,48 @@ def bond_view_update(ctx, startdate, enddate, viewid):
     database.batch(db, t, df_new, df_old, timestamp = False)
 
 
+@mt.command()
+@click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
+@click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help=u'start date to calc')
+@click.option('--viewid', 'viewid', default='MC.VW0005', help=u'macro timing view id')
+@click.pass_context
+def sp_view_update(ctx, startdate, enddate, viewid):
+    backtest_interval = pd.date_range(startdate, enddate)
+    mv = cal_view()
+    mv = mv.resample('d').last().fillna(method = 'pad')
+
+    today = datetime.now()
+    mv_view_id = np.repeat(viewid, len(mv))
+    mv_date = mv.index
+    mv_inc = mv.view
+    created_at = np.repeat(today, len(mv))
+    updated_at = np.repeat(today, len(mv))
+    #df_inc_value = np.column_stack([mv_view_id, mv_date, mv_inc, created_at, updated_at])
+    #df_inc = pd.DataFrame(df_inc_value, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
+    union_mv = {}
+    union_mv['mc_view_id'] = mv_view_id
+    union_mv['mc_date'] = mv_date
+    union_mv['mc_inc'] = mv_inc
+    union_mv['created_at'] = created_at
+    union_mv['updated_at'] = updated_at
+    union_mv_df = pd.DataFrame(union_mv, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
+    df_new = union_mv_df.set_index(['mc_view_id', 'mc_date'])
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('mc_view_strength', metadata, autoload = True)
+    columns = [
+        t.c.mc_view_id,
+        t.c.mc_date,
+        t.c.mc_inc,
+        t.c.created_at,
+        t.c.updated_at,
+    ]
+    s = select(columns, (t.c.mc_view_id == viewid))
+    df_old = pd.read_sql(s, db, index_col = ['mc_view_id', 'mc_date'], parse_dates = ['mc_date'])
+    database.batch(db, t, df_new, df_old, timestamp = False)
+
+
 def re_view(bt_int):
     repy = load_re_price_yoy()
     m1 = load_m1_yoy()
@@ -533,3 +575,96 @@ def load_re_price_yoy():
     repy.columns = ['repy']
 
     return repy
+
+
+def load_us_indicator():
+    feature_names = {
+        'MC.US0001':'IP',
+        'MC.US0002':'MP',
+        'MC.US0003':'BM',
+        'MC.US0004':'UN',
+        'MC.US0005':'IUI',
+        'MC.US0006':'IPD',
+        'MC.US0007':'MI',
+        'MC.US0008':'DNO',
+        'MC.US0009':'MUO',
+        'MC.US0010':'CEI',
+    }
+
+    engine = database.connection('wind')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(
+        mc_us_indicator.globalid,
+        mc_us_indicator.mc_us_date,
+        mc_us_indicator.mc_us_value,
+        ).statement
+
+    usi = pd.read_sql(
+        sql,
+        session.bind,
+        index_col = ['mc_us_date', 'globalid'],
+        parse_dates = ['mc_us_date'],
+        )
+    session.commit()
+    session.close()
+
+    usi = usi.unstack()
+    usi.columns = usi.columns.levels[1]
+    usi = usi.rename(columns = feature_names)
+
+    return usi
+
+
+def lag():
+    data = smooth()
+    ip = data.IP.copy().diff().apply(np.sign)
+    ip.index = ip.index+timedelta(18)
+    mp = data.MP.copy().diff().apply(np.sign)
+    mp.index = mp.index+timedelta(18)
+    bm = data.BM.copy().diff().apply(np.sign)
+    bm.index = bm.index+timedelta(5)
+   # bm[bm.index <= '2009'] = 0
+    un = data.UN.copy().diff().apply(np.sign)
+    un.index = un.index+timedelta(6)
+    iui = data.IUI.copy().diff().apply(np.sign)
+    iui.index = iui.index+timedelta(7)
+    ipd = data.IPD.copy().diff().apply(np.sign)
+    ipd.index= ipd.index+timedelta(18)
+    mi = data.MI.copy()
+    mi.index = mi.index+timedelta(37)
+    mi = mi.dropna().diff().apply(np.sign)
+    dno = data.DNO.copy()
+    dno.index = dno.index+timedelta(23)
+    dno = dno.dropna().diff().apply(np.sign)
+    muo = data.MUO.copy()
+    muo.index = muo.index+timedelta(37)
+    muo = muo.dropna().diff().apply(np.sign)
+    cei = data.CEI.copy()
+    cei.index = cei.index-timedelta(10)
+    cei = cei.dropna().diff().apply(np.sign)
+
+    data_lag = pd.concat([ip,mp,bm,un,iui,ipd,mi,dno,muo,cei],1)
+    data_lag = data_lag.fillna(method = 'pad')
+    data_lag = data_lag.dropna()
+
+    return data_lag
+
+def smooth():
+    data = load_us_indicator()
+    data = data.rolling(4).apply(filter)
+
+    return data
+
+def filter(sequence):
+    '''
+    This is a band-filter, which keep cycle from 4 months to 12 months.
+    '''
+    return sequence[0]+2*sequence[1]+2*sequence[2]+sequence[3]
+    #return np.mean(sequence)
+
+def cal_view():
+    data = lag()
+    data['view'] = data.loc[:, ['IP', 'MP', 'BM', 'UN', 'IUI', 'IPD', 'MI', 'DNO', 'MUO', 'CEI']].sum(axis = 1)
+
+    return data
