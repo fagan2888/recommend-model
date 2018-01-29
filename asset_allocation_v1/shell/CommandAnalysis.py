@@ -507,13 +507,34 @@ def passive_fund_ratio(ctx):
         passive_funds.add(line.strip()[0:6])
 
 
+    dates = []
+    data = []
+
+
     funds = asset_on_online_fund.load(800000)
-    funds.on_fund_type = funds.on_fund_type.astype(str)
     for date, group in funds.groupby(funds.index):
         group = group[(group.on_fund_type == 11101) | (group.on_fund_type == 11102) | (group.on_fund_type == 11202) | (group.on_fund_type == 11205)]
-        print group['on_fund_code'] in passive_funds
-        #print group[group.on_fund_code in passive_funds]
+
+        print group[group.on_fund_code.isin(passive_funds)]
+        passive_ratio = group[group.on_fund_code.isin(passive_funds)].on_fund_ratio.sum()
+        active_ratio = group[~group.on_fund_code.isin(passive_funds)].on_fund_ratio.sum()
+
+
+        ratio_sum = active_ratio + passive_ratio
+        if ratio_sum == 0:
+            active_ratio = 0.0
+            passive_ratio = 0.0
+            pass
+        else:
+            active_ratio = active_ratio / ratio_sum
+            passive_ratio = passive_ratio / ratio_sum
+
+        #print date, active_ratio, passive_ratio
+
+        dates.append(date)
+        data.append([active_ratio, passive_ratio])
+
+    df = pd.DataFrame(data, index=dates, columns = ['active_ratio', 'passive_ratio'])
+
+    df.to_csv('active_passive_fund_ratio.csv')
     return
-
-
-

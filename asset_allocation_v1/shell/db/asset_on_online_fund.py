@@ -14,37 +14,38 @@ from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
 
-# def load(gid, included_online_id=False):
-#     db = database.connection('asset')
-#     metadata = MetaData(bind=db)
-#     t1 = Table('on_online_pos', metadata, autoload=True)
+def load(gid, included_online_id=False):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('on_online_fund', metadata, autoload=True)
 
-#     columns = [
-#         t1.c.on_date,
-#         t1.c.on_asset_id,
-#         t1.c.on_ratio,
-#     ]
-#     index_col = ['on_date', 'on_asset_id']
-    
-#     if included_online_id:
-#         columns.insert(0, t1.c.on_online_id)
-#         index_col.insert(0, 'on_online_id')
+    columns = [
+        t1.c.on_date,
+        t1.c.on_fund_type,
+        t1.c.on_fund_code,
+        t1.c.on_fund_ratio,
+    ]
+    index_col = ['on_date']
+  
+    if included_online_id:
+        columns.insert(0, t1.c.on_online_id)
+        index_col.insert(0, 'on_online_id')
 
-#     s = select(columns)
+    s = select(columns)
 
-#     if gid is not None:
-#         s = s.where(t1.c.on_online_id == gid)
-#     else:
-#         return None
-#     # if xtypes is not None:
-#     #     s = s.where(t1.c.on_type.in_(xtypes))
-    
-#     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['on_date'])
+    if gid is not None:
+        s = s.where(t1.c.on_online_id == gid)
+    else:
+        return None
+    # if xtypes is not None:
+    #     s = s.where(t1.c.on_type.in_(xtypes))
+  
+    df = pd.read_sql(s, db, index_col=index_col, parse_dates=['on_date'])
 
-#     df = df.unstack().fillna(0.0)
-#     df.columns = df.columns.droplevel(0)
+    #df = df.unstack()
+    #df.columns = df.columns.droplevel(0)
 
-#     return df
+    return df
 
 def load_fund_pos(gid):
     db = database.connection('asset')
