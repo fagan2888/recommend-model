@@ -91,28 +91,53 @@ def month_last_day():
 #    return factor_df
 
 
+
+def percentile20nan(x):
+    x[x <= np.percentile(x,20)] = np.nan
+    return x
+
+
 #插入股票合法性表
-def compute_stock_valid():
+def stock_valid_table():
 
     all_stocks = stock_util.all_stock_info()
     st_stocks = stock_util.stock_st()
+
     list_date = stock_util.all_stock_listdate()
     list_date.sk_listdate = list_date.sk_listdate + timedelta(365)
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
     session = Session()
-    sql = session.query(tq_qt_skdailyprice.tradedate, tq_qt_skdailyprice.secode ,tq_qt_skdailyprice.tclose).filter(tq_qt_skdailyprice.secode.in_(all_stocks.index)).statement
+    sql = session.query(tq_qt_skdailyprice.tradedate, tq_qt_skdailyprice.secode ,tq_qt_skdailyprice.tclose, tq_qt_skdailyprice.amount).filter(tq_qt_skdailyprice.secode.in_(all_stocks.index)).statement
+
     #过滤停牌股票
-    quotation = pd.read_sql(sql, session.bind , index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']).replace(0.0, np.nan)
+    quotation_amount = pd.read_sql(sql, session.bind , index_col = ['tradedate', 'secode'], parse_dates = ['tradedate'])
+
+    quotation = quotation_amount[['tclose']]
+    quotation = quotation.replace(0.0, np.nan)
     quotation = quotation.unstack()
     quotation.columns = quotation.columns.droplevel(0)
-    session.commit()
-    session.close()
 
     #60个交易日内需要有25个交易日未停牌
     quotation_count = quotation.rolling(60).count()
     quotation[quotation_count < 25] = np.nan
+
+
+    #过滤掉过去一年日均成交额排名后20%的股票
+    amount = quotation_amount[['amount']]
+    amount = amount.unstack()
+    amount.columns = amount.columns.droplevel(0)
+
+    year_amount = amount.rolling(252, min_periods = 100).mean()
+
+    year_amount = year_amount.apply(percentile20nan, axis = 1)
+
+    quotation[year_amount.isnull()] = np.nan
+
+    session.commit()
+    session.close()
+
 
     #过滤st股票
     for i in range(0, len(st_stocks)):
@@ -123,6 +148,7 @@ def compute_stock_valid():
         if secode in set(quotation.columns):
             #print secode, selecteddate, outdate
             quotation.loc[selecteddate:outdate, secode] = np.nan
+
 
     #过滤上市未满一年股票
     for secode in list_date.index:
@@ -184,29 +210,78 @@ def valid_stock_filter(factor_df):
     return factor_df
 
 
-#归一化
+#去极值标准化
 def normalized(factor_df):
 
+    #去极值
     factor_median = factor_df.median(axis = 1)
+
+    factor_df_sub_median = abs(factor_df.sub(factor_median, axis = 0))
+    factor_df_sub_median_median = factor_df_sub_median.median(axis = 1)
+
+    max_factor_df = factor_median + 10.000 * factor_df_sub_median_median
+    min_factor_df = factor_median - 10.000 * factor_df_sub_median_median
+
+    for date in max_factor_df.index:
+        max_factor = max_factor_df.loc[date]
+        min_factor = min_factor_df.loc[date]
+
+        record = factor_df.loc[date]
+        factor_df.loc[date, record > max_factor] = max_factor
+        factor_df.loc[date, record < min_factor] = min_factor
+
+    #归一化
     factor_std  = factor_df.std(axis = 1)
     factor_mean  = factor_df.mean(axis = 1)
-    factor_std = factor_std.dropna()#一行中只有一个数据，则没有标准差，std后为nan
 
-    factor_median = factor_median.loc[factor_std.index]
-    factor_df = factor_df.loc[factor_std.index]
-
-    factor_df = factor_df.sub(factor_median, axis = 0)
+    factor_df = factor_df.sub(factor_mean, axis = 0)
     factor_df = factor_df.div(factor_std, axis = 0)
 
-    factor_df[factor_df > 5]  = 5
-    factor_df[factor_df < -5] = -5
+    return factor_df
+
+
+#行业中性化
+def industry_normalized(factor_df):
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(ra_stock.sk_secode, ra_stock.sk_swlevel1code).statement
+    all_stocks = pd.read_sql(sql, session.bind, index_col = ['sk_secode'])
+    session.commit()
+    session.close()
+
+
+    secodes = list(set(factor_df.columns) & set(all_stocks.index))
+    all_stocks = all_stocks.loc[secodes]
+    factor_df = factor_df[secodes]
+
+    all_stocks = all_stocks.reset_index()
+    all_stocks = all_stocks.set_index(['sk_swlevel1code'])
+
+
+    industry_factors = []
+    #按照申万行业groupby, 然后做标准化
+    for sk_swlevel1code, group in all_stocks.groupby(all_stocks.index):
+        industry_secodes =  group.sk_secode.ravel()
+        industry_factor_df =  factor_df[industry_secodes]
+
+        industry_factor_std  = industry_factor_df.std(axis = 1)
+        industry_factor_mean  = industry_factor_df.mean(axis = 1)
+
+        industry_factor_df = industry_factor_df.sub(industry_factor_mean, axis = 0)
+        industry_factor_df = industry_factor_df.div(industry_factor_std, axis = 0)
+
+        industry_factors.append(industry_factor_df)
+
+    factor_df = pd.concat(industry_factors, axis = 1)
 
     return factor_df
 
 
 
 #更新因子值数据
-def update_factor_value(sf_id, factor_df):
+def update_factor_value(bf_id, factor_df):
 
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
@@ -214,18 +289,23 @@ def update_factor_value(sf_id, factor_df):
 
     for stock_id in factor_df.columns:
         ser = factor_df[stock_id].dropna()
+        records = []
         for date in ser.index:
-            sfv = stock_factor_value()
-            sfv.sf_id = sf_id
-            sfv.stock_id = stock_id
-            sfv.trade_date = date
-            sfv.factor_value = ser.loc[date]
-            session.merge(sfv)
+            bsfe = barra_stock_factor_exposure()
+            bsfe.bf_id = bf_id
+            bsfe.stock_id = stock_id
+            bsfe.trade_date = date
+            bsfe.factor_exposure = ser.loc[date]
+            #session.merge(bsfe)
+            records.append(bsfe)
 
+        session.add_all(records)
         session.commit()
 
+        #print bf_id, stock_id
+
     session.close()
-    logger.info('update stock factor value done')
+    logger.info('update barra stock factor exposure done')
     return
 
 

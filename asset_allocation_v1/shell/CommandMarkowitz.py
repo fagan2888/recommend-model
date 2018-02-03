@@ -28,11 +28,11 @@ from sqlalchemy import MetaData, Table, select, func
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos,asset_stock
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos,asset_stock,asset_stock_factor
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
-import stock_factor
+import stock_factor ,barra_stock_factor, stock_factor_util
 
 import traceback, code
 
@@ -755,6 +755,18 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             #
             sr = asset_stock.load_stock_nav_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'MZ':
+            #
+            # markowitz配置资产
+            #
+            sr = asset_mz_markowitz_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'BF':
+            #
+            # markowitz配置资产
+            #
+            sr = asset_stock_factor.load_factor_nav_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         else:
             sr = pd.Series()
 
@@ -875,10 +887,18 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
     elif algo == 5:
         rank = argv['rank']
-        if rank.isdigit():
-            df = stock_factor.compute_rankcorr_multi_factor_pos(string.atoi(rank.strip()))
-        else:
-            df = stock_factor.compute_rankcorr_multi_factor_pos()
+        #df = stock_factor.compute_rankcorr_multi_factor_pos(string.atoi(rank.strip()))
+        #factor_df = pd.read_csv('barra_stock_factor/free_capital_factor.csv', index_col =['tradedate'], parse_dates = ['tradedate'])
+        #factor_df = pd.read_csv('barra_stock_factor/ep_ttm_factor.csv', index_col =['tradedate'], parse_dates = ['tradedate'])
+        factor_df = pd.read_csv('barra_stock_factor/bp_factor.csv', index_col =['tradedate'], parse_dates = ['tradedate'])
+        df = barra_stock_factor.factor_layer(factor_df)
+        #df = stock_factor.compute_rankcorr_multi_factor_pos()
+    elif algo == 6:
+        df = markowitz_days(
+            sdate, edate, assets,
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+        df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
+        df = barra_stock_factor.factor_pos_2_stock_pos(df)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -909,7 +929,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    if algo == 1:
+    if algo == 1 or algo == 5:
         pass
     else:
         df = df.rolling(window = 4, min_periods = 1).mean()
@@ -917,7 +937,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     if optappend:
         df = df.iloc[3:,:]
 
-    df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
+    df[df.abs() < 0.0000999] = 0 # 过滤掉过小的份额
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     if turnover >= 0.01:
@@ -925,7 +945,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     if optappend:
         df = pd.concat([df_pos_old, df]).fillna(0.0)
-    #print df.tail()
 
     df.index.name = 'mz_date'
     df.columns.name='mz_markowitz_asset'

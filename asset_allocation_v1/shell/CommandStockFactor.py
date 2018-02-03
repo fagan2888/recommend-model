@@ -84,7 +84,7 @@ def call_factor_func(f):
 def stock_factor_value(ctx):
 
 
-    bp_factor()
+    #bp_factor()
     #factor_funcs = [ln_capital_factor, ln_price_factor, highlow_price_factor, relative_strength_factor, std_factor, trade_volumn_factor, turn_rate_factor, weighted_strength_factor, bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
     #factor_funcs = [bp_factor, current_ratio_factor, cash_ratio_factor, pe_ttm_factor, roa_factor, roe_factor, holder_factor, fcfp_factor]
     #pool = Pool(16)
