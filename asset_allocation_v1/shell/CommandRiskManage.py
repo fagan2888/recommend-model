@@ -60,8 +60,8 @@ def test(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
     Const.datadir = datadir
 
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        yesterday = (datetime.now() - timedelta(days=1))
+        enddate = yesterday.strftime("%Y-%m-%d")
 
     df_nav = pd.read_csv(datapath('../csvdata/000300_nav_2012.csv'),  index_col=['date'], parse_dates=['date'])
     #df_nav = pd.read_csv(datapath('dd.csv'),  index_col=['td_date'], parse_dates=['td_date'])
@@ -94,7 +94,7 @@ def simple(ctx, datadir, optinst, startdate, enddate):
     Const.datadir = datadir
 
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
+        yesterday = (datetime.now() - timedelta(days=1))
         enddate = yesterday.strftime("%Y-%m-%d")
         
     if optinst is None:

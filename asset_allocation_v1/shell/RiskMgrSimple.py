@@ -51,6 +51,8 @@ class RiskMgrSimple(object):
             'cnfdn': sr_cnfdn,
             'timing': df_input['timing'],
         })
+        from ipdb import set_trace
+        set_trace()
 
         #
         # status: 0:不在风控中; 1:风控中
@@ -109,4 +111,4 @@ class RiskMgrSimple(object):
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act})
         df_result.index.name = 'rm_date'
 
-        return df_result;
+        return df_result
