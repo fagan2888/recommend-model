@@ -622,6 +622,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
 
     hs300_mean, zz500_mean = np.abs(df_inc.mean(0)[:2])
     sp500_mean = np.abs(df_inc.mean(0)['ERI000001'])
+    hsi_mean = np.abs(df_inc.mean(0)['ERI000002'])
     add_view = True
     add_view_respectively = False
 
@@ -631,6 +632,10 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
         sz_view = load_newest_view('MC.VW0001', day)
         df_inc.iloc[:, [0]] += hs300_mean*(sz_view)*view_level
         df_inc.iloc[:, [1]] += zz500_mean*(sz_view)*view_level
+
+        #恒生观点
+        #if day > datetime(2017,1,30):
+            #df_inc.iloc[:, [4]] += hsi_mean*(sz_view)*view_level
 
         #美股观点
         #sp_view = load_newest_view('MC.VW0005', day)

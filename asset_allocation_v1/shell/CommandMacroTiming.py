@@ -130,7 +130,7 @@ def bond_view_update(ctx, startdate, enddate, viewid):
 @click.option('--viewid', 'viewid', default='MC.VW0005', help=u'macro timing view id')
 @click.pass_context
 def sp_view_update(ctx, startdate, enddate, viewid):
-    backtest_interval = pd.date_range(startdate, enddate)
+    #backtest_interval = pd.date_range(startdate, enddate)
     mv = cal_view()
     mv = mv.resample('d').last().fillna(method = 'pad')
     mv = mv.rolling(30).mean().dropna()
