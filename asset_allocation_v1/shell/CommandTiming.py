@@ -141,8 +141,8 @@ def signal_update_gftd(timing):
     sdate = timing['tc_begin_date'].strftime("%Y-%m-%d")
     edate = yesterday.strftime("%Y-%m-%d")
 
-    tdates = base_trade_dates.load_index(sdate, edate)
-    
+    #tdates = base_trade_dates.load_index(sdate, edate)
+    tdates = base_trade_dates.load_other_index(timing['tc_index_id'], sdate, edate)
     #
     # 解析模型参数
     #
@@ -151,16 +151,15 @@ def signal_update_gftd(timing):
         
     df_nav = load_index_ohlc(
         timing['tc_index_id'], reindex=tdates, begin_date=sdate, end_date=edate, mask=[0, 2])
-    
+
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
-    
     df_new['tc_timing_id'] = timing_id
     df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
-
     # print df_new[df_new['tc_stop'].isnull()].head()
+
     num_signal = df_new['tc_signal'].rolling(2, 1).apply(lambda x: 1 if x[-1] != x[0] else 0).sum()
-    
+
     formaters = ['tc_close', 'tc_open', 'tc_high', 'tc_low', 'tc_recording_high', 'tc_recording_low', 'tc_stop_high', 'tc_stop_low']
 
     if not df_new.empty:
