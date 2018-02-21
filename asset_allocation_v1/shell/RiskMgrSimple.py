@@ -40,7 +40,7 @@ class RiskMgrSimple(object):
         sr_inc2d = sr_inc.rolling(window=2).sum() # 2日收益率
         sr_inc3d = sr_inc.rolling(window=3).sum() # 3日收益率
         sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
-        
+       
         sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
         #sr_cnfdn = sr_cnfdn.shift(1)
 
@@ -76,9 +76,10 @@ class RiskMgrSimple(object):
                     status, empty_days, position, action = 1, 0, 0, 2
                 elif row['inc3d'] < self.maxdd:
                     status, empty_days, position, action = 1, 0, 0, 3
-                elif row['cnfdn'] is not None and row['inc5d'] < row['cnfdn'] and row['inc5d'] < self.mindd:
+                elif row['cnfdn'] is not None and row['inc5d'] < row['cnfdn']: #and row['inc5d'] < self.mindd:
                     status, empty_days, position, action = 1, 0, 0, 5
 
+                print row
                 #
                 # 根据当前的风控状态进行处理
                 #

@@ -17,13 +17,16 @@ import MySQLdb
 import config
 
 
+from sqlalchemy import *
+from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
-from sqlalchemy import MetaData, Table, select, func, literal_column
+#from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
 from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav
 from util import xdict
+from db.asset_fund import *
 
 import traceback, code
 
@@ -471,3 +474,70 @@ def online_nav(ctx, optsdate, optedate):
 
     online_nav_df = pd.DataFrame(data)
     print online_nav_df
+
+
+#基金收益率,剔除排名10%，20%，30%，40%，50%的基金的收益率
+@analysis.command()
+@click.pass_context
+def fund_yield(ctx):
+
+    '''
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    records = session.query(ra_fund.globalid).filter(ra_fund.ra_type == 1).all()
+    globalids = [record[0] for record in records]
+
+    sql = session.query(ra_fund_nav.ra_fund_id, ra_fund_nav.ra_date, ra_fund_nav.ra_nav).filter(ra_fund_nav.ra_fund_id.in_(globalids))
+
+    df = pd.read_sql(sql.statement, session.bind, index_col = ['ra_date', 'ra_fund_id'], parse_dates = ['ra_date'])
+    df = df.unstack()
+    df.columns = df.columns.droplevel(0)
+
+    df.to_csv('fund_nav.csv')
+
+    session.commit()
+    session.close()
+    '''
+
+
+
+    df = pd.read_csv('fund_nav.csv', index_col = ['ra_date'], parse_dates = ['ra_date'])
+
+    df_inc = df.groupby(df.index.strftime('%Y')).last().pct_change()
+
+
+    dates = df_inc.index
+
+
+    ratios = [0, 0.1, 0.2, 0.3, 0.4, 0.7]
+    dfs = []
+    for ratio in ratios:
+        ds = []
+        rs = []
+        for i in range(0, len(dates) - 1):
+            date = dates[i]
+            next_date = dates[i + 1]
+            inc = df_inc.loc[date].dropna()
+            inc = inc.sort_values()
+
+            inc = inc.iloc[int(len(inc) * ratio):]
+
+
+
+            next_inc =  df_inc.loc[next_date]
+            next_inc = next_inc.loc[inc.index]
+            next_inc = next_inc.mean()
+
+            ds.append(next_date)
+            rs.append(next_inc)
+
+        ratio_df = pd.DataFrame(rs, index = ds, columns = ['nav']).fillna(0.0)
+        ratio_df = (ratio_df + 1).cumprod()
+        dfs.append(ratio_df)
+
+
+    df = pd.concat(dfs, axis = 1)
+    print df
+    df.to_csv('df.csv')
