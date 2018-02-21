@@ -396,10 +396,8 @@ def signal_update(riskmgr):
     else:
         sdate = None
 
-    tdates = base_trade_dates.load_index(sdate)
-        
+    tdates = base_trade_dates.load_other_index(riskmgr['rm_asset_id'], sdate)
     sr_nav = database.load_nav_series(riskmgr['rm_asset_id'], reindex=tdates, begin_date=sdate)
-
     if sr_timing.empty:
         sr_timing = pd.Series(1, index=sr_nav.index)
 

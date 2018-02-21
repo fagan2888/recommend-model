@@ -15,6 +15,7 @@ from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
 
+
 #
 # base.trade_dates
 #
@@ -36,6 +37,26 @@ def load_index(begin_date=None, end_date=None):
 
     df = pd.read_sql(s, db, index_col = ['td_date'], parse_dates=['td_date'])
 
+    return df.index
+
+
+def load_other_index(index_id, begin_date=None, end_date=None):
+
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('index_value', metadata, autoload=True)
+
+    columns = [
+        t1.c.iv_time,
+    ]
+
+    s = select(columns).where(t1.c.iv_index_id == index_id)
+    if begin_date is not None:
+        s = s.where(t1.c.iv_time >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.iv_time <= end_date)
+
+    df = pd.read_sql(s, db, index_col = ['iv_time'], parse_dates=['iv_time'])
     return df.index
 
 
