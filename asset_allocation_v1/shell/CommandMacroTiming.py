@@ -91,7 +91,7 @@ def macro_view_update(ctx, startdate, enddate, viewid, idx):
 def bond_view_update(ctx, startdate, enddate, viewid):
     backtest_interval = pd.date_range(startdate, enddate)
     mv = ir_view(backtest_interval)
-    mv = mv.rolling(60).apply(lambda x: 1 if sum(x) > 10 else 0).fillna(0.0)
+    mv = mv.rolling(60).apply(lambda x: sum(x)/10 - 1).fillna(0.0)
 
     today = datetime.now()
     mv_view_id = np.repeat(viewid, len(mv))
@@ -177,6 +177,7 @@ def gold_view_update(ctx, startdate, enddate, viewid):
     #backtest_interval = pd.date_range(startdate, enddate)
     mv = cal_gold_view()
     mv = mv.resample('d').last().fillna(method = 'pad')
+    mv['view'] = mv['view'].shift(15)
 
     today = datetime.now()
     mv_view_id = np.repeat(viewid, len(mv))
