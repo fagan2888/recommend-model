@@ -131,9 +131,51 @@ def bond_view_update(ctx, startdate, enddate, viewid):
 @click.pass_context
 def sp_view_update(ctx, startdate, enddate, viewid):
     #backtest_interval = pd.date_range(startdate, enddate)
-    mv = cal_view()
+    mv = cal_sp_view()
     mv = mv.resample('d').last().fillna(method = 'pad')
     mv = mv.rolling(30).mean().dropna()
+
+    today = datetime.now()
+    mv_view_id = np.repeat(viewid, len(mv))
+    mv_date = mv.index
+    mv_inc = mv.view
+    created_at = np.repeat(today, len(mv))
+    updated_at = np.repeat(today, len(mv))
+    #df_inc_value = np.column_stack([mv_view_id, mv_date, mv_inc, created_at, updated_at])
+    #df_inc = pd.DataFrame(df_inc_value, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
+    union_mv = {}
+    union_mv['mc_view_id'] = mv_view_id
+    union_mv['mc_date'] = mv_date
+    union_mv['mc_inc'] = mv_inc
+    union_mv['created_at'] = created_at
+    union_mv['updated_at'] = updated_at
+    union_mv_df = pd.DataFrame(union_mv, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
+    df_new = union_mv_df.set_index(['mc_view_id', 'mc_date'])
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('mc_view_strength', metadata, autoload = True)
+    columns = [
+        t.c.mc_view_id,
+        t.c.mc_date,
+        t.c.mc_inc,
+        t.c.created_at,
+        t.c.updated_at,
+    ]
+    s = select(columns, (t.c.mc_view_id == viewid))
+    df_old = pd.read_sql(s, db, index_col = ['mc_view_id', 'mc_date'], parse_dates = ['mc_date'])
+    database.batch(db, t, df_new, df_old, timestamp = False)
+
+
+@mt.command()
+@click.option('--start-date', 'startdate', default='2003-01-01', help=u'start date to calc')
+@click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help=u'start date to calc')
+@click.option('--viewid', 'viewid', default='MC.VW0006', help=u'macro timing view id')
+@click.pass_context
+def gold_view_update(ctx, startdate, enddate, viewid):
+    #backtest_interval = pd.date_range(startdate, enddate)
+    mv = cal_gold_view()
+    mv = mv.resample('d').last().fillna(method = 'pad')
 
     today = datetime.now()
     mv_view_id = np.repeat(viewid, len(mv))
@@ -616,6 +658,42 @@ def load_us_indicator():
 
     return usi
 
+def load_gold_indicator():
+    feature_names = {
+        'MC.GD0001':'uslrr',
+        'MC.GD0002':'usrei',
+        'MC.GD0003':'eurei',
+        'MC.GD0004':'ukrei',
+        'MC.GD0005':'uscpi',
+        'MC.GD0006':'eucpi',
+        'MC.GD0007':'ukcpi',
+        'MC.GD0008':'eulnr',
+        'MC.GD0009':'uklnr',
+    }
+
+    engine = database.connection('wind')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(
+        mc_gold_indicator.globalid,
+        mc_gold_indicator.mc_gold_date,
+        mc_gold_indicator.mc_gold_value,
+        ).statement
+
+    gdi = pd.read_sql(
+        sql,
+        session.bind,
+        index_col = ['mc_gold_date', 'globalid'],
+        parse_dates = ['mc_gold_date'],
+        )
+    session.commit()
+    session.close()
+
+    gdi = gdi.unstack()
+    gdi.columns = gdi.columns.levels[1]
+    gdi = gdi.rename(columns = feature_names)
+
+    return gdi
 
 def lag():
     data = smooth()
@@ -664,8 +742,26 @@ def filter(sequence):
     return sequence[0]+2*sequence[1]+2*sequence[2]+sequence[3]
     #return np.mean(sequence)
 
-def cal_view():
+def cal_sp_view():
     data = lag()
     data['view'] = data.loc[:, ['IP', 'MP', 'BM', 'UN', 'IUI', 'IPD', 'MI', 'DNO', 'MUO', 'CEI']].sum(axis = 1)
 
     return data
+
+
+def cal_gold_view():
+    data = load_gold_indicator()
+    data.loc[:, ['uscpi', 'eucpi', 'ukcpi']] = data.loc[:, ['uscpi', 'eucpi', 'ukcpi']].pct_change(12)*100
+    data['eulrr'] = data['eulnr'] - data['eucpi']
+    data = data.dropna().loc[:, ['eulrr', 'eurei', 'ukrei', 'uslrr', 'usrei']]
+
+    filter_coef = [1, 2, 2, 1]
+    data = data.rolling(4).apply(lambda x: np.dot(x, filter_coef))
+    data = data.diff()
+    data = np.sign(data)*(-1)
+    data['view'] = data.sum(1)
+    # data['view'] = data['view'].shift(1)
+    data = data.dropna()
+
+    return data
+

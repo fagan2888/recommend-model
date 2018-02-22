@@ -26,6 +26,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import *
 from util.xdebug import dd
+from ipdb import set_trace
 
 import traceback, code
 

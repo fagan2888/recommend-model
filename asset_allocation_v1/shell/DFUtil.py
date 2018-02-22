@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import calendar
 from sqlalchemy import *
 
-from db import database, Nav
+from db import database, Nav, base_ra_index_nav
 from util.xdebug import dd
 
 
@@ -48,7 +48,14 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     df = df_inc[start_date:].copy()
 
     df_position['cash'] = 1 - df_position.sum(axis=1)
-    df['cash'] = 0.0
+    # df['cash'] = 0.0
+    # use monetary fund to replace cash
+    cash = base_ra_index_nav.load_series('120000039')
+    cash = cash.pct_change()
+    cash.name = 'cash'
+    df = df.join(cash).fillna(0.0)
+    # from ipdb import set_trace
+    # set_trace()
 
     assets_s = pd.Series(np.zeros(len(df.columns)), index=df.columns) # 当前资产
     assets_s[0] = 1

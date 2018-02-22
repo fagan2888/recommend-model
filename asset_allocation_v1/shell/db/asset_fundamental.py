@@ -85,6 +85,7 @@ class mc_real_estate(Base):
     mc_re_date = Column(Date, primary_key = True)
     mc_re_value = Column(Float)
 
+
 class mc_us_indicator(Base):
 
     __tablename__ = 'mc_us_indicator'
@@ -92,3 +93,12 @@ class mc_us_indicator(Base):
     globalid = Column(String, primary_key = True)
     mc_us_date = Column(Date, primary_key = True)
     mc_us_value = Column(Float)
+
+
+class mc_gold_indicator(Base):
+
+    __tablename__ = 'mc_gold_indicator'
+
+    globalid = Column(String, primary_key = True)
+    mc_gold_date = Column(Date, primary_key = True)
+    mc_gold_value = Column(Float)
