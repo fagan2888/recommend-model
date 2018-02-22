@@ -91,6 +91,7 @@ def macro_view_update(ctx, startdate, enddate, viewid, idx):
 def bond_view_update(ctx, startdate, enddate, viewid):
     backtest_interval = pd.date_range(startdate, enddate)
     mv = ir_view(backtest_interval)
+    mv = mv.rolling(60).apply(lambda x: 1 if sum(x) > 10 else 0).fillna(0.0)
 
     today = datetime.now()
     mv_view_id = np.repeat(viewid, len(mv))
@@ -753,10 +754,12 @@ def cal_gold_view():
     data = load_gold_indicator()
     data.loc[:, ['uscpi', 'eucpi', 'ukcpi']] = data.loc[:, ['uscpi', 'eucpi', 'ukcpi']].pct_change(12)*100
     data['eulrr'] = data['eulnr'] - data['eucpi']
+    data['uklrr'] = data['uklnr'] - data['ukcpi']
     data = data.dropna().loc[:, ['eulrr', 'eurei', 'ukrei', 'uslrr', 'usrei']]
 
     filter_coef = [1, 2, 2, 1]
     data = data.rolling(4).apply(lambda x: np.dot(x, filter_coef))
+    # data = data.rolling(4).mean()
     data = data.diff()
     data = np.sign(data)*(-1)
     data['view'] = data.sum(1)
@@ -764,4 +767,3 @@ def cal_gold_view():
     data = data.dropna()
 
     return data
-
