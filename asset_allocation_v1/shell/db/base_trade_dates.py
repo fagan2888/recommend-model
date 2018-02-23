@@ -10,6 +10,7 @@ import logging
 import database
 import MySQLdb
 import config
+import re
 
 from dateutil.parser import parse
 
@@ -40,23 +41,50 @@ def load_index(begin_date=None, end_date=None):
     return df.index
 
 
-def load_other_index(index_id, begin_date=None, end_date=None):
+def load_origin_index_trade_date(index_id, begin_date=None, end_date=None):
+
+    if index_id.isdigit():
+        xtype = int(index_id) / 10000000
+    else:
+        xtype = re.sub(r'([\d]+)','',index_id).strip()
 
     db = database.connection('base')
     metadata = MetaData(bind=db)
-    t1 = Table('index_value', metadata, autoload=True)
+    if xtype == 'ERI':
+        t1 = Table('exchange_rate_index_nav', metadata, autoload=True)
 
-    columns = [
-        t1.c.iv_time,
-    ]
+        columns = [
+            t1.c.eri_nav_date,
+        ]
 
-    s = select(columns).where(t1.c.iv_index_id == index_id)
-    if begin_date is not None:
-        s = s.where(t1.c.iv_time >= begin_date)
-    if end_date is not None:
-        s = s.where(t1.c.iv_time <= end_date)
+        s = select(columns).where(t1.c.eri_index_id == index_id)
+        if begin_date is not None:
+            s = s.where(t1.c.eri_nav_date >= begin_date)
+        if end_date is not None:
+            s = s.where(t1.c.eri_nav_date <= end_date)
 
-    df = pd.read_sql(s, db, index_col = ['iv_time'], parse_dates=['iv_time'])
+        df = pd.read_sql(s, db, index_col = ['eri_nav_date'], parse_dates=['eri_nav_date'])
+
+    elif xtype == 12:
+        t1 = Table('ra_index_nav', metadata, autoload=True)
+
+        columns = [
+            t1.c.ra_nav_date,
+        ]
+
+        s = select(columns).where(t1.c.ra_index_id == index_id)
+        if begin_date is not None:
+            s = s.where(t1.c.ra_nav_date >= begin_date)
+        if end_date is not None:
+            s = s.where(t1.c.ra_nav_date <= end_date)
+
+        df = pd.read_sql(s, db, index_col = ['ra_nav_date'], parse_dates=['ra_nav_date'])
+
+    else:
+        return None
+
+    df = df.groupby(df.index).first()
+
     return df.index
 
 

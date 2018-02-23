@@ -142,7 +142,7 @@ def signal_update_gftd(timing):
     edate = yesterday.strftime("%Y-%m-%d")
 
     #tdates = base_trade_dates.load_index(sdate, edate)
-    tdates = base_trade_dates.load_other_index(timing['tc_index_id'], sdate, edate)
+    tdates = base_trade_dates.load_origin_index_trade_date(timing['tc_index_id'], sdate, edate)
     #
     # 解析模型参数
     #
