@@ -462,10 +462,6 @@ def grossprofit_factor():
     return
 
 
-
-
-
-
 #户均持股比例因子
 def holder_factor():
 
