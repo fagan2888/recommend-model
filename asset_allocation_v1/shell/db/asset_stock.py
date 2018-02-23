@@ -191,6 +191,36 @@ class tq_sk_shareholdernum(Base):
 
 
 
+class tq_fin_prottmindic(Base):
+
+    __tablename__ = 'tq_fin_prottmindic'
+
+    ID = Column(Integer, primary_key = True)
+
+    compcode = Column(String)
+    publishdate = Column(Date)
+    updatedate = Column(Date)
+    enddate = Column(Date)
+    reporttype = Column(Integer)
+
+    roedilutedcut = Column(Float)
+    roa = Column(Float)
+
+
+class tq_sk_businfo(Base):
+
+    __tablename__ = 'tq_sk_businfo'
+
+    ID = Column(Integer, primary_key = True)
+
+    compcode = Column(String)
+    publishdate = Column(Date)
+
+    clgpmrto = Column(Float)
+    corebizcostrto = Column(Float)
+
+
+
 def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
     engine = database.connection('base')

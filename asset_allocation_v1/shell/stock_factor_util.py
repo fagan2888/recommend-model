@@ -69,6 +69,24 @@ def month_last_day():
     return trade_df.index
 
 
+#获取交易日收盘日
+def a_trade_date():
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    trade_dates = asset_trade_dates.trade_dates
+    sql = session.query(trade_dates.td_date).statement
+    trade_df = pd.read_sql(sql, session.bind, index_col = ['td_date'], parse_dates = ['td_date'])
+    trade_df = trade_df.sort_index()
+    session.commit()
+    session.close()
+
+    return trade_df.index
+
+
+
 ##过滤掉不合法股票
 #def valid_stock_filter(factor_df):
 #
@@ -358,6 +376,60 @@ def financial_report_data(fr_df, name):
     #向后填充四个月度
     fr_df = fr_df.fillna(method = 'pad', limit = 4)
 
+
+    compcode_globalid = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
+    fr_df = fr_df.rename(columns = compcode_globalid)
+
+    return fr_df
+
+
+#计算财报因子(按照A股交易日)
+def financial_report_data_trade_date(fr_df, name):
+
+    all_stocks = stock_util.all_stock_info()
+    stock_listdate = stock_util.all_stock_listdate()[['sk_listdate']]
+    all_stocks = pd.concat([all_stocks, stock_listdate], axis = 1, join_axes = [all_stocks.index])
+
+    all_stocks = all_stocks.reset_index()
+    all_stocks = all_stocks.set_index('sk_compcode')
+
+    #过滤未上市时的报表信息
+    groups = []
+    for compcode, group in fr_df.groupby(fr_df.index):
+        listdate = all_stocks.loc[compcode, 'sk_listdate']
+        group = group[group.enddate > listdate]
+        groups.append(group)
+    fr_df = pd.concat(groups, axis = 0)
+
+    #根据公布日期，选最近的收盘交易日
+    trade_dates = a_trade_date()
+    firstpublishdates = fr_df.firstpublishdate.ravel()
+    trans_firstpublishdate = []
+    for firstpublishdate in firstpublishdates:
+        greater_trade_dates = trade_dates[trade_dates >= firstpublishdate]
+        if len(greater_trade_dates) == 0:
+            trans_firstpublishdate.append(np.nan)
+        else:
+            trans_firstpublishdate.append(greater_trade_dates[0])
+    fr_df.firstpublishdate = trans_firstpublishdate
+    fr_df = fr_df.dropna()
+
+    fr_df = fr_df.reset_index()
+    fr_df = fr_df.set_index(['firstpublishdate','compcode'])
+    fr_df = fr_df.sort_index()
+
+    #过滤掉两个季报一起公布的情况，比如有的公司年报和一季报一起公布
+    fr_df = fr_df.groupby(level = [0, 1]).last()
+
+    fr_df = fr_df[[name]]
+    fr_df = fr_df.unstack()
+    fr_df.columns = fr_df.columns.droplevel(0)
+
+    #扩展到每个交易日
+    fr_df = fr_df.loc[a_trade_date()]
+
+    #向后填充
+    fr_df = fr_df.fillna(method = 'pad')
 
     compcode_globalid = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
     fr_df = fr_df.rename(columns = compcode_globalid)
