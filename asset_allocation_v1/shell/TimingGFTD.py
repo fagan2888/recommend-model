@@ -23,6 +23,7 @@ class TimingGFTD(object):
         #
         # step 1: 计算 ud
         #
+        df_nav = df_nav.sort_index()
         sr_ud = df_nav['tc_close']\
             .rolling(window=self.n1+1, min_periods=self.n1+1)\
             .apply(lambda x: cmp(x[-1], x[0])).fillna(0)

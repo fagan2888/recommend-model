@@ -10,15 +10,12 @@ import numpy as np
 from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from ipdb import set_trace
-
 import config
 from db import database, asset_trade_dates, base_ra_index_nav, asset_mc_view
 from db.asset_fundamental import *
 from calendar import monthrange
 from datetime import datetime, timedelta
-
 logger = logging.getLogger(__name__)
-
 
 @click.group(invoke_without_command=True)
 @click.pass_context
@@ -27,7 +24,6 @@ def mt(ctx):
     macro timing
     '''
     pass
-
 
 @mt.command()
 @click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
@@ -248,7 +244,6 @@ def ir_view(bt_int):
     sf = load_social_finance()
     m2 = load_m2_value()
 
-    sf_m2 = pd.merge(sf, m2, left_index = True, right_index = True, how = 'inner')
     sf_m2['sf_m2'] = (sf_m2['sf'] - sf_m2['m2']).diff(12)
     sf_m2['sf_m2_diff'] = sf_m2['sf_m2'].rolling(12).mean().diff().dropna()
     #sf_m2.to_csv('sf_m2.csv', index_label = 'date')
@@ -724,7 +719,7 @@ def lag():
     cei = data.CEI.copy()
     cei.index = cei.index-timedelta(10)
     cei = cei.dropna().diff().apply(np.sign)
-
+    
     data_lag = pd.concat([ip,mp,bm,un,iui,ipd,mi,dno,muo,cei],1)
     data_lag = data_lag.fillna(method = 'pad')
     data_lag = data_lag.dropna()
@@ -749,7 +744,6 @@ def cal_sp_view():
     data['view'] = data.loc[:, ['IP', 'MP', 'BM', 'UN', 'IUI', 'IPD', 'MI', 'DNO', 'MUO', 'CEI']].sum(axis = 1)
 
     return data
-
 
 def cal_gold_view():
     data = load_gold_indicator()

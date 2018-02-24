@@ -553,6 +553,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
     #
     s = 'perform %-12s' % label
     data = {}
+    # if False and bootstrap is None:
     if bootstrap is None:
         count = multiprocessing.cpu_count() / 2
         process_adjust_indexs = [[] for i in range(0, count)]
@@ -630,16 +631,20 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
         view_level = 0.1
         #上证观点
         sz_view = load_newest_view('MC.VW0001', day)
-        df_inc.iloc[:, [0]] += hs300_mean*(sz_view)*view_level
-        df_inc.iloc[:, [1]] += zz500_mean*(sz_view)*view_level
+        df_inc.iloc[:, [0]] += hs300_mean*(sz_view)*view_level*2
+        df_inc.iloc[:, [1]] += zz500_mean*(sz_view)*view_level*2
 
         #恒生观点
         #if day > datetime(2017,1,30):
             #df_inc.iloc[:, [4]] += hsi_mean*(sz_view)*view_level
 
         #美股观点
-        #sp_view = load_newest_view('MC.VW0005', day)
-        #df_inc.iloc[:, [3]] += sp500_mean*(sp_view)*view_level
+        sp_view = load_newest_view('MC.VW0005', day)
+        df_inc.iloc[:, [3]] += sp500_mean*(sp_view)*view_level
+
+        #黄金观点
+        gd_view = load_newest_view('MC.VW0006', day)
+        df_inc.iloc[:, [2]] += sp500_mean*(gd_view)*view_level
 
     if add_view_respectively:
         view_level = 0.05
@@ -1270,6 +1275,3 @@ def copy(ctx, optsrc, optdst, optlist):
     df_markowitz_asset = df_markowitz_asset.set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
 
     asset_mz_markowitz_asset.save(df_xtab['globalid'], df_markowitz_asset)
-
-
-

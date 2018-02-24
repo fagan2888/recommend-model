@@ -1,6 +1,5 @@
 #coding=utf8
 
-
 import getopt
 import string
 import json
