@@ -96,3 +96,26 @@ def stock_pos_2_weight(stock_pos):
 
     stock_pos_df = pd.DataFrame(datas).T
     return stock_pos_df
+
+
+#根据每期股票按照因子权重配置每期股票权重
+def stock_pos_2_factor_weight(bf_id, stock_pos):
+
+    all_stocks = all_stock_info()
+
+    dates = list(stock_pos.keys())
+    dates.sort()
+    datas = {}
+    for date in dates:
+        stocks = stock_pos[date]
+        stocks = list(stocks)
+        stocks_num = 1.0 * len(stocks)
+        record = pd.Series(0, index = all_stocks.globalid)
+        record[record.index.isin(stocks)] = 1.0 / stocks_num
+        #stock_pos_df.loc[date] = record
+        #for stock_id in stocks:
+        #    record.loc[stock_id] = 1.0 * stocks.count(stock_id) / stocks_num
+        datas[date] = record
+
+    stock_pos_df = pd.DataFrame(datas).T
+    return stock_pos_df
