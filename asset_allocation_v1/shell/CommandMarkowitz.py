@@ -886,13 +886,14 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
     elif algo == 5:
-        rank = argv['rank']
+        #rank = argv['rank']
         #df = stock_factor.compute_rankcorr_multi_factor_pos(string.atoi(rank.strip()))
         #factor_df = pd.read_csv('barra_stock_factor/free_capital_factor.csv', index_col =['tradedate'], parse_dates = ['tradedate'])
         #factor_df = pd.read_csv('barra_stock_factor/ep_ttm_factor.csv', index_col =['tradedate'], parse_dates = ['tradedate'])
-        factor_df = pd.read_csv('barra_stock_factor/bp_factor.csv', index_col =['tradedate'], parse_dates = ['tradedate'])
-        df = barra_stock_factor.factor_layer(factor_df)
+        #factor_df = pd.read_csv('barra_stock_factor/bp_factor.csv', index_col =['tradedate'], parse_dates = ['tradedate'])
+        #df = barra_stock_factor.factor_layer(factor_df)
         #df = stock_factor.compute_rankcorr_multi_factor_pos()
+        df = barra_stock_factor.factor_boot_pos()
     elif algo == 6:
         df = markowitz_days(
             sdate, edate, assets,
