@@ -142,15 +142,17 @@ def signal_update_gftd(timing):
     edate = yesterday.strftime("%Y-%m-%d")
 
     #tdates = base_trade_dates.load_index(sdate, edate)
-    tdates = base_trade_dates.load_origin_index_trade_date(timing['tc_index_id'], sdate, edate)
+    tdates = base_trade_dates.load_origin_index_trade_date(timing['tc_index_id'], sdate)
     #
     # 解析模型参数
     #
     argv = {k: int(v) for (k,v) in [x.split('=') for x in timing['tc_argv'].split(',')]}
     n1, n2, n3, n4 = argv['n1'], argv['n2'], argv['n3'], argv['n4']
-        
+
     df_nav = load_index_ohlc(
-        timing['tc_index_id'], reindex=tdates, begin_date=sdate, end_date=edate, mask=[0, 2])
+        timing['tc_index_id'], reindex=tdates, begin_date=sdate, end_date=None, mask=[0, 2])
+    df_nav = df_nav.sort_index()
+
 
     # risk_mgr = RiskManagement.RiskManagement()
     df_new = TimingGFTD(n1=n1,n2=n2,n3=n3,n4=n4).timing(df_nav)
