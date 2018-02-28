@@ -244,6 +244,7 @@ def ir_view(bt_int):
     sf = load_social_finance()
     m2 = load_m2_value()
 
+    sf_m2 = pd.merge(sf, m2, left_index = True, right_index = True, how = 'inner')
     sf_m2['sf_m2'] = (sf_m2['sf'] - sf_m2['m2']).diff(12)
     sf_m2['sf_m2_diff'] = sf_m2['sf_m2'].rolling(12).mean().diff().dropna()
     #sf_m2.to_csv('sf_m2.csv', index_label = 'date')
