@@ -15,9 +15,12 @@ import logging.config
 from pathos import multiprocessing
 from scipy.stats import rankdata
 from sklearn.cluster import KMeans
+from scipy.spatial import distance
 from starvine.bvcopula.copula import frank_copula
 
 from db import asset_barra_stock_factor_layer_nav, base_ra_index_nav
+import warnings
+warnings.filterwarnings('ignore')
 
 def setup_logging(
     default_path = './shell/logging.json',
@@ -100,10 +103,11 @@ def cal_rho(id1, id2):
     asset2 = load_nav(id2)
     if asset1.index[0].date() > datetime.date(2010, 1, 1):
         logging.error("historical data of asset {} must start before 2010-01-01".format(id1))
-        os._exit(1)
+        return 0
+
     if asset2.index[0].date() > datetime.date(2010, 1, 1):
         logging.error("historical data of asset {} must start before 2010-01-01".format(id2))
-        os._exit(1)
+        return 0
 
     dates1 = asset1.index
     dates2 = asset2.index
@@ -123,6 +127,10 @@ def cal_rho(id1, id2):
     rank_x = rankdata(x)/LENTH1
     rank_y = rankdata(y)/LENTH1
     model, par = train(rank_x, rank_y)
+    if model is 0:
+        logging.error("Model fail to converge!".format(id1))
+        return 0
+
 
     cpus = multiprocessing.cpu_count()
     pool = multiprocessing.ProcessingPool(process=cpus)
@@ -141,14 +149,17 @@ def cal_rho(id1, id2):
     df = df.fillna(method = 'pad')
     # df = df.abs()
     # df = df.rolling(120, 60).mean().dropna()
-    df = df.rolling(120).mean().dropna()
+    df = df.rolling(60).mean().dropna()
     df = df[df.index >= '2012-07-27']
 
     return df
 
 
 def cal_mul_rhos():
-    base_pool = ['120000002', '120000013', '120000014', '120000015', '120000009', '120000029', '120000039', '120000025', '120000028']
+    base_pool = []
+    for base_id in range(2, 42):
+        base_pool.append('12{:07}'.format(base_id))
+
     bf_pool = []
     for factor_id in range(1, 3):
         for layer in range(5):
@@ -160,37 +171,85 @@ def cal_mul_rhos():
         if df is None:
             df = cal_rho('120000001', asset)
         else:
-            df = df.join(cal_rho('120000001', asset))
-            print asset, df.mean()
+            tmp_df = cal_rho('120000001', asset)
+            if tmp_df is 0:
+                pass
+            else:
+                df = df.join(tmp_df)
+        print asset, df.mean()
     
     ##去除标准指数的非交易日数据
     df = df.dropna()
-    df.to_csv('copula/kTau/kTau_sh300_120_2.csv', index_label = 'date')
+    df.to_csv('copula/kTau/kTau_sh300_60.csv', index_label = 'date')
     return df
 
 
-def cluster():
-    df = pd.read_csv('copula/kTau/kTau_sh300_120_2.csv', index_col = 0, parse_dates = True)
+def cluster(sdate = None, edate = None):
+    df = pd.read_csv('copula/kTau/kTau_sh300_60.csv', index_col = 0, parse_dates = True)
     df = df.fillna(method = 'pad')
+    if sdate is not None:
+        df = df[df.index >= sdate]
+    if edate is not None:
+        df = df[df.index <= edate]
     assets = df.columns.values
-
     x = df.values.T
-    scores = {}
-    for n_clusters in range(2, 11):
-        model = KMeans(n_clusters=n_clusters, random_state=0).fit(x)
-        res = model.fit(x)
-        score = res.score(x)
-        scores[n_clusters] = score
+
+    ## Use BIC to choose the best cluster number
+    # ks = range(2, 11)
+    # kmeans = [KMeans(n_clusters = i, init="k-means++").fit(x) for i in ks]
+    # BIC = [compute_bic(kmeansi,x) for kmeansi in kmeans]
+    # best_cluster_num = ks[np.argmin(BIC)]
+    # logger.info("Best cluster number: {}".format(best_cluster_num))
     
-    set_trace()
+    best_cluster_num = 8
+    model = KMeans(n_clusters=best_cluster_num, random_state=0).fit(x)
 
     asset_cluster = {}
     for i in range(model.n_clusters):
         asset_cluster[rankdata(model.cluster_centers_.mean(1))[i]] = assets[model.labels_ == i]
-    # for i in sorted(rankdata(model.cluster_centers_.mean(1))):
-        # print i, asset_cluster[i]
+    for i in sorted(rankdata(model.cluster_centers_.mean(1))):
+        print i, asset_cluster[i]
+    set_trace()
     
     return asset_cluster
+
+
+def compute_bic(kmeans,X):
+    """
+    Computes the BIC metric for a given clusters
+
+    Parameters:
+    -----------------------------------------
+    kmeans:  List of clustering object from scikit learn
+
+    X     :  multidimension np array of data points
+
+    Returns:
+    -----------------------------------------
+    BIC value
+    """
+    # assign centers and labels
+    centers = [kmeans.cluster_centers_]
+    labels  = kmeans.labels_
+    #number of clusters
+    m = kmeans.n_clusters
+    # size of the clusters
+    n = np.bincount(labels)
+    #size of data set
+    N, d = X.shape
+
+    #compute variance for all clusters beforehand
+    cl_var = (1.0 / (N - m) / d) * sum([sum(distance.cdist(X[np.where(labels == i)], [centers[0][i]], 
+             'euclidean')**2) for i in range(m)])
+
+    const_term = 0.5 * m * np.log(N) * (d+1)
+
+    BIC = np.sum([n[i] * np.log(n[i]) -
+               n[i] * np.log(N) -
+             ((n[i] * d) / 2) * np.log(2*np.pi*cl_var) -
+             ((n[i] - 1) * d/ 2) for i in range(m)]) - const_term
+
+    return(BIC)
 
 
 def cal_layer(id1, id2):
@@ -208,8 +267,7 @@ def cal_layer(id1, id2):
         df = rho_pool.join(rho)
         x = df.values.T
         model = KMeans(n_clusters=3, random_state=0).fit(x)
-        res = model.fit(x)
-        score = res.score(x)
+        score = model.score(x)
         return rankdata(model.cluster_centers_.mean(1))[model.labels_[-1]]
 
  
@@ -251,5 +309,6 @@ if __name__ == '__main__':
     layer = cal_layer(id1, id2)
     logger.info("kTau correlation of {} and {} is in layer {}".format(id1, id2, layer))
     '''
-    # cal_mul_rhos()
+    cal_mul_rhos()
+    # cluster('2016-01-01')
     cluster()
