@@ -137,6 +137,31 @@ class barra_stock_factor_layer_nav(Base):
     created_at = Column(DateTime)
 
 
+class barra_stock_factor_layer_ic(Base):
+
+    __tablename__ = 'barra_stock_factor_layer_ic'
+
+    bf_id = Column(String, primary_key = True)
+    trade_date = Column(Date, primary_key = True)
+    ic = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+class barra_stock_factor_layer_weight_nav(Base):
+
+    __tablename__ = 'barra_stock_factor_layer_weight_nav'
+
+    bf_id = Column(String, primary_key = True)
+    trade_date = Column(Date, primary_key = True)
+    layer = Column(Integer, primary_key = True)
+    nav = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
 
 def load_factor_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 

@@ -98,24 +98,32 @@ def stock_pos_2_weight(stock_pos):
     return stock_pos_df
 
 
+
 #根据每期股票按照因子权重配置每期股票权重
 def stock_pos_2_factor_weight(bf_id, stock_pos):
 
     all_stocks = all_stock_info()
 
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
     dates = list(stock_pos.keys())
     dates.sort()
     datas = {}
+
     for date in dates:
         stocks = stock_pos[date]
-        stocks = list(stocks)
-        stocks_num = 1.0 * len(stocks)
+        stocks = list(set(stocks) & set(all_stocks.globalid.ravel()))
+        sql = session.query(barra_stock_factor_exposure.stock_id, barra_stock_factor_exposure.factor_exposure).filter(and_(barra_stock_factor_exposure.bf_id == bf_id, barra_stock_factor_exposure.trade_date == date)).statement
+        factor_exposure_df = pd.read_sql(sql, session.bind, index_col = ['stock_id'])
+        factor_exposure_df = factor_exposure_df.loc[stocks]
+        factor_exposure_df = factor_exposure_df / factor_exposure_df.sum()
         record = pd.Series(0, index = all_stocks.globalid)
-        record[record.index.isin(stocks)] = 1.0 / stocks_num
-        #stock_pos_df.loc[date] = record
-        #for stock_id in stocks:
-        #    record.loc[stock_id] = 1.0 * stocks.count(stock_id) / stocks_num
+        for stock_id in factor_exposure_df.index:
+            record.loc[stock_id] = factor_exposure_df.loc[stock_id].ravel()[0]
         datas[date] = record
 
     stock_pos_df = pd.DataFrame(datas).T
+
     return stock_pos_df

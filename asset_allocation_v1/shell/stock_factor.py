@@ -176,6 +176,8 @@ def current_ratio_factor():
     return
 
 
+
+
 #现金比率因子
 def cash_ratio_factor():
 
@@ -202,6 +204,9 @@ def cash_ratio_factor():
     session.close()
 
     return
+
+
+
 
 
 #市盈率因子
@@ -414,8 +419,6 @@ def market_leverage_factor():
     session.close()
 
     return
-
-
 
 
 

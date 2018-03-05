@@ -123,6 +123,7 @@ class tq_fin_proindicdata(Base):
     fcff = Column(Float)
     fcfe = Column(Float)
     ltmliabtoequconms = Column(Float)
+    ltmliabtota = Column(Float)
     equtotliab = Column(Float)
     reporttype = Column(Integer)
 
