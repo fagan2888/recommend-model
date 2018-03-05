@@ -894,6 +894,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #df = barra_stock_factor.factor_layer(factor_df)
         #df = stock_factor.compute_rankcorr_multi_factor_pos()
         df = barra_stock_factor.factor_boot_pos()
+        #bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005', 'BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
+        #    'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
+        #df = barra_stock_factor.regression_tree_factor_spliter(bf_ids)
     elif algo == 6:
         df = markowitz_days(
             sdate, edate, assets,
