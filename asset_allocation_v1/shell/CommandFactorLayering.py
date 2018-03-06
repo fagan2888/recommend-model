@@ -12,13 +12,15 @@ import pandas as pd
 import numpy as np
 import logging
 import logging.config
+from numpy import mat
 from pathos import multiprocessing
 from scipy.stats import rankdata
-from sklearn.cluster import KMeans
+from scipy.signal import hilbert
+from sklearn.cluster import KMeans, AgglomerativeClustering
 from scipy.spatial import distance
 from starvine.bvcopula.copula import frank_copula
 
-from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, asset_fl_info
+from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, asset_fl_info, asset_fl_nav
 from sqlalchemy import MetaData, Table, select, func, literal_column
 import warnings
 warnings.filterwarnings('ignore')
@@ -51,7 +53,7 @@ def fl(ctx):
     '''
     if ctx.invoked_subcommand is None:
         ctx.invoke(fl_update)
-        # ctx.invode(fl_nav_update)
+        ctx.invoke(fl_nav_update)
     else:
         pass
 
@@ -107,14 +109,33 @@ def fl_update(ctx):
     df_new = df_new.set_index(['fl_id', 'fl_asset_id'])
     database.batch(db, t, df_new, df_old)
 
+
 @fl.command()
 @click.pass_context
-def fl_nav_update():
-    pass
+def fl_nav_update(ctx):
+    df_layer = asset_fl_info.load()
+    with click.progressbar(length=len(df_layer.index.levels[0]), label='update nav'.ljust(30)) as bar:
+        for fl_id in df_layer.index.levels[0]:
+            assets = np.array(df_layer.loc[fl_id].index)
+            sumple_df = sumple_update(assets, fl_id)
+
+            df_new = sumple_df.reset_index()
+            df_new.columns = ['fl_date', 'fl_nav']
+            df_new['fl_id'] = fl_id
+            df_new = df_new.set_index(['fl_id', 'fl_date'])
+            # set_trace()
+            df_old = asset_fl_nav.load_nav(fl_id)
+
+            db = database.connection('asset')
+            metadata = MetaData(bind=db)
+            t = Table('fl_nav', metadata, autoload=True)
+            database.batch(db, t, df_new, df_old)
+            bar.update(1)
+
 
 class FactorLayer():
 
-    def __init__(self, h_num = 6, m_num = 2, l_num = 1):
+    def __init__(self, h_num = 7, m_num = 2, l_num = 1):
 
         self._pool = FactorLayer.get_pool()
         self.h_pool = []
@@ -146,13 +167,6 @@ class FactorLayer():
         return pool
 
 
-        df_risk_return = self.cal_mul_risk_return()
-        asset_cluster_hml = self.cluster(df_risk_return, self._pool, 3)
-        # self.h_pool = np.insert(asset_cluster_hml[1.0], 0, '120000001')
-        self.h_pool = asset_cluster_hml[1.0]
-        self.m_pool = asset_cluster_hml[2.0]
-        self.l_pool = asset_cluster_hml[3.0]
-
     def hml_layer(self):
         asset_cluster_hml = self.cluster(self.df_risk_return, 3, self._pool)
         self.h_pool = asset_cluster_hml[1.0]
@@ -165,10 +179,16 @@ class FactorLayer():
 
 
     def high_layer(self):
-        self.h_pool_cluster = self.cluster(self.df_rho, self.h_num, self.h_pool)
+        self.h_pool_cluster = self.cluster(self.df_rho, self.h_num, self.h_pool, method = 'agg')
+        for k, v in self.h_pool_cluster.iteritems():
+            if '120000002' in v:
+                v = np.insert(v, 0, '120000001')
+                self.h_pool_cluster[k] = v
+
 
     def low_layer(self):
         self.l_pool_cluster[1.0] = self.l_pool
+
 
     @staticmethod
     def train(arr1, arr2):
@@ -298,7 +318,7 @@ class FactorLayer():
 
 
     @staticmethod
-    def cluster(df, best_cluster_num, pool = None, sdate = None, edate = None):
+    def cluster(df, best_cluster_num, pool = None, sdate = None, edate = None, method = 'kmeans'):
 
         if pool is not None:
             try:
@@ -323,14 +343,21 @@ class FactorLayer():
         # best_cluster_num = ks[np.argmin(BIC)]
         # logger.info("Best cluster number: {}".format(best_cluster_num))
         
-        model = KMeans(n_clusters=best_cluster_num, random_state=0).fit(x)
 
-        asset_cluster = {}
-        for i in range(model.n_clusters):
-            asset_cluster[rankdata(model.cluster_centers_.mean(1))[i]] = assets[model.labels_ == i]
-        # for i in sorted(rankdata(model.cluster_centers_.mean(1))):
-            # print i, asset_cluster[i]
+        if method == 'kmeans':
+            model = KMeans(n_clusters=best_cluster_num, random_state=0).fit(x)
+            asset_cluster = {}
+            for i in range(model.n_clusters):
+                asset_cluster[rankdata(model.cluster_centers_.mean(1))[i]] = assets[model.labels_ == i]
+            # for i in sorted(rankdata(model.cluster_centers_.mean(1))):
+                # print i, asset_cluster[i]
         
+        elif method == 'agg':
+            model = AgglomerativeClustering(n_clusters=best_cluster_num, linkage='ward').fit(x)
+            asset_cluster = {}
+            for i in np.arange(model.n_clusters):
+                asset_cluster[i+1.0] = assets[model.labels_ == i]
+
         return asset_cluster
 
 
@@ -360,6 +387,8 @@ def load_nav(id_):
 
 
 def sumple(X, maxiter = 100):
+    if X.shape[1] == 1:
+        return X.ravel()
     ncor, n = X.shape
     X = hilbert(X ,axis = 0)
     X = mat(X)
@@ -382,11 +411,26 @@ def sumple(X, maxiter = 100):
     return r
 
 
+def sumple_update(assets, fl_id):
+    asset_navs = []
+    for asset_id in assets:
+        asset_nav = load_nav(asset_id)
+        asset_nav.columns = [asset_id]
+        asset_navs.append(asset_nav)
+    df = pd.concat(asset_navs, 1).fillna(method = 'pad').dropna()
+    df = df/df.iloc[0, :]
+    x = df.values
+    sumple_x = sumple(x)
+    sumple_df = pd.DataFrame(data = sumple_x, index = df.index, columns = [fl_id])
+
+    return sumple_df
+
+
 if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
     setup_logging()
-    factor_layer = FactorLayer(6)
+    factor_layer = FactorLayer()
     # print factor_layer._pool
     factor_layer.handle()
     for k,v in factor_layer.h_pool_cluster.iteritems():
