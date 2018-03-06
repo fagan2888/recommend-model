@@ -831,6 +831,7 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     layer_ic_df = layer_ic_df.rolling(6).mean()
     layer_ic_abs = abs(layer_ic_df)
 
+    #print layer_ic_df
     sql = session.query(barra_stock_factor_layer_stocks.layer, barra_stock_factor_layer_stocks.trade_date ,barra_stock_factor_layer_stocks.bf_id).statement
     all_factor_layer_stock_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'bf_id'])
 
@@ -859,15 +860,23 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     factor_layer_df = pd.DataFrame(factor_layers, index = dates)
     factor_layer_df[pd.isnull(factor_layer_df)] = np.nan
 
-    #print factor_layer_df.tail()
+    #print factor_layer_df
     session.commit()
     session.close()
 
     return factor_layer_df
 
 
+
 #根据秩相关选取因子，然后利用bootstrap计算净值
 def factor_boot_pos():
+
+    bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
+            'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
+
+    #bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012']
+    factor_pos_df = regression_tree_ic_factor_layer_selector(bf_ids)
+
 
     all_stocks = stock_util.all_stock_info()
     secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
@@ -892,11 +901,6 @@ def factor_boot_pos():
     session = Session()
 
 
-    bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
-            'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
-
-    #bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012']
-    factor_pos_df = regression_tree_ic_factor_layer_selector(bf_ids)
 
     dates = factor_pos_df.index[7:]
     stock_pos_df = pd.DataFrame(0, index = dates, columns = all_stocks.globalid)
@@ -963,6 +967,8 @@ def factor_boot_pos():
 
     session.commit()
     session.close()
+
+    stock_pos_df.to_csv('stock_pos.csv')
 
     return stock_pos_df
 
