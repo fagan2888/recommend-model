@@ -20,26 +20,44 @@ from ipdb import set_trace
 #import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
-    #Read parameters
-
-    with open('bl.json') as f:
-        bl_parameters = json.load(f)
-
-    P_high = np.array(np.matrix(bl_parameters["P_high"]))
-    P_low = np.array(np.matrix(bl_parameters["P_low"]))
-    Q = np.array(np.matrix(bl_parameters["Q"]).T)
-    Omega = np.matrix(bl_parameters["Omega"]) if bl_parameters["Omega"] else None
-    tau = bl_parameters["tau"]
-
+def efficient_frontier_spe(return_rate, today, bound, sum1 = 0.65, sum2 = 0.45):
     solvers.options['show_progress'] = False
 
     n_asset    =     len(return_rate)
-    if n_asset == 6:
-        asset_mean, cov = black_litterman(return_rate, P_high, Q, Omega, tau)
-    if n_asset == 7:
-        asset_mean, cov = black_litterman(return_rate, P_low, Q, Omega, tau)
     
+    #Read parameters
+    with open('bl.json') as f:
+        bl_parameters = json.load(f)
+
+    #Hardcode weights from bootstrap
+    from db import asset_mz_markowitz_pos
+    weights = asset_mz_markowitz_pos.load('MZ.000010')
+    #Retrieve the last date
+        #if not bootstrap:
+    # weights = weights.loc[funddfr.index[-1]]
+    weights = weights.loc[today]
+
+    if n_asset == 5:
+        P = np.array(np.matrix(bl_parameters["P_raw"]))
+    else:
+        weights['120000039'] = 1-weights.sum()
+        if n_asset == 6:
+            weights = weights.reindex(['120000001', '120000002', '120000014', '120000039', 'ERI000001', 'ERI000002'])
+            P = np.array(np.matrix(bl_parameters["P_high"]))
+        
+        if n_asset == 7:
+            weights['120000010'] = 0
+            weights = weights.reindex(['120000001', '120000002', '120000010', '120000014', '120000039', 'ERI000001', 'ERI000002'])
+            P = np.array(np.matrix(bl_parameters["P_low"]))
+
+    Q = np.array(np.matrix(bl_parameters["Q"]).T)
+    Omega = np.matrix(bl_parameters["Omega"]) if bl_parameters["Omega"] else None
+    tau = bl_parameters["tau"]
+    # delta = 2.5
+    # Sigma = np.cov(return_rate)
+
+    asset_mean, cov = black_litterman(return_rate, weights, P, Q, Omega, tau)
+    # RAW Markowitz
     # asset_mean = np.mean(return_rate, axis=1)
     # cov = np.cov(return_rate)
     S = matrix(cov + cov * np.eye(len(asset_mean)) * 2)         #Double the diagonal of cov matrix
@@ -481,7 +499,7 @@ def grs(portfolio):
 
 
 
-def black_litterman(return_rate, P, Q, Omega=None, tau=0.05):
+def black_litterman(return_rate, weights, P, Q, Omega=None, tau=0.05):
     '''
     For the argument return_rate (Pi), since the original black_litterman model asks for equilibrium returns,
     which are currently unavaliable. Thus, here we use the naive mean return from historical data instead.
@@ -498,9 +516,10 @@ def black_litterman(return_rate, P, Q, Omega=None, tau=0.05):
     Possible values: [0.01, 0.05], 1, or approximately 1 divided by #observations.
     '''
     #Use mean return coming from history to substitute equilibrium return obtained by rev opt
-    pi = np.mean(return_rate, axis = 1)
+    pi = np.mean(return_rate, axis=1)
     #the covariance matrix of returns, i.e. Sigma
     Sigma = np.cov(return_rate)
+
     var_view_portfoilo = np.dot(np.dot(P, Sigma), P.T)
     # try:
     # except:
