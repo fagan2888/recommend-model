@@ -14,27 +14,35 @@ import cvxopt
 from cvxopt import matrix, solvers
 from numpy import isnan
 from scipy import linalg
+import json
+from ipdb import set_trace
 #import pylab
 #import matplotlib.pyplot as plt
 
 
 def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
+    #Read parameters
+
+    with open('bl.json') as f:
+        bl_parameters = json.load(f)
+
+    P_high = np.array(np.matrix(bl_parameters["P_high"]))
+    P_low = np.array(np.matrix(bl_parameters["P_low"]))
+    Q = np.array(np.matrix(bl_parameters["Q"]).T)
+    Omega = np.matrix(bl_parameters["Omega"]) if bl_parameters["Omega"] else None
+    tau = bl_parameters["tau"]
 
     solvers.options['show_progress'] = False
 
     n_asset    =     len(return_rate)
-
-    asset_mean = np.mean(return_rate, axis = 1)
-    #print asset_mean
-    l = len(asset_mean)
-
-    cov        =     np.cov(return_rate)
-
-    S           =     matrix(cov)
-    l2 = matrix(S * np.eye(l))
-    l2 = l2 * 2
-    S = S + l2
-    #S = l2
+    if n_asset == 6:
+        asset_mean, cov = black_litterman(return_rate, P_high, Q, Omega, tau)
+    if n_asset == 7:
+        asset_mean, cov = black_litterman(return_rate, P_low, Q, Omega, tau)
+    
+    # asset_mean = np.mean(return_rate, axis=1)
+    # cov = np.cov(return_rate)
+    S = matrix(cov + cov * np.eye(len(asset_mean)) * 2)         #Double the diagonal of cov matrix
 
     pbar       =     matrix(asset_mean)
 
@@ -473,49 +481,47 @@ def grs(portfolio):
 
 
 
-def black_litterman(delta, weq, sigma, tau, P, Q, Omega):
+def black_litterman(return_rate, P, Q, Omega=None, tau=0.05):
+    '''
+    For the argument return_rate (Pi), since the original black_litterman model asks for equilibrium returns,
+    which are currently unavaliable. Thus, here we use the naive mean return from historical data instead.
 
-    # Reverse optimize and back out the equilibrium returns
-    # This is formula (12) page 6.
-    #print weq
+    The P, Q are view matrices, where P identifies the assets involved in each views. (K x N matrix for K views),
+    and Q is the view vector denotes the excess returns for each view.
 
+    The uncertainty of the views results in a random, unknown, independent,
+    normally distributed error term vector, with a mean 0.
+    The Omega is the corresponding covariance matrix, formed only by the variance.
+    The off-diagonal positions are all 0 since we assume that views are all independent of one another.
 
-    pi = weq.dot(sigma * delta)
-
-
-    # We use tau * sigma many places so just compute it once
-    ts = tau * sigma
-
-
+    The scalar tau is more or less inversely proportional to the relative weight given to the return vector (Pi).
+    Possible values: [0.01, 0.05], 1, or approximately 1 divided by #observations.
+    '''
+    #Use mean return coming from history to substitute equilibrium return obtained by rev opt
+    pi = np.mean(return_rate, axis = 1)
+    #the covariance matrix of returns, i.e. Sigma
+    Sigma = np.cov(return_rate)
+    var_view_portfoilo = np.dot(np.dot(P, Sigma), P.T)
+    # try:
+    # except:
+    #     print return_rate
+    #     print P
+    
+    if Omega == None:
+        Omega = var_view_portfoilo * tau
+    # We use tau * cov many places so just compute it once
+    ts = tau * Sigma
     # Compute posterior estimate of the mean
     # This is a simplified version of formula (8) on page 4.
     middle = linalg.inv(np.dot(np.dot(P,ts),P.T) + Omega)
-
-
-    #print middle
-    #print(middle)
-    #print(Q-np.expand_dims(np.dot(P,pi.T),axis=1))
+    # Use this line if the argument P and Q are just matrix
+    # er = np.expand_dims(pi,axis=0).T + np.dot(np.dot(np.dot(ts,P.T),middle),(Q - np.dot(P,pi.T)).T)
+    # Use this line if the argument P and Q are wrapped matrices (for calculating the Omega by the formula given in the paper)
     er = np.expand_dims(pi,axis=0).T + np.dot(np.dot(np.dot(ts,P.T),middle),(Q - np.expand_dims(np.dot(P,pi.T),axis=1)))
-
-
-    # Compute posterior estimate of the uncertainty in the mean
-    # This is a simplified and combined version of formulas (9) and (15)
-    posteriorSigma = sigma + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
-    #print(posteriorSigma)
-    # Compute posterior weights based on uncertainty in mean
-    w = er.T.dot(linalg.inv(delta * posteriorSigma)).T
-    # Compute lambda value
-    # We solve for lambda from formula (17) page 7, rather than formula (18)
-    # just because it is less to type, and we've already computed w*.
-    lmbda = np.dot(linalg.pinv(P).T,(w.T * (1 + tau) - weq).T)
-
-
-    ws = []
-    for v in w:
-        ws.append(v[0])
-
-
-    return [er, ws, lmbda]
+    # The following formula is directly coming from the paper
+    # er = np.dot(linalg.inv(linalg.inv(ts)+np.dot(P.T, np.dot(linalg.inv(Omega), P))), np.dot(linalg.inv(ts), pi)+np.dot(P.T, np.dot(linalg.inv(Omega), Q))
+    posteriorcov = Sigma + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
+    return er, posteriorcov
 
 
 def printHello():
@@ -637,7 +643,8 @@ if __name__ == '__main__':
 
 
     rs = [[0.25,0.3,0.4, 0.3, 0.2, -0.1, -0.2], [0.1, 0.2, 0.3, -0.01, -0.2, 0.01, 0.02], [0.001, 0.02, -0.03, 0.05, -0.06, -0.07, 0.1]]
-    test_efficient_frontier(rs)
+    # test_efficient_frontier(rs)
+    # set_trace()
 
     #print portfolio[0]
     #print np.cov(rs)
