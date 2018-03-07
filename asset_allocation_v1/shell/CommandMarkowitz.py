@@ -31,6 +31,7 @@ from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_resh
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
+from ipdb import set_trace
 
 import traceback, code
 
@@ -614,8 +615,13 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
 
     if bootstrap is None:
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+    
+        
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+
+    #Use Blacklitterman
+    
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
