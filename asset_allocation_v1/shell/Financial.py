@@ -11,6 +11,7 @@ from sklearn import datasets, linear_model
 import numpy as np
 from scipy.stats import norm
 import cvxopt
+import pandas as pd
 from cvxopt import matrix, solvers
 from numpy import isnan
 from scipy import linalg
@@ -20,8 +21,11 @@ from ipdb import set_trace
 #import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(return_rate, today, bound, sum1 = 0.65, sum2 = 0.45):
+def efficient_frontier_spe(funddfr, today, bound, sum1 = 0.65, sum2 = 0.45):
     solvers.options['show_progress'] = False
+
+    codes = funddfr.columns
+    return_rate = [funddfr[code].values for code in codes]
 
     n_asset    =     len(return_rate)
     
@@ -33,23 +37,22 @@ def efficient_frontier_spe(return_rate, today, bound, sum1 = 0.65, sum2 = 0.45):
     from db import asset_mz_markowitz_pos
     weights = asset_mz_markowitz_pos.load('MZ.000010')
     #Retrieve the last date
-        #if not bootstrap:
-    # weights = weights.loc[funddfr.index[-1]]
     weights = weights.loc[today]
 
-    if n_asset == 5:
-        P = np.array(np.matrix(bl_parameters["P_raw"]))
-    else:
-        weights['120000039'] = 1-weights.sum()
-        if n_asset == 6:
-            weights = weights.reindex(['120000001', '120000002', '120000014', '120000039', 'ERI000001', 'ERI000002'])
-            P = np.array(np.matrix(bl_parameters["P_high"]))
-        
-        if n_asset == 7:
-            weights['120000010'] = 0
-            weights = weights.reindex(['120000001', '120000002', '120000010', '120000014', '120000039', 'ERI000001', 'ERI000002'])
-            P = np.array(np.matrix(bl_parameters["P_low"]))
+    #HERE WE ARE GONNA RETRIEVE FUTURE RETURN RATE AS VIEWS
+    #=======================================================
+    from CommandMarkowitz import load_nav_series
+    future_returns = [load_nav_series(code, begin_date=today).iloc[:90] for code in codes]
+    future_return_rates = [asset.pct_change().fillna(0) for asset in future_returns]
+    corresponding_P = np.array([np.mean(asset) for asset in future_return_rates])
+    P_parsed = [corresponding_P / corresponding_P.sum()]  #Normalize and fit the form
+    #=======================================================
 
+    # raw_P = bl_parameters["P"]
+    # P_serialized = [pd.Series(view, index=view.keys()) for view in raw_P]
+    # P_parsed = [view.reindex(codes).fillna(0) for view in P_serialized]
+
+    P = np.array(P_parsed)
     Q = np.array(np.matrix(bl_parameters["Q"]).T)
     Omega = np.matrix(bl_parameters["Omega"]) if bl_parameters["Omega"] else None
     tau = bl_parameters["tau"]
@@ -520,7 +523,7 @@ def black_litterman(return_rate, weights, P, Q, Omega=None, tau=0.05):
     #the covariance matrix of returns, i.e. Sigma
     Sigma = np.cov(return_rate)
 
-    var_view_portfoilo = np.dot(np.dot(P, Sigma), P.T)
+    var_view_portfoilo = np.dot(np.dot(P, Sigma), P.T) * np.eye(Sigma.shape[0])
     # try:
     # except:
     #     print return_rate
