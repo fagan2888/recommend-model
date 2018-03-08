@@ -123,7 +123,6 @@ def fl_nav_update(ctx):
             df_new.columns = ['fl_date', 'fl_nav']
             df_new['fl_id'] = fl_id
             df_new = df_new.set_index(['fl_id', 'fl_date'])
-            # set_trace()
             df_old = asset_fl_nav.load_nav(fl_id)
 
             db = database.connection('asset')
@@ -422,6 +421,10 @@ def sumple_update(assets, fl_id):
     x = df.values
     sumple_x = sumple(x)
     sumple_df = pd.DataFrame(data = sumple_x, index = df.index, columns = [fl_id])
+
+    df.columns = assets
+    df['sumple'] = sumple_x
+    df.to_csv('copula/sumple/{}.csv'.format(fl_id), index_label = 'date') 
 
     return sumple_df
 
