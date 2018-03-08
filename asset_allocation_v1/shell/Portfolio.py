@@ -209,17 +209,7 @@ def markowitz_r_spe(funddfr, today, bounds):
     final_codes = []
 
 
-    codes = funddfr.columns
-
-
-    return_rate = []
-
-    for code in codes:
-        return_rate.append(funddfr[code].values)
-
-
-    risks, returns, ws = fin.efficient_frontier_spe(return_rate, today, bounds)
-    # risks, returns, ws = fin.efficient_frontier_spe(funddfr, today, bounds)
+    risks, returns, ws = fin.efficient_frontier_spe(funddfr, today, bounds)
 
     for j in range(0, len(risks)):
         sharp = (returns[j] - rf) / risks[j]
