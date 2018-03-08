@@ -27,10 +27,11 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_fl_nav
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
+from ipdb import set_trace
 
 import traceback, code
 
@@ -665,6 +666,10 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
         sr = base_exchange_rate_index_nav.load_series(
             asset_id, reindex=None, end_date=end_date)
 
+    elif xtype == 'FL.':
+
+        sr = asset_fl_nav.load_series(
+            asset_id, reindex=None, end_date=end_date)
     else:
         sr = pd.Series()
 
@@ -744,6 +749,10 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         elif prefix == 'ER':
 
             sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'BL':
+
+            sr = asset_fl_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         else:
             sr = pd.Series()
