@@ -18,6 +18,7 @@ import DBData
 import util_numpy as npu
 import Portfolio as PF
 from TimingWavelet import TimingWt
+from collections import defaultdict
 import multiprocessing
 from multiprocessing import Manager
 
@@ -28,7 +29,7 @@ from sqlalchemy import MetaData, Table, select, func
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos,asset_stock,asset_stock_factor, asset_fl_nav
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos,asset_stock,asset_stock_factor, asset_fl_nav, asset_fl_info
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
@@ -69,7 +70,7 @@ def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optrepla
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid, optappend=optappend)
+            ctx.invoke(pos, optid=optid, optappend=optappend, sdate=startdate )
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -773,8 +774,7 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             # markowitz配置资产
             #
             sr = asset_stock_factor.load_factor_nav_series(
-        elif prefix == 'BL':
-
+        elif prefix == 'FL':
             sr = asset_fl_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         else:
@@ -949,7 +949,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    if algo == 1 or algo == 5:
+    if algo == 1:
         pass
     else:
         df = df.rolling(window = 4, min_periods = 1).mean()
