@@ -436,5 +436,16 @@ if __name__ == '__main__':
     factor_layer = FactorLayer()
     # print factor_layer._pool
     factor_layer.handle()
-    for k,v in factor_layer.h_pool_cluster.iteritems():
-        print k, v
+    # for k,v in factor_layer.h_pool_cluster.iteritems():
+        # print k, v
+    equity_pool = factor_layer.h_pool[:-10]
+    print equity_pool
+    '''
+    equity_nav = []
+    for asset in equity_pool:
+        asset_nav = load_nav(asset).loc['2011-01-01':'2018-03-01']
+        equity_nav.append(asset_nav)
+        asset_nav.name = asset
+        print asset, len(asset_nav)
+    equity_nav_df = pd.concat(equity_nav, 1)
+    '''

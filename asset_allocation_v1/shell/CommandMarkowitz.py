@@ -18,6 +18,7 @@ import DBData
 import util_numpy as npu
 import Portfolio as PF
 from TimingWavelet import TimingWt
+from collections import defaultdict
 import multiprocessing
 from multiprocessing import Manager
 
@@ -27,7 +28,7 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_fl_nav
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_fl_nav, asset_fl_info
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
@@ -65,7 +66,7 @@ def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optrepla
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid, optappend=optappend)
+            ctx.invoke(pos, optid=optid, optappend=optappend, sdate=startdate )
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -750,7 +751,7 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
             sr = base_exchange_rate_index_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-        elif prefix == 'BL':
+        elif prefix == 'FL':
 
             sr = asset_fl_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
@@ -872,6 +873,47 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+    elif algo == 5:
+        layer_asset = {}
+        layer_assets = {}
+        layer_info = asset_fl_info.load()
+        for layer in layer_info.index.levels[0]:
+            used_assets = np.intersect1d(assets.keys(), layer_info.loc[layer].index)
+            if len(used_assets) != 0:
+                layer_asset[layer] = used_assets
+        
+        for layer in layer_asset.keys():
+            uppers = []
+            lowers = []
+            sum2s = []
+            sum1s = []
+            for asset in layer_asset[layer]:
+                uppers.append(assets[asset]['upper'])
+                lowers.append(assets[asset]['lower'])
+                sum2s.append(assets[asset]['sum2'])
+                sum1s.append(assets[asset]['sum1'])
+
+            upper = np.mean(uppers)
+            lower = np.mean(lowers)
+            sum2 = np.mean(sum2s)
+            sum1 = np.mean(sum1s)
+            
+            layer_assets[layer] = {'upper':upper, 'lower':lower, 'sum2':sum2, 'sum1': sum1}
+
+        df = markowitz_days(
+            sdate, edate, layer_assets,
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+        
+        df_layer = df.iloc[:, :-3]
+        df_ratio = df.iloc[:, -3:]
+
+        layer_num = df_layer.shape[1]
+        for layer in layer_asset.keys():
+            for asset in layer_asset[layer]:
+                df_layer[asset] = df_layer[layer]/len(layer_asset[layer])
+        
+        df = df_layer.iloc[:, layer_num:] 
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;

@@ -82,6 +82,7 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, op
         pools = [s.strip() for s in optid.split(',')]
     else:
         pools = None
+
     df_pool = load_pools(pools, [1, 2])
 
     if optlist:

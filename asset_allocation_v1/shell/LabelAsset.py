@@ -114,6 +114,7 @@ def label_asset_nav(start_date, end_date):
         
 
 def label_asset_stock_per_day(day, lookback, limit = 5):
+
     # 加载时间轴数据
     index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
 
