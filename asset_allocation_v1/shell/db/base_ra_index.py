@@ -33,3 +33,17 @@ def find(globalid):
     s = select(columns).where(t.c.globalid == globalid)
 
     return s.execute().first()
+
+def load_globalid():
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    t = Table('ra_index', metadata, autoload=True)
+
+    columns = [
+        t.c.globalid,
+    ]
+
+    s = select(columns) 
+    df = pd.read_sql(s, db)
+
+    return df['globalid']
