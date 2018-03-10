@@ -20,7 +20,7 @@ from sklearn.cluster import KMeans, AgglomerativeClustering
 from scipy.spatial import distance
 from starvine.bvcopula.copula import frank_copula
 
-from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, asset_fl_info, asset_fl_nav
+from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, base_ra_index, asset_fl_info, asset_fl_nav
 from sqlalchemy import MetaData, Table, select, func, literal_column
 import warnings
 warnings.filterwarnings('ignore')
@@ -62,14 +62,14 @@ def fl(ctx):
 def fl_update(ctx):
     df_old = asset_fl_info.load()
 
-    factor_layer = FactorLayer()
+    factor_layer = FactorLayer(8, 2, 1, base_pool_only = False)
     factor_layer.handle()
 
     fl_id = []
     fl_asset_id = []
     fl_first_loc = []
     fl_second_loc = []
-    
+
     layer = 1
     for k, v in factor_layer.l_pool_cluster.iteritems():
         for asset_id in v:
@@ -96,7 +96,7 @@ def fl_update(ctx):
             fl_first_loc.append(3)
             fl_second_loc.append(int(layer))
         layer += 1
-    
+
     df_new = pd.DataFrame(\
         data = np.column_stack([fl_id, fl_asset_id, fl_first_loc, fl_second_loc]),\
         columns = ['fl_id', 'fl_asset_id', 'fl_first_loc', 'fl_second_loc']
@@ -134,9 +134,9 @@ def fl_nav_update(ctx):
 
 class FactorLayer():
 
-    def __init__(self, h_num = 7, m_num = 2, l_num = 1):
+    def __init__(self, h_num = 7, m_num = 2, l_num = 1, base_pool_only = True):
 
-        self._pool = FactorLayer.get_pool()
+        self._pool = FactorLayer.get_pool(base_pool_only)
         self.h_pool = []
         self.m_pool = []
         self.l_pool = []
@@ -144,15 +144,16 @@ class FactorLayer():
         self.h_num = h_num
         self.m_num = m_num
         self.l_num = l_num
-        
+
         self.h_pool_cluster = {}
         self.m_pool_cluster = {}
         self.l_pool_cluster = {}
 
-    
-    @staticmethod
-    def get_pool():
 
+    @staticmethod
+    def get_pool(base_pool_only):
+
+        '''
         base_pool = []
         for base_id in range(2, 42):
             base_pool.append('12{:07}'.format(base_id))
@@ -161,7 +162,23 @@ class FactorLayer():
         for factor_id in range(1, 3):
             for layer in range(5):
                 bf_pool.append('BF.{:06}.{}'.format(factor_id, layer))
-        pool = base_pool+bf_pool     
+        pool = base_pool+bf_pool
+        '''
+
+        base_pool = base_ra_index.load_globalid()
+        base_pool = base_pool.values
+        base_pool = [str(x) for x in base_pool]
+        base_pool = np.sort(base_pool).tolist()[1:]
+        if base_pool_only:
+            return base_pool
+
+        bf_pool = []
+        bf_pool_df = asset_barra_stock_factor_layer_nav.load_layer_id()
+        for idx, row in bf_pool_df.iterrows():
+            bf_pool.append('{}.{}'.format(row['bf_id'], row['layer']))
+
+        ## drop '12000001' from base_pool because it it the baseline
+        pool = base_pool + bf_pool
 
         return pool
 
@@ -259,7 +276,7 @@ class FactorLayer():
         df = df[df.index >= '2012-07-27']
 
         return df
-    
+
 
     def cal_mul_rhos(self):
 
@@ -274,11 +291,11 @@ class FactorLayer():
                 else:
                     df = df.join(tmp_df)
             # print asset, df.mean()
-        
+
         ##去除标准指数的非交易日数据
         df = df.dropna()
         df.to_csv('copula/kTau/kTau_sh300_60.csv', index_label = 'date')
-        return df    
+        return df
 
 
     @staticmethod
@@ -331,7 +348,7 @@ class FactorLayer():
             df = df[df.index >= sdate]
         if edate is not None:
             df = df[df.index <= edate]
-        
+
         assets = df.columns.values
         x = df.values.T
 
@@ -341,7 +358,7 @@ class FactorLayer():
         # BIC = [compute_bic(kmeansi,x) for kmeansi in kmeans]
         # best_cluster_num = ks[np.argmin(BIC)]
         # logger.info("Best cluster number: {}".format(best_cluster_num))
-        
+
 
         if method == 'kmeans':
             model = KMeans(n_clusters=best_cluster_num, random_state=0).fit(x)
@@ -350,7 +367,7 @@ class FactorLayer():
                 asset_cluster[rankdata(model.cluster_centers_.mean(1))[i]] = assets[model.labels_ == i]
             # for i in sorted(rankdata(model.cluster_centers_.mean(1))):
                 # print i, asset_cluster[i]
-        
+
         elif method == 'agg':
             model = AgglomerativeClustering(n_clusters=best_cluster_num, linkage='ward').fit(x)
             asset_cluster = {}
@@ -366,10 +383,12 @@ class FactorLayer():
         # self.df_risk_return = self.cal_mul_risk_return()
         self.hml_layer()
         self.mid_layer()
+
         ## 按照相关性将高风险资产分成六类
-        self.df_rho = pd.read_csv('copula/kTau/kTau_sh300_60.csv', index_col = 0, parse_dates = True)
+        self.df_rho= pd.read_csv('copula/kTau/kTau_sh300_60.csv', index_col = 0, parse_dates = True)
         # self.df_rho = self.cal_mul_rhos()
         self.high_layer()
+
         ## 低风险只有货币和短融，无需分类
         self.low_layer()
 
@@ -424,7 +443,7 @@ def sumple_update(assets, fl_id):
 
     df.columns = assets
     df['sumple'] = sumple_x
-    df.to_csv('copula/sumple/{}.csv'.format(fl_id), index_label = 'date') 
+    df.to_csv('copula/sumple/{}.csv'.format(fl_id), index_label = 'date')
 
     return sumple_df
 
@@ -433,13 +452,13 @@ if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
     setup_logging()
-    factor_layer = FactorLayer()
+    factor_layer = FactorLayer(6, 2, 1, base_pool_only = True)
     # print factor_layer._pool
     factor_layer.handle()
-    # for k,v in factor_layer.h_pool_cluster.iteritems():
-        # print k, v
+    for k,v in factor_layer.h_pool_cluster.iteritems():
+        print k, v
     equity_pool = factor_layer.h_pool[:-10]
-    print equity_pool
+    # print equity_pool
     '''
     equity_nav = []
     for asset in equity_pool:
