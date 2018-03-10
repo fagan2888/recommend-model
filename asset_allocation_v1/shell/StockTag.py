@@ -64,22 +64,18 @@ def largecapfitness(funddf, indexdf, ratio):
 
         largecaptag[code] = largecapr
 
-
     fitness = {}
     for code in largecaptag.keys():
         rs = largecaptag[code]
         fitness[code] = (np.mean(rs), np.std(rs), (np.mean(rs) - Const.rf) / np.std(rs))
 
-
     x = fitness
     sorted_x = sorted(x.iteritems(), key=lambda x : x[1][2], reverse=True)
     sorted_fitness = sorted_x
 
-
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
-
 
     return result
 
@@ -1202,7 +1198,6 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
         if code in columns:
             tmp_codes.append(code)
     codes = tmp_codes
-
 
     positiondf = positiondf[codes]
 
