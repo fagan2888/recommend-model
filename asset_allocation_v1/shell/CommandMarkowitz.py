@@ -29,7 +29,7 @@ from sqlalchemy import MetaData, Table, select, func
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos,asset_stock,asset_stock_factor, asset_fl_nav, asset_fl_info
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_fl_nav, asset_fl_info, asset_barra_stock_factor_layer_nav
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
@@ -774,9 +774,12 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             # markowitz配置资产
             #
             sr = asset_stock_factor.load_factor_nav_series(
+                    asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+
         elif prefix == 'FL':
             sr = asset_fl_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+
         else:
             sr = pd.Series()
 
@@ -1018,7 +1021,7 @@ def nav(ctx, optid, opttype, optrisk, optlist):
         df_markowitz = asset_mz_markowitz.load(markowitzs)
     else:
         df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
-        
+
     if optlist:
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
@@ -1034,7 +1037,7 @@ def nav(ctx, optid, opttype, optrisk, optlist):
 def nav_update_alloc(markowitz, optrisk):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
-    
+
     for _, alloc in df_alloc.iterrows():
         nav_update(markowitz, alloc)
 
@@ -1107,7 +1110,7 @@ def turnover(ctx, optid, opttype, optrisk, optlist):
     print(tabulate(data, headers=headers, tablefmt="psql"))
     # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
     # print(tabulate(data, headers=headers, tablefmt="grid"))
-    
+
 def turnover_update_alloc(markowitz, optrisk):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)

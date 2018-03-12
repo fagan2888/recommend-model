@@ -62,7 +62,7 @@ def fl(ctx):
 def fl_update(ctx):
     df_old = asset_fl_info.load()
 
-    factor_layer = FactorLayer(9, 2, 1, base_pool_only = False)
+    factor_layer = FactorLayer(8, 2, 1, base_pool_only = False)
     factor_layer.handle()
 
     fl_id = []
@@ -134,7 +134,7 @@ def fl_nav_update(ctx):
 
 class FactorLayer():
 
-    def __init__(self, h_num = 7, m_num = 2, l_num = 1, base_pool_only = True):
+    def __init__(self, h_num = 8, m_num = 2, l_num = 1, base_pool_only = True):
 
         self._pool = FactorLayer.get_pool(base_pool_only)
         #self.baseline = 'BF.000001.1'
@@ -318,7 +318,6 @@ class FactorLayer():
         df = pd.rolling_corr(asset1, asset2, 60).dropna()
         df = df.to_frame(name = id2)
         df = df[df.index >= '2012-01-01']
-        print id2
 
         return df
 
@@ -447,8 +446,8 @@ class FactorLayer():
 
         ## 按照相关性将高风险资产分成六类
         # self.df_rho= pd.read_csv('copula/kTau/kTau_sh300_60.csv', index_col = 0, parse_dates = True)
-        # self.df_rho= pd.read_csv('copula/corr/corr_mf_60.csv', index_col = 0, parse_dates = True)
-        self.df_rho = self.cal_mul_rhos(method = 'corr')
+        self.df_rho= pd.read_csv('copula/corr/corr_mf_60.csv', index_col = 0, parse_dates = True)
+        # self.df_rho = self.cal_mul_rhos(method = 'corr')
         self.high_layer()
 
         ## 低风险只有货币和短融，无需分类
@@ -514,11 +513,12 @@ if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
     setup_logging()
-    factor_layer = FactorLayer(8, 2, 1, base_pool_only = False)
+    factor_layer = FactorLayer(7, 2, 1, base_pool_only = False)
     # print factor_layer._pool
     factor_layer.handle()
     for k,v in factor_layer.h_pool_cluster.iteritems():
         print k, v
+
     # print equity_pool
     '''
     equity_nav = []
