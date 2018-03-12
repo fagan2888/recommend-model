@@ -43,7 +43,7 @@ def load_globalid():
         t.c.globalid,
     ]
 
-    s = select(columns) 
+    s = select(columns)
     df = pd.read_sql(s, db)
 
     return df['globalid']

@@ -40,7 +40,7 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     # 动作也是在收盘确认之后发生的
     #
     start_date = df_position.index.min()
-    
+
     if start_date not in df_inc.index:
         df_inc.loc[start_date] = 0
         df_inc.sort_index(inplace=True)
@@ -79,7 +79,7 @@ def portfolio_nav(df_inc, df_position, result_col='portfolio') :
     #
     # 计算资产组合净值
     #
-    df_result.insert(0, result_col, df_result.sum(axis=1))               
+    df_result.insert(0, result_col, df_result.sum(axis=1))
 
     return df_result
 
@@ -104,9 +104,9 @@ def portfolio_nav2(df_pos, end_date=None) :
     min_date = dates.min()
     if max_date < min_date:
         return pd.DataFrame(columns=(['portfolio'] + list(df_inc.columns)))
-    
+
     dates = dates[(dates >= min_date) & (dates <= max_date)]
-    
+
     pairs = zip(dates[0:-1], dates[1:])
     if max_date.strftime("%Y-%m-%d") not in dates:
         pairs.append((dates[-1], max_date))
@@ -161,7 +161,7 @@ def portfolio_nav2(df_pos, end_date=None) :
 def load_nav_csv(csv, columns=None, reindex=None):
     if columns and 'date' not in columns:
         columns.insert(0, 'date')
-        
+
     df = pd.read_csv(csv, index_col='date', parse_dates=['date'], usecols=columns)
 
     if reindex:
@@ -171,7 +171,7 @@ def load_nav_csv(csv, columns=None, reindex=None):
         # 
         index = df.index.union(reindex)
         df = df.reindex(index, method='pad').reindex(reindex)
-        
+
     return df
 
 def load_inc_csv(csv, columns=None, reindex=None):
@@ -194,14 +194,14 @@ def load_inc_csv(csv, columns=None, reindex=None):
 
     if reindex is not None:
         dfr = dfr.reindex(reindex)
-        
+
     return dfr
 
 def pad_sum_to_one(df, by, ratio='ratio'):
     df3 = df[ratio].groupby(by).agg(['sum', 'idxmax'])
     df.ix[df3['idxmax'], ratio] += (1 - df3['sum']).values
     # print df[ratio].groupby(by).sum()
-    
+
     return df
 
 def filter_by_turnover_rate(df, turnover_rate):
@@ -210,7 +210,7 @@ def filter_by_turnover_rate(df, turnover_rate):
         df_tmp = filter_by_turnover_rate_per_risk(v0, turnover_rate)
         if not df_tmp.empty:
             df_result = pd.concat([df_result, df_tmp])
-            
+
     return df_result
 
 def filter_by_turnover_rate_per_risk(df, turnover_rate):
@@ -227,7 +227,7 @@ def filter_by_turnover_rate_per_risk(df, turnover_rate):
             if df_diff.isnull().values.any() or xsum >= turnover_rate:
                 df_result = pd.concat([df_result, v1])
                 df_last = df_current
-                
+
     return df_result
 
 def filter_by_turnover(df, turnover):
@@ -302,7 +302,7 @@ def nav_max_drawdown_window(df_nav, window, min_periods=1):
 
 def merge_column_for_fund_id_type(df, code, usecols=['globalid', 'ra_type']):
     sr_code = df[code]
-    
+
     db = database.connection('base')
     # 加载基金列表
     t = Table('ra_fund', MetaData(bind=db), autoload=True)
@@ -312,9 +312,9 @@ def merge_column_for_fund_id_type(df, code, usecols=['globalid', 'ra_type']):
         t.c.ra_type,
         t.c.ra_name,
     ]
-    
+
     s = select(columns, (t.c.ra_code.in_(sr_code)))
-    
+
     df_c2i = pd.read_sql(s, db, index_col = ['ra_code'])
 
     df_result = df.merge(df_c2i[usecols], left_on=code, right_index=True)
@@ -347,7 +347,7 @@ def categories_types(as_int=False):
             'GLNC'            : 42, # 黄金
             'HSCI.HI'         : 43, # 恒生
         }
-        
+
     #
     # 输出配置数据
     #
@@ -380,17 +380,17 @@ def categories_name(category, default='unknown'):
         15 : 'decline'        , # 下跌
         16 : 'growth'         , # 成长
         17 : 'value'          , # 价值
-        
+
         21 : 'ratebond'       , # 利率债
         22 : 'creditbond'     , # 信用债
         23 : 'convertiblebond', # 可转债
-        
+
         31 : 'money'          , # 货币
-        
+
         41 : 'SP500.SPI'      , # 标普
         42 : 'GLNC'           , # 黄金
         43 : 'HSCI.HI'        , # 恒生
-    }        
+    }
 
     if category in tls:
         return tls[category]
