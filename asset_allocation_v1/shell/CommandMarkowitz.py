@@ -873,7 +873,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
-    elif algo == 5:
+    elif algo in (5, 6):
         layer_asset = {}
         layer_assets = {}
         layer_info = asset_fl_info.load()
@@ -881,7 +881,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             used_assets = np.intersect1d(assets.keys(), layer_info.loc[layer].index)
             if len(used_assets) != 0:
                 layer_asset[layer] = used_assets
-        
+
         for layer in layer_asset.keys():
             uppers = []
             lowers = []
@@ -897,22 +897,28 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             lower = np.mean(lowers)
             sum2 = np.mean(sum2s)
             sum1 = np.mean(sum1s)
-            
+
             layer_assets[layer] = {'upper':upper, 'lower':lower, 'sum2':sum2, 'sum1': sum1}
 
-        df = markowitz_days(
-            sdate, edate, layer_assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
-        
+        if algo == 5:
+            df = markowitz_days(
+                sdate, edate, layer_assets,
+                label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+        elif algo == 6:
+            df = markowitz_days(
+                sdate, edate, assets,
+                label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+
+
         df_layer = df.iloc[:, :-3]
-        df_ratio = df.iloc[:, -3:]
+        # df_ratio = df.iloc[:, -3:]
 
         layer_num = df_layer.shape[1]
         for layer in layer_asset.keys():
             for asset in layer_asset[layer]:
                 df_layer[asset] = df_layer[layer]/len(layer_asset[layer])
-        
-        df = df_layer.iloc[:, layer_num:] 
+
+        df = df_layer.iloc[:, layer_num:]
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
