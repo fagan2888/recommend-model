@@ -361,6 +361,7 @@ def signal(ctx, optid, optlist, optonline):
 
     df_riskmgr = asset_rm_riskmgr.load(ids, xtypes)
 
+
     if optlist:
 
         df_riskmgr['rm_name'] = df_riskmgr['rm_name'].map(lambda e: e.decode('utf-8'))

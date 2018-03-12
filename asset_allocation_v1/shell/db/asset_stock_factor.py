@@ -163,6 +163,31 @@ class barra_stock_factor_layer_weight_nav(Base):
 
 
 
+class barra_stock_factor_stock_allocate(Base):
+
+    __tablename__ = 'barra_stock_factor_stock_allocate'
+
+    trade_date = Column(Date, primary_key = True)
+    stock_id = Column(String, primary_key = True)
+    weight = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+
+class barra_stock_factor_allocate_nav(Base):
+
+    __tablename__ = 'barra_stock_factor_allocate_nav'
+
+    allocate_date = Column(Date, primary_key = True)
+    nav_date = Column(Date, primary_key = True)
+    nav = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
 def load_factor_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
     bf_ids = asset_id.strip().split('.')

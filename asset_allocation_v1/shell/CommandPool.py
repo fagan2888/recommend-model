@@ -34,8 +34,10 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
+from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund
+from db.asset_stock_factor import *
 
 import traceback, code
 
@@ -151,6 +153,7 @@ def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit,
         fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc)
 
 
+
 def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
     ''' re calc fund for single fund pool
     '''
@@ -189,6 +192,96 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
         s = s.where(ra_pool_fund_t.c.ra_pool.in_(df_new.index.get_level_values(0).tolist()))
         df_old = pd.read_sql(s, db, index_col = df_new.index.names)
         database.batch(db, ra_pool_fund_t, df_new, df_old)
+
+
+
+@pool.command()
+@click.option('--datadir', '-d', type=click.Path(exists=True), help=u'dir used to store tmp data')
+@click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
+@click.option('--end-date', 'enddate', help=u'end date to calc')
+@click.option('--period', 'optperiod', type=int, default=13, help=u'adjust period by week')
+@click.option('--id', 'optid', help=u'fund pool id to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--calc/--no-calc', 'optcalc', default=True, help=u're calc label')
+@click.option('--limit', 'optlimit', type=int, default=20, help=u'how many fund selected for each category')
+@click.option('--points', 'optpoints', help=u'Adjust points')
+@click.pass_context
+def fund_multifactor(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
+    '''run constant risk model
+    '''    
+    if datadir is None:
+        datadir = "./tmp"
+    Const.datadir = datadir
+
+    if not enddate:
+        yesterday = (datetime.now() - timedelta(days=1)); 
+        enddate = yesterday.strftime("%Y-%m-%d")        
+    if optid is not None:
+        pools = [s.strip() for s in optid.split(',')]
+    else:
+        pools = None
+    df_pool = load_pools(pools)
+
+
+    if optlist:
+        #print df_pool
+        #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
+        df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_pool, headers='keys', tablefmt='psql')
+        return 0
+
+    if optpoints is not None:
+        adjust_points=pd.DatetimeIndex(optpoints.split(','))
+    else:
+        adjust_points = get_multifactor_adjust_point(label_period=optperiod, startdate=startdate)
+
+    print "adjust point:"
+    for date in adjust_points:
+        print date.strftime("%Y-%m-%d")
+
+
+    for _, pool in df_pool.iterrows():
+        fund_multifactor_corr_jensen(pool, adjust_points, optlimit, optcalc)
+
+
+
+def fund_multifactor_corr_jensen(pool, adjust_points, optlimit, optcalc):
+
+    lookback = pool.ra_lookback
+    limit = optlimit
+
+    if optcalc:
+        #
+        # 计算每个调仓点的最新配置
+        #
+        db = database.connection('asset')
+        ra_pool_sample_t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
+        ra_pool_fund_t= Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+
+        data = []
+        with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
+            for day in adjust_points:
+                print day
+                bar.update(1)
+                codes = multifactor_pool_by_corr_jensen(pool, day, lookback, limit)
+                if codes is None or len(codes) == 0:
+                    continue
+                ra_fund = base_ra_fund.load(codes = codes)
+                ra_fund = ra_fund.set_index(['ra_code'])
+                ra_pool    = pool['id']
+                for code in ra_fund.index:
+                    ra_fund_id = ra_fund.loc[code, 'globalid']
+                    data.append([ra_pool, day, ra_fund_id, code])
+        fund_df = pd.DataFrame(data, columns = ['ra_pool', 'ra_date', 'ra_fund_id', 'ra_fund_code'])
+        fund_df = fund_df.set_index(['ra_pool', 'ra_date', 'ra_fund_id'])
+
+        df_new = fund_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(ra_pool_fund_t.c.ra_pool.in_(df_new.index.get_level_values(0).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, ra_pool_fund_t, df_new, df_old)
+
 
 
 def fund_update(pool, adjust_points, optlimit, optcalc):
@@ -317,7 +410,7 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=13):
         enddate = yesterday.strftime("%Y-%m-%d")        
 
     index = DBData.trade_date_index(startdate, end_date=enddate)
-    
+
     if label_period > 1:
         label_index = index[::label_period]
         if index.max() not in label_index:
@@ -341,8 +434,30 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=13):
     #     '2016-08-05',
     #     '2016-11-05',
     # ])
-    
+
     return label_index
+
+
+def get_multifactor_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
+
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(barra_stock_factor_stock_allocate.trade_date).statement
+    df = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
+
+    df = df.groupby(df.index).first()
+    df = df[df.index >= startdate]
+
+    label_index = df.index[::label_period]
+
+    session.commit()
+    session.close()
+
+    return label_index
+
 
 @pool.command()
 @click.option('--id', 'optid', help=u'ids of fund pool to update')
@@ -843,3 +958,79 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
         final_codes = final_codes[0 : limit]
         return final_codes
 
+
+def multifactor_pool_by_corr_jensen(pool, day, lookback, limit):
+
+    index = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=lookback)
+
+    start_date = index.min().strftime("%Y-%m-%d")
+    end_date = day.strftime("%Y-%m-%d")
+
+    ra_index_id = pool['ra_index_id']
+    pool_id     = pool['id']
+
+    bf_ids = pool.ra_index_id.strip().split('.')
+    layer = int(bf_ids[-1])
+    bf_id = '.'.join(bf_ids[0:2])
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    #df_nav_index = base_ra_index_nav.index_value(start_date, end_date, ra_index_id)
+    #df_nav_index.index.name = str(df_nav_index.index.name)
+    #sql = session.query(barra_stock_factor_allocate_nav.nav_date, barra_stock_factor_allocate_nav.nav).filter(barra_stock_factor_allocate_nav.allocate_date == day).statement
+    sql = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.nav).filter(barra_stock_factor_layer_nav.bf_id == bf_id).filter(barra_stock_factor_layer_nav.layer == layer).statement
+    df_nav_index = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
+    df_nav_index = df_nav_index[df_nav_index.index <= day]
+    df_nav_index = df_nav_index.iloc[-252:,]
+    session.commit()
+    session.close()
+
+    df_nav_index.columns = ['nav']
+
+    if len(df_nav_index.index) == 0:
+        return []
+
+    pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+
+    df_nav_fund  = base_ra_fund_nav.load_daily(start_date, end_date, codes = pool_codes)
+
+    if len(df_nav_fund) == 0:
+        return []
+
+    df_nav_fund  = df_nav_fund.reindex(pd.date_range(df_nav_index.index[0], df_nav_index.index[-1]))
+    df_nav_fund  = df_nav_fund.fillna(method = 'pad')
+    df_nav_fund  = df_nav_fund.loc[df_nav_index.index]
+    fund_index_df = pd.concat([df_nav_index, df_nav_fund], axis = 1, join_axes = [df_nav_index.index])
+    df_nav_fund  = df_nav_fund.dropna(axis = 0, how = 'all')
+
+    fund_index_corr_df = fund_index_df.pct_change().fillna(0.0).corr().fillna(0.0)
+
+    corr = fund_index_corr_df['nav'][1:]
+    corr = corr.sort_values(ascending = False)
+
+    code_jensen = {}
+    for code in df_nav_fund.columns:
+        jensen = fin.jensen(df_nav_fund[code].pct_change().fillna(0.0), df_nav_index['nav'].pct_change().fillna(0.0) ,Const.rf)
+        code_jensen.setdefault(code, jensen)
+
+    if len(code_jensen) == 0:
+        logger.info('No FUND')
+        return None
+    else:
+        final_codes = []
+        x = code_jensen
+        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+        #print sorted_x[0:10]
+        corr_threshold = np.percentile(corr.values, 90)
+        corr_threshold = 0.7 if corr_threshold <= 0.7 else corr_threshold
+        corr_threshold = 0.9 if corr_threshold >= 0.9 else corr_threshold
+        #corr_threshold = 0.9
+        for i in range(0, len(sorted_x)):
+            code, jensen = sorted_x[i]
+            if corr[code] >= corr_threshold:
+                final_codes.append(code)
+
+        final_codes = final_codes[0 : limit]
+        print day, bf_id, layer, final_codes
+        return final_codes

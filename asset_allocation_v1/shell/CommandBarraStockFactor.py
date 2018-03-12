@@ -110,6 +110,23 @@ def barra_stock_factor_layer(ctx):
 
 @bsf.command()
 @click.pass_context
+def barra_stock_factor_fund(ctx):
+
+
+    bf_ids = ['BF.000001.0', 'BF.000002.0', 'BF.000003.0', 'BF.000004.0', 'BF.000005.0','BF.000006.0','BF.000007.0','BF.000008.0','BF.000009.0','BF.000010.0','BF.000011.0','BF.000012.0', 'BF.000013.0', 'BF.000014.0', 'BF.000015.0', 'BF.000016.0', 'BF.000017.0', 'BF.000001.1', 'BF.000002.1', 'BF.000003.1', 'BF.000004.1', 'BF.000005.1','BF.000006.1','BF.000007.1','BF.000008.1','BF.000009.1','BF.000010.1','BF.000011.1','BF.000012.1', 'BF.000013.1', 'BF.000014.1', 'BF.000015.1', 'BF.000016.1', 'BF.000017.1']
+
+    pool = Pool(40)
+    pool.map(layer_index_fund, bf_ids)
+    pool.close()
+    pool.join()
+
+    #layer_index_fund(bf_ids[0])
+
+    return
+
+
+@bsf.command()
+@click.pass_context
 def barra_stock_factor_layer_index_nav(ctx):
 
 
@@ -117,9 +134,11 @@ def barra_stock_factor_layer_index_nav(ctx):
             'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
 
     pool = Pool(20)
-    pool.map(factor_layer_nav, bf_ids)
+    pool.map(factor_regression_tree_layer_nav, bf_ids)
     pool.close()
     pool.join()
+
+    #factor_regression_tree_layer_nav(bf_ids[0])
 
     return
 
@@ -162,12 +181,12 @@ def barra_stock_factor_ic(ctx):
     bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
             'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
 
-    pool = Pool(20)
-    pool.map(regression_tree_factor_layer_ic, bf_ids)
-    pool.close()
-    pool.join()
+    #pool = Pool(20)
+    #pool.map(regression_tree_factor_layer_ic, bf_ids)
+    #pool.close()
+    #pool.join()
 
-    #regression_tree_factor_layer_ic(bf_ids[0])
+    regression_tree_factor_layer_ic(bf_ids[0])
     return
 
 
@@ -263,7 +282,7 @@ def barra_regression_tree_spliter(ctx):
 @click.pass_context
 def export_barra_stock_factor_nav(ctx):
 
-    bf_id = 'BF.000008'
+    bf_id = 'BF.000001'
 
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
@@ -276,14 +295,24 @@ def export_barra_stock_factor_nav(ctx):
     session.commit()
     session.close()
 
+
+    hs300 = base_ra_index_nav.load_series(120000002)
+
     df = df.unstack()
     df.columns = df.columns.droplevel(0)
 
+    data = {}
+    data['large_capital'] = df[0]
+    data['hs300'] = hs300
+
+    df = pd.DataFrame(data).dropna()
+
     df = df[df.index >= '2010-01-01']
     df = df / df.iloc[0]
-    print df.head()
-    print df.tail()
-    print df.sum(axis = 1).tail()
+    print df.corr(method = 'spearman')
+    #print df.head()
+    #print df.tail()
+    #print df.sum(axis = 1).tail()
 
     df.to_csv('nav.csv')
     return

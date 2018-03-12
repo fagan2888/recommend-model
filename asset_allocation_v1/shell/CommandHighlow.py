@@ -390,48 +390,97 @@ def load_riskmgr2(assets, sr_riskmgr, reindex=None, enable=True):
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
 
-    if asset_id.isdigit():
+    prefix = asset_id[0:2]
+    if prefix.isdigit():
         xtype = int(asset_id) / 10000000
+        if xtype == 1:
+            #
+            # 基金池资产
+            #
+            asset_id = int(asset_id) % 10000000
+            (pool_id, category) = (asset_id / 100, asset_id % 100)
+            ttype = pool_id / 10000
+            sr = asset_ra_pool_nav.load_series(
+                pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 3:
+            #
+            # 基金池资产
+            #
+            sr = base_ra_fund_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 4:
+            #
+            # 修型资产
+            #
+            sr = asset_rs_reshape_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 12:
+            #
+            # 指数资产
+            #
+            sr = base_ra_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 'ERI':
+
+            sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        else:
+            sr = pd.Series()
     else:
-        xtype = re.sub(r'([\d]+)','',asset_id).strip()
-
-
-    if xtype == 1:
-        #
-        # 基金池资产
-        #
-        asset_id = string.atoi(asset_id) / 10000000
-        (pool_id, category) = (asset_id / 100, asset_id % 100)
-        ttype = pool_id / 10000
-        sr = asset_ra_pool_nav.load_series(
-            pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 3:
-        #
-        # 基金池资产
-        #
-        sr = base_ra_fund_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 4:
-        #
-        # 修型资产
-        #
-        sr = asset_rs_reshape_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 12:
-        #
-        # 指数资产
-        #
-        sr = base_ra_index_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-    elif xtype == 'ERI':
-
-        sr = base_exchange_rate_index_nav.load_series(
-            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-
-    else:
-        sr = pd.Series()
+        if prefix == 'AP':
+            #
+            # 基金池资产
+            #
+            sr = asset_ra_pool_nav.load_series(
+                asset_id, 0, 9, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'FD':
+            #
+            # 基金资产
+            #
+            sr = base_ra_fund_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'RS':
+            #
+            # 修型资产
+            #
+            sr = asset_rs_reshape_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'IX':
+            #
+            # 指数资产
+            #
+            sr = base_ra_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'ER':
+            #
+            # 人民币计价的指数资产
+            #
+            sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'SK':
+            #
+            # 股票资产
+            #
+            sr = asset_stock.load_stock_nav_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'MZ':
+            #
+            # markowitz配置资产
+            #
+            sr = asset_mz_markowitz_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'BF':
+            #
+            # markowitz配置资产
+            #
+            sr = asset_stock_factor.load_factor_nav_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        else:
+            sr = pd.Series()
 
     return sr
+
+
 
 @highlow.command()
 @click.option('--id', 'optid', help=u'ids of highlow to update')

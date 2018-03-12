@@ -75,7 +75,7 @@ def find_type_fund(ra_type):
         t.c.ra_volume,
     ]
 
-    s = select(columns).where(t.c.ra_type == ra_type)
+    s = select(columns).where(t.c.ra_type == ra_type).where(t.c.ra_mask == 0)
 
     df = pd.read_sql(s, db)
 
