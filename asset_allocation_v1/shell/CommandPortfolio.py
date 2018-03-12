@@ -464,7 +464,6 @@ def kun(portfolio, alloc):
     #
     df_asset = asset_ra_portfolio_asset.load([gid])
 
-
     if '11310100' not in df_asset['ra_asset_id'].values:
         sr = (gid, '11310100', '货币资产', 31, '11310100')
         df_asset.ix[len(df_asset.index)] = sr
@@ -524,7 +523,6 @@ def kun(portfolio, alloc):
                 continue
             # 选择基金
             #print type(asset_id), asset_id,  pools.keys()
-            #print pools
             (pool_id, df_fund) = pools[asset_id]
             segments = choose_fund_avg(day, pool_id, ratio, df_fund.loc[day])
             #if int(risk * 10) == 1:

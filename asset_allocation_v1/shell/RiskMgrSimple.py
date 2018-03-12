@@ -100,6 +100,7 @@ class RiskMgrSimple(object):
                         #if empty_days != 1:
                         #    status, position, action = 1, 0, 6 # 无条件空仓
 
+
                 result_act[day] = action
                 result_pos[day] = position
                 #

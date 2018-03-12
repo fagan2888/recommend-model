@@ -1,5 +1,6 @@
 #coding=utf8
 
+
 from sqlalchemy import MetaData, Table, select, func
 # import string
 # from datetime import datetime, timedelta
@@ -10,10 +11,41 @@ import re
 import logging
 import database
 from db import base_ra_index
+from sqlalchemy import MetaData, Table, select, func
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime, Float
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
 
 from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
+
+Base = declarative_base()
+
+class ra_pool(Base):
+
+    __tablename__ = 'ra_pool'
+
+    id = Column(String, primary_key = True)
+
+    ra_type = Column(Integer)
+    ra_algo = Column(Integer)
+
+    ra_date_type = Column(Integer)
+
+    ra_fund_type = Column(Integer)
+    ra_index_id = Column(String)
+    ra_name = Column(String)
+
+    ra_asset_name = Column(String)
+    ra_lookback = Column(Integer)
+
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
 
 def categories_name(category, default='未知'):
     tls = {
