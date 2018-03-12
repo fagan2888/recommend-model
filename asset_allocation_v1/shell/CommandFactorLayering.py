@@ -62,7 +62,7 @@ def fl(ctx):
 def fl_update(ctx):
     df_old = asset_fl_info.load()
 
-    factor_layer = FactorLayer(8, 2, 1, base_pool_only = False)
+    factor_layer = FactorLayer(9, 2, 1, base_pool_only = False)
     factor_layer.handle()
 
     fl_id = []
@@ -137,6 +137,8 @@ class FactorLayer():
     def __init__(self, h_num = 7, m_num = 2, l_num = 1, base_pool_only = True):
 
         self._pool = FactorLayer.get_pool(base_pool_only)
+        #self.baseline = 'BF.000001.1'
+        self.baseline = '120000039'
         self.h_pool = []
         self.m_pool = []
         self.l_pool = []
@@ -168,7 +170,7 @@ class FactorLayer():
         base_pool = base_ra_index.load_globalid()
         base_pool = base_pool.values
         base_pool = [str(x) for x in base_pool]
-        base_pool = np.sort(base_pool).tolist()[1:]
+        base_pool = np.sort(base_pool).tolist()
         if base_pool_only:
             return base_pool
 
@@ -196,10 +198,12 @@ class FactorLayer():
 
     def high_layer(self):
         self.h_pool_cluster = self.cluster(self.df_rho, self.h_num, self.h_pool, method = 'agg')
+        '''
         for k, v in self.h_pool_cluster.iteritems():
-            if '120000002' in v:
-                v = np.insert(v, 0, '120000001')
+            if 'BF.00000' in v:
+                v = np.insert(v, 0, self.baseline)
                 self.h_pool_cluster[k] = v
+                '''
 
 
     def low_layer(self):
@@ -219,16 +223,16 @@ class FactorLayer():
     def cal_rho(id1, id2):
         asset1 = load_nav(id1)
         asset2 = load_nav(id2)
-        if asset1.index[0].date() > datetime.date(2010, 1, 1):
-            logger.warning("historical data of asset {} must start before 2010-01-01!".format(id1))
+        if asset1.index[0].date() > datetime.date(2010, 1, 5):
+            logger.warning("historical data of asset {} must start before 2010-01-05!".format(id1))
             return 0
 
         if asset1.index[-1].date() < datetime.date(2018, 1, 1):
             logger.warning("historical data of asset {} isn't up to date!".format(id1))
             return 0
 
-        if asset2.index[0].date() > datetime.date(2010, 1, 1):
-            logger.warning("historical data of asset {} must start before 2010-01-01!".format(id2))
+        if asset2.index[0].date() > datetime.date(2010, 1, 5):
+            logger.warning("historical data of asset {} must start before 2010-01-05!".format(id2))
             return 0
 
         if asset2.index[-1].date() < datetime.date(2018, 1, 1):
@@ -277,24 +281,81 @@ class FactorLayer():
 
         return df
 
+    @staticmethod
+    def cal_corr(id1, id2):
+        asset1 = load_nav(id1)
+        asset2 = load_nav(id2)
+        if asset1.index[0].date() > datetime.date(2010, 1, 5):
+            logger.warning("historical data of asset {} must start before 2010-01-05!".format(id1))
+            return 0
 
-    def cal_mul_rhos(self):
+        if asset1.index[-1].date() < datetime.date(2018, 1, 1):
+            logger.warning("historical data of asset {} isn't up to date!".format(id1))
+            return 0
 
-        df = None
-        for asset in self.h_pool:
-            if df is None:
-                df = self.cal_rho('120000001', asset)
-            else:
-                tmp_df = self.cal_rho('120000001', asset)
-                if tmp_df is 0:
-                    pass
+        if asset2.index[0].date() > datetime.date(2010, 1, 5):
+            logger.warning("historical data of asset {} must start before 2010-01-05!".format(id2))
+            return 0
+
+        if asset2.index[-1].date() < datetime.date(2018, 1, 1):
+            logger.warning("historical data of asset {} isn't up to date!".format(id2))
+            return 0
+
+        asset1 = asset1.pct_change().dropna()
+        asset2 = asset2.pct_change().dropna()
+        asset1 = asset1.replace(0.0, np.nan).dropna()
+        asset2 = asset2.replace(0.0, np.nan).dropna()
+
+        asset1 = asset1.rolling(20).sum()
+        asset2 = asset2.rolling(20).sum()
+
+        dates1 = asset1.index
+        dates2 = asset2.index
+        joint_dates = dates1.intersection(dates2)
+        asset1 = asset1.reindex(joint_dates)
+        asset2 = asset2.reindex(joint_dates)
+
+        df = pd.rolling_corr(asset1, asset2, 60).dropna()
+        df = df.to_frame(name = id2)
+        df = df[df.index >= '2012-01-01']
+        print id2
+
+        return df
+
+
+    def cal_mul_rhos(self, method = 'corr'):
+
+        if method == 'corr':
+            df = None
+            for asset in self.h_pool:
+                print asset
+                if df is None:
+                    df = self.cal_corr(self.baseline, asset)
                 else:
-                    df = df.join(tmp_df)
+                    tmp_df = self.cal_corr(self.baseline, asset)
+                    if tmp_df is 0:
+                        pass
+                    else:
+                        df = df.join(tmp_df)
             # print asset, df.mean()
+
+        elif method == 'rho':
+            df = None
+            for asset in self.h_pool:
+                if df is None:
+                    df = self.cal_rho(self.baseline, asset)
+                else:
+                    tmp_df = self.cal_rho(self.baseline, asset)
+                    if tmp_df is 0:
+                        pass
+                    else:
+                        df = df.join(tmp_df)
 
         ##去除标准指数的非交易日数据
         df = df.dropna()
-        df.to_csv('copula/kTau/kTau_sh300_60.csv', index_label = 'date')
+        #df.to_csv('copula/kTau/kTau_sh300_60.csv', index_label = 'date')
+        df.to_csv('copula/corr/corr_mf_60.csv', index_label = 'date')
+
         return df
 
 
@@ -302,8 +363,8 @@ class FactorLayer():
     def cal_risk_return(id_):
         asset = load_nav(id_).pct_change()
 
-        if asset.index[0].date() > datetime.date(2010, 1, 1):
-            logger.warning("historical data of asset {} must start before 2010-01-01".format(id_))
+        if asset.index[0].date() > datetime.date(2010, 1, 5):
+            logger.warning("historical data of asset {} must start before 2010-01-05".format(id_))
             return 0
 
         if asset.index[-1].date() < datetime.date(2018, 1, 1):
@@ -329,7 +390,7 @@ class FactorLayer():
                     pass
                 else:
                     df = df.join(tmp_df)
-        df.to_csv('copula/rr/risk_return_60.csv') 
+        df.to_csv('copula/rr/risk_return_60.csv')
         return df
 
 
@@ -385,8 +446,9 @@ class FactorLayer():
         self.mid_layer()
 
         ## 按照相关性将高风险资产分成六类
-        self.df_rho= pd.read_csv('copula/kTau/kTau_sh300_60.csv', index_col = 0, parse_dates = True)
-        # self.df_rho = self.cal_mul_rhos()
+        # self.df_rho= pd.read_csv('copula/kTau/kTau_sh300_60.csv', index_col = 0, parse_dates = True)
+        # self.df_rho= pd.read_csv('copula/corr/corr_mf_60.csv', index_col = 0, parse_dates = True)
+        self.df_rho = self.cal_mul_rhos(method = 'corr')
         self.high_layer()
 
         ## 低风险只有货币和短融，无需分类
@@ -452,12 +514,11 @@ if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
     setup_logging()
-    factor_layer = FactorLayer(6, 2, 1, base_pool_only = True)
+    factor_layer = FactorLayer(8, 2, 1, base_pool_only = False)
     # print factor_layer._pool
     factor_layer.handle()
     for k,v in factor_layer.h_pool_cluster.iteritems():
         print k, v
-    equity_pool = factor_layer.h_pool[:-10]
     # print equity_pool
     '''
     equity_nav = []
