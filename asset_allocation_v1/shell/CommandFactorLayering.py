@@ -134,9 +134,10 @@ def fl_nav_update(ctx):
 
 class FactorLayer():
 
-    def __init__(self, h_num = 8, m_num = 2, l_num = 1, base_pool_only = True):
+    def __init__(self, h_num = 8, m_num = 2, l_num = 1, window = 60, base_pool_only = True):
 
         self._pool = FactorLayer.get_pool(base_pool_only)
+        self.window = window
         #self.baseline = 'BF.000001.1'
         self.baseline = '120000039'
         self.h_pool = []
@@ -220,7 +221,7 @@ class FactorLayer():
 
 
     @staticmethod
-    def cal_rho(id1, id2):
+    def cal_rho(id1, id2, window):
         asset1 = load_nav(id1)
         asset2 = load_nav(id2)
         if asset1.index[0].date() > datetime.date(2010, 1, 5):
@@ -276,13 +277,13 @@ class FactorLayer():
         df = df.fillna(method = 'pad')
         # df = df.abs()
         # df = df.rolling(120, 60).mean().dropna()
-        df = df.rolling(60).mean().dropna()
+        df = df.rolling(window).mean().dropna()
         df = df[df.index >= '2012-07-27']
 
         return df
 
     @staticmethod
-    def cal_corr(id1, id2):
+    def cal_corr(id1, id2, window):
         asset1 = load_nav(id1)
         asset2 = load_nav(id2)
         if asset1.index[0].date() > datetime.date(2010, 1, 5):
@@ -315,9 +316,9 @@ class FactorLayer():
         asset1 = asset1.reindex(joint_dates)
         asset2 = asset2.reindex(joint_dates)
 
-        df = pd.rolling_corr(asset1, asset2, 60).dropna()
+        df = pd.rolling_corr(asset1, asset2, window).dropna()
         df = df.to_frame(name = id2)
-        df = df[df.index >= '2012-01-01']
+        df = df[df.index >= '2010-01-04']
 
         return df
 
@@ -326,34 +327,38 @@ class FactorLayer():
 
         if method == 'corr':
             df = None
-            for asset in self.h_pool:
-                print asset
-                if df is None:
-                    df = self.cal_corr(self.baseline, asset)
-                else:
-                    tmp_df = self.cal_corr(self.baseline, asset)
-                    if tmp_df is 0:
-                        pass
+            with click.progressbar(length=len(self.h_pool), label='cal corr'.ljust(30)) as bar:
+                for asset in self.h_pool:
+                    # print asset,
+                    if df is None:
+                        df = self.cal_corr(self.baseline, asset, self.window)
                     else:
-                        df = df.join(tmp_df)
+                        tmp_df = self.cal_corr(self.baseline, asset, self.window)
+                        if tmp_df is 0:
+                            pass
+                        else:
+                            df = df.join(tmp_df)
+                    bar.update(1)
             # print asset, df.mean()
 
         elif method == 'rho':
             df = None
-            for asset in self.h_pool:
-                if df is None:
-                    df = self.cal_rho(self.baseline, asset)
-                else:
-                    tmp_df = self.cal_rho(self.baseline, asset)
-                    if tmp_df is 0:
-                        pass
+            with click.progressbar(length=len(self.h_pool), label='cal corr'.ljust(30)) as bar:
+                for asset in self.h_pool:
+                    if df is None:
+                        df = self.cal_rho(self.baseline, asset, self.window)
                     else:
-                        df = df.join(tmp_df)
+                        tmp_df = self.cal_rho(self.baseline, asset, self.window)
+                        if tmp_df is 0:
+                            pass
+                        else:
+                            df = df.join(tmp_df)
+                    bar.update(1)
 
         ##去除标准指数的非交易日数据
         df = df.dropna()
         #df.to_csv('copula/kTau/kTau_sh300_60.csv', index_label = 'date')
-        df.to_csv('copula/corr/corr_mf_60.csv', index_label = 'date')
+        df.to_csv('copula/corr/corr_mf_{}.csv'.format(self.window), index_label = 'date')
 
         return df
 
@@ -437,6 +442,28 @@ class FactorLayer():
         return asset_cluster
 
 
+    def cal_mean_corr(self):
+        corr = {}
+        for k,v in factor_layer.h_pool_cluster.iteritems():
+            layer_assets = []
+            for asset in v:
+                tmp_nav = load_nav(asset)
+                tmp_ret = tmp_nav.pct_change()
+                tmp_ret = tmp_ret.replace(0.0, np.nan).dropna()
+                layer_assets.append(tmp_ret)
+            layer_df = pd.concat(layer_assets, 1)
+            layer_df = layer_df[layer_df.index >= '2012-07-27']
+            layer_df = layer_df.dropna()
+            corr[k] = layer_df.corr().mean().mean()
+
+        mean_corr = np.mean(corr.values())
+
+        print corr
+        print mean_corr
+
+        return mean_corr
+
+
     def handle(self):
         ## 按照风险收益比将原始资产聚成高、中、低风险三类资产,并将中风险再分成两类
         self.df_risk_return = pd.read_csv('copula/rr/risk_return_60.csv', index_col = 0, parse_dates = True)
@@ -446,9 +473,10 @@ class FactorLayer():
 
         ## 按照相关性将高风险资产分成六类
         # self.df_rho= pd.read_csv('copula/kTau/kTau_sh300_60.csv', index_col = 0, parse_dates = True)
-        self.df_rho= pd.read_csv('copula/corr/corr_mf_60.csv', index_col = 0, parse_dates = True)
-        # self.df_rho = self.cal_mul_rhos(method = 'corr')
+        # self.df_rho= pd.read_csv('copula/corr/corr_mf_{}.csv'.format(window), index_col = 0, parse_dates = True)
+        self.df_rho = self.cal_mul_rhos(method = 'corr')
         self.high_layer()
+        self.cal_mean_corr()
 
         ## 低风险只有货币和短融，无需分类
         self.low_layer()
@@ -513,7 +541,9 @@ if __name__ == '__main__':
 
     logger = logging.getLogger(__name__)
     setup_logging()
-    factor_layer = FactorLayer(7, 2, 1, base_pool_only = False)
+    window = 30
+    print 'window is {}'.format(window)
+    factor_layer = FactorLayer(8, 2, 1, base_pool_only = False, window = window)
     # print factor_layer._pool
     factor_layer.handle()
     for k,v in factor_layer.h_pool_cluster.iteritems():
