@@ -610,16 +610,80 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
 def markowitz_r(df_inc, today, limits, bootstrap, cpu_count):
     '''perform markowitz
     '''
+
+    #==================================================================
+    #Load view parameters
+    codes = df_inc.columns
+
+
+
+
+    #Read parameters
+    import json
+    with open('bl.json') as f:
+        bl_parameters = json.load(f)
+    eta = np.array(bl_parameters["eta"])
+    Omega = np.matrix(bl_parameters["Omega"]) if bl_parameters["Omega"] else None
+    alpha = bl_parameters["alpha"]
+    risk_parity = bl_parameters["risk_parity"]
+    
+    from CommandMarkowitz import load_nav_series
+    future_returns = pd.DataFrame.from_dict({code: load_nav_series(code, begin_date=today).iloc[:21] for code in codes})
+    if len(future_returns) > 0:
+        corresponding_P = (future_returns.iloc[-1]/future_returns.iloc[0]) - 1
+        corresponding_P = corresponding_P.apply(lambda x: 1 if x>0 else -1)
+        P = np.diag(corresponding_P)
+        # P_parsed = [corresponding_P.values * weights]  #Normalize and fit the form
+        # # P_parsed = [P_parsed / abs(P_parsed.sum())]
+        if corresponding_P.sum() == 0:
+            raw_P = bl_parameters["P"]
+            P_serialized = pd.Series(raw_P, index=raw_P.keys()).reindex(codes).fillna(0)
+            P_parsed = np.diag(P_serialized)
+            P = np.array([row for row in P_parsed if abs(row.sum())>0])
+            
+    else:
+        raw_P = bl_parameters["P"]
+        P_serialized = pd.Series(raw_P, index=raw_P.keys()).reindex(codes).fillna(0)
+        P_parsed = np.diag(P_serialized)
+        P = np.array([row for row in P_parsed if abs(row.sum())>0])
+        
+    # Load raw views
+    # raw_P = bl_parameters["P"]
+    # if today.month <= 6:
+    #     raw_P['ERI000002'] = 1
+    # else:
+    #     raw_P['ERI000002'] = -1
+    # P_serialized = pd.Series(raw_P, index=raw_P.keys()).reindex(codes).fillna(0)
+    # P_parsed = np.diag(P_serialized)
+    # P = np.array([row for row in P_parsed if abs(row.sum())>0])
+
+
+
+    if risk_parity:
+    # Load weights from riskparity model
+        from Portfolio import riskparity
+        weights = np.array(riskparity(df_inc))
+        from CommandMarkowitz import load_nav_series
+        history_returns = pd.DataFrame.from_dict({code: load_nav_series(code, end_date=today).iloc[-21:] for code in codes})
+        cov_history = np.cov(history_returns.pct_change().fillna(0).T)
+        delta = float((weights.dot(history_returns.iloc[-1]/history_returns.iloc[0]) -1 - 0.03/12) / weights.dot(np.dot(cov_history, weights.T)))
+        delta = max(1, delta)
+        alpha = alpha
+    else:
+        delta = None
+        weights = None
+    #==================================================================
+
     bound = []
     for asset in df_inc.columns:
         bound.append(limits[asset])
 
     if bootstrap is None:
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, today, bound)
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, delta, weights, P, eta, Omega, alpha, bound, risk_parity)
     
         
     else:
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, today, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, delta, weights, P, eta, Omega, alpha, bound, risk_parity, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
     #Use Blacklitterman
     
