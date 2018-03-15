@@ -21,51 +21,29 @@ from ipdb import set_trace
 #import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(funddfr, today, bound, sum1 = 0.65, sum2 = 0.45):
+def efficient_frontier_spe(funddfr, delta, weights, P, eta, Omega, alpha, bound, risk_parity, sum1 = 0.65, sum2 = 0.45):
     solvers.options['show_progress'] = False
 
-    codes = funddfr.columns
-    return_rate = [funddfr[code].values for code in codes]
+    return_rate = funddfr.T
 
     n_asset    =     len(return_rate)
-    
-    #Read parameters
-    with open('bl.json') as f:
-        bl_parameters = json.load(f)
 
-    #Hardcode weights from bootstrap
-    from db import asset_mz_markowitz_pos
-    weights = asset_mz_markowitz_pos.load('MZ.000010')
-    #Retrieve the last date
-    weights = weights.loc[today]
+    cov = np.cov(return_rate)
 
-    #HERE WE ARE GONNA RETRIEVE FUTURE RETURN RATE AS VIEWS
-    #=======================================================
-    from CommandMarkowitz import load_nav_series
-    future_returns = [load_nav_series(code, begin_date=today).iloc[:90] for code in codes]
-    future_return_rates = [asset.pct_change().fillna(0) for asset in future_returns]
-    corresponding_P = np.array([np.mean(asset) for asset in future_return_rates])
-    P_parsed = [corresponding_P / corresponding_P.sum()]  #Normalize and fit the form
-    #=======================================================
+    # ONLY USE THIS LINE FOR SETTING PI TO HISTORICAL (MEAN)
+    # BTW change the pi in black_litterman as well
 
-    # raw_P = bl_parameters["P"]
-    # P_serialized = [pd.Series(view, index=view.keys()) for view in raw_P]
-    # P_parsed = [view.reindex(codes).fillna(0) for view in P_serialized]
+    if not risk_parity:
+        weights = np.mean(return_rate, axis=1)
 
-    P = np.array(P_parsed)
-    Q = np.array(np.matrix(bl_parameters["Q"]).T)
-    Omega = np.matrix(bl_parameters["Omega"]) if bl_parameters["Omega"] else None
-    tau = bl_parameters["tau"]
-    # delta = 2.5
-    # Sigma = np.cov(return_rate)
-
-    asset_mean, cov = black_litterman(return_rate, weights, P, Q, Omega, tau)
+    expected_return = black_litterman(delta, weights, cov, P, eta, Omega, alpha, risk_parity)
     # RAW Markowitz
     # asset_mean = np.mean(return_rate, axis=1)
     # cov = np.cov(return_rate)
-    S = matrix(cov + cov * np.eye(len(asset_mean)) * 2)         #Double the diagonal of cov matrix
 
-    pbar       =     matrix(asset_mean)
+    S = matrix(cov + cov * np.eye(len(expected_return)) * 2)         #Double the diagonal of cov matrix
+
+    pbar       =     matrix(expected_return)
 
     #
     # 设置限制条件, 闲置条件的意思
@@ -502,7 +480,7 @@ def grs(portfolio):
 
 
 
-def black_litterman(return_rate, weights, P, Q, Omega=None, tau=0.05):
+def black_litterman(delta, weights, Sigma, P, eta, Omega, alpha, risk_parity):
     '''
     For the argument return_rate (Pi), since the original black_litterman model asks for equilibrium returns,
     which are currently unavaliable. Thus, here we use the naive mean return from historical data instead.
@@ -515,35 +493,32 @@ def black_litterman(return_rate, weights, P, Q, Omega=None, tau=0.05):
     The Omega is the corresponding covariance matrix, formed only by the variance.
     The off-diagonal positions are all 0 since we assume that views are all independent of one another.
 
-    The scalar tau is more or less inversely proportional to the relative weight given to the return vector (Pi).
-    Possible values: [0.01, 0.05], 1, or approximately 1 divided by #observations.
     '''
-    #Use mean return coming from history to substitute equilibrium return obtained by rev opt
-    pi = np.mean(return_rate, axis=1)
-    #the covariance matrix of returns, i.e. Sigma
-    Sigma = np.cov(return_rate)
+    #Use the weight coming from risk parity to do reverse optimization
+    if risk_parity:
+        pi = weights.dot(Sigma * delta)
+    else:
+        pi = weights
 
-    var_view_portfoilo = np.dot(np.dot(P, Sigma), P.T) * np.eye(Sigma.shape[0])
-    # try:
-    # except:
-    #     print return_rate
-    #     print P
-    
+    var_view = np.dot(np.dot(P, Sigma), P.T) 
+
+    Q = [P[k].dot(pi) + eta[k] * np.sqrt(var_view[k,k]) for k in range(P.shape[0])]
+    Q = np.array(np.matrix(Q).T)
+
     if Omega == None:
-        Omega = var_view_portfoilo * tau
-    # We use tau * cov many places so just compute it once
-    ts = tau * Sigma
+        Omega = var_view * alpha * np.eye(P.shape[0])
+
     # Compute posterior estimate of the mean
     # This is a simplified version of formula (8) on page 4.
-    middle = linalg.inv(np.dot(np.dot(P,ts),P.T) + Omega)
+    middle = linalg.inv(var_view + Omega)
     # Use this line if the argument P and Q are just matrix
     # er = np.expand_dims(pi,axis=0).T + np.dot(np.dot(np.dot(ts,P.T),middle),(Q - np.dot(P,pi.T)).T)
     # Use this line if the argument P and Q are wrapped matrices (for calculating the Omega by the formula given in the paper)
-    er = np.expand_dims(pi,axis=0).T + np.dot(np.dot(np.dot(ts,P.T),middle),(Q - np.expand_dims(np.dot(P,pi.T),axis=1)))
+    er = np.expand_dims(pi,axis=0).T + np.dot(np.dot(np.dot(Sigma,P.T),middle),(Q - np.expand_dims(np.dot(P,pi.T),axis=1)))
     # The following formula is directly coming from the paper
     # er = np.dot(linalg.inv(linalg.inv(ts)+np.dot(P.T, np.dot(linalg.inv(Omega), P))), np.dot(linalg.inv(ts), pi)+np.dot(P.T, np.dot(linalg.inv(Omega), Q))
-    posteriorcov = Sigma + ts - ts.dot(P.T).dot(middle).dot(P).dot(ts)
-    return er, posteriorcov
+    # posteriorcov = Sigma - Sigma.dot(P.T).dot(middle).dot(P).dot(Sigma)
+    return er
 
 
 def printHello():
@@ -649,7 +624,21 @@ def efficient_frontier_wrong(return_rate, bound):
 
         return final_risks, final_returns, final_ws
 
-
+def ewcm(data, smooth):
+    # data gives the daily returns to extract the covariance matrix from. 
+    # smooth is a smoothing parameter
+    (row_data, col_data) = data.shape
+    cov_mat = np.zeros((row_data, row_data))
+    for i in range(0, row_data):
+        for j in range(0, row_data):
+            mean_1 = np.mean(data.iloc[i])
+            mean_2 = np.mean(data.iloc[j])
+            total = 0
+            for k in range(0, col_data):
+                total = total + smooth**(col_data-1-k-1)*(data.iloc[i][k] - mean_1)*(data.iloc[j][k] - mean_2)                
+            total = total*(1 - smooth)
+            cov_mat[i][j] = total
+    return np.matrix(cov_mat)
 
     #for m in range(0, len(portfolios)):
     #    print portfolios[m]

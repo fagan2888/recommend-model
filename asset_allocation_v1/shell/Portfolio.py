@@ -101,7 +101,6 @@ def technicallocation(funddf, fund_rank):
             return_rate.append(dfr[code].values)
 
         #print return_rate
-        set_trace()
         risks, returns, ws = fin.efficient_frontier_fund(return_rate)
 
 
@@ -198,7 +197,7 @@ def markowitz_r(funddfr, bounds):
     return final_risk, final_return, final_ws, final_sharp
 
 
-def markowitz_r_spe(funddfr, today, bounds):
+def markowitz_r_spe(funddfr, delta, weights, P, eta, Omega, alpha, bounds, risk_parity):
 
     rf = Const.rf
 
@@ -208,8 +207,8 @@ def markowitz_r_spe(funddfr, today, bounds):
     final_sharp = -10000000000000000000000000.0
     final_codes = []
 
-
-    risks, returns, ws = fin.efficient_frontier_spe(funddfr, today, bounds)
+    
+    risks, returns, ws = fin.efficient_frontier_spe(funddfr, delta, weights, P, eta, Omega, alpha, bounds, risk_parity)
 
     for j in range(0, len(risks)):
         sharp = (returns[j] - rf) / risks[j]
@@ -221,14 +220,14 @@ def markowitz_r_spe(funddfr, today, bounds):
 
     return final_risk, final_return, final_ws, final_sharp
 
-def m_markowitz(queue, random_index, df_inc, today, bound):
+def m_markowitz(queue, random_index, df_inc, delta, weights, P, eta, Omega, alpha, bound, risk_parity):
     for index in random_index:
         tmp_df_inc = df_inc.iloc[index]
-        risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, today, bound)
+        risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, delta, weights, P, eta, Omega, alpha, bound, risk_parity)
         queue.put((risk, returns, ws, sharpe))
 
 
-def markowitz_bootstrape(df_inc, today, bound, cpu_count = 0, bootstrap_count=0):
+def markowitz_bootstrape(df_inc, delta, weights, P, eta, Omega, alpha, bound, risk_parity, cpu_count = 0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -267,7 +266,7 @@ def markowitz_bootstrape(df_inc, today, bound, cpu_count = 0, bootstrap_count=0)
     q = manager.Queue()
     processes = []
     for indexs in process_indexs:
-        p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, today, bound,))
+        p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, delta, weights, P, eta, Omega, alpha, bound, risk_parity))
         processes.append(p)
         p.start()
 
