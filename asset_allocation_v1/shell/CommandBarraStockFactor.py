@@ -29,6 +29,7 @@ import math
 import scipy.stats as stats
 import json
 from barra_stock_factor import *
+from corr_regression_tree import *
 import functools
 
 
@@ -104,6 +105,19 @@ def barra_stock_factor_layer(ctx):
     pool.join()
 
     #regression_tree_factor_layer(bf_ids[0])
+
+    return
+
+
+@bsf.command()
+@click.pass_context
+def barra_stock_factor_corr_regression_tree_layer(ctx):
+
+
+    bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
+            'BF.000013', 'BF.000014', 'BF.000015', 'BF.000016', 'BF.000017']
+
+    regression_tree_factor_corr_layer(bf_ids)
 
     return
 

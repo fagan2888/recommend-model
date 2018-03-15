@@ -260,10 +260,13 @@ def fund_multifactor_corr_jensen(pool, adjust_points, optlimit, optcalc):
 
         data = []
         with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
+            pre_codes = None
             for day in adjust_points:
+
                 print day
+
                 bar.update(1)
-                codes = multifactor_pool_by_corr_jensen(pool, day, lookback, limit)
+                codes = multifactor_pool_by_corr_jensen(pool, day, lookback, limit, pre_codes)
                 if codes is None or len(codes) == 0:
                     continue
                 ra_fund = base_ra_fund.load(codes = codes)
@@ -272,6 +275,9 @@ def fund_multifactor_corr_jensen(pool, adjust_points, optlimit, optcalc):
                 for code in ra_fund.index:
                     ra_fund_id = ra_fund.loc[code, 'globalid']
                     data.append([ra_pool, day, ra_fund_id, code])
+
+                pre_codes = codes
+
         fund_df = pd.DataFrame(data, columns = ['ra_pool', 'ra_date', 'ra_fund_id', 'ra_fund_code'])
         fund_df = fund_df.set_index(['ra_pool', 'ra_date', 'ra_fund_id'])
 
@@ -799,7 +805,6 @@ def turnover_update_category(pool, category):
     
     df_new = df_new.applymap("{:.4f}".format)
 
-
     db = database.connection('asset')
     # 加载旧数据
     t2 = Table('ra_pool_criteria', MetaData(bind=db), autoload=True)
@@ -959,7 +964,7 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
         return final_codes
 
 
-def multifactor_pool_by_corr_jensen(pool, day, lookback, limit):
+def multifactor_pool_by_corr_jensen(pool, day, lookback, limit, pre_codes):
 
     index = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=lookback)
 
@@ -1021,16 +1026,45 @@ def multifactor_pool_by_corr_jensen(pool, day, lookback, limit):
         final_codes = []
         x = code_jensen
         sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-        #print sorted_x[0:10]
-        corr_threshold = np.percentile(corr.values, 90)
-        corr_threshold = 0.7 if corr_threshold <= 0.7 else corr_threshold
-        corr_threshold = 0.9 if corr_threshold >= 0.9 else corr_threshold
-        #corr_threshold = 0.9
-        for i in range(0, len(sorted_x)):
-            code, jensen = sorted_x[i]
-            if corr[code] >= corr_threshold:
-                final_codes.append(code)
 
-        final_codes = final_codes[0 : limit]
-        print day, bf_id, layer, final_codes
+        if pre_codes is None:
+            #print sorted_x[0:10]
+            corr_threshold = np.percentile(corr.values, 90)
+            corr_threshold = 0.7 if corr_threshold <= 0.7 else corr_threshold
+            corr_threshold = 0.9 if corr_threshold >= 0.9 else corr_threshold
+            #corr_threshold = 0.9
+            for i in range(0, len(sorted_x)):
+                code, jensen = sorted_x[i]
+                if corr[code] >= corr_threshold:
+                    final_codes.append(code)
+
+            final_codes = final_codes[0 : limit]
+            print day, bf_id, layer, final_codes
+
+        else:
+            corr_threshold = np.percentile(corr.values, 80)
+            corr_codes = set(corr[corr >= corr_threshold].index.ravel())
+            sorted_x = sorted_x[0: len(sorted_x) / 3]
+            jensen_codes = []
+            for code, jensen in sorted_x:
+                jensen_codes.append(code)
+
+            corr_jensen_codes = (set(corr_codes) & set(jensen_codes))
+
+            for code in pre_codes:
+                if code in corr_jensen_codes:
+                    final_codes.append(code)
+
+            corr_jensen_codes = corr_jensen_codes.difference(set(pre_codes))
+
+            for code, jensen in sorted_x:
+                if code in corr_jensen_codes:
+                    final_codes.append(code)
+
+            final_codes = final_codes[0 : limit]
+            print day, bf_id, layer, final_codes
+
+            #print pre_codes
+            #print corr_threshold
+
         return final_codes

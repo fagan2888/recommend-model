@@ -218,7 +218,6 @@ def layer_index_fund(bf_id):
 
     adjust_point = CommandPool.get_multifactor_adjust_point(startdate = '2012-01-01', enddate=None, label_period=1)
 
-
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -231,6 +230,7 @@ def layer_index_fund(bf_id):
 
     pool = df_pool.iloc[0]
 
+    #adjust_point = adjust_point[-3:]
     CommandPool.fund_multifactor_corr_jensen(pool, adjust_point, 5, True)
 
     db_asset = create_engine(config.db_asset_uri)
@@ -353,6 +353,8 @@ def regression_tree_factor_layer(bf_id):
     session.close()
 
     return
+
+
 
 
 
