@@ -21,7 +21,7 @@ from ipdb import set_trace
 #import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(funddfr, delta, weights, P, eta, Omega, alpha, bound, risk_parity, sum1 = 0.65, sum2 = 0.45):
+def efficient_frontier_spe(funddfr, delta, weights, P, eta, alpha, bound, risk_parity, sum1 = 0.65, sum2 = 0.45):
     solvers.options['show_progress'] = False
 
     return_rate = funddfr.T
@@ -30,16 +30,20 @@ def efficient_frontier_spe(funddfr, delta, weights, P, eta, Omega, alpha, bound,
 
     cov = np.cov(return_rate)
 
-    # ONLY USE THIS LINE FOR SETTING PI TO HISTORICAL (MEAN)
-    # BTW change the pi in black_litterman as well
+    if eta.size==0:       
+        #If we are not gonna use Blacklitterman, just leave eta as blank
+        expected_return = np.mean(return_rate, axis=1)
+    else:
+        #If use the risk parity model, the input should be the weight, then by reverse optimization,
+        #we will have the expected return
+        if risk_parity:
+            initialvalue = weights
+        #Otherwise, we just give the mean return as the expected return
+        else:
+            initialvalue = np.mean(return_rate, axis=1)
+        #Then we go blacklitterman
+        expected_return = black_litterman(delta, initialvalue, cov, P, eta, alpha, risk_parity)
 
-    if not risk_parity:
-        weights = np.mean(return_rate, axis=1)
-
-    expected_return = black_litterman(delta, weights, cov, P, eta, Omega, alpha, risk_parity)
-    # RAW Markowitz
-    # asset_mean = np.mean(return_rate, axis=1)
-    # cov = np.cov(return_rate)
 
     S = matrix(cov + cov * np.eye(len(expected_return)) * 2)         #Double the diagonal of cov matrix
 
@@ -480,33 +484,21 @@ def grs(portfolio):
 
 
 
-def black_litterman(delta, weights, Sigma, P, eta, Omega, alpha, risk_parity):
-    '''
-    For the argument return_rate (Pi), since the original black_litterman model asks for equilibrium returns,
-    which are currently unavaliable. Thus, here we use the naive mean return from historical data instead.
+def black_litterman(delta, initialvalue, Sigma, P, eta, alpha, risk_parity):
 
-    The P, Q are view matrices, where P identifies the assets involved in each views. (K x N matrix for K views),
-    and Q is the view vector denotes the excess returns for each view.
-
-    The uncertainty of the views results in a random, unknown, independent,
-    normally distributed error term vector, with a mean 0.
-    The Omega is the corresponding covariance matrix, formed only by the variance.
-    The off-diagonal positions are all 0 since we assume that views are all independent of one another.
-
-    '''
     #Use the weight coming from risk parity to do reverse optimization
     if risk_parity:
+        weights = initialvalue
         pi = weights.dot(Sigma * delta)
     else:
-        pi = weights
+        pi = initialvalue
 
     var_view = np.dot(np.dot(P, Sigma), P.T) 
 
     Q = [P[k].dot(pi) + eta[k] * np.sqrt(var_view[k,k]) for k in range(P.shape[0])]
     Q = np.array(np.matrix(Q).T)
 
-    if Omega == None:
-        Omega = var_view * alpha * np.eye(P.shape[0])
+    Omega = var_view / alpha * np.eye(P.shape[0])
 
     # Compute posterior estimate of the mean
     # This is a simplified version of formula (8) on page 4.
