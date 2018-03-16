@@ -59,6 +59,21 @@ def load(globalids=None, codes=None):
     return df
 
 
+def load_all_globalid():
+    db = database.connection('base')
+    metadata = MetaData(bind = db)
+    t = Table('ra_fund', metadata, autoload=True)
+
+    columns = [
+        t.c.globalid,
+    ]
+
+    s = select(columns)
+    df = pd.read_sql(s, db)
+
+    return df
+
+
 def find_type_fund(ra_type):
 
     db = database.connection('base')
@@ -80,3 +95,6 @@ def find_type_fund(ra_type):
     df = pd.read_sql(s, db)
 
     return df
+
+if __name__ == '__main__':
+    print load_all_globalid()
