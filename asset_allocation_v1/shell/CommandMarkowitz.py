@@ -66,7 +66,7 @@ def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optrepla
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid, optappend=optappend, sdate=startdate )
+            ctx.invoke(pos, optid=optid, optappend=optappend, sdate=startdate)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -671,11 +671,20 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
 
         sr = asset_fl_nav.load_series(
             asset_id, reindex=None, end_date=end_date)
+
+    elif xtype == 'BF..':
+
+        sr = asset_barra_stock_factor_layer_nav.load_series_2(
+            asset_id, reindex=None, end_date=end_date)
     else:
         sr = pd.Series()
 
 
     wt = TimingWt(sr)
+    #try:
+    #    filtered_data = wt.wavefilter(sr, wavelet_filter_num)
+    #except:
+    #    set_trace()
     filtered_data = wt.wavefilter(sr, wavelet_filter_num)
     filtered_data = filtered_data.fillna(0.0)
     filtered_data = filtered_data[filtered_data.index >= begin_date]
@@ -913,7 +922,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         elif algo == 6:
             df = markowitz_days(
-                sdate, edate, assets,
+                sdate, edate, layer_assets,
                 label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
 
 
