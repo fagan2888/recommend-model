@@ -36,7 +36,7 @@ from Const import datapath
 from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
-from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund
+from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_ra_pool
 from db.asset_stock_factor import *
 
 import traceback, code
@@ -1075,3 +1075,65 @@ def multifactor_pool_by_corr_jensen(pool, day, lookback, limit, pre_codes):
             #print corr_threshold
 
         return final_codes
+
+
+@pool.command()
+@click.pass_context
+def test_fund_pool(ctx):
+
+    month_last_trade_date_df = asset_trade_dates.load_month_last_trade_date()
+    month_last_trade_date_df = month_last_trade_date_df[month_last_trade_date_df.index >= '2012-01-01']
+    month_last_trade_date_df = month_last_trade_date_df.sort_index(ascending = True)
+
+    for day in month_last_trade_date_df.index[::3]:
+        #print day
+        dates = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=53)
+        codes = base_ra_fund.find_type_fund(1).ra_code.ravel()
+        df_nav_fund = base_ra_fund_nav.load_daily(dates[0], day, codes = codes)
+        df_nav_fund = df_nav_fund.loc[dates]
+        df_nav_fund = df_nav_fund.dropna(axis = 1, thresh = len(df_nav_fund) * 0.95)
+        df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
+        df_notavaible_fund = df_inc_fund[abs(df_inc_fund) > 0.11]
+        df_notavaible_fund = df_notavaible_fund.dropna(axis = 1, how = 'all')
+        funds = df_inc_fund.columns.difference(df_notavaible_fund.columns)
+        df_inc_fund = df_inc_fund[funds]
+
+
+        index_ids = [120000001, 120000002, 120000018]
+        index_inc = {}
+        for index in index_ids:
+            nav = base_ra_index_nav.load_series(index, reindex=dates, begin_date=dates[0], end_date=day)
+
+
+
+        df_inc_fund = df_inc_fund.mean(axis = 0)
+        df_inc_fund.sort_values(inplace=True, ascending=False)
+        fund_codes = df_inc_fund.head().index.ravel()
+
+        print day, fund_codes
+        base_engine = database.connection('base')
+        base_Session = sessionmaker(bind=base_engine)
+        base_session = base_Session()
+        sql = base_session.query(base_ra_fund.ra_fund.ra_code, base_ra_fund.ra_fund.globalid).filter(base_ra_fund.ra_fund.ra_code.in_(fund_codes)).statement
+        code_id_df = pd.read_sql(sql, base_session.bind, index_col = ['ra_code'])
+        base_session.commit()
+        base_session.close()
+
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        for code in code_id_df.index:
+
+            pool_id = 11110600
+            fund_id = code_id_df.loc[code, 'globalid']
+            rpf = asset_ra_pool.ra_pool_fund()
+            rpf.ra_pool = pool_id
+            rpf.ra_category = 0
+            rpf.ra_fund_id = fund_id
+            rpf.ra_fund_code = code
+            rpf.ra_date = day
+            session.add(rpf)
+
+        session.commit()
+        session.close()

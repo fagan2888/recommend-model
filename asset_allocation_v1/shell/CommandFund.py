@@ -35,6 +35,8 @@ from sqlalchemy import *
 from tabulate import tabulate
 from db import database, base_ra_fund_nav, base_ra_index, base_ra_fund, base_ra_index_nav
 
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from scipy.stats import pearsonr
 import traceback, code
 
 logger = logging.getLogger(__name__)
@@ -189,6 +191,7 @@ def load_ra_corr(corrs):
 
     return df
 
+
 @fund.command(name='type')
 @click.option('--id', 'optid', help=u'specify type id (e.g. 1001,1002')
 @click.option('--fund', 'optfund', help=u'specify fund code (e.g. 519983,213009')
@@ -216,3 +219,31 @@ def type_command(ctx, optid, optfund, optlist):
 
     for _, corr in df_corr.iterrows():
         corr_update(corr, codes)
+
+
+
+@fund.command()
+@click.pass_context
+def corr_cluster(ctx):
+
+        stock_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+        #qdii_codes = list(base_ra_fund.find_type_fund(4).ra_code.ravel())
+        codes = stock_codes
+        df_nav_fund = base_ra_fund_nav.load_daily('2015-01-01', '2017-12-01', codes = codes)
+        df_nav_fund = df_nav_fund.dropna(axis = 1, thresh = len(df_nav_fund) * 2.0 / 3.0)
+
+        df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
+
+        def pearson_affinity(M):
+            return 1 - np.array([[pearsonr(a,b)[0] for a in M] for b in M])
+
+        cluster = AgglomerativeClustering(n_clusters=10, linkage='average', affinity=pearson_affinity)
+
+        cluster.fit(df_inc_fund.T)
+
+        asset_cluster = {}
+        for i in np.arange(10):
+            asset_cluster[i+1] = df_inc_fund.columns[cluster.labels_ == i]
+
+        for k, v in asset_cluster.items():
+            print v

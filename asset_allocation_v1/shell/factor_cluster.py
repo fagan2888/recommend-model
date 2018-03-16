@@ -347,7 +347,7 @@ def barra_stock_factor_fund_pool_duplicated(lookback, limit):
         dates = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=lookback)
         df_nav_fund = base_ra_fund_nav.load_daily(dates[0], day, codes = codes)
         df_nav_fund = df_nav_fund.loc[dates]
-        df_nav_fund = df_nav_fund.dropna(axis = 1, thresh = len(df_nav_fund) * 2.0 / 3)
+        df_nav_fund = df_nav_fund.dropna(axis = 1, thresh = len(df_nav_fund) * 0.95)
 
 
         df_nav_index = {}
@@ -355,6 +355,10 @@ def barra_stock_factor_fund_pool_duplicated(lookback, limit):
             df_nav_index[bf_id] = load_selected_factor_nav_series(bf_id, reindex = dates, begin_date = dates[0], end_date = day)
 
         df_nav_index = pd.DataFrame(df_nav_index)
+        df_nav_fund = df_nav_fund.loc[df_nav_index.index]
+
+        df_inc_index = df_nav_index.pct_change().fillna(0.0)
+        df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
 
         df_nav_index_fund = pd.concat([df_nav_index, df_nav_fund], axis = 1, join_axes = [df_nav_index.index])
 
@@ -373,15 +377,15 @@ def barra_stock_factor_fund_pool_duplicated(lookback, limit):
 
 
             bf_corr = bf_corr[bf_corr < 1.0]
-            bf_corr = bf_corr[bf_corr >= 0.85]
+            bf_corr = bf_corr[bf_corr >= 0.70]
             bf_corr.sort_values(inplace = True, ascending = False)
 
             fund_jensens = {}
             for fund_code in bf_corr.index:
-                fund_jensens[fund_code] = fin.jensen(df_inc_index_fund[fund_code], df_inc_index_fund[bf_id] ,Const.rf)
+                fund_jensens[fund_code] = abs(1 - fin.beta(df_inc_index_fund[fund_code], df_inc_index_fund[bf_id] ,Const.rf))
             fund_jensens_ser = pd.Series(fund_jensens)
-            fund_jensens_ser.sort_values(inplace=True, ascending=False)
-            num = len(fund_jensens_ser) / 5 if len(fund_jensens_ser) / 5 >= 10 else 10
+            fund_jensens_ser.sort_values(inplace=True, ascending=True)
+            num = len(fund_jensens_ser) / 5 if len(fund_jensens_ser) / 5 >= 20 else 20
             bf_avaible_funds[bf_id] = fund_jensens_ser.iloc[0 : num].index.ravel()
 
         this_fund_pool = {}

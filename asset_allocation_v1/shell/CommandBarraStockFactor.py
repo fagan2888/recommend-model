@@ -310,48 +310,46 @@ def export_barra_stock_factor_nav(ctx):
     sql = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.bf_id ,barra_stock_factor_layer_nav.layer, barra_stock_factor_layer_nav.nav).statement
 
     df = pd.read_sql(sql ,session.bind, index_col = ['trade_date', 'bf_id','layer'], parse_dates = ['trade_date'])
+
     session.commit()
     session.close()
 
     df = df.unstack([1,2])
     df.columns = df.columns.droplevel(0)
     df = df.dropna()
+    df = df.resample('W-FRI').last()
     df_inc = df.pct_change().fillna(0.0)
-    #print df_inc.corr().mean()
-    #df_inc.corr().to_csv('corr.csv')
-
-    df_inc = df_inc.loc[:,['BF.000001','BF.000006']]
-
-    df_inc.columns = list('abcd')
-    df_corr = df_inc.rolling(60).corr().dropna()
-    df_corr = df_corr[df_corr.index.get_level_values(1) == 'a'][::60]
 
 
-    for i in df_corr.columns:
-        corr = df_corr[i]
-        print np.corrcoef(corr[1:].values, corr[:-1].values)
-    '''
-    hs300 = base_ra_index_nav.load_series(120000002)
+    #df_inc = df_inc.loc[:,['BF.000001', 'BF.000006']]
+    #df_inc = df_inc.iloc[:,[1,3]]
+    df_inc = df_inc.loc[:,'BF.000001']
+    df_inc = df_inc.iloc[:,1]
 
-    df = df.unstack()
-    df.columns = df.columns.droplevel(0)
+    #print np.corrcoef(df_inc.iloc[:,0], df_inc.iloc[:,1])
+    #print np.corrcoef(pow( ( 1 + df_inc.iloc[:,0]), len(df_inc)), pow( ( 1 + df_inc.iloc[:,1]), len(df_inc)))
 
-    data = {}
-    data['large_capital'] = df[0]
-    data['hs300'] = hs300
 
-    df = pd.DataFrame(data).dropna()
+    session.commit()
+    session.close()
 
-    df = df[df.index >= '2010-01-01']
-    df = df / df.iloc[0]
-    print df.corr(method = 'spearman')
-    #print df.head()
-    #print df.tail()
-    #print df.sum(axis = 1).tail()
+    zz500 = base_ra_index_nav.load_series(120000002)
+    zz500 = zz500.loc[df_inc.index]
+    zz500_inc = zz500.pct_change().fillna(0.0)
 
-    df.to_csv('nav.csv')
-    '''
+    print np.corrcoef(df_inc, zz500_inc)
+    print np.corrcoef(np.exp(df_inc * 52), np.exp(zz500_inc * 52))
 
+    juchao_xiao = base_ra_index_nav.load_series(120000020)
+    juchao_xiao = juchao_xiao.loc[df_inc.index]
+    juchao_xiao_inc =   juchao_xiao.pct_change().fillna(0.0)
+
+    #print np.corrcoef(juchao_xiao_inc, zz500_inc)
+    #print np.corrcoef(juchao_xiao_inc - juchao_xiao_inc.mean(), zz500_inc - zz500_inc.mean())
+    #print np.corrcoef(pow( ( 1 + juchao_xiao_inc), 52), pow( ( 1 + zz500_inc), 52))
+    #print np.corrcoef(np.exp(juchao_xiao_inc * 52), np.exp(zz500_inc * 52))
+
+    #print np.corrcoef(juchao_xiao_inc, zz500_inc)
     return
 
 

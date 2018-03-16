@@ -311,6 +311,7 @@ class FactorCluster(object):
         # df_ret = np.exp(df_ret*52) - 1
         # df_ret = df_assets/df_assets.iloc[0]
         df_ret = df_assets.pct_change().dropna()
+        #df_ret = np.exp(df_ret * 52)
 
         # df_ret.to_csv('df_ret.csv', index_label = 'date')
         # sys.exit(0)
