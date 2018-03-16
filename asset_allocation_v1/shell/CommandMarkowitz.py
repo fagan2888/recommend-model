@@ -523,7 +523,7 @@ def average_days(start_date, end_date, assets):
     return df
 
 
-def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, wavelet = False, wavelet_filter_num = 0):
+def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, blacklitterman = False, wavelet = False, wavelet_filter_num = 0):
     '''perform markowitz asset for days
     '''
     # 加载时间轴数据
@@ -558,7 +558,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
         q = manager.Queue()
         processes = []
         for indexs in process_adjust_indexs:
-            p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num,))
+            p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, blacklitterman, wavelet, wavelet_filter_num,))
             processes.append(p)
             p.start()
 
@@ -576,18 +576,18 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
                 # bar.update(1)
                 logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
                 # 高风险资产配置
-                data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
+                data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman, wavelet, wavelet_filter_num)
 
     return pd.DataFrame(data).T
 
 
-def m_markowitz_day(queue, days, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
+def m_markowitz_day(queue, days, lookback, assets, bootstrap, cpu_count, blacklitterman, wavelet, wavelet_filter_num):
     for day in days:
-        sr = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
+        sr = markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman, wavelet, wavelet_filter_num)
         queue.put((day, sr))
 
 
-def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
+def markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman, wavelet, wavelet_filter_num):
     '''perform markowitz for single day
     '''
 
@@ -609,59 +609,33 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
-    return markowitz_r(df_inc, day, assets, bootstrap, cpu_count)
+    return markowitz_r(df_inc, day, assets, bootstrap, cpu_count, blacklitterman)
 
-def markowitz_r(df_inc, today, limits, bootstrap, cpu_count):
+def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman):
     '''perform markowitz
     '''
 
-    #==================================================================
-    #Load view parameters
-    codes = df_inc.columns
-
-
-
-
-    #Read parameters
-    import json
-    with open('bl.json') as f:
-        bl_parameters = json.load(f)
-    eta = np.array(bl_parameters["eta"])
-    Omega = np.matrix(bl_parameters["Omega"]) if bl_parameters["Omega"] else None
-    alpha = bl_parameters["alpha"]
-    risk_parity = bl_parameters["risk_parity"]
-    
-    from CommandMarkowitz import load_nav_series
-    future_returns = pd.DataFrame.from_dict({code: load_nav_series(code, begin_date=today).iloc[:21] for code in codes})
-    if len(future_returns) > 0:
-        corresponding_P = (future_returns.iloc[-1]/future_returns.iloc[0]) - 1
-        corresponding_P = corresponding_P.apply(lambda x: 1 if x>0 else -1)
-        P = np.diag(corresponding_P)
-        # P_parsed = [corresponding_P.values * weights]  #Normalize and fit the form
-        # # P_parsed = [P_parsed / abs(P_parsed.sum())]
-        if corresponding_P.sum() == 0:
-            raw_P = bl_parameters["P"]
-            P_serialized = pd.Series(raw_P, index=raw_P.keys()).reindex(codes).fillna(0)
-            P_parsed = np.diag(P_serialized)
-            P = np.array([row for row in P_parsed if abs(row.sum())>0])
-            
+    #=====================
+    #read new parameters from csv
+    if blacklitterman:
+        codes = df_inc.columns
+        view_parameters_overall = pd.read_csv('views.csv', index_col='td_date', parse_dates=['td_date'])
+        try:
+            view_parameters_today = view_parameters_overall.loc[today]
+        except:
+            view_parameters_today = view_parameters_overall.iloc[-1]
+        alpha = view_parameters_today['confidence']
+        risk_parity = True if view_parameters_today['riskparity']==1 else False
+        views = view_parameters_today.reindex(codes).fillna(0)
+        eta = np.array(abs(views[views!=0]))
+        P = np.diag(np.sign(views))
+        P = np.array([i for i in P if i.sum()!=0])
+        if eta.size == 0:           #If there is no view, run as non-blacklitterman
+            P=alpha=risk_parity=None
+            eta = np.array([])
     else:
-        raw_P = bl_parameters["P"]
-        P_serialized = pd.Series(raw_P, index=raw_P.keys()).reindex(codes).fillna(0)
-        P_parsed = np.diag(P_serialized)
-        P = np.array([row for row in P_parsed if abs(row.sum())>0])
-        
-    # Load raw views
-    # raw_P = bl_parameters["P"]
-    # if today.month <= 6:
-    #     raw_P['ERI000002'] = 1
-    # else:
-    #     raw_P['ERI000002'] = -1
-    # P_serialized = pd.Series(raw_P, index=raw_P.keys()).reindex(codes).fillna(0)
-    # P_parsed = np.diag(P_serialized)
-    # P = np.array([row for row in P_parsed if abs(row.sum())>0])
-
-
+        P=alpha=risk_parity=None
+        eta = np.array([])
 
     if risk_parity:
     # Load weights from riskparity model
@@ -683,11 +657,11 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count):
         bound.append(limits[asset])
 
     if bootstrap is None:
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, delta, weights, P, eta, Omega, alpha, bound, risk_parity)
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, delta, weights, P, eta, alpha, bound, risk_parity)
     
         
     else:
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, delta, weights, P, eta, Omega, alpha, bound, risk_parity, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, delta, weights, P, eta, alpha, bound, risk_parity, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
     #Use Blacklitterman
     
@@ -969,16 +943,16 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     elif algo == 2:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, blacklitterman=False, wavelet = False)
     elif algo == 3:
         df = markowitz_days(
             sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman=False, wavelet = False)
     elif algo == 4:
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
-    elif algo == 5:
+    elif algo == 18:
         #rank = argv['rank']
         #df = stock_factor.compute_rankcorr_multi_factor_pos(string.atoi(rank.strip()))
         #factor_df = pd.read_csv('barra_stock_factor/free_capital_factor.csv', index_col =['tradedate'], parse_dates = ['tradedate'])
@@ -990,11 +964,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005', 'BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
         #    'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
         #df = barra_stock_factor.regression_tree_factor_spliter(bf_ids)
-    elif algo == 6:
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
-        df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
+    elif algo == 19:
         df = barra_stock_factor.factor_pos_2_stock_pos(df)
     elif algo == 17:
 
@@ -1002,6 +972,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
         df = corr_regression_tree.regression_tree_factor_cluster_boot(bf_ids)
 
+    elif algo == 5:
+        df = df = markowitz_days(
+            sdate, edate, assets,        
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman=True, wavelet = False)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
