@@ -95,7 +95,7 @@ def regression_tree_factor_corr_layer(bf_ids):
 
     params = {}
     params['min_leaf_node'] = 20
-    params['threads'] = 30
+    #params['threads'] = 30
 
     for date in dates[-10:]:
         tmp_yield_df = yield_df[yield_df.index <= date]
@@ -115,10 +115,7 @@ def regression_tree_factor_corr_layer(bf_ids):
         tmp_yield_df = tmp_yield_df[stocks]
         corr_df = tmp_yield_df.corr()
 
-        print time.time()
         tree = create_regression_tree(tmp_factor, corr_df, 5, params)
-        print time.time()
-        print date, tree
         #print date ,tree
         #corr_df = corr_df[corr_df > 0.9]
         #print tmp_yield_df.corr().dropna(axis = 0)
@@ -143,10 +140,10 @@ def err(stock_ids, corr_df):
         return np.inf
 
     tmp_corr_df = corr_df.ix[stock_ids, stock_ids]
-    mean = tmp_corr_df.values.reshape(-1).mean()
-    std = tmp_corr_df.values.reshape(-1).std()
+    corrs = tmp_corr_df.values.reshape(-1)
+    corrs = corrs[corrs < 1.0]
 
-    return std / mean
+    return -corrs.mean()
 
 
 
