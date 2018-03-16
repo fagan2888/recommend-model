@@ -20,7 +20,7 @@ from sklearn.cluster import KMeans, AgglomerativeClustering
 from scipy.spatial import distance
 from starvine.bvcopula.copula import frank_copula
 
-from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, base_ra_index, asset_fl_info, asset_fl_nav
+from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, base_ra_index, asset_fl_info, asset_fl_nav, base_ra_fund, base_ra_fund_nav
 from sqlalchemy import MetaData, Table, select, func, literal_column
 import warnings
 warnings.filterwarnings('ignore')
@@ -134,15 +134,12 @@ def fl_nav_update(ctx):
 
 class FactorLayer():
 
-    def __init__(self, h_num = 8, m_num = 2, l_num = 1, window = 60, base_pool_only = True, hml_num = 3):
+    def __init__(self, h_num = 8, m_num = 2, l_num = 1, window = 60, base_pool_only = True):
 
         self._pool = FactorLayer.get_pool(base_pool_only)
         self.window = window
         #self.baseline = 'BF.000001.1'
         self.baseline = '120000039'
-        self.hml_num = hml_num
-
-        self.score = 0
         self.h_pool = []
         self.m_pool = []
         self.l_pool = []
@@ -151,7 +148,6 @@ class FactorLayer():
         self.m_num = m_num
         self.l_num = l_num
 
-        self.asset_cluster_hml = {}
         self.h_pool_cluster = {}
         self.m_pool_cluster = {}
         self.l_pool_cluster = {}
@@ -161,17 +157,6 @@ class FactorLayer():
     def get_pool(base_pool_only):
 
         '''
-        base_pool = []
-        for base_id in range(2, 42):
-            base_pool.append('12{:07}'.format(base_id))
-
-        bf_pool = []
-        for factor_id in range(1, 3):
-            for layer in range(5):
-                bf_pool.append('BF.{:06}.{}'.format(factor_id, layer))
-        pool = base_pool+bf_pool
-        '''
-
         base_pool = base_ra_index.load_globalid()
         base_pool = base_pool.values
         base_pool = [str(x) for x in base_pool]
@@ -186,13 +171,15 @@ class FactorLayer():
 
         ## drop '12000001' from base_pool because it it the baseline
         pool = base_pool + bf_pool
+        '''
 
-        return pool
+        fund_pool = base_ra_fund.find_type_fund(1).globalid.values
+
+        return fund_pool
 
 
-    def hml_layer(self, hml_num):
-        asset_cluster_hml = self.cluster(self.df_risk_return, hml_num, self._pool)
-        self.asset_cluster_hml = asset_cluster_hml
+    def hml_layer(self):
+        asset_cluster_hml = self.cluster(self.df_risk_return, 3, self._pool)
         self.h_pool = asset_cluster_hml[1.0]
         self.m_pool = asset_cluster_hml[2.0]
         self.l_pool = asset_cluster_hml[3.0]
@@ -214,6 +201,10 @@ class FactorLayer():
 
     def low_layer(self):
         self.l_pool_cluster[1.0] = self.l_pool
+
+    def fund_layer(self):
+        df = cal_mul_fund_corr()
+        return df
 
 
     @staticmethod
@@ -312,8 +303,8 @@ class FactorLayer():
         asset1 = asset1.replace(0.0, np.nan).dropna()
         asset2 = asset2.replace(0.0, np.nan).dropna()
 
-        asset1 = asset1.rolling(5).sum()
-        asset2 = asset2.rolling(5).sum()
+        asset1 = asset1.rolling(20).sum()
+        asset2 = asset2.rolling(20).sum()
 
         dates1 = asset1.index
         dates2 = asset2.index
@@ -332,8 +323,8 @@ class FactorLayer():
 
         if method == 'corr':
             df = None
-            with click.progressbar(length=len(self.h_pool), label='cal corr'.ljust(30)) as bar:
-                for asset in self.h_pool:
+            with click.progressbar(length=len(self._pool), label='cal corr'.ljust(30)) as bar:
+                for asset in self._pool:
                     # print asset,
                     if df is None:
                         df = self.cal_corr(self.baseline, asset, self.window)
@@ -348,7 +339,7 @@ class FactorLayer():
 
         elif method == 'rho':
             df = None
-            with click.progressbar(length=len(self.h_pool), label='cal corr'.ljust(30)) as bar:
+            with click.progressbar(length=len(self._pool), label='cal corr'.ljust(30)) as bar:
                 for asset in self.h_pool:
                     if df is None:
                         df = self.cal_rho(self.baseline, asset, self.window)
@@ -362,10 +353,20 @@ class FactorLayer():
 
         ##去除标准指数的非交易日数据
         df = df.dropna()
-        #df.to_csv('copula/kTau/kTau_sh300_60.csv', index_label = 'date')
-        df.to_csv('copula/corr/corr_mf_{}.csv'.format(self.window), index_label = 'date')
+        # df.to_csv('copula/kTau/kTau_sh300_60.csv', index_label = 'date')
+        # df.to_csv('copula/corr/corr_mf_{}.csv'.format(self.window), index_label = 'date')
+        df.to_csv('copula/fund/corr_mf_{}.csv'.format(self.window), index_label = 'date')
 
         return df
+
+    def cal_mul_fund_corr(self):
+        pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+        df_nav_fund  = base_ra_fund_nav.load_daily('2016-12-31', '2017-12-31', codes = pool_codes)
+        df_corr = df_nav_fund.rolling(20).corr()
+        set_trace()
+        # df_corr = df_corr.unstack()
+
+        return df_nav_fund
 
 
     @staticmethod
@@ -447,9 +448,9 @@ class FactorLayer():
         return asset_cluster
 
 
-    def cal_mean_corr(self, pool):
+    def cal_mean_corr(self):
         corr = {}
-        for k,v in pool.iteritems():
+        for k,v in factor_layer.h_pool_cluster.iteritems():
             layer_assets = []
             for asset in v:
                 tmp_nav = load_nav(asset)
@@ -459,43 +460,53 @@ class FactorLayer():
             layer_df = pd.concat(layer_assets, 1)
             layer_df = layer_df[layer_df.index >= '2012-07-27']
             layer_df = layer_df.dropna()
-            layer_df = layer_df.rolling(5).sum()[::5]
             corr[k] = layer_df.corr().mean().mean()
 
         mean_corr = np.mean(corr.values())
 
-        # print corr
-        # print mean_corr
+        print corr
+        print mean_corr
 
         return mean_corr
 
 
     def handle(self):
         ## 按照风险收益比将原始资产聚成高、中、低风险三类资产,并将中风险再分成两类
-        self.df_risk_return = pd.read_csv('copula/rr/risk_return_60.csv', index_col = 0, parse_dates = True)
+        # self.df_risk_return = pd.read_csv('copula/rr/risk_return_60.csv', index_col = 0, parse_dates = True)
         # self.df_risk_return = self.cal_mul_risk_return()
-        self.hml_layer(self.hml_num)
-        self.mid_layer()
+        # self.hml_layer()
+        # self.mid_layer()
 
         ## 按照相关性将高风险资产分成六类
         # self.df_rho= pd.read_csv('copula/kTau/kTau_sh300_60.csv', index_col = 0, parse_dates = True)
         # self.df_rho= pd.read_csv('copula/corr/corr_mf_{}.csv'.format(window), index_col = 0, parse_dates = True)
-
-        self.df_rho = self.cal_mul_rhos(method = 'corr')
-        self.high_layer()
-        self.score = self.cal_mean_corr(self.h_pool_cluster)
+        # self.df_rho = self.cal_mul_rhos(method = 'corr')
+        self.df_rho = self.cal_mul_fund_corr()
+        self.fund_layer()
+        self.cal_mean_corr()
 
         ## 低风险只有货币和短融，无需分类
         self.low_layer()
 
 
 def load_nav(id_):
-    if id_.startswith('BF'):
+    prefix = str(id_)[0:2]
+    if prefix.isdigit():
+        xtype = int(id_) / 10000000
+    else:
+        xtype = prefix
+
+    if xtype == 'BF':
         factor = id_[:-2]
         layer = int(id_[-1])
         df = asset_barra_stock_factor_layer_nav.load_series(factor, layer)
+    elif xtype == 12:
+        df = base_ra_index_nav.load_series(int(id_))
+    elif xtype == 3:
+        df = base_ra_fund_nav.load_series(int(id_))
     else:
-        df = base_ra_index_nav.load_series(id_)
+        df = pd.Series()
+        logger.error('No asset {}'.format(id_))
 
     return df
 
@@ -545,22 +556,17 @@ def sumple_update(assets, fl_id):
 
 
 if __name__ == '__main__':
+    # load_nav('120000039')
 
     logger = logging.getLogger(__name__)
     setup_logging()
-    window = 240
+    window = 30
     print 'window is {}'.format(window)
-    with open('copula/score/score_window_{}.csv'.format(window), 'wb') as f:
-        f.write('layer_num, score\n')
-        for i in range(2, 15):
-            factor_layer = FactorLayer(i, 2, 1, base_pool_only = False, window = window)
-            factor_layer.handle()
-            score = factor_layer.score
-            f.write('{}, {}\n'.format(i, score))
+    factor_layer = FactorLayer(8, 2, 1, base_pool_only = False, window = window)
     # print factor_layer._pool
-    # factor_layer.handle()
-    # for k,v in factor_layer.h_pool_cluster.iteritems():
-    #     print k, v
+    factor_layer.handle()
+    for k,v in factor_layer.h_pool_cluster.iteritems():
+        print k, v
 
     # print equity_pool
     '''
