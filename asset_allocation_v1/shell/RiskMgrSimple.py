@@ -17,6 +17,7 @@ import click
 import DFUtil
 from scipy import stats
 import random
+from ipdb import set_trace
 
 
 
@@ -31,24 +32,33 @@ class RiskMgrSimple(object):
         self.mindd = mindd
         self.empty = empty
         self.period = period
+        self.ratio = 0.4
 
     def perform(self, asset, df_input):
         #
         # 计算回撤矩阵 和 0.97, 0.75置信区间
         #
-        sr_inc = df_input['nav'].pct_change().fillna(0.0)
+        sr_inc = np.log(1+df_input['nav'].pct_change().fillna(0.0))
         sr_inc2d = sr_inc.rolling(window=2).sum() # 2日收益率
         sr_inc3d = sr_inc.rolling(window=3).sum() # 3日收益率
         sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
+
+        idx = int(self.period*0.03)-1
+        idx2 = int(self.period*0.01)-1
+        sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx:idx+2]))
+        sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx2:idx2+2]))
         
-        sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
+        # sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.03, x.mean(), x.std(ddof=1)))
+        # sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
         #sr_cnfdn = sr_cnfdn.shift(1)
+        # set_trace()
 
         df = pd.DataFrame({
             'inc2d': sr_inc2d.fillna(0),
             'inc3d': sr_inc3d.fillna(0),
             'inc5d': sr_inc5d.fillna(0),
             'cnfdn': sr_cnfdn,
+            'cnfdn2': sr_cnfdn2,
             'timing': df_input['timing'],
         })
 
@@ -64,6 +74,7 @@ class RiskMgrSimple(object):
         #    3. 5天后, 择时若给出全仓信号则全仓, 否则继续空仓直到择时给出全仓信号.
         #
         status, empty_days, action = 0, 0, 0
+        flag = 0
 
         result_pos = {} # 结果仓位
         result_act = {} # 结果动作
@@ -72,12 +83,19 @@ class RiskMgrSimple(object):
                 #
                 # 是否启动风控
                 #
+                if flag != 1:
+                    if row['cnfdn'] is not None and row['inc5d'] < row['cnfdn']:
+                        status, empty_days, position, action = 1, 0, self.ratio, 5
+
                 if row['inc2d'] < self.maxdd:
-                    status, empty_days, position, action = 1, 0, 0, 2
+                    status, empty_days, position, action = 2, 0, 0, 2
+                    flag = 1
                 elif row['inc3d'] < self.maxdd:
-                    status, empty_days, position, action = 1, 0, 0, 3
-                elif row['cnfdn'] is not None and row['inc5d'] < row['cnfdn'] and row['inc5d'] < self.mindd:
-                    status, empty_days, position, action = 1, 0, 0, 5
+                    status, empty_days, position, action = 2, 0, 0, 3
+                    flag = 1
+                elif row['cnfdn2'] is not None and row['inc5d'] < row['cnfdn2'] and row['inc5d'] < self.mindd:
+                    status, empty_days, position, action = 2, 0, 0, 5
+                    flag = 1
 
                 #
                 # 根据当前的风控状态进行处理
@@ -87,13 +105,19 @@ class RiskMgrSimple(object):
                     status, position, action = 0, 1, 0
                 else:
                     # 风控中 (status == 1)
+
                     if empty_days >= self.empty:
                         if row['timing'] == 1.0:
                             empty_days = 0
                             status, position, action = 0, 1, 8 # 择时满仓
+                            if flag == 1:
+                                flag = 0
                         else:
                             empty_days += 1
-                            status, position, action = 1, 0, 7 # 空仓等待择时加仓信号
+                            if flag == 1:
+                                status, position, action = 2, 0, 7
+                            else:
+                                status, position, action = 1, self.ratio, 7 # 空仓等待择时加仓信号
                     else:
                         empty_days += 1
                         #if empty_days != 1:
