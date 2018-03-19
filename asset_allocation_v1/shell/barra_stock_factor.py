@@ -1705,7 +1705,7 @@ def roe_factor():
     roe_df = roe_df.rename(columns={'publishdate':'firstpublishdate'})
     roe_df = stock_factor_util.financial_report_data_trade_date(roe_df, 'roedilutedcut')
 
-    print roe_df
+    #print roe_df
     #去极值标准化行业中性化
     roe_df = stock_factor_util.normalized(roe_df)
     #bp_df = industry_normalized(bp_df)

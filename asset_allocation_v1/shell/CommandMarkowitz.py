@@ -32,7 +32,7 @@ from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_resh
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
 from util import xdict
 from util.xdebug import dd
-import stock_factor ,barra_stock_factor, stock_factor_util
+import stock_factor ,barra_stock_factor, stock_factor_util, corr_regression_tree
 
 import traceback, code
 
@@ -903,6 +903,12 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
         df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
         df = barra_stock_factor.factor_pos_2_stock_pos(df)
+    elif algo == 17:
+
+        bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005', 'BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
+            'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
+        df = corr_regression_tree.regression_tree_factor_cluster_boot(bf_ids)
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;

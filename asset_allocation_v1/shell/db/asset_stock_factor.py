@@ -188,6 +188,18 @@ class barra_stock_factor_allocate_nav(Base):
     created_at = Column(DateTime)
 
 
+class barra_stock_factor_regression_tree(Base):
+
+    __tablename__ = 'barra_stock_factor_regression_tree'
+
+    trade_date = Column(Date, primary_key = True)
+    tree = Column(Text)
+    clusters = Column(Text)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
 def load_factor_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
     bf_ids = asset_id.strip().split('.')
