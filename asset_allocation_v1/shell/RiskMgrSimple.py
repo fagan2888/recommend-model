@@ -38,7 +38,8 @@ class RiskMgrSimple(object):
         #
         # 计算回撤矩阵 和 0.97, 0.75置信区间
         #
-        sr_inc = np.log(1+df_input['nav'].pct_change().fillna(0.0))
+        # sr_inc = np.log(1+df_input['nav'].pct_change().fillna(0.0))
+        sr_inc = df_input['nav'].pct_change().fillna(0.0)
         sr_inc2d = sr_inc.rolling(window=2).sum() # 2日收益率
         sr_inc3d = sr_inc.rolling(window=3).sum() # 3日收益率
         sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
@@ -82,6 +83,7 @@ class RiskMgrSimple(object):
         status, empty_days, action = 0, 0, 0
         flag = 0
 
+        result_status = {}
         result_pos = {} # 结果仓位
         result_act = {} # 结果动作
         with click.progressbar(length=len(df.index), label='riskmgr %-20s' % (asset)) as bar:
@@ -89,9 +91,9 @@ class RiskMgrSimple(object):
                 #
                 # 是否启动风控
                 #
-                if flag != 1:
-                    if row['cnfdn'] is not None and row['inc5d'] < row['cnfdn']:
-                        status, empty_days, position, action = 1, 0, self.ratio, 5
+                # if flag != 1:
+                #     if row['cnfdn'] is not None and row['inc5d'] < row['cnfdn']:
+                #         status, empty_days, position, action = 1, 0, self.ratio, 5
 
                 if row['inc2d'] < self.maxdd:
                     status, empty_days, position, action = 2, 0, 0, 2
@@ -129,6 +131,7 @@ class RiskMgrSimple(object):
                         #if empty_days != 1:
                         #    status, position, action = 1, 0, 6 # 无条件空仓
 
+                result_status[day] = status
                 result_act[day] = action
                 result_pos[day] = position
                 #
@@ -138,5 +141,38 @@ class RiskMgrSimple(object):
         
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act})
         df_result.index.name = 'rm_date'
+        
+        # Regular calc winrate and exception
+        # df = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status':result_status})
+        # df.index.name = 'rm_date'
+        # indexes = [i for i in range(len(df)) if df.iloc[i].rm_pos==8]
+        # count = [i for i in indexes if (df.iloc[i:i+7].rm_pos.sum()<7)]
+        # idx_start = [i+1 for i in range(len(df)-1) if df.iloc[i].rm_pos == 1 and df.iloc[i+1].rm_pos==0]
+        # idx_end = [i+1 for i in range(len(df)-1) if df.iloc[i].rm_pos == 0 and df.iloc[i+1].rm_pos==1]
+        # if idx_end[0]<idx_start[0]:
+        #     idx_end = idx_end[1:]
+        # if len(idx_end) < len(idx_start):
+        #     idx_end.append(len(df)-1)
+        # inc = np.log(1+sr_inc)
+        # count = np.array([inc.loc[df.iloc[i:j].index].sum() for i,j in zip(idx_start, idx_end)])
+        # print "Risk Ctrl Triggered: " + str(count.size)
+        # print "Winrate: " + str(count[count<0].size * 1.0 / count.size)
+        # print len(count)
+        # print df.index[count]
+
+        df = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status':result_status})
+        df.index.name = 'rm_date'
+        i = 0
+        # set_trace()
+        # while df.iloc[i].rm_status == 2:
+        #     i+=1
+
+        # while i < range(len(df)):
+        #     i+=1 
+        #     pass
+            
+
+        # set_trace()
+
 
         return df_result;
