@@ -67,7 +67,7 @@ class RiskMgrSimple(object):
             'cnfdn2': sr_cnfdn2,
             'timing': df_input['timing'],
         })
-        set_trace()
+        # set_trace()
         #
         # status: 0:不在风控中; 1:风控中
         # action: 0:无风控; 2:2日收益率触发风控; 3:3日收益率触发风控; 5:5日收益率触发风控; 6:无条件空仓; 7:无条件空仓结束等择时加仓信号; 8:择时满仓
