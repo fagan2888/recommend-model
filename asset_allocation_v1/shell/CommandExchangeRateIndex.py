@@ -156,6 +156,36 @@ def cny(ctx, optfull, optid):
                 database.batch(db, exchange_rate_index_nav_t, df_new, df_old)
 
 
+                exchange_rate_index_nav_df = exchange_rate_index_nav_df.reset_index()
+                ra_index_nav_df = pd.DataFrame([])
+                ra_index_nav_df['ra_index_code'] = exchange_rate_index_nav_df['eri_index_id']
+                ra_index_nav_df['ra_date'] = exchange_rate_index_nav_df['eri_date']
+                ra_index_nav_df['ra_open'] = exchange_rate_index_nav_df['eri_open']
+                ra_index_nav_df['ra_high'] = exchange_rate_index_nav_df['eri_high']
+                ra_index_nav_df['ra_low'] = exchange_rate_index_nav_df['eri_low']
+                ra_index_nav_df['ra_nav'] = exchange_rate_index_nav_df['eri_nav']
+                ra_index_nav_df['ra_inc'] = exchange_rate_index_nav_df['eri_inc']
+                ra_index_nav_df['ra_volume'] = exchange_rate_index_nav_df['eri_volume']
+                ra_index_nav_df['ra_amount'] = exchange_rate_index_nav_df['eri_amount']
+                ra_index_nav_df['ra_nav_date'] = exchange_rate_index_nav_df['eri_nav_date']
+                ra_index_nav_df['ra_mask'] = exchange_rate_index_nav_df['eri_mask']
+                if exchange_rate_index_nav_df['eri_index_id'].iloc[0] == 'ERI000001':
+                    ra_index_nav_df['ra_index_id'] = 120000042
+                elif exchange_rate_index_nav_df['eri_index_id'].iloc[0] == 'ERI000002':
+                    ra_index_nav_df['ra_index_id'] = 120000043
+
+                ra_index_nav_df = ra_index_nav_df.set_index(['ra_index_id', 'ra_date'])
+
+
+                df_new = ra_index_nav_df
+                columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+                s = select(columns)
+                s = s.where(ra_index_nav_t.c.ra_index_id.in_(df_new.index.get_level_values(0).tolist()))
+                s = s.where(ra_index_nav_t.c.ra_date.in_(df_new.index.get_level_values(1).tolist()))
+                df_old = pd.read_sql(s, db, index_col = ['ra_index_id', 'ra_date'], parse_dates = ['ra_date'])
+                database.batch(db, ra_index_nav_t, df_new, df_old)
+
+
     pass
 
 
