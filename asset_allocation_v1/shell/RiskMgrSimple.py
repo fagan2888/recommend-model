@@ -43,15 +43,21 @@ class RiskMgrSimple(object):
         sr_inc3d = sr_inc.rolling(window=3).sum() # 3日收益率
         sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
 
-        idx = int(self.period*0.03)-1
-        idx2 = int(self.period*0.01)-1
-        sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx:idx+2]))
-        sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx2:idx2+2]))
+        # idx = int(self.period*0.03)-1
+        # idx2 = int(self.period*0.01)-1
+
+        # sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: sum((sorted(x)[:idx2+1]))*(1/0.99))
         
-        # sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.03, x.mean(), x.std(ddof=1)))
-        # sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
+        #NonParametric VaR
+        # sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx:idx+1]))
+        # sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx2:idx2+1]))
+        
+        #Parametric VaR
+        sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.03, x.mean(), x.std(ddof=1)))
+        sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
+    
         #sr_cnfdn = sr_cnfdn.shift(1)
-        # set_trace()
+
 
         df = pd.DataFrame({
             'inc2d': sr_inc2d.fillna(0),
@@ -61,7 +67,7 @@ class RiskMgrSimple(object):
             'cnfdn2': sr_cnfdn2,
             'timing': df_input['timing'],
         })
-
+        set_trace()
         #
         # status: 0:不在风控中; 1:风控中
         # action: 0:无风控; 2:2日收益率触发风控; 3:3日收益率触发风控; 5:5日收益率触发风控; 6:无条件空仓; 7:无条件空仓结束等择时加仓信号; 8:择时满仓
