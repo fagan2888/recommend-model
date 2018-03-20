@@ -53,7 +53,7 @@ class RiskMgrSimple(object):
         # sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx2:idx2+1]))
         
         #Parametric VaR
-        sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.03, x.mean(), x.std(ddof=1)))
+        sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.05, x.mean(), x.std(ddof=1)))
         sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
     
         #sr_cnfdn = sr_cnfdn.shift(1)
