@@ -616,7 +616,9 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman):
 
     #=====================
     #read new parameters from csv
-    if blacklitterman:
+    if bootstrap is None:
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+    elif blacklitterman:
         codes = df_inc.columns
         view_parameters_overall = pd.read_csv('views.csv', index_col='td_date', parse_dates=['td_date'])
         try:
@@ -630,16 +632,10 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman):
         P = np.diag(np.sign(views))
         P = np.array([i for i in P if i.sum()!=0])
         if eta.size == 0:           #If there is no view, run as non-blacklitterman
-            P=alpha=risk_parity=None
-            eta = np.array([])
-
+            risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
-    elif bootstrap is None:
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
-
-    #Use Blacklitterman
     
 
     sr_result = pd.concat([

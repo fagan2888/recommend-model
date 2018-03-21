@@ -21,7 +21,7 @@ from ipdb import set_trace
 #import matplotlib.pyplot as plt
 
 
-def efficient_frontier_spe(funddfr, delta, weights, P, eta, alpha, bound, risk_parity, sum1 = 0.65, sum2 = 0.45):
+def efficient_frontier_spe(funddfr, bound, sum1 = 0.65, sum2 = 0.45):
     solvers.options['show_progress'] = False
 
     return_rate = funddfr.T
@@ -30,20 +30,7 @@ def efficient_frontier_spe(funddfr, delta, weights, P, eta, alpha, bound, risk_p
 
     cov = np.cov(return_rate)
 
-    if eta.size==0:       
-        #If we are not gonna use Blacklitterman, just leave eta as blank
-        expected_return = np.mean(return_rate, axis=1)
-    else:
-        #If use the risk parity model, the input should be the weight, then by reverse optimization,
-        #we will have the expected return
-        if risk_parity:
-            initialvalue = weights
-        #Otherwise, we just give the mean return as the expected return
-        else:
-            initialvalue = np.mean(return_rate, axis=1)
-        #Then we go blacklitterman
-        expected_return = black_litterman(delta, initialvalue, cov, P, eta, alpha, risk_parity)
-
+    expected_return = np.mean(return_rate, axis=1)
 
     S = matrix(cov + cov * np.eye(len(expected_return)) * 2)         #Double the diagonal of cov matrix
 
@@ -107,6 +94,81 @@ def efficient_frontier_spe(funddfr, delta, weights, P, eta, alpha, bound, risk_p
 
     return risks, returns, portfolios
 
+
+def efficient_frontier_spe_bl(funddfr, P, eta, alpha, bound, sum1 = 0.65, sum2 = 0.45):
+    solvers.options['show_progress'] = False
+
+    return_rate = funddfr.T
+
+    n_asset    =     len(return_rate)
+
+    cov = np.cov(return_rate)
+            
+    initialvalue = np.mean(return_rate, axis=1)
+
+    expected_return = black_litterman(initialvalue, cov, P, eta, alpha)
+
+    S = matrix(cov + cov * np.eye(len(expected_return)) * 2)         #Double the diagonal of cov matrix
+
+    pbar       =     matrix(expected_return)
+
+    #
+    # 设置限制条件, 闲置条件的意思
+    #    GW <= H
+    # 其中:
+    #    G 是掩码矩阵, 其元素只有0,1,
+    #    W 是每个资产的权重,
+    #    H 是一个值
+    # 对于i行的意思是 sum(Gij * Wi | j=0..n_asset-1) <= Hi
+    #
+    # 具体地, 本函数有4类闲置条件:
+    #    1: Wi >= 0, 由G的0..(n_asset-1) 行控制
+    #    2: Wi下限, 由G的n_asset..(2*n_asset-1)行控制
+    #    3: Wi的上限,由G的2*n_asset..(3*n_asset-1)行控制
+    #    4: 某类资产之和的上限, 由G的3*n_asset 行控制
+    #
+
+    G = matrix(0.0, (3 * n_asset + 2,  n_asset))
+    h = matrix(0.0, (3 * n_asset + 2, 1) )
+ 
+    h[3* n_asset, 0] = sum1
+    h[3* n_asset + 1, 0] = sum2
+    for i in range(0, n_asset):
+        #
+        # Wi >= 0
+        #
+        # h[i, 0] = 0
+        G[i, i] = -1
+        #
+        # Wi的下限
+        #
+        G[n_asset + i, i ]     = -1
+        h[n_asset + i, 0] = -1.0 * bound[i]['lower']
+        #
+        # Wi的上限
+        #
+        G[2 * n_asset + i, i ] = 1
+        h[2 * n_asset + i, 0] = bound[i]['upper']
+        #
+        # 某类资产之和的上限
+        #
+        if bound[i]['sum1'] == True or bound[i]['sum1'] == 1:
+            G[3 * n_asset, i] = 1
+
+        if bound[i]['sum2'] == True or bound[i]['sum2'] == 1:
+            G[3 * n_asset + 1, i] = 1
+
+    A          =  matrix(1.0, (1, n_asset))
+    b          =  matrix(1.0)
+
+    N          = 200
+    mus        = [ 10**(5.0*t/N-1.0) for t in range(N) ]
+    portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
+    returns    = [ dot(pbar,x) for x in portfolios ]
+    risks      = [ sqrt(dot(x, S*x)) for x in portfolios ]
+
+
+    return risks, returns, portfolios
 
 
 
@@ -484,14 +546,10 @@ def grs(portfolio):
 
 
 
-def black_litterman(delta, initialvalue, Sigma, P, eta, alpha, risk_parity):
+def black_litterman(initialvalue, Sigma, P, eta, alpha):
 
     #Use the weight coming from risk parity to do reverse optimization
-    if risk_parity:
-        weights = initialvalue
-        pi = weights.dot(Sigma * delta)
-    else:
-        pi = initialvalue
+    pi = initialvalue
 
     var_view = np.dot(np.dot(P, Sigma), P.T) 
 
