@@ -21,6 +21,8 @@ from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
 
+from sqlalchemy import *
+from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
@@ -28,7 +30,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
-from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
 from util import xdict
 from util.xdebug import dd
 from ipdb import set_trace
@@ -627,15 +629,29 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
 
         bl_view_id = argv['bl_view_id']
 
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
 
-        codes = df_inc.columns
-        view_parameters_overall = pd.read_csv('views.csv', index_col='td_date', parse_dates=['td_date'])
-        try:
-            view_parameters_today = view_parameters_overall.loc[today]
-        except:
-            view_parameters_today = view_parameters_overall.iloc[-1]
+        sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(and_(asset_ra_bl.ra_bl_view.globalid == bl_view_id, asset_ra_bl.ra_bl_view.bl_date <= today)).statement
+
+
+        view_df = pd.read_sql(sql, session.bind, index_col = ['bl_date', 'bl_index_id'], parse_dates =  ['bl_date'])
+        view_df = view_df.unstack()
+        view_df.columns = view_df.columns.droplevel(0)
+        view_df = view_df.sort_index()
+
+        if len(view_df) == 0:
+            last_view = pd.Series(0, index = df_inc.columns)
+        else:
+            last_view = view_df.iloc[-1]
+
+        session.commit()
+        session.close()
+
+
         alpha = float(argv['bl_confidence'])
-        views = view_parameters_today.reindex(codes).fillna(0)
+        views = last_view.reindex(df_inc.columns).fillna(0)
         eta = np.array(abs(views[views!=0]))
         P = np.diag(np.sign(views))
         P = np.array([i for i in P if i.sum()!=0])
