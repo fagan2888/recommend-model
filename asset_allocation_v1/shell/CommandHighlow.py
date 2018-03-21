@@ -26,6 +26,8 @@ from tabulate import tabulate
 from db import *
 from util import xdict
 from util.xdebug import dd
+from RiskParity import cal_weight
+from ipdb import set_trace
 
 import traceback, code
 
@@ -176,7 +178,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         df_asset.loc['11310100'] = (0, u'货币(低)', 31, 0, '11310100')
     if '11310101' not in df_asset.index:
         df_asset.loc['11310101'] = (0, u'货币(高)', 31, 0, '11310101')
-    
+
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     mz_highlow        = Table('mz_highlow', metadata, autoload=True)
@@ -456,7 +458,7 @@ def pos(ctx, optid, opttype, optlist, optrisk):
         df_highlow = asset_mz_highlow.load(highlows)
     else:
         df_highlow = asset_mz_highlow.load(highlows, xtypes)
-        
+
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_highlow, headers='keys', tablefmt='psql')
@@ -570,6 +572,140 @@ def pos_update(highlow, alloc):
     # save
     # print df_tosave
     asset_mz_highlow_pos.save(highlow_id, df_tosave)
+
+
+@highlow.command()
+@click.option('--id', 'optid', help=u'ids of highlow to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.pass_context
+def limit(ctx, optid, optlist, optrisk):
+    ''' calc pool nav and inc
+    '''
+    if optid is not None:
+        highlows = [s.strip() for s in optid.split(',')]
+    else:
+        if 'highlow' in ctx.obj:
+            highlows = [str(ctx.obj['highlow'])]
+        else:
+            highlows = None
+
+    xtypes = [9]
+
+    if highlows is not None:
+        df_highlow = asset_mz_highlow.load(highlows)
+    else:
+        df_highlow = asset_mz_highlow.load(highlows, xtypes)
+
+    if optlist:
+        df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_highlow, headers='keys', tablefmt='psql')
+        return 0
+    for _, highlow in df_highlow.iterrows():
+        limit_update_alloc(highlow, optrisk)
+
+
+def limit_update_alloc(highlow, optrisk):
+    risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
+    df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'], risks)
+
+    # df_alloc = df_alloc[df_alloc.mz_risk == 1.0]
+    for _, alloc in df_alloc.iterrows():
+        limit_update(highlow, alloc)
+
+    click.echo(click.style("highlow limit complement! instance id [%s]" % (highlow['globalid']), fg='green'))
+
+    # df = []
+    # for risk in range(1, 11):
+    #     tmp_df = pd.read_csv('tmp/hl_pos_3/hl_pos_risk_{}.csv'.format(risk), index_col = 0, parse_dates = True)
+    #     df.append(tmp_df.iloc[:, 0])
+    # df_result = pd.concat(df, 1)
+    # df_result = df_result.rolling(4).mean().dropna()
+    # df_result.to_csv('tmp/hl_pos_3/hl_all_risk.csv', index_label = 'date')
+
+
+def limit_update(highlow, alloc):
+    df_limit = cal_limit(highlow, alloc)
+    df_limit.index.name = 'mz_date'
+    df_limit = df_limit.reset_index()
+    df_limit['mz_risk'] = alloc.mz_risk
+    df_limit['mz_highlow_id'] = alloc.mz_highlow_id
+    df_limit['globalid'] = alloc.globalid
+
+    asset_mz_highlow_limit.save(alloc.mz_highlow_id, df_limit)
+    set_trace()
+
+
+def cal_limit(highlow, alloc):
+    lookback = 104
+    large_number = 1e4
+    high = highlow['mz_high_id']
+    low = highlow['mz_low_id']
+    risk = int(alloc['mz_risk'] * 10)
+    # risk_budget = [(risk-1)/9.0, (10-risk)/9.0]
+    risk_budget_all = [
+        [0.0, 1.0], # risk 1
+        [0.4, 0.6], # risk 2
+        [0.8, 0.2], # risk 3
+        [0.9, 0.1], # risk 4
+        [0.95, 0.05], # risk 5
+        [0.97, 0.03], # risk 6
+        [0.995, 0.005], # risk 7
+        [0.999, 0.001], # risk 8
+        [0.99999, 0.00001], # risk 9
+        [1.0, 0.0], # risk 10
+    ]
+    risk_budget = risk_budget_all[risk - 1]
+    baseline = [(risk-1)/9.0, (10-risk)/9.0]
+    if risk == 10:
+        cons = (
+            {'type': 'eq', 'fun': lambda x: x[0] - 1},
+        )
+    elif risk == 1:
+        cons = (
+            {'type': 'eq', 'fun': lambda x: x[1] - 1},
+        )
+    else:
+        cons = (
+            {'type': 'ineq', 'fun': lambda x: x[0] - baseline[0] + 0.05},
+            {'type': 'ineq', 'fun': lambda x: x[1] - baseline[1] + 0.05},
+            {'type': 'ineq', 'fun': lambda x: -x[0] + baseline[0] + 0.05},
+            {'type': 'ineq', 'fun': lambda x: -x[1] + baseline[1] + 0.05},
+        )
+
+    trade_dates = DBData.trade_date_index(start_date = '2009-01-01')
+    test_dates = DBData.trade_date_index(start_date = '2012-07-06')
+
+    high_nav = asset_mz_markowitz_nav.load_series(high)
+    low_nav = asset_mz_markowitz_nav.load_series(low)
+
+    high_nav = high_nav.reindex(trade_dates).dropna()
+    low_nav = low_nav.reindex(trade_dates).dropna()
+
+    # f = open('tmp/hl_pos_3/hl_pos_risk_{}.csv'.format(risk), 'wb')
+    # f.write('date, high_pos_{0}, low_pos_{0}\n'.format(risk))
+    ratio_hs = []
+    ratio_ls = []
+    for date in test_dates:
+        lookback_dates = DBData.trade_date_lookback_index(end_date = date, lookback = lookback)
+        tmp_high_nav = high_nav.loc[lookback_dates]
+        tmp_low_nav = low_nav.loc[lookback_dates]
+        tmp_df = pd.concat([tmp_high_nav, tmp_low_nav], 1)
+        tmp_cov = (tmp_df.pct_change().dropna()).cov().values
+        hl_pos = cal_weight(tmp_cov*large_number, risk_budget, cons2 = cons)
+        ratio_h, ratio_l = hl_pos
+        ratio_hs.append(ratio_h)
+        ratio_ls.append(ratio_l)
+        # f.write('{}, {}, {}\n'.format(date, ratio_h, ratio_l))
+    # f.close()
+    df = pd.DataFrame(
+        data = np.column_stack([ratio_hs, ratio_ls]),
+        index = test_dates,
+        columns = ['ratio_h', 'ratio_l'],
+        )
+
+    return df
+
 
 def jiao(highlow, alloc):
 

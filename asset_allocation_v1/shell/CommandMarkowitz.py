@@ -64,7 +64,7 @@ def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optrepla
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid, optappend=optappend)
+            ctx.invoke(pos, optid=optid, optappend=optappend, sdate = startdate)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
