@@ -92,7 +92,7 @@ def cal_wavelet_view(view, indexid, wavenum, trend_lookback, start_date):
     for date in trade_dates:
         lookback_date = DBData.trade_date_lookback_index(end_date = date, lookback = int(trend_lookback))
         wavelet_nav_series = load_wavelet_nav_series(indexid, end_date = date, wavelet_filter_num = int(wavenum))
-        view_nav_series = wavelet_nav_series.loc[lookback_date]
+        view_nav_series = wavelet_nav_series.loc[lookback_date].dropna()
         bl_view = np.sign(view_nav_series.iloc[-1]-view_nav_series.iloc[0])
         bl_views.append(bl_view)
 
@@ -100,7 +100,8 @@ def cal_wavelet_view(view, indexid, wavenum, trend_lookback, start_date):
     df.index.name = 'bl_date'
     df['globalid'] = view['globalid']
     df['bl_index_id'] = indexid
-    df.set_index(['globalid', 'bl_index_id'])
+    df = df.reset_index()
+    df = df.set_index(['bl_date', 'globalid', 'bl_index_id'])
     return df
 
 
