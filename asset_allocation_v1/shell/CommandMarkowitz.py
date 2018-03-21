@@ -691,8 +691,10 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
     #    set_trace()
     filtered_data = wt.wavefilter(sr, wavelet_filter_num)
     filtered_data = filtered_data.fillna(0.0)
-    filtered_data = filtered_data[filtered_data.index >= begin_date]
-    filtered_data = filtered_data.loc[reindex]
+    if begin_date is not None:
+        filtered_data = filtered_data[filtered_data.index >= begin_date]
+    if reindex is not None:
+        filtered_data = filtered_data.loc[reindex]
 
     return filtered_data
 

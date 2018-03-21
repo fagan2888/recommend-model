@@ -34,8 +34,8 @@ import CommandAnalysis
 import CommandImport
 import CommandStockFactor
 import CommandBarraStockFactor
-import CommandFactorLayering
 import CommandFactorCluster
+import CommandView
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -274,6 +274,6 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandImport.import_command)
     roboadvisor.add_command(CommandStockFactor.sf)
     roboadvisor.add_command(CommandBarraStockFactor.bsf)
-    roboadvisor.add_command(CommandFactorLayering.fl)
     roboadvisor.add_command(CommandFactorCluster.fc)
+    roboadvisor.add_command(CommandView.view)
     roboadvisor(obj={})
