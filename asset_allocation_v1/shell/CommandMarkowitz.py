@@ -615,6 +615,10 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman):
     '''perform markowitz
     '''
 
+    bound = []
+    for asset in df_inc.columns:
+        bound.append(limits[asset])
+
     #=====================
     #read new parameters from csv
     if blacklitterman:
@@ -633,35 +637,12 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman):
         if eta.size == 0:           #If there is no view, run as non-blacklitterman
             P=alpha=risk_parity=None
             eta = np.array([])
-    else:
-        P=alpha=risk_parity=None
-        eta = np.array([])
 
-    if risk_parity:
-    # Load weights from riskparity model
-        from Portfolio import riskparity
-        weights = np.array(riskparity(df_inc))
-        from CommandMarkowitz import load_nav_series
-        history_returns = pd.DataFrame.from_dict({code: load_nav_series(code, end_date=today).iloc[-21:] for code in codes})
-        cov_history = np.cov(history_returns.pct_change().fillna(0).T)
-        delta = float((weights.dot(history_returns.iloc[-1]/history_returns.iloc[0]) -1 - 0.03/12) / weights.dot(np.dot(cov_history, weights.T)))
-        delta = max(1, delta)
-        alpha = alpha
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+    elif bootstrap is None:
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
-        delta = None
-        weights = None
-    #==================================================================
-
-    bound = []
-    for asset in df_inc.columns:
-        bound.append(limits[asset])
-
-    if bootstrap is None:
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, delta, weights, P, eta, alpha, bound, risk_parity)
-    
-        
-    else:
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, delta, weights, P, eta, alpha, bound, risk_parity, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
     #Use Blacklitterman
     
@@ -973,7 +954,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = corr_regression_tree.regression_tree_factor_cluster_boot(bf_ids)
 
     elif algo == 5:
-        df = df = markowitz_days(
+        df = markowitz_days(
             sdate, edate, assets,        
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman=True, wavelet = False)
     else:
