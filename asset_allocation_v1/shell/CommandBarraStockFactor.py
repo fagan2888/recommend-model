@@ -362,5 +362,7 @@ def export_barra_stock_factor_ic(ctx):
     return
 
 
-
-
+@bsf.command()
+@click.pass_context
+def barra_stock_factor_2_composite_asset(ctx):
+    pass

@@ -35,6 +35,8 @@ import statsmodels
 import time
 import functools
 import Portfolio as PF
+from sklearn.tree._criterion import MSE
+from sklearn.tree._criterion import Criterion
 
 
 from sklearn.cluster import KMeans
@@ -49,12 +51,18 @@ import stock_factor_util
 logger = logging.getLogger(__name__)
 
 
+class mymse(MSE):
+
+    pass
+
+
 def regression_tree_factor_corr_layer(bf_ids):
 
 
     all_stocks = stock_util.all_stock_info()
     secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
 
+    '''
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -85,8 +93,9 @@ def regression_tree_factor_corr_layer(bf_ids):
     session.commit()
     session.close()
 
-    #factor_df = pd.read_csv('barra_stock_factor/factor_exposure.csv', index_col = ['trade_date', 'stock_id', 'bf_id'], parse_dates = ['trade_date'])
-    #yield_df = pd.read_csv('barra_stock_factor/yield.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+    '''
+    factor_df = pd.read_csv('barra_stock_factor/factor_exposure.csv', index_col = ['trade_date', 'stock_id', 'bf_id'], parse_dates = ['trade_date'])
+    yield_df = pd.read_csv('barra_stock_factor/yield.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
     factor_df = factor_df[factor_df.index.get_level_values(0) >= '2003-01-01']
 
     dates = list(set(factor_df.index.get_level_values(0).ravel()))
@@ -116,8 +125,10 @@ def regression_tree_factor_corr_layer(bf_ids):
         tmp_yield_df = tmp_yield_df[stocks]
         corr_df = tmp_yield_df.corr()
 
-
-        tree = create_regression_tree(tmp_factor.copy(), corr_df, 6, params)
+        num = len(stocks)
+        clf = DecisionTreeRegressor(criterion = mymse())
+        clf.fit(tmp_factor.values, corr_df.iloc[:,0].ravel())
+        #tree = create_regression_tree(tmp_factor.copy(), corr_df, 6, params)
 
         engine = database.connection('asset')
         Session = sessionmaker(bind=engine)
@@ -386,6 +397,5 @@ if __name__ == '__main__':
     bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
             'BF.000013', 'BF.000014', 'BF.000015', 'BF.000016', 'BF.000017']
 
-    #regression_tree_factor_corr_layer(bf_ids)
-    regression_tree_factor_cluster_boot(bf_ids)
-
+    regression_tree_factor_corr_layer(bf_ids)
+    #regression_tree_factor_cluster_boot(bf_ids)
