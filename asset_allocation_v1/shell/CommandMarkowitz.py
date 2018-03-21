@@ -630,7 +630,8 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
         df_argv.reset_index(level=0, inplace=True)
         argv = df_argv['mz_value'].to_dict()
 
-        #print argv
+        bl_view_id = argv['bl_view_id']
+
 
         codes = df_inc.columns
         view_parameters_overall = pd.read_csv('views.csv', index_col='td_date', parse_dates=['td_date'])
@@ -639,7 +640,6 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
         except:
             view_parameters_today = view_parameters_overall.iloc[-1]
         alpha = float(argv['bl_confidence'])
-        print alpha
         views = view_parameters_today.reindex(codes).fillna(0)
         eta = np.array(abs(views[views!=0]))
         P = np.diag(np.sign(views))
