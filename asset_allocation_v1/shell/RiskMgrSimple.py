@@ -30,42 +30,46 @@ class RiskMgrSimple(object):
     def __init__(self, empty=5, maxdd=-0.075, mindd=-0.05, period=252):
         self.maxdd = maxdd
         self.mindd = mindd
+        self.mindd2 = mindd
         self.empty = empty
         self.period = period
-        self.ratio = 0.4
+        self.ratio = 0.3
 
     def perform(self, asset, df_input):
         #
         # 计算回撤矩阵 和 0.97, 0.75置信区间
         #
-        # sr_inc = np.log(1+df_input['nav'].pct_change().fillna(0.0))
-        sr_inc = df_input['nav'].pct_change().fillna(0.0)
+        sr_inc = np.log(1+df_input['nav'].pct_change().fillna(0.0))
+        # sr_inc = df_input['nav'].pct_change().fillna(0.0)
         sr_inc2d = sr_inc.rolling(window=2).sum() # 2日收益率
         sr_inc3d = sr_inc.rolling(window=3).sum() # 3日收益率
         sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
 
         # idx = int(self.period*0.03)-1
-        # idx2 = int(self.period*0.01)-1
+        # idx2 = int(self.period*0.03)-1
 
-        # sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: sum((sorted(x)[:idx2+1]))*(1/0.99))
+        # sr_cnfdn97 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean((sorted(x)[:idx+1])))
+        # sr_cnfdn99 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean((sorted(x)[:idx2+1])))
         
         #NonParametric VaR
         # sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx:idx+1]))
         # sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx2:idx2+1]))
         
-        #Parametric VaR
-        sr_cnfdn = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.05, x.mean(), x.std(ddof=1)))
-        sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
+        # Parametric VaR
+        sr_cnfdn995 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.005, x.mean(), x.std(ddof=1)))
+        sr_cnfdn99 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
+        # sr_cnfdn35 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.65, x.mean(), x.std(ddof=1)))
+        # sr_cnfdn65 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.35, x.mean(), x.std(ddof=1)))
     
         #sr_cnfdn = sr_cnfdn.shift(1)
-
 
         df = pd.DataFrame({
             'inc2d': sr_inc2d.fillna(0),
             'inc3d': sr_inc3d.fillna(0),
             'inc5d': sr_inc5d.fillna(0),
-            'cnfdn': sr_cnfdn,
-            'cnfdn2': sr_cnfdn2,
+            'cnfdn995': sr_cnfdn995,
+            'cnfdn99': sr_cnfdn99,
+            # 'cnfdn35': sr_cnfdn35,
             'timing': df_input['timing'],
         })
         # set_trace()
@@ -91,17 +95,18 @@ class RiskMgrSimple(object):
                 #
                 # 是否启动风控
                 #
-                # if flag != 1:
-                #     if row['cnfdn'] is not None and row['inc5d'] < row['cnfdn']:
-                #         status, empty_days, position, action = 1, 0, self.ratio, 5
+                if flag != 1:
+                    if row['cnfdn99'] is not None and row['inc5d'] < row['cnfdn99']:
+                        status, empty_days, position, action = 1, 0, self.ratio, 5
+                        count = 0
 
                 if row['inc2d'] < self.maxdd:
                     status, empty_days, position, action = 2, 0, 0, 2
                     flag = 1
-                elif row['inc3d'] < self.maxdd:
+                elif row['inc3d'] < self.maxdd*3/2:
                     status, empty_days, position, action = 2, 0, 0, 3
                     flag = 1
-                elif row['cnfdn2'] is not None and row['inc5d'] < row['cnfdn2'] and row['inc5d'] < self.mindd:
+                elif row['cnfdn995'] is not None and row['inc5d'] < row['cnfdn995'] and row['inc5d'] < self.mindd:
                     status, empty_days, position, action = 2, 0, 0, 5
                     flag = 1
 
@@ -113,13 +118,18 @@ class RiskMgrSimple(object):
                     status, position, action = 0, 1, 0
                 else:
                     # 风控中 (status == 1)
-
+                    # if row['cnfdn35'] is not None and row['inc5d'] > row['cnfdn35']:
+                    #     count += 1
+                    # else:
+                    #     count = 0
                     if empty_days >= self.empty:
+                        #择时决定何时满仓
                         if row['timing'] == 1.0:
-                            empty_days = 0
                             status, position, action = 0, 1, 8 # 择时满仓
                             if flag == 1:
                                 flag = 0
+                        # if count >= 5:
+                        #     status, position, action = 0, 1, 8
                         else:
                             empty_days += 1
                             if flag == 1:
@@ -144,9 +154,9 @@ class RiskMgrSimple(object):
         
         # Regular calc winrate and exception
         # df = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status':result_status})
-        # df.index.name = 'rm_date'
-        # indexes = [i for i in range(len(df)) if df.iloc[i].rm_pos==8]
-        # count = [i for i in indexes if (df.iloc[i:i+7].rm_pos.sum()<7)]
+        # # df.index.name = 'rm_date'
+        # indexes = [i for i in range(len(df)) if df.iloc[i].rm_action==8]
+        # count_exception = [i for i in indexes if (df.iloc[i:i+7].rm_pos.sum()<7)]
         # idx_start = [i+1 for i in range(len(df)-1) if df.iloc[i].rm_pos == 1 and df.iloc[i+1].rm_pos==0]
         # idx_end = [i+1 for i in range(len(df)-1) if df.iloc[i].rm_pos == 0 and df.iloc[i+1].rm_pos==1]
         # if idx_end[0]<idx_start[0]:
@@ -157,22 +167,46 @@ class RiskMgrSimple(object):
         # count = np.array([inc.loc[df.iloc[i:j].index].sum() for i,j in zip(idx_start, idx_end)])
         # print "Risk Ctrl Triggered: " + str(count.size)
         # print "Winrate: " + str(count[count<0].size * 1.0 / count.size)
-        # print len(count)
-        # print df.index[count]
+        # print len(count_exception)
+        # print df.index[count_exception]
+        # set_trace()
 
+        #Modified
         df = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status':result_status})
         df.index.name = 'rm_date'
-        i = 0
-        # set_trace()
-        # while df.iloc[i].rm_status == 2:
-        #     i+=1
+        indexes = [i for i in range(len(df)) if df.iloc[i].rm_action==8]
+        count_exception = [i for i in indexes if (df.iloc[i:i+7].rm_pos.sum()<7)]
+        status2=calcstatus(2,df)
+        status1=calcstatus(1,df)
+        inc = np.log(1+sr_inc)
+        count2 = np.array([inc.iloc[i].sum() for i in status2])
+        count1 = np.array([inc.iloc[i].sum() for i in status1])
 
-        # while i < range(len(df)):
-        #     i+=1 
-        #     pass
-            
+        print "Lv1 Risk Triggered: " + str(count1.size)
+        print "Lv1 Risk Ctrl Win: " + str(count1[count1<0].size)
+        print "Lv2 Risk Triggered: " + str(count2.size)
+        print "Lv2 Risk Ctrl Win: " + str(count2[count2<0].size)
+        print "Overall Win Rate: " + str((count2[count2<0].size + 0.5* count1[count1<0].size) / (count2.size + 0.5*count1.size))
 
-        # set_trace()
+
+
+
+        set_trace()
 
 
         return df_result;
+
+
+def calcstatus(status, df):
+    i = 1
+    result = []
+    while i < len(df):
+        if df.iloc[i-1].rm_status != status and df.iloc[i].rm_status == status:
+            tmp = []
+            while i < len(df) and df.iloc[i].rm_status == status:
+                tmp.append(i)
+                i+=1
+            result.append(tmp)
+        else:
+            i+=1 
+    return result
