@@ -1,17 +1,21 @@
 #coding=utf8
 
+
 from sqlalchemy import MetaData, Table, select, func
-# import string
-# from datetime import datetime, timedelta
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime, Float
 import pandas as pd
-# import os
-# import sys
 import logging
 import database
+from sqlalchemy.ext.declarative import declarative_base
+from dateutil.parser import parse
+
 
 from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
+
+Base = declarative_base()
+
 
 #
 # tc_timing
@@ -39,3 +43,29 @@ def load(id_, xtypes=None):
 
     return df
 
+
+
+class ra_bl(Base):
+
+    __tablename__ = 'ra_bl'
+
+    globalid = Column(String, primary_key = True)
+    bl_name = Column(String)
+    bl_type = Column(Integer)
+    bl_method = Column(Integer)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+class ra_bl_view(Base):
+
+    __tablename__ = 'ra_bl_view'
+
+    globalid = Column(String, primary_key = True)
+    bl_date = Column(String, primary_key = True)
+    bl_index_id = Column(String, primary_key = True)
+    bl_view = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
