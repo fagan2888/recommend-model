@@ -769,10 +769,12 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
         P = np.array([i for i in P if i.sum()!=0])
 
         if eta.size == 0:           #If there is no view, run as non-blacklitterman
-            risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
-        else:
-            risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+            P=alpha=risk_parity=None
+            eta = np.array([])
 
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+    elif bootstrap is None:
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
@@ -1132,6 +1134,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005', 'BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
             'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
         df = corr_regression_tree.regression_tree_factor_cluster_boot(bf_ids)
+            sdate, edate, assets,        
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman=True, wavelet = False)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
