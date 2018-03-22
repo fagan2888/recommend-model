@@ -30,7 +30,7 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_factor_cluster
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
 from util import xdict
 from util.xdebug import dd
@@ -662,6 +662,7 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
             risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
         else:
             risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
@@ -813,6 +814,11 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         elif prefix == 'FL':
 
             sr = asset_fl_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+
+        elif prefix == 'FC':
+
+            sr = asset_factor_cluster.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
 
         elif prefix == 'BF':
