@@ -25,7 +25,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import *
 from db import asset_ra_bl, asset_ra_bl_argv, asset_ra_bl_asset, asset_ra_bl_view
-from CommandMarkowitz import load_wavelet_nav_series
+from CommandMarkowitz import load_wavelet_nav_series, load_nav_series
 from util.xdebug import dd
 
 import traceback, code
@@ -36,6 +36,8 @@ from ipdb import set_trace
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
 def view(ctx, optid, optonline):
+    '''add asset view
+    '''
     if ctx.invoked_subcommand is None:
         ctx.invoke(signal, optid=optid, optonline=optonline)
     else:
@@ -93,7 +95,17 @@ def cal_wavelet_view(view, indexid, wavenum, trend_lookback, start_date):
         lookback_date = DBData.trade_date_lookback_index(end_date = date, lookback = int(trend_lookback))
         wavelet_nav_series = load_wavelet_nav_series(indexid, end_date = date, wavelet_filter_num = int(wavenum))
         view_nav_series = wavelet_nav_series.loc[lookback_date].dropna()
-        bl_view = np.sign(view_nav_series.iloc[-1]-view_nav_series.iloc[0])
+
+        nav_series = load_nav_series(indexid, end_date = date)
+        nav_series = nav_series.loc[view_nav_series.index]
+
+        view_nav_series = view_nav_series / view_nav_series.iloc[0]
+        nav_series = nav_series / nav_series.iloc[0]
+        #bl_view = np.sign(view_nav_series.iloc[-1]-view_nav_series.iloc[0])
+
+        #print view_nav_series.tail(), nav_series.tail()
+        #print
+        bl_view = np.sign(view_nav_series.iloc[-1] - nav_series.iloc[-1])
         bl_views.append(bl_view)
 
     df = pd.DataFrame(bl_views, index = trade_dates, columns = ['bl_view'])
