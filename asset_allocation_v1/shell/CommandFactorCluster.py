@@ -19,7 +19,7 @@ from scipy.stats import rankdata
 from scipy.signal import hilbert
 from sklearn.cluster import KMeans, AgglomerativeClustering
 from scipy.spatial import distance
-from starvine.bvcopula.copula import frank_copula
+#from starvine.bvcopula.copula import frank_copula
 
 from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, base_ra_index, base_trade_dates, asset_factor_cluster_nav
 from db.asset_factor_cluster import *
@@ -326,13 +326,13 @@ class FactorCluster():
         self.l_pool_cluster[1.0] = self.l_pool
 
 
-    @staticmethod
-    def train(arr1, arr2):
-        c = frank_copula.FrankCopula()
-        ## start itering from 2.7, any value here is OK
-        par, state = c.fitMLE(arr1, arr2, [2.7])
+    #@staticmethod
+    #def train(arr1, arr2):
+    #    c = frank_copula.FrankCopula()
+    #    ## start itering from 2.7, any value here is OK
+    #    par, state = c.fitMLE(arr1, arr2, [2.7])
 
-        return c, par
+    #    return c, par
 
 
     @staticmethod
@@ -473,8 +473,6 @@ class FactorCluster():
 
         ##去除标准指数的非交易日数据
         df = df.dropna()
-        #df.to_csv('copula/kTau/kTau_sh300_60.csv', index_label = 'date')
-        df.to_csv('copula/corr/corr_mf_{}.csv'.format(self.window), index_label = 'date')
 
         return df
 
@@ -510,7 +508,6 @@ class FactorCluster():
                     pass
                 else:
                     df = df.join(tmp_df)
-        df.to_csv('copula/rr/risk_return_60.csv')
         return df
 
 
@@ -582,14 +579,11 @@ class FactorCluster():
 
     def handle(self):
         ## 按照风险收益比将原始资产聚成高、中、低风险三类资产,并将中风险再分成两类
-        # self.df_risk_return = pd.read_csv('copula/rr/risk_return_60.csv', index_col = 0, parse_dates = True)
         self.df_risk_return = self.cal_mul_risk_return()
         self.hml_layer(self.hml_num)
         self.mid_layer()
 
         ## 按照相关性将高风险资产分成六类
-        # self.df_rho= pd.read_csv('copula/kTau/kTau_sh300_60.csv', index_col = 0, parse_dates = True)
-        # self.df_rho= pd.read_csv('copula/corr/corr_mf_{}.csv'.format(window), index_col = 0, parse_dates = True)
 
         self.df_rho = self.cal_mul_rhos(method = 'corr')
         self.high_layer()
@@ -732,7 +726,6 @@ def sumple_update(assets, fl_id):
 
     df.columns = assets
     df['sumple'] = sumple_x
-    df.to_csv('copula/sumple/{}.csv'.format(fl_id), index_label = 'date')
 
     return sumple_df
 
