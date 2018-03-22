@@ -236,9 +236,16 @@ def load_index_for_asset(db, asset_id):
         t.c.ra_fund_ratio,
     ]
     s = select(columns, (t.c.ra_asset_id == asset_id))
-    
+
     df = pd.read_sql(s, db, index_col = ['ra_date', 'ra_fund_code'], parse_dates=['ra_date'])
 
     return df
 
-    
+
+@composite.command()
+@click.pass_context
+def factor_nav_2_composite_asset(ctx):
+    ''' barra factor and cluster factor to composite nav
+    '''
+
+
