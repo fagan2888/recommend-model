@@ -1,35 +1,21 @@
 #coding=utf8
 
 
-import getopt
-import string
-import json
-import os
 import sys
 sys.path.append('shell')
 import click
 import pandas as pd
 import numpy as np
-import LabelAsset
-import os
-import time
-import re
 import Const
-import DFUtil
 import DBData
 
-from datetime import datetime, timedelta
-from dateutil.parser import parse
-from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
-from tabulate import tabulate
 from db import *
-from db import asset_ra_bl, asset_ra_bl_argv, asset_ra_bl_asset, asset_ra_bl_view
+from db import asset_ra_bl, asset_ra_bl_argv, asset_ra_bl_asset, asset_ra_bl_view, asset_mc_view, asset_mc_view_strength
 from CommandMarkowitz import load_wavelet_nav_series, load_nav_series
-from util.xdebug import dd
 from heapq import nlargest
+from scipy.stats import rankdata
 
-import traceback, code
 from ipdb import set_trace
 
 @click.group(invoke_without_command=True)
@@ -70,8 +56,8 @@ def signal(ctx, optid, optonline):
     for _, view in df_view.iterrows():
         if view['bl_method'] == 2:
             signal_update_wavelet(view)
-        else:
-            pass
+        elif view['bl_method'] == 1:
+            signal_update_macro(view)
 
 
 def signal_update_wavelet(view):
@@ -90,15 +76,7 @@ def signal_update_wavelet(view):
     dates = df_new.index.unique()
     df_new = df_new.astype('object')
     for date in dates:
-        ## asset with max sharpe ratio get view 1
-        # df_new.loc[date, 'bl_view'] = np.sign(df_new.loc[date, 'bl_view'] - df_new.loc[date, 'bl_view'].max()) + 1
-        df_new.loc[date, 'bl_view'] = convert_sharpe_to_view_2(df_new.loc[date, 'bl_view'].values.ravel())
-
-        ## asset with max sharpe ratio get view 1, asset with min sharpe ratio get view -1
-        # df_new.loc[date, 'bl_view'] = convert_sharpe_to_view(df_new.loc[date, 'bl_view'].values.ravel())
-
-        ## asset with max sharpe ratio get view 2, asset with second largest sharpe ratio get view 1
-        # df_new.loc[date, 'bl_view'] = convert_sharpe_to_view_3(df_new.loc[date, 'bl_view'].values.ravel())
+        df_new.loc[date, 'bl_view'] = convert_sharpe_to_view_4(df_new.loc[date, 'bl_view'].values.ravel())
 
     df_new = df_new.reset_index()
     df_new = df_new.set_index(['bl_date', 'globalid', 'bl_index_id'])
@@ -106,6 +84,7 @@ def signal_update_wavelet(view):
     asset_ra_bl_view.save(viewid, df_new)
 
 
+## asset with max sharpe ratio get view 1, asset with min sharpe ratio get view -1
 def convert_sharpe_to_view(x):
     x = x.astype(float)
     Min = min(x)
@@ -120,19 +99,20 @@ def convert_sharpe_to_view(x):
 
     return x
 
-
+## asset with max sharpe ratio get view 1
 def convert_sharpe_to_view_2(x):
     x = x.astype(float)
     Max = max(x)
     for i in range(len(x)):
         if x[i] == Max:
-            x[i] = 2
+            x[i] = 1
         else:
             x[i] = 0
 
     return x
 
 
+## asset with max sharpe ratio get view 2, asset with second largest sharpe ratio get view 1
 def convert_sharpe_to_view_3(x):
     x = x.astype(float)
     Max, Smax = nlargest(2, x)
@@ -145,6 +125,13 @@ def convert_sharpe_to_view_3(x):
             x[i] = 0
 
     return x
+
+
+def convert_sharpe_to_view_4(x):
+    x = x.astype(float)
+    rank_x = rankdata(x) - np.median(rankdata(x))
+
+    return rank_x
 
 
 def cal_wavelet_view(view, indexid, wavenum, trend_lookback, start_date):
@@ -180,4 +167,20 @@ def cal_wavelet_view(view, indexid, wavenum, trend_lookback, start_date):
     return df
 
 
+def signal_update_macro(view):
+    viewid = view['globalid']
+    assets = asset_ra_bl_asset.load_assets(id_ = viewid)
+    bl_views = []
+    for asset in assets:
+        mc_view_id = asset_mc_view.get_view_id(asset)
+        bl_view = asset_mc_view_strength.load_view_strength(mc_view_id)
+        bl_view = np.sign(bl_view)
+        bl_view = bl_view.reset_index()
+        bl_view.columns = ['bl_date', 'bl_view']
+        bl_view['globalid'] = viewid
+        bl_view['bl_index_id'] = asset
+        bl_views.append(bl_view)
 
+    df_bl_views = pd.concat(bl_views)
+    df_bl_views = df_bl_views.set_index(['bl_date', 'globalid', 'bl_index_id'])
+    asset_ra_bl_view.save(viewid, df_bl_views)

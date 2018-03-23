@@ -724,6 +724,12 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
 
         sr = asset_barra_stock_factor_layer_nav.load_series_2(
             asset_id, reindex=None, end_date=end_date)
+
+    elif xtype.startswith('FC'):
+
+        sr = asset_factor_cluster.load_series(
+            asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+
     else:
         sr = pd.Series()
 

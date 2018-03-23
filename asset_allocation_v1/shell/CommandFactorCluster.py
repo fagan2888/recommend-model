@@ -91,18 +91,19 @@ def fc_update(ctx, optid):
 
         pool = [asset[0] for asset in sql2.all()]
         argv = {k:int(v) for k,v in sql1.all()}
-        # fc = FactorCluster(pool, **argv)
-        # fc.handle()
+        fc = FactorCluster(pool, **argv)
+        fc.handle()
+
         # with open('model', 'wb') as f:
         #     pickle.dump(fc, f)
-        with open('model', 'rb') as f:
-            fc = pickle.load(f)
+        # with open('model', 'rb') as f:
+        #     fc = pickle.load(f)
 
         session.commit()
         session.close()
 
-        #fc_update_json(optid, fc)
-        #fc_update_struct(optid, fc)
+        fc_update_json(optid, fc)
+        fc_update_struct(optid, fc)
         fc_update_nav(optid, fc)
 
 
@@ -148,14 +149,13 @@ def fc_update_struct(optid, fc):
 
     fcs = factor_cluster_struct()
     fcs.globalid = optid
-    set_trace()
     fcs.fc_parent_cluster_id = -1
     fcs.fc_subject_asset_id = optid
     fcs.depth = 0
     session.merge(fcs)
 
     for k,v,d in k_v:
-        print k,v,d
+        # print k,v,d
         for vv in v:
             fcs = factor_cluster_struct()
             fcs.globalid = optid
@@ -206,7 +206,7 @@ def fc_update_nav(optid, fc):
         df_depth = pd.read_sql(sql2, session.bind, index_col = ['fc_parent_cluster_id'])
         parents = df_depth.index.unique()
         for parent in parents:
-            print parent
+            # print parent
             children = df_depth[df_depth.index == parent].values.ravel()
             df = []
             for child in children:
