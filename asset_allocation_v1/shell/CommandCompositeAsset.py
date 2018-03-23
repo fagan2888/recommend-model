@@ -39,6 +39,7 @@ from db import database
 from db.asset_stock_factor import *
 from db.asset_stock import *
 from db.asset_composite import *
+from db.asset_factor_cluster import *
 
 import traceback, code
 
@@ -285,7 +286,7 @@ def factor_nav_2_composite_asset(ctx):
                 rcan.ra_nav = nav
                 rcan.ra_inc = 0.0
 
-                #session.merge(rcan)
+                session.merge(rcan)
 
             session.commit()
 
@@ -295,21 +296,25 @@ def factor_nav_2_composite_asset(ctx):
             asset_id_split = asset_id.strip().split('.')
             fc_id = '.'.join(asset_id_split[1:])
 
-            records = session.query(ra_composite_asset_nav.ra_date, ra_composite_asset_nav.nav).filter(ra_composite_asset_nav.ra_asset_id == fc_id).all()
-
-            #for record in records:
-
-            #    trade_date = record[0]
-            #    nav = record[1]
+            records = session.query(factor_cluster_nav.date, factor_cluster_nav.nav).filter(factor_cluster_nav.fc_cluster_id == fc_id).all()
 
 
-            #    rcan = ra_composite_asset_nav()
-            #    rcan.ra_asset_id = asset_id
-            #    rcan.ra_date = trade_date
-            #    rcan.ra_nav = nav
+            for record in records:
+                trade_date = record[0]
+                nav = record[1]
 
-            #    session.merge(rcan)
-            #session.commit()
+
+                rcan = ra_composite_asset_nav()
+                rcan.ra_asset_id = asset_id
+                rcan.ra_date = trade_date
+                rcan.ra_nav = nav
+                rcan.ra_inc = 0.0
+
+                session.merge(rcan)
+
+            #print asset_id
+
+            session.commit()
 
     session.commit()
     session.close()
