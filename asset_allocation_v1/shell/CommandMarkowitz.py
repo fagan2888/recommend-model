@@ -681,62 +681,100 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
 
 def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=None, wavelet=None, wavelet_filter_num=None):
 
-    if asset_id.isdigit():
+    prefix = asset_id[0:2]
+    if prefix.isdigit():
         xtype = int(asset_id) / 10000000
+        if xtype == 1:
+            #
+            # 基金池资产
+            #
+            asset_id = int(asset_id) % 10000000
+            (pool_id, category) = (asset_id / 100, asset_id % 100)
+            ttype = pool_id / 10000
+            sr = asset_ra_pool_nav.load_series(
+                pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 3:
+            #
+            # 基金池资产
+            #
+            sr = base_ra_fund_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 4:
+            #
+            # 修型资产
+            #
+            sr = asset_rs_reshape_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 12:
+            #
+            # 指数资产
+            #
+            sr = base_ra_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif xtype == 'ERI':
+
+            sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        else:
+            sr = pd.Series()
     else:
-        xtype = re.sub(r'([\d]+)','',asset_id).strip()
+        if prefix == 'AP':
+            #
+            # 基金池资产
+            #
+            sr = asset_ra_pool_nav.load_series(
+                asset_id, 0, 9, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'FD':
+            #
+            # 基金资产
+            #
+            sr = base_ra_fund_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'RS':
+            #
+            # 修型资产
+            #
+            sr = asset_rs_reshape_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'IX':
+            #
+            # 指数资产
+            #
+            sr = base_ra_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'ER':
+            #
+            # 人民币计价的指数资产
+            #
+            sr = base_exchange_rate_index_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'SK':
+            #
+            # 股票资产
+            #
+            sr = asset_stock.load_stock_nav_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'MZ':
+            #
+            # markowitz配置资产
+            #
+            sr = asset_mz_markowitz_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'BF':
+            #
+            # markowitz配置资产
+            #
+            sr = asset_stock_factor.load_factor_nav_series(
+                    asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        elif prefix == 'FC':
 
-
-    if xtype == 1:
-        #
-        # 基金池资产
-        #
-        asset_id %= 10000000
-        (pool_id, category) = (asset_id / 100, asset_id % 100)
-        ttype = pool_id / 10000
-        sr = asset_ra_pool_nav.load_series(
-            pool_id, category, ttype, reindex=None, end_date=end_date)
-    elif xtype == 3:
-        #
-        # 基金池资产
-        #
-        sr = base_ra_fund_nav.load_series(
-            asset_id, reindex=None, end_date=end_date)
-    elif xtype == 4:
-        #
-        # 修型资产
-        #
-        sr = asset_rs_reshape_nav.load_series(
-            asset_id, reindex=None, end_date=end_date)
-    elif xtype == 12:
-        #
-        # 指数资产
-        #
-        sr = base_ra_index_nav.load_series(
-            asset_id, reindex=None, end_date=end_date)
-    elif xtype == 'ERI':
-
-        sr = base_exchange_rate_index_nav.load_series(
-            asset_id, reindex=None, end_date=end_date)
-
-    elif xtype == 'FL.':
-
-        sr = asset_fl_nav.load_series(
-            asset_id, reindex=None, end_date=end_date)
-
-    elif xtype == 'BF..':
-
-        sr = asset_barra_stock_factor_layer_nav.load_series_2(
-            asset_id, reindex=None, end_date=end_date)
-    else:
-        sr = pd.Series()
-
+            sr = asset_factor_cluster.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+        else:
+            sr = pd.Series()
 
     wt = TimingWt(sr)
-    #try:
-    #    filtered_data = wt.wavefilter(sr, wavelet_filter_num)
-    #except:
-    #    set_trace()
+
     filtered_data = wt.wavefilter(sr, wavelet_filter_num)
     filtered_data = filtered_data.fillna(0.0)
     if begin_date is not None:
@@ -834,15 +872,14 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             #
             sr = asset_stock_factor.load_factor_nav_series(
                     asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-
-
         elif prefix == 'FC':
 
             sr = asset_factor_cluster.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
-
         else:
             sr = pd.Series()
+
+
 
     return sr
 
@@ -959,6 +996,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+    elif algo == 5:
+        df = markowitz_days(
+            sdate, edate, assets,
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman=True, wavelet = False, markowitz_id = markowitz_id)
     elif algo == 18:
         #rank = argv['rank']
         #df = stock_factor.compute_rankcorr_multi_factor_pos(string.atoi(rank.strip()))
@@ -974,15 +1015,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     elif algo == 19:
         df = barra_stock_factor.factor_pos_2_stock_pos(df)
     elif algo == 17:
-
         bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005', 'BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
             'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
         df = corr_regression_tree.regression_tree_factor_cluster_boot(bf_ids)
-
-    elif algo == 5:
-        df = markowitz_days(
-            sdate, edate, assets,        
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman=True, wavelet = False, markowitz_id = markowitz_id)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
