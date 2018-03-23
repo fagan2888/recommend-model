@@ -33,8 +33,12 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
+from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database
+from db.asset_stock_factor import *
+from db.asset_stock import *
+from db.asset_composite import *
 
 import traceback, code
 
@@ -198,7 +202,7 @@ def nav_update_fund(db, asset):
 
     # 更新数据库
     database.batch(db['asset'], t2, df_new, df_old, timestamp=False)
-    
+
 def format_nav_and_inc(x):
     if x.name == "ra_nav":
         ret = x.map("{:.6f}".format)
@@ -208,8 +212,8 @@ def format_nav_and_inc(x):
         ret = x
 
     return ret
-    
-    
+
+
 def load_fund_category(db, pid, category):
     # 加载基金列表
     t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
@@ -222,7 +226,7 @@ def load_fund_category(db, pid, category):
         s = s.distinct()
     else:
         s = s.where(t.c.ra_category == category)
-    
+
     df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
 
     return df
@@ -242,6 +246,7 @@ def load_index_for_asset(db, asset_id):
     return df
 
 
+
 @composite.command()
 @click.pass_context
 def factor_nav_2_composite_asset(ctx):
@@ -249,3 +254,63 @@ def factor_nav_2_composite_asset(ctx):
     '''
 
 
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+
+    ca_ids = session.query(ra_composite_asset.globalid).all()
+    session.commit()
+
+
+    for record in ca_ids:
+
+        asset_id = record[0]
+        if asset_id.startswith('CA.BF'):
+
+            asset_id_split = asset_id.strip().split('.')
+            layer = int(asset_id_split[-1])
+            bf_id = '.'.join(asset_id_split[1:3])
+            records = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.nav).filter(and_(barra_stock_factor_layer_nav.bf_id == bf_id,barra_stock_factor_layer_nav.layer == layer)).all()
+            session.commit()
+
+            for record in records:
+
+                trade_date = record[0]
+                nav = record[1]
+
+                rcan = ra_composite_asset_nav()
+                rcan.ra_asset_id = asset_id
+                rcan.ra_date = trade_date
+                rcan.ra_nav = nav
+
+                session.merge(rcan)
+            session.commit()
+
+
+        elif asset_id.startswith('CA.Fc'):
+
+            asset_id_split = asset_id.strip().split('.')
+            fc_id = '.'.join(asset_id_split[1:])
+
+            print asset_id
+            #records = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.nav).filter(and_(barra_stock_factor_layer_nav.bf_id == bf_id,barra_stock_factor_layer_nav.layer == layer)).all()
+
+            #for record in records:
+
+            #    trade_date = record[0]
+            #    nav = record[1]
+
+
+            #    rcan = ra_composite_asset_nav()
+            #    rcan.ra_asset_id = asset_id
+            #    rcan.ra_date = trade_date
+            #    rcan.ra_nav = nav
+
+            #    session.merge(rcan)
+            #session.commit()
+
+    session.commit()
+    session.close()
+
+    pass
