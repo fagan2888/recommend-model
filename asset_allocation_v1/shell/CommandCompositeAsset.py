@@ -295,8 +295,7 @@ def factor_nav_2_composite_asset(ctx):
             asset_id_split = asset_id.strip().split('.')
             fc_id = '.'.join(asset_id_split[1:])
 
-            print asset_id
-            #records = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.nav).filter(and_(barra_stock_factor_layer_nav.bf_id == bf_id,barra_stock_factor_layer_nav.layer == layer)).all()
+            records = session.query(ra_composite_asset_nav.ra_date, ra_composite_asset_nav.nav).filter(ra_composite_asset_nav.ra_asset_id == fc_id).all()
 
             #for record in records:
 
