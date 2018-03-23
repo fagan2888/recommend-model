@@ -111,7 +111,6 @@ def factor_yield(factor1_df, factor2_df):
     factor_nav_df.to_csv('factor_nav.csv')
 
 
-
 #多因子暴露聚类
 def multi_factor_kmeans(factor_df):
 
@@ -2051,7 +2050,6 @@ def grossprofit_factor():
     stock_factor_util.update_factor_value('BF.000017', grossprofit_df)
 
     return grossprofit_df
-
 
 
 

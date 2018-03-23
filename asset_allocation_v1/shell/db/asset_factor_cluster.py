@@ -66,7 +66,7 @@ class factor_cluster_nav(Base):
     __tablename__ = 'factor_cluster_nav'
 
     globalid = Column(String, primary_key = True)
-    factor_cluster_id = Column(String, primary_key = True)
+    fc_cluster_id = Column(String, primary_key = True)
     date = Column(Date, primary_key = True)
     nav = Column(Float)
 
