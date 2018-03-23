@@ -283,12 +283,14 @@ def factor_nav_2_composite_asset(ctx):
                 rcan.ra_asset_id = asset_id
                 rcan.ra_date = trade_date
                 rcan.ra_nav = nav
+                rcan.ra_inc = 0.0
 
-                session.merge(rcan)
+                #session.merge(rcan)
+
             session.commit()
 
 
-        elif asset_id.startswith('CA.Fc'):
+        elif asset_id.startswith('CA.FC'):
 
             asset_id_split = asset_id.strip().split('.')
             fc_id = '.'.join(asset_id_split[1:])
