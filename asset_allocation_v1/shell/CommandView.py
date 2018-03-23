@@ -54,10 +54,10 @@ def signal(ctx, optid, optonline):
     #             signal_update_wavelet(view)
 
     for _, view in df_view.iterrows():
-        if view['bl_method'] == 2:
-            signal_update_wavelet(view)
-        elif view['bl_method'] == 1:
+        if view['bl_method'] == 1:
             signal_update_macro(view)
+        elif view['bl_method'] == 2:
+            signal_update_wavelet(view)
 
 
 def signal_update_wavelet(view):
@@ -82,6 +82,30 @@ def signal_update_wavelet(view):
     df_new = df_new.set_index(['bl_date', 'globalid', 'bl_index_id'])
 
     asset_ra_bl_view.save(viewid, df_new)
+
+    return df_new
+
+
+def signal_update_macro(view):
+    viewid = view['globalid']
+    assets = asset_ra_bl_asset.load_assets(id_ = viewid)
+    bl_views = []
+    for asset in assets:
+        mc_view_id = asset_mc_view.get_view_id(asset)
+        bl_view = asset_mc_view_strength.load_view_strength(mc_view_id)
+        bl_view = np.sign(bl_view)
+        bl_view = bl_view.reset_index()
+        bl_view.columns = ['bl_date', 'bl_view']
+        bl_view['globalid'] = viewid
+        bl_view['bl_index_id'] = asset
+        bl_views.append(bl_view)
+
+    df_bl_views = pd.concat(bl_views)
+    df_bl_views = df_bl_views.set_index(['bl_date', 'globalid', 'bl_index_id'])
+
+    asset_ra_bl_view.save(viewid, df_bl_views)
+
+    return df_bl_views
 
 
 ## asset with max sharpe ratio get view 1, asset with min sharpe ratio get view -1
@@ -126,7 +150,7 @@ def convert_sharpe_to_view_3(x):
 
     return x
 
-
+## use sharpe ratio rank as view
 def convert_sharpe_to_view_4(x):
     x = x.astype(float)
     rank_x = rankdata(x) - np.median(rankdata(x))
@@ -167,20 +191,4 @@ def cal_wavelet_view(view, indexid, wavenum, trend_lookback, start_date):
     return df
 
 
-def signal_update_macro(view):
-    viewid = view['globalid']
-    assets = asset_ra_bl_asset.load_assets(id_ = viewid)
-    bl_views = []
-    for asset in assets:
-        mc_view_id = asset_mc_view.get_view_id(asset)
-        bl_view = asset_mc_view_strength.load_view_strength(mc_view_id)
-        bl_view = np.sign(bl_view)
-        bl_view = bl_view.reset_index()
-        bl_view.columns = ['bl_date', 'bl_view']
-        bl_view['globalid'] = viewid
-        bl_view['bl_index_id'] = asset
-        bl_views.append(bl_view)
 
-    df_bl_views = pd.concat(bl_views)
-    df_bl_views = df_bl_views.set_index(['bl_date', 'globalid', 'bl_index_id'])
-    asset_ra_bl_view.save(viewid, df_bl_views)
