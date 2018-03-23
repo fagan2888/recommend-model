@@ -39,37 +39,19 @@ class RiskMgrSimple(object):
         #
         # 计算回撤矩阵 和 0.97, 0.75置信区间
         #
-        sr_inc = np.log(1+df_input['nav'].pct_change().fillna(0.0))
+        sr_inc = np.log(1+df_input['nav'].pct_change().fillna(0.0))*1000
         # sr_inc = df_input['nav'].pct_change().fillna(0.0)
         sr_inc2d = sr_inc.rolling(window=2).sum() # 2日收益率
         sr_inc3d = sr_inc.rolling(window=3).sum() # 3日收益率
         sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
 
-        # idx = int(self.period*0.03)-1
-        # idx2 = int(self.period*0.03)-1
+        from arch import arch_model
 
-        # sr_cnfdn97 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean((sorted(x)[:idx+1])))
-        # sr_cnfdn99 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean((sorted(x)[:idx2+1])))
-        
-        #NonParametric VaR
-        # sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx:idx+1]))
-        # sr_cnfdn2 = sr_inc5d.rolling(window=self.period).apply(lambda x: np.mean(sorted(x)[idx2:idx2+1]))
-        
-        # Parametric VaR
-        sr_cnfdn995 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.005, x.mean(), x.std(ddof=1)))
-        sr_cnfdn99 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.01, x.mean(), x.std(ddof=1)))
-        # sr_cnfdn35 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.65, x.mean(), x.std(ddof=1)))
-        # sr_cnfdn65 = sr_inc5d.rolling(window=self.period).apply(lambda x: stats.norm.ppf(0.35, x.mean(), x.std(ddof=1)))
-    
-        #sr_cnfdn = sr_cnfdn.shift(1)
 
         df = pd.DataFrame({
             'inc2d': sr_inc2d.fillna(0),
             'inc3d': sr_inc3d.fillna(0),
             'inc5d': sr_inc5d.fillna(0),
-            'cnfdn995': sr_cnfdn995,
-            'cnfdn99': sr_cnfdn99,
-            # 'cnfdn35': sr_cnfdn35,
             'timing': df_input['timing'],
         })
         # set_trace()
@@ -92,23 +74,31 @@ class RiskMgrSimple(object):
         result_act = {} # 结果动作
         with click.progressbar(length=len(df.index), label='riskmgr %-20s' % (asset)) as bar:
             for day, row in df.iterrows():
-                #
+  
                 # 是否启动风控
-                #
-                if flag != 1:
-                    if row['cnfdn99'] is not None and row['inc5d'] < row['cnfdn99']:
-                        status, empty_days, position, action = 1, 0, self.ratio, 5
-                        count = 0
 
-                if row['inc2d'] < self.maxdd:
-                    status, empty_days, position, action = 2, 0, 0, 2
-                    flag = 1
-                elif row['inc3d'] < self.maxdd*3/2:
-                    status, empty_days, position, action = 2, 0, 0, 3
-                    flag = 1
-                elif row['cnfdn995'] is not None and row['inc5d'] < row['cnfdn995'] and row['inc5d'] < self.mindd:
-                    status, empty_days, position, action = 2, 0, 0, 5
-                    flag = 1
+                #保证有足够多的参数用于拟合, 先跳过300个历史数据
+                if sr_inc.loc[:day].size < 300:
+                    pass
+                else:
+                    df_inc2d = sr_inc2d[day::-2][::-1].fillna(0)
+                    df_inc3d = sr_inc3d[day::-3][::-1].fillna(0)
+                    df_inc5d = sr_inc5d[day::-5][::-1].fillna(0)
+                    model_2d = arch_model(df_inc2d, mean='ARX', p=1,o=0,q=1)
+                    model_3d = arch_model(df_inc3d, mean='ARX', p=1,o=0,q=1)
+                    model_5d = arch_model(df_inc5d, mean='ARX', p=1,o=0,q=1)
+                    res_2d = model_2d.fit(update_freq=10, disp='off')
+                    res_3d = model_3d.fit(update_freq=10, disp='off')
+                    res_5d = model_5d.fit(update_freq=10, disp='off')
+                    if flag != 1:
+                        if row['inc2d'] < (res_2d.params['Const'] - 3 * res_2d.conditional_volatility[-1]):
+                            status, empty_days, position, action = 1, 0, self.ratio, 2
+                        elif row['inc3d'] < (res_3d.params['Const'] - 3 * res_3d.conditional_volatility[-1]):
+                            status, empty_days, position, action = 1, 0, self.ratio, 3
+                        
+                    if row['inc5d'] < (res_5d.params['Const'] - 3 * res_5d.conditional_volatility[-1]):
+                        status, empty_days, position, action = 2, 0, 0, 5
+                        flag = 1
 
                 #
                 # 根据当前的风控状态进行处理
@@ -117,19 +107,13 @@ class RiskMgrSimple(object):
                     # 不在风控中
                     status, position, action = 0, 1, 0
                 else:
-                    # 风控中 (status == 1)
-                    # if row['cnfdn35'] is not None and row['inc5d'] > row['cnfdn35']:
-                    #     count += 1
-                    # else:
-                    #     count = 0
+                    # 风控中 (status=1或2)
                     if empty_days >= self.empty:
                         #择时决定何时满仓
                         if row['timing'] == 1.0:
                             status, position, action = 0, 1, 8 # 择时满仓
                             if flag == 1:
                                 flag = 0
-                        # if count >= 5:
-                        #     status, position, action = 0, 1, 8
                         else:
                             empty_days += 1
                             if flag == 1:
@@ -178,7 +162,7 @@ class RiskMgrSimple(object):
         count_exception = [i for i in indexes if (df.iloc[i:i+7].rm_pos.sum()<7)]
         status2=calcstatus(2,df)
         status1=calcstatus(1,df)
-        inc = np.log(1+sr_inc)
+        inc = np.log(1+(sr_inc/1000.0))
         count2 = np.array([inc.iloc[i].sum() for i in status2])
         count1 = np.array([inc.iloc[i].sum() for i in status1])
 
@@ -189,9 +173,6 @@ class RiskMgrSimple(object):
         print "Overall Win Rate: " + str((count2[count2<0].size + 0.5* count1[count1<0].size) / (count2.size + 0.5*count1.size))
 
 
-
-
-        set_trace()
 
 
         return df_result;
