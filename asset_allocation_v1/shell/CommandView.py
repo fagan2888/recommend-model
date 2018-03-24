@@ -1,6 +1,5 @@
 #coding=utf8
 
-
 import sys
 sys.path.append('shell')
 import click
@@ -76,7 +75,7 @@ def signal_update_wavelet(view):
     dates = df_new.index.unique()
     df_new = df_new.astype('object')
     for date in dates:
-        df_new.loc[date, 'bl_view'] = convert_sharpe_to_view_4(df_new.loc[date, 'bl_view'].values.ravel())
+        df_new.loc[date, 'bl_view'] = convert_sharpe_to_view_3(df_new.loc[date, 'bl_view'].values.ravel())
 
     df_new = df_new.reset_index()
     df_new = df_new.set_index(['bl_date', 'globalid', 'bl_index_id'])
@@ -123,6 +122,7 @@ def convert_sharpe_to_view(x):
 
     return x
 
+
 ## asset with max sharpe ratio get view 1
 def convert_sharpe_to_view_2(x):
     x = x.astype(float)
@@ -139,11 +139,13 @@ def convert_sharpe_to_view_2(x):
 ## asset with max sharpe ratio get view 2, asset with second largest sharpe ratio get view 1
 def convert_sharpe_to_view_3(x):
     x = x.astype(float)
-    Max, Smax = nlargest(2, x)
+    Max, Smax, Tmax = nlargest(3, x)
     for i in range(len(x)):
         if x[i] == Max:
-            x[i] = 2
+            x[i] = 3
         elif x[i] == Smax:
+            x[i] = 2
+        elif x[i] == Tmax:
             x[i] = 1
         else:
             x[i] = 0
