@@ -25,3 +25,18 @@ def save(id_, df):
     s = select(columns).where(t.c.globalid == id_)
     df_old = pd.read_sql(s, db, index_col = ['bl_date', 'globalid', 'bl_index_id'], parse_dates = ['bl_date'])
     database.batch(db, t, df, df_old, timestamp = True)
+
+
+def load(id_, index_id):
+    db = database.connection('asset')
+    metadata = MetaData(bind =  db)
+    t = Table('ra_bl_view', metadata, autoload = True)
+    columns = [
+        t.c.bl_date,
+        t.c.bl_view,
+    ]
+
+    s = select(columns).where(t.c.globalid == id_).where(t.c.bl_index_id == index_id)
+    df = pd.read_sql(s, db, index_col = ['bl_date'], parse_dates = True)
+
+    return df

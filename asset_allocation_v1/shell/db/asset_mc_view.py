@@ -27,6 +27,7 @@ def get_view_id(asset):
     ]
     s = select(columns).where(t.c.mc_asset_id == asset)
     id_ = s.execute()
+    id_ = id_.fetchall()
     id_ = id_[0][0]
 
     return id_

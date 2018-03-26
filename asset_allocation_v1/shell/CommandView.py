@@ -57,6 +57,8 @@ def signal(ctx, optid, optonline):
             signal_update_macro(view)
         elif view['bl_method'] == 2:
             signal_update_wavelet(view)
+        elif view['bl_method'] == 3:
+            signal_update_wavemacro(view)
 
 
 def signal_update_wavelet(view):
@@ -75,7 +77,7 @@ def signal_update_wavelet(view):
     dates = df_new.index.unique()
     df_new = df_new.astype('object')
     for date in dates:
-        df_new.loc[date, 'bl_view'] = convert_sharpe_to_view_3(df_new.loc[date, 'bl_view'].values.ravel())
+        df_new.loc[date, 'bl_view'] = convert_sharpe_to_view_2(df_new.loc[date, 'bl_view'].values.ravel())
 
     df_new = df_new.reset_index()
     df_new = df_new.set_index(['bl_date', 'globalid', 'bl_index_id'])
@@ -105,6 +107,33 @@ def signal_update_macro(view):
     asset_ra_bl_view.save(viewid, df_bl_views)
 
     return df_bl_views
+
+
+def signal_update_wavemacro(view):
+    viewid = view['globalid']
+    argv = asset_ra_bl_argv.load_argv(id_ = viewid)
+    wave_id = argv['wavelet_id']
+    macro_id = argv['macro_id']
+    assets = asset_ra_bl_asset.load_assets(id_ = viewid)
+    bl_views = []
+    for asset in assets:
+        wavelet_view = asset_ra_bl_view.load(wave_id, asset)
+        macro_view = asset_ra_bl_view.load(macro_id, asset)
+        if len(macro_view) == 0:
+            wavelet_view['bl_index_id'] = asset
+            bl_views.append(wavelet_view)
+        else:
+            macro_view = macro_view.loc[wavelet_view.index].fillna(method = 'pad').dropna()
+            wavemacro_view = macro_view + wavelet_view
+            wavemacro_view['bl_index_id'] = asset
+            bl_views.append(wavemacro_view)
+
+    df_bl_views = pd.concat(bl_views)
+    df_bl_views = df_bl_views.reset_index()
+    df_bl_views['globalid'] = viewid
+    df_bl_views = df_bl_views.set_index(['bl_date', 'globalid', 'bl_index_id'])
+
+    asset_ra_bl_view.save(viewid, df_bl_views)
 
 
 ## asset with max sharpe ratio get view 1, asset with min sharpe ratio get view -1
