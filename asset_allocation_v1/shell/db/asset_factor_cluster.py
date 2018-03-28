@@ -8,6 +8,7 @@ import logging
 import database
 from sqlalchemy.ext.declarative import declarative_base
 from dateutil.parser import parse
+import  asset_trade_dates
 
 
 from dateutil.parser import parse
@@ -97,6 +98,46 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     ]
 
     s = select(columns).where(t1.c.fc_cluster_id == id_)
+
+    if begin_date is not None:
+        s = s.where(t1.c.date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.date <= end_date)
+
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+
+    return df['nav']
+
+
+
+def load_selected_factor_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
+
+
+    if not end_date:
+        end_date = datetime.now().strftime("%Y-%m-%d")
+
+
+    month_last_trade_date_df = asset_trade_dates.load_month_last_trade_date()
+
+    month_last_trade_date_df = month_last_trade_date_df[month_last_trade_date_df.index <= end_date]
+
+    month_last_trade_date_df = month_last_trade_date_df.sort_index(ascending = True)
+    factor_selected_date = month_last_trade_date_df.index[-1]
+
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('factor_cluster_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.date.label('date'),
+        t1.c.nav.label('nav'),
+    ]
+
+    s = select(columns).where(t1.c.fc_cluster_id == id_).where(t1.c.factor_selected_date == factor_selected_date)
 
     if begin_date is not None:
         s = s.where(t1.c.date >= begin_date)

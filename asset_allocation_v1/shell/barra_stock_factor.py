@@ -830,11 +830,14 @@ def regression_tree_factor_layer_ic(bf_id):
     session = Session()
 
     #导出factor exposure
+
     sql = session.query(barra_stock_factor_exposure.trade_date, barra_stock_factor_exposure.stock_id ,barra_stock_factor_exposure.factor_exposure).filter(barra_stock_factor_exposure.bf_id == bf_id).filter(barra_stock_factor_exposure.trade_date.in_(stock_factor_util.month_last_day())).statement
     factor_df = pd.read_sql(sql, session.bind , index_col = ['trade_date', 'stock_id'], parse_dates = ['trade_date'])
 
     factor_df = factor_df.unstack()
     factor_df.columns = factor_df.columns.droplevel(0)
+
+
 
     session.commit()
     session.close()
@@ -849,6 +852,10 @@ def regression_tree_factor_layer_ic(bf_id):
     yield_df.columns = yield_df.columns.droplevel(0)
     yield_df = yield_df.rename(columns = secode_globalid_dict)
 
+    #yield_df.to_csv('yieldm.csv')
+
+    #yield_df = pd.read_csv('yieldm.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+
     session.commit()
     session.close()
 
@@ -856,33 +863,60 @@ def regression_tree_factor_layer_ic(bf_id):
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    sql = session.query(barra_stock_factor_layer_stocks.layer, barra_stock_factor_layer_stocks.trade_date ,barra_stock_factor_layer_stocks.stock_ids).filter(barra_stock_factor_layer_stocks.bf_id == bf_id).statement
+    sql = session.query(barra_stock_factor_layer_stocks.layer, barra_stock_factor_layer_stocks.trade_date ,barra_stock_factor_layer_stocks.stock_ids).filter(barra_stock_factor_layer_stocks.bf_id == bf_id).filter(barra_stock_factor_layer_stocks.trade_date >= '2002-01-01').statement
     all_factor_layer_stock_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'layer'])
 
 
     all_factor_layer_stock_df = all_factor_layer_stock_df.unstack()
     all_factor_layer_stock_df.columns = all_factor_layer_stock_df.columns.droplevel(0)
 
-    for date in all_factor_layer_stock_df.index:
-        layer_stocks = all_factor_layer_stock_df.loc[date].dropna()
+
+    for i in range(0, len(all_factor_layer_stock_df.index) - 1):
+        layer_stock_date = all_factor_layer_stock_df.index[ i ]
+        yieldm_date = all_factor_layer_stock_df.index[ i + 1 ]
+
+        layer_stocks = all_factor_layer_stock_df.loc[layer_stock_date].dropna()
         layer_stocks = layer_stocks.sort_index(ascending=True)
         layer_exposure = []
         layer_yieldm = []
+
         for layer in layer_stocks.index:
             stocks = json.loads(layer_stocks[layer])
-            exposure = factor_df.loc[date, stocks].mean()
-            yieldm = yield_df.loc[date, stocks].mean()
+            exposure = factor_df.loc[layer_stock_date, stocks].mean()
+            yieldm = yield_df.loc[yieldm_date, stocks].mean()
             layer_exposure.append(exposure)
             layer_yieldm.append(yieldm)
 
         ic = np.corrcoef(layer_exposure, layer_yieldm)[0][1]
-        print bf_id, date, ic
+        print bf_id, yieldm_date, ic
 
         bsfli = barra_stock_factor_layer_ic()
         bsfli.bf_id = bf_id
-        bsfli.trade_date = date
+        bsfli.trade_date = yieldm_date
         bsfli.ic = ic
         session.merge(bsfli)
+
+
+    #for date in all_factor_layer_stock_df.index:
+    #    layer_stocks = all_factor_layer_stock_df.loc[date].dropna()
+    #    layer_stocks = layer_stocks.sort_index(ascending=True)
+    #    layer_exposure = []
+    #    layer_yieldm = []
+    #    for layer in layer_stocks.index:
+    #        stocks = json.loads(layer_stocks[layer])
+    #        exposure = factor_df.loc[date, stocks].mean()
+    #        yieldm = yield_df.loc[date, stocks].mean()
+    #        layer_exposure.append(exposure)
+    #        layer_yieldm.append(yieldm)
+
+    #    ic = np.corrcoef(layer_exposure, layer_yieldm)[0][1]
+    #    print bf_id, date, ic
+
+    #    bsfli = barra_stock_factor_layer_ic()
+    #    bsfli.bf_id = bf_id
+    #    bsfli.trade_date = date
+    #    bsfli.ic = ic
+    #    session.merge(bsfli)
 
     session.commit()
     session.close()

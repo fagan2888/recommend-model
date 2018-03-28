@@ -609,6 +609,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman, w
         else:
             data[asset] = load_nav_series(asset, index, begin_date, end_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
+    df_nav = df_nav.dropna(axis = 1 , how = 'all')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
     return markowitz_r(df_inc, day, assets, bootstrap, cpu_count, blacklitterman, markowitz_id)
@@ -874,10 +875,13 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
                     asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         elif prefix == 'FC':
 
-            sr = asset_factor_cluster.load_series(
+            #sr = asset_factor_cluster.load_series(
+            #    asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+            sr = asset_factor_cluster.load_selected_factor_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         else:
             sr = pd.Series()
+
 
 
     return sr
@@ -999,11 +1003,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman=True, wavelet = False, markowitz_id = markowitz_id)
-    elif algo == 6:
-        factor_cluster.factor_cluster_boot()
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman=True, wavelet = False, markowitz_id = markowitz_id)
     elif algo == 18:
         #rank = argv['rank']
         #df = stock_factor.compute_rankcorr_multi_factor_pos(string.atoi(rank.strip()))
@@ -1025,6 +1024,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
+
 
     if 'return' in df.columns:
         df_sharpe = df[['return', 'risk', 'sharpe']].copy()
@@ -1051,12 +1051,12 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     #
     df = df.round(4)             # 四舍五入到万分位
 
+    df = df.fillna(0.0)
     #每四周做平滑
     if algo == 1:
         pass
     else:
         df = df.rolling(window = 4, min_periods = 1).mean()
-
     if optappend:
         df = df.iloc[3:,:]
 
@@ -1151,12 +1151,21 @@ def nav_update(markowitz, alloc):
     #max_date = df_pos.index.max()
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
+    df_incs = []
+    for i in range(1, len(df_pos.index) + 1):
+        begin_date = df_pos.index[i - 1]
+        if i == len(df_pos.index):
+            end_date = datetime.now()
+        else:
+            end_date = df_pos.index[i]
+        data = {}
+        for asset_id in df_pos.columns:
+            data[asset_id] = load_nav_series(asset_id, begin_date=begin_date, end_date=end_date)
+        df_nav = pd.DataFrame(data).fillna(method='pad')
+        df_inc  = df_nav.pct_change().fillna(0.0).iloc[1:]
+        df_incs.append(df_inc)
+    df_inc = pd.concat(df_incs)
 
-    data = {}
-    for asset_id in df_pos.columns:
-        data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
-    df_nav = pd.DataFrame(data).fillna(method='pad')
-    df_inc  = df_nav.pct_change().fillna(0.0)
     # 计算复合资产净值
 
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
