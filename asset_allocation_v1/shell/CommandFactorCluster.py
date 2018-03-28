@@ -2,6 +2,7 @@
 # coding=utf-8
 
 from ipdb import set_trace
+import copy
 import datetime
 import json
 import os
@@ -49,6 +50,7 @@ def setup_logging(
     else:
         logging.basicConfig(level=default_level)
 
+
 @click.group(invoke_without_command=True)
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.pass_context
@@ -57,7 +59,8 @@ def fc(ctx, optid):
     factor layereing
     '''
     if ctx.invoked_subcommand is None:
-        ctx.invoke(fc_update, optid)
+        # ctx.invoke(fc_update, optid)
+        ctx.invoke(fc_update_nav, optid = optid)
     else:
         pass
 
@@ -101,9 +104,9 @@ def fc_update(ctx, optid):
         session.commit()
         session.close()
 
-        #fc_update_json(optid, fc)
-        #fc_update_struct(optid, fc)
-        fc_update_nav(optid, fc)
+        fc_update_json(optid, fc)
+        # fc_update_struct(optid, fc)
+        # fc_update_nav(optid, fc)
 
 
 def fc_update_json(optid, fc):
@@ -113,11 +116,12 @@ def fc_update_json(optid, fc):
     session = Session()
 
     fc_json_struct = cal_json(optid, fc)
+    fc_json_struct = json.dumps(fc_json_struct)
 
     session.query(
         factor_cluster.fc_json_struct
         ).filter(factor_cluster.globalid == optid).\
-            update({factor_cluster.fc_json_struct:str(fc_json_struct)})
+            update({factor_cluster.fc_json_struct:fc_json_struct})
 
     session.commit()
     session.close()
@@ -148,7 +152,6 @@ def fc_update_struct(optid, fc):
 
     fcs = factor_cluster_struct()
     fcs.globalid = optid
-    set_trace()
     fcs.fc_parent_cluster_id = -1
     fcs.fc_subject_asset_id = optid
     fcs.depth = 0
@@ -170,7 +173,7 @@ def fc_update_struct(optid, fc):
 def cal_json(optid, fc):
 
     fc_json_struct = {}
-    fc_json_struct[optid] = {}
+    fc_json_struct[str(optid)] = {}
     for i in range(1, 1+int(fc.hml_num)):
         fc_json_struct[optid]['{}.{}'.format(optid, i)] = {}
 
@@ -184,58 +187,78 @@ def cal_json(optid, fc):
     return fc_json_struct
 
 
-def fc_update_nav(optid, fc):
+@fc.command()
+@click.option('--id', 'optid', help=u'specify cluster id')
+@click.pass_context
+def fc_update_nav(ctx, optid):
     engine = database.connection('asset')
     Session = sessionmaker(bind = engine)
     session = Session()
 
     sql1 = session.query(
-        distinct(factor_cluster_struct.depth),
+        distinct(factor_cluster.fc_json_struct),
+        ).filter(factor_cluster.globalid == optid)
+
+    sql2 = session.query(
+        distinct(barra_stock_factor_valid_factor.trade_date),
         )
-    depths = [depth[0] for depth in sql1.all()]
-    depths = sorted(depths, reverse = True)
-    trade_dates = base_trade_dates.load_trade_dates().index
-    df_result = pd.DataFrame(columns = ['date', 'nav', 'globalid', 'fc_cluster_id'])
 
-    for depth in depths:
-        sql2 = session.query(
-            factor_cluster_struct.fc_parent_cluster_id,
-            factor_cluster_struct.fc_subject_asset_id,
-            ).filter(factor_cluster_struct.depth == depth).statement
+    fc_json = json.loads(sql1.all()[0][0])
+    fc_json = fc_json['FC.000001']['FC.000001.3']
+    trade_dates = sorted(base_trade_dates.load_trade_dates().index)
+    trade_dates_month = [date[0] for date in sql2.all() if date[0] > datetime.date(2010, 1, 1)]
+    layers = sorted(fc_json)
 
-        df_depth = pd.read_sql(sql2, session.bind, index_col = ['fc_parent_cluster_id'])
-        parents = df_depth.index.unique()
-        for parent in parents:
-            print parent
-            children = df_depth[df_depth.index == parent].values.ravel()
-            df = []
-            for child in children:
-                tmp_df = load_nav_series(asset_id = child, reindex = trade_dates, begin_date = '2010-01-01').sort_index()
-                df.append(tmp_df)
-            df = pd.concat(df, 1)
-            df = df.dropna()
-            df = df.pct_change()
-            df = df.fillna(0.0)
-            df = df.mean(1)
-            df = df + 1
-            df = df.cumprod()
+    with click.progressbar(length=len(trade_dates_month), label='update layer nav'.ljust(30)) as bar:
+        for date in trade_dates_month:
+            sql3 = session.query(
+                barra_stock_factor_valid_factor.bf_layer_id
+                ).filter(barra_stock_factor_valid_factor.trade_date == date)
+            valid_factor = [factor[0] for factor in sql3.all()]
+            fc_json_tmp = copy.deepcopy(fc_json)
 
-            df = df.to_frame(name = 'nav')
-            df.index.name = 'date'
-            df = df.reset_index()
-            df['globalid'] = optid
-            df['fc_cluster_id'] = parent
-            df_result = pd.concat([df_result, df])
+            large = fc_json_tmp['FC.000001.3.1']
+            large = [factor for factor in large if factor in valid_factor]
+            fc_json_tmp['FC.000001.3.1'] = large
 
-    db = database.connection('asset')
-    metadata = MetaData(bind=db)
-    t = Table('factor_cluster_nav', metadata, autoload=True)
+            mid = fc_json_tmp['FC.000001.3.6']
+            mid = [factor for factor in mid if factor in valid_factor]
+            fc_json_tmp['FC.000001.3.6'] = mid
 
-    df_old = asset_factor_cluster_nav.load_all(optid)
-    df_old = df_old.set_index(['globalid', 'fc_cluster_id', 'date'])
-    df_result = df_result.set_index(['globalid', 'fc_cluster_id', 'date'])
-    database.batch(db, t, df_result, df_old)
-    set_trace()
+            small = fc_json_tmp['FC.000001.3.3']
+            small = [factor for factor in small if factor in valid_factor]
+            fc_json_tmp['FC.000001.3.3'] = small
+
+            for layer in layers:
+                layer_ret = []
+                factors = fc_json_tmp[layer]
+                if len(factors) == 0:
+                    continue
+
+                for factor in factors:
+                    factor_nav = load_nav_series(factor, reindex = trade_dates)
+                    factor_ret = factor_nav.pct_change().dropna()
+                    factor_ret = factor_ret.loc[date - datetime.timedelta(365): date + datetime.timedelta(31)]
+                    layer_ret.append(factor_ret)
+
+                df_layer_ret = pd.concat(layer_ret, 1)
+                df_layer_ret = df_layer_ret.mean(1)
+                df_layer_nav = (1 + df_layer_ret).cumprod()
+                df_layer_nav = df_layer_nav.to_frame(name = 'nav')
+                df_layer_nav.index.name = 'date'
+                df_layer_nav = df_layer_nav.reset_index()
+                df_layer_nav['globalid'] = optid
+                df_layer_nav['fc_cluster_id'] = layer
+                df_layer_nav['factor_selected_date'] = date
+                df_layer_nav = df_layer_nav.set_index(['globalid', 'fc_cluster_id', 'date', 'factor_selected_date'])
+
+                db = database.connection('asset')
+                metadata = MetaData(bind=db)
+                t = Table('factor_cluster_nav', metadata, autoload=True)
+
+                df_old = asset_factor_cluster_nav.load_nav(optid, layer, date)
+                database.batch(db, t, df_layer_nav, df_old)
+            bar.update(1)
 
 
 class FactorCluster():
