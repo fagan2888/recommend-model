@@ -75,7 +75,7 @@ class factor_cluster_nav(Base):
 
 
 class barra_stock_factor_valid_factor(Base):
-    
+
     __tablename__ = 'barra_stock_factor_valid_factor'
 
     bf_layer_id = Column(String, primary_key = True)

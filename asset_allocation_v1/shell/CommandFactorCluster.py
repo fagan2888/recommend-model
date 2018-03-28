@@ -94,19 +94,18 @@ def fc_update(ctx, optid):
 
         pool = [asset[0] for asset in sql2.all()]
         argv = {k:int(v) for k,v in sql1.all()}
-        # fc = FactorCluster(pool, **argv)
-        # fc.handle()
-        # with open('model', 'wb') as f:
-        #     pickle.dump(fc, f)
-        with open('model', 'rb') as f:
-            fc = pickle.load(f)
+        fc = FactorCluster(pool, **argv)
+        fc.handle()
+        with open('model2', 'wb') as f:
+            pickle.dump(fc, f)
+        # with open('model2', 'rb') as f:
+        #     fc = pickle.load(f)
 
         session.commit()
         session.close()
 
         fc_update_json(optid, fc)
-        # fc_update_struct(optid, fc)
-        # fc_update_nav(optid, fc)
+        fc_update_struct(optid, fc)
 
 
 def fc_update_json(optid, fc):
@@ -204,34 +203,38 @@ def fc_update_nav(ctx, optid):
         )
 
     fc_json = json.loads(sql1.all()[0][0])
-    fc_json = fc_json['FC.000001']['FC.000001.3']
+    fc_json = fc_json['%s'%optid]['%s.3'%optid]
     trade_dates = sorted(base_trade_dates.load_trade_dates().index)
-    trade_dates_month = [date[0] for date in sql2.all() if date[0] > datetime.date(2010, 1, 1)]
+    trade_dates_month = [date[0] for date in sql2.all() if date[0] > datetime.date(2011, 1, 1)]
     layers = sorted(fc_json)
 
     with click.progressbar(length=len(trade_dates_month), label='update layer nav'.ljust(30)) as bar:
         for date in trade_dates_month:
+            print
+            print date
             sql3 = session.query(
                 barra_stock_factor_valid_factor.bf_layer_id
                 ).filter(barra_stock_factor_valid_factor.trade_date == date)
             valid_factor = [factor[0] for factor in sql3.all()]
             fc_json_tmp = copy.deepcopy(fc_json)
 
-            large = fc_json_tmp['FC.000001.3.1']
+            large = fc_json_tmp['%s.3.5'%optid]
             large = [factor for factor in large if factor in valid_factor]
-            fc_json_tmp['FC.000001.3.1'] = large
+            fc_json_tmp['%s.3.5'%optid] = large
 
-            mid = fc_json_tmp['FC.000001.3.6']
-            mid = [factor for factor in mid if factor in valid_factor]
-            fc_json_tmp['FC.000001.3.6'] = mid
+            # mid = fc_json_tmp['FC.000001.3.6']
+            # mid = [factor for factor in mid if factor in valid_factor]
+            # fc_json_tmp['FC.000001.3.6'] = mid
 
-            small = fc_json_tmp['FC.000001.3.3']
+            small = fc_json_tmp['%s.3.1'%optid]
             small = [factor for factor in small if factor in valid_factor]
-            fc_json_tmp['FC.000001.3.3'] = small
+            fc_json_tmp['%s.3.1'%optid] = small
 
             for layer in layers:
                 layer_ret = []
                 factors = fc_json_tmp[layer]
+                if len(factors) != 0:
+                    print layer
                 if len(factors) == 0:
                     continue
 
@@ -258,6 +261,7 @@ def fc_update_nav(ctx, optid):
 
                 df_old = asset_factor_cluster_nav.load_nav(optid, layer, date)
                 database.batch(db, t, df_layer_nav, df_old)
+            print
             bar.update(1)
 
 
