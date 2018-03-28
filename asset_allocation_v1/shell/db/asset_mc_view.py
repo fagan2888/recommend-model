@@ -5,6 +5,7 @@ import pandas as pd
 import logging
 import database
 from dateutil.parser import parse
+from ipdb import set_trace
 logger = logging.getLogger(__name__)
 def load_view_strength(viewid):
     db = database.connection('asset')
