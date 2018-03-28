@@ -200,6 +200,17 @@ class barra_stock_factor_regression_tree(Base):
     created_at = Column(DateTime)
 
 
+class barra_stock_factor_valid_factor(Base):
+
+    __tablename__ = 'barra_stock_factor_valid_factor'
+
+    trade_date = Column(Date, primary_key = True)
+    bf_layer_id = Column(String, primary_key = True)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
 def load_factor_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
     bf_ids = asset_id.strip().split('.')

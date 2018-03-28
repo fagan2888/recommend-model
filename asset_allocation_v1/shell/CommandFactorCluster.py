@@ -22,11 +22,12 @@ from sklearn.cluster import KMeans, AgglomerativeClustering
 from scipy.spatial import distance
 #from starvine.bvcopula.copula import frank_copula
 
-from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, base_ra_index, base_trade_dates, asset_factor_cluster_nav
+from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, base_ra_index, base_trade_dates, asset_factor_cluster_nav, base_ra_fund
 from db.asset_factor_cluster import *
 # from sqlalchemy import MetaData, Table, select, func, literal_column
 from sqlalchemy import * 
 from sqlalchemy.orm import sessionmaker
+import factor_cluster
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -51,6 +52,7 @@ def setup_logging(
         logging.basicConfig(level=default_level)
 
 
+
 @click.group(invoke_without_command=True)
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.pass_context
@@ -63,6 +65,21 @@ def fc(ctx, optid):
         ctx.invoke(fc_update_nav, optid = optid)
     else:
         pass
+
+@fc.command()
+@click.pass_context
+def factor_cluster_fund_pool(ctx):
+
+    #factor_cluster_ids = ['FC.000001.3.1', 'FC.000001.3.2', 'FC.000001.3.3', 'FC.000001.3.4', 'FC.000001.3.5', 'FC.000001.3.6', 
+    #        'FC.000001.3.7', 'FC.000001.3.8']
+
+    factor_cluster_ids = ['FC.000001.3.1', 'FC.000001.3.3', 'FC.000001.3.6']
+    pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+
+    factor_cluster.factor_cluster_fund_pool(factor_cluster_ids, pool_codes, 53, 5)
+
+    return
+
 
 @fc.command()
 @click.option('--id', 'optid', help=u'specify markowitz id')
@@ -755,6 +772,10 @@ def sumple_update(assets, fl_id):
     df['sumple'] = sumple_x
 
     return sumple_df
+
+
+
+
 
 
 if __name__ == '__main__':

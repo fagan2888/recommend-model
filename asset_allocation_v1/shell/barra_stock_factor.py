@@ -937,6 +937,8 @@ def corr_factor_layer_selector(bf_ids):
     session.close()
 
     factor_layer_df.to_csv('factor_layer_df.csv')
+
+    print factor_layer_df
     return factor_layer_df
 
 
@@ -999,9 +1001,23 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     factor_layer_df = pd.DataFrame(factor_layers, index = dates)
     factor_layer_df[pd.isnull(factor_layer_df)] = np.nan
 
+    session.query(barra_stock_factor_valid_factor).delete()
+
+    for trade_date in factor_layer_df.index:
+        trade_date_factors = factor_layer_df.loc[trade_date].dropna()
+        for item in trade_date_factors.ravel():
+            bf_layer_id = str(item[0]) + '.' + str(item[1])
+
+            bsfvf = barra_stock_factor_valid_factor()
+            bsfvf.trade_date = trade_date
+            bsfvf.bf_layer_id = bf_layer_id
+
+            session.merge(bsfvf)
+
     session.commit()
     session.close()
 
+    print factor_layer_df
     return factor_layer_df
 
 

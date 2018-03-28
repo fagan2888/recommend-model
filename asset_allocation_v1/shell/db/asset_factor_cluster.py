@@ -68,6 +68,7 @@ class factor_cluster_nav(Base):
     globalid = Column(String, primary_key = True)
     fc_cluster_id = Column(String, primary_key = True)
     date = Column(Date, primary_key = True)
+    factor_selected_date = Column(Date, primary_key = True)
     nav = Column(Float)
 
     updated_at = Column(DateTime)
