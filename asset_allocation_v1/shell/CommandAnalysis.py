@@ -606,3 +606,13 @@ def passive_fund_ratio(ctx):
 
     df.to_csv('active_passive_fund_ratio.csv')
     return
+
+
+
+@analysis.command()
+@click.pass_context
+def index_corr(ctx):
+
+    index_id = ['120000001','120000001']
+
+    return

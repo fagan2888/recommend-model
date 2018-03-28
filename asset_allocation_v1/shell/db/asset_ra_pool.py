@@ -47,6 +47,23 @@ class ra_pool(Base):
 
 
 
+class ra_pool_fund(Base):
+
+    __tablename__ = 'ra_pool_fund'
+
+    ra_pool = Column(String, primary_key = True)
+
+    ra_category = Column(Integer, primary_key = True)
+    ra_date = Column(Date, primary_key = True)
+
+    ra_fund_id = Column(Integer, primary_key = True)
+    ra_fund_code = Column(String)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+
 def categories_name(category, default='未知'):
     tls = {
         11 : '大盘',

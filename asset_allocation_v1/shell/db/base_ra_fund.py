@@ -1,17 +1,47 @@
 #coding=utf8
 
+
 from sqlalchemy import MetaData, Table, select, func
 # import string
 # from datetime import datetime, timedelta
 import pandas as pd
+import re
 # import os
 # import sys
 import logging
 import database
+from db import base_ra_index
+from sqlalchemy import MetaData, Table, select, func
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime, Float
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
 
 from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
+
+Base = declarative_base()
+
+
+class ra_fund(Base):
+
+    __tablename__ = 'ra_fund'
+
+    globalid = Column(Integer, primary_key = True)
+
+    ra_code = Column(String)
+    ra_name = Column(String)
+
+    ra_type = Column(String)
+
+    ra_fund_type = Column(Integer)
+
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
 
 def find(globalid):
     db = database.connection('base')
