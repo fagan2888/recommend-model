@@ -27,7 +27,6 @@ from db.asset_factor_cluster import *
 # from sqlalchemy import MetaData, Table, select, func, literal_column
 from sqlalchemy import * 
 from sqlalchemy.orm import sessionmaker
-import factor_cluster
 import warnings
 warnings.filterwarnings('ignore')
 
