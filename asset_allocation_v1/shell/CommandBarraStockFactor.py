@@ -68,15 +68,18 @@ def barra_stock_factor_exposure(ctx):
     #grossprofit_factor()
     #factor_funcs = [ep_ttm_factor, free_capital_factor, bp_factor]
 
-    factor_funcs = [ep_ttm_factor, bp_factor, free_capital_factor, turn_rate_factor, trade_amount_factor, holder_avgpct_factor, roe_factor,
-            roa_factor, weight_strength_factor, relative_strength_factor, std_factor, current_ratio_factor, cash_ratio_factor, debtequityratio_factor, 
-            finalcial_leverage_factor, grossprofit_factor]
-    pool = Pool(len(factor_funcs))
-    for func in factor_funcs:
-        pool.apply_async(func)
-    pool.close()
-    pool.join()
 
+    #factor_funcs = [ep_ttm_factor, bp_factor, free_capital_factor, ln_price_factor, turn_rate_factor, trade_amount_factor, holder_avgpct_factor, roe_factor,
+    #        roa_factor, weight_strength_factor, relative_strength_factor, std_factor, current_ratio_factor, cash_ratio_factor, debtequityratio_factor, 
+    #        finalcial_leverage_factor, grossprofit_factor]
+    #pool = Pool(len(factor_funcs))
+    #for func in factor_funcs:
+    #    pool.apply_async(func)
+    #pool.close()
+    #pool.join()
+
+
+    ln_price_factor()
     return
 
 
@@ -198,12 +201,12 @@ def barra_stock_factor_ic(ctx):
     bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
             'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
 
-    #pool = Pool(20)
-    #pool.map(regression_tree_factor_layer_ic, bf_ids)
-    #pool.close()
-    #pool.join()
+    pool = Pool(20)
+    pool.map(regression_tree_factor_layer_ic, bf_ids)
+    pool.close()
+    pool.join()
 
-    regression_tree_factor_layer_ic(bf_ids[0])
+    #regression_tree_factor_layer_ic(bf_ids[3])
     return
 
 

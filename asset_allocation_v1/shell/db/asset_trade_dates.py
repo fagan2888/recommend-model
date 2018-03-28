@@ -7,6 +7,7 @@ import database
 from dateutil.parser import parse
 import sys
 
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -37,3 +38,18 @@ class trade_dates(Base):
 
     td_date = Column(Date, primary_key = True)
     td_type = Column(Integer)
+
+
+def load_month_last_trade_date():
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(trade_dates.td_date).filter(trade_dates.td_type >= 8).statement
+    df = pd.read_sql(sql, session.bind, index_col = ['td_date'], parse_dates = ['td_date'])
+
+    session.commit()
+    session.close()
+
+    return df
