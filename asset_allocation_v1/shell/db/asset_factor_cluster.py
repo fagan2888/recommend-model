@@ -32,6 +32,35 @@ class factor_cluster(Base):
     created_at = Column(DateTime)
 
 
+class factor_cluster_argv(Base):
+
+    __tablename__ = 'factor_cluster_argv'
+
+    globalid = Column(String, primary_key = True)
+    fc_key = Column(String)
+    fc_value = Column(String)
+
+    fc_value = Column(String)
+
+
+class factor_cluster_asset(Base):
+
+    __tablename__ = 'factor_cluster_asset'
+
+    globalid = Column(String, primary_key = True)
+    fc_asset_id = Column(String)
+
+
+class factor_cluster_struct(Base):
+
+    __tablename__ = 'factor_cluster_struct'
+
+    globalid = Column(String, primary_key = True)
+    fc_parent_cluster_id = Column(String, primary_key = True)
+    fc_subject_asset_id = Column(String, primary_key = True)
+    depth = Column(Integer)
+
+
 class factor_cluster_nav(Base):
 
     __tablename__ = 'factor_cluster_nav'
@@ -40,6 +69,17 @@ class factor_cluster_nav(Base):
     factor_cluster_id = Column(String, primary_key = True)
     date = Column(Date, primary_key = True)
     nav = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+class barra_stock_factor_valid_factor(Base):
+    
+    __tablename__ = 'barra_stock_factor_valid_factor'
+
+    bf_layer_id = Column(String, primary_key = True)
+    trade_date = Column(Date, primary_key = True)
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)

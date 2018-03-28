@@ -880,7 +880,6 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             sr = pd.Series()
 
 
-
     return sr
 
 @markowitz.command()
