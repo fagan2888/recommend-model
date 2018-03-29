@@ -483,8 +483,12 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
         elif prefix == 'FC':
 
-            sr = asset_factor_cluster.load_series(
+            # sr = asset_factor_cluster.load_series(
+            #     asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+            sr = asset_factor_cluster.load_selected_factor_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+
+
         else:
             sr = pd.Series()
 
@@ -903,8 +907,6 @@ def jiao2(highlow, alloc):
             data_h[column] = df_high[column] * df_high_riskmgr[column] * ratio_h
     df_h = pd.DataFrame(data_h)
 
-    #dd(df_h)
-
     data_l = {}
     if not df_low.empty:
         df_low = df_low.reindex(index, method='pad')
@@ -1037,11 +1039,28 @@ def nav_update(alloc, enddate):
         max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
 
-    data = {}
-    for asset_id in df_pos.columns:
-        data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
-    df_nav = pd.DataFrame(data).fillna(method='pad')
-    df_inc  = df_nav.pct_change().fillna(0.0)
+    # data = {}
+    # for asset_id in df_pos.columns:
+    #     data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
+    # df_nav = pd.DataFrame(data).fillna(method='pad')
+    # df_inc  = df_nav.pct_change().fillna(0.0)
+
+
+    df_incs = []
+    for i in range(1, len(df_pos.index) + 1):
+        begin_date = df_pos.index[i - 1]
+        if i == len(df_pos.index):
+            end_date = datetime.now()
+        else:
+            end_date = df_pos.index[i]
+        data = {}
+        for asset_id in df_pos.columns:
+            data[asset_id] = load_nav_series(asset_id, begin_date=begin_date, end_date=end_date)
+        df_nav = pd.DataFrame(data).fillna(method='pad')
+        df_inc  = df_nav.pct_change().fillna(0.0).iloc[1:]
+        df_incs.append(df_inc)
+    df_inc = pd.concat(df_incs)
+
 
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
@@ -1076,13 +1095,13 @@ def turnover(ctx, optid, opttype, optlist):
         df_highlow = asset_mz_highlow.load(highlows)
     else:
         df_highlow = asset_mz_highlow.load(highlows, xtypes)
-        
+
     if optlist:
 
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_highlow, headers='keys', tablefmt='psql')
         return 0
-    
+
     data = []
     with click.progressbar(length=len(df_highlow), label='update turnover'.ljust(30)) as bar:
         for _, highlow in df_highlow.iterrows():
