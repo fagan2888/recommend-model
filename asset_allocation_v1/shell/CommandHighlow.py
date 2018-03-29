@@ -1019,17 +1019,17 @@ def nav(ctx, optid, opttype, optlist, optenddate):
 
 def nav_update_alloc(highlow, enddate):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
-    
+
     with click.progressbar(length=len(df_alloc), label=('update nav %s' % (highlow['globalid'])).ljust(30)) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             nav_update(alloc, enddate)
-    
+
 def nav_update(alloc, enddate):
     alloc_id = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_mz_highlow_pos.load(alloc_id)
-    
+
     # 加载资产收益率
     min_date = df_pos.index.min()
     #max_date = df_pos.index.max()

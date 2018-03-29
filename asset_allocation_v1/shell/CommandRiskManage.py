@@ -18,6 +18,7 @@ import Const
 import RiskManagement
 import RiskMgrSimple
 import RiskMgrLow
+import RiskMgrGARCH
 import DFUtil
 
 from datetime import datetime, timedelta
@@ -411,6 +412,8 @@ def signal_update(riskmgr):
         risk_mgr = RiskMgrSimple.RiskMgrSimple(empty=argv['e'])
     elif riskmgr['rm_algo'] == 3:
         risk_mgr = RiskMgrLow.RiskMgrLow()
+    elif riskmgr['rm_algo'] == 4:
+        risk_mgr = RiskMgrGARCH.RiskMgrGARCH()
     else:
         click.echo(click.style("\nunsupported riskmgr algo (%d, %d)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
         return false

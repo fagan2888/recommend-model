@@ -476,6 +476,74 @@ def online_nav(ctx, optsdate, optedate):
     print online_nav_df
 
 
+<<<<<<< HEAD
+=======
+#线上风险10和portfolio有费率数据月度收益率
+@analysis.command()
+@click.pass_context
+def online_portfolio_month_nav(ctx):
+    ser = asset_on_online_nav.load_series(800000, 8)
+    ser = ser.groupby(ser.index.strftime('%Y-%m')).last()
+    online_ser = ser.pct_change()
+ 
+    ser = asset_ra_portfolio_nav.load_series('PO.000030', 8)
+    ser = ser.groupby(ser.index.strftime('%Y-%m')).last()
+    portfolio_ser = ser.pct_change()
+
+    data = {}
+    data['online'] = online_ser
+    data['po.000030'] = portfolio_ser
+
+    df = pd.DataFrame(data)
+
+    df.to_csv('线上新模型有费率和标杆组合风险10有费率每月收益率.csv')
+
+
+
+#线上风险10权益类资产被动管理型基金占比
+@analysis.command()
+@click.pass_context
+def passive_fund_ratio(ctx):
+
+
+    passive_funds = set()
+    for line in open('./data/passive_fund.csv','r').readlines():
+        passive_funds.add(line.strip()[0:6])
+
+
+    dates = []
+    data = []
+
+
+    funds = asset_on_online_fund.load(800000)
+    for date, group in funds.groupby(funds.index):
+        group = group[(group.on_fund_type == 11101) | (group.on_fund_type == 11102) | (group.on_fund_type == 11202) | (group.on_fund_type == 11205)]
+
+        print group[group.on_fund_code.isin(passive_funds)]
+        passive_ratio = group[group.on_fund_code.isin(passive_funds)].on_fund_ratio.sum()
+        active_ratio = group[~group.on_fund_code.isin(passive_funds)].on_fund_ratio.sum()
+
+
+        ratio_sum = active_ratio + passive_ratio
+        if ratio_sum == 0:
+            active_ratio = 0.0
+            passive_ratio = 0.0
+            pass
+        else:
+            active_ratio = active_ratio / ratio_sum
+            passive_ratio = passive_ratio / ratio_sum
+
+        #print date, active_ratio, passive_ratio
+
+        dates.append(date)
+        data.append([active_ratio, passive_ratio])
+
+    df = pd.DataFrame(data, index=dates, columns = ['active_ratio', 'passive_ratio'])
+
+    df.to_csv('active_passive_fund_ratio.csv')
+    return
+
+>>>>>>> fb9b4e08cbc22882e50ec09e11e1396c20c46102
 #基金收益率,剔除排名10%，20%，30%，40%，50%的基金的收益率
 @analysis.command()
 @click.pass_context
