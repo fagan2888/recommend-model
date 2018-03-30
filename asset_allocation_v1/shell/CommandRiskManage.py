@@ -20,6 +20,7 @@ import RiskMgrSimple
 import RiskMgrLow
 import RiskMgrGARCH
 import DFUtil
+import CommandMarkowitz
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -368,7 +369,7 @@ def signal(ctx, optid, optlist, optonline):
         df_riskmgr['rm_name'] = df_riskmgr['rm_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_riskmgr, headers='keys', tablefmt='psql')
         return 0
-    
+
     # with click.progressbar(length=len(df_riskmgr), label='update riskmgr signal') as bar:
     #     for _, riskmgr in df_riskmgr.iterrows():
     #         bar.update(1)
@@ -382,13 +383,13 @@ def signal_update(riskmgr):
     argv = {'e': 5}
     if riskmgr['rm_argv'] != '':
         argv.update({k: int(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(',')]})
-    
+
     # 加载择时信号
     sr_timing = asset_tc_timing_signal.load_series(riskmgr['rm_timing_id'])
     # print sr_timing.head()
     if sr_timing.empty:
         click.echo(click.style("\nempty timing signal (%s, %s), suppose all 1\n" % (riskmgr_id, riskmgr['rm_timing_id']), fg="red"))
-    
+
     # 加载资产收益率
     # min_date = df_position.index.min()
     # max_date = (datetime.now() - timedelta(days=1)) # yesterday
@@ -400,7 +401,8 @@ def signal_update(riskmgr):
 
     #tdates = base_trade_dates.load_other_index(riskmgr['rm_asset_id'], sdate)
     tdates = base_trade_dates.load_origin_index_trade_date(riskmgr['rm_asset_id'], sdate)
-    sr_nav = database.load_nav_series(riskmgr['rm_asset_id'], reindex=tdates, begin_date=sdate)
+    # sr_nav = database.load_nav_series(riskmgr['rm_asset_id'], reindex=tdates, begin_date=sdate)
+    sr_nav = CommandMarkowitz.load_nav_series(riskmgr['rm_asset_id'], reindex=tdates, begin_date=sdate)
     if sr_timing.empty:
         sr_timing = pd.Series(1, index=sr_nav.index)
 
@@ -417,7 +419,7 @@ def signal_update(riskmgr):
     else:
         click.echo(click.style("\nunsupported riskmgr algo (%d, %d)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
         return false
-    
+
     df_result = risk_mgr.perform(riskmgr_id, df)
     # df_result.drop(['nav', 'timing'], axis=1, inplace=True)
     df_result = DFUtil.filter_same_with_last(df_result)
@@ -468,7 +470,9 @@ def nav_update(riskmgr):
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
 
-    sr_nav = database.load_nav_series(
+    # sr_nav = database.load_nav_series(
+    #     riskmgr['rm_asset_id'], begin_date=min_date, end_date=max_date);
+    sr_nav = CommandMarkowitz.load_nav_series(
         riskmgr['rm_asset_id'], begin_date=min_date, end_date=max_date);
     df_inc = sr_nav.pct_change().fillna(0.0).to_frame(riskmgr_id)
 

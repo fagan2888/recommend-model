@@ -18,6 +18,8 @@ import DFUtil
 from scipy import stats
 import random
 from ipdb import set_trace
+from arch import arch_model
+from pathos.multiprocessing import ProcessPool as Pool
 
 
 class RiskMgrGARCH(object):
@@ -36,14 +38,13 @@ class RiskMgrGARCH(object):
         #
         sr_inc = np.log(1+df_input['nav'].pct_change().fillna(0.0))*1000
         # sr_inc = df_input['nav'].pct_change().fillna(0.0)
+        # sr_inc1d = sr_inc # 1日收益率
         sr_inc2d = sr_inc.rolling(window=2).sum() # 2日收益率
         sr_inc3d = sr_inc.rolling(window=3).sum() # 3日收益率
         sr_inc5d = sr_inc.rolling(window=5).sum() # 5日收益率
 
-        from arch import arch_model
-
-
         df = pd.DataFrame({
+            # 'inc1d': sr_inc1d.fillna(0),
             'inc2d': sr_inc2d.fillna(0),
             'inc3d': sr_inc3d.fillna(0),
             'inc5d': sr_inc5d.fillna(0),
@@ -69,28 +70,35 @@ class RiskMgrGARCH(object):
         result_act = {} # 结果动作
         with click.progressbar(length=len(df.index), label='riskmgr %-20s' % (asset)) as bar:
             for day, row in df.iterrows():
-  
+
                 # 是否启动风控
 
                 #保证有足够多的参数用于拟合, 先跳过300个历史数据
                 if sr_inc.loc[:day].size < 300:
                     pass
                 else:
+                    # df_inc1d = sr_inc
                     df_inc2d = sr_inc2d[day::-2][::-1].fillna(0)
                     df_inc3d = sr_inc3d[day::-3][::-1].fillna(0)
                     df_inc5d = sr_inc5d[day::-5][::-1].fillna(0)
-                    model_2d = arch_model(df_inc2d, mean='ARX', p=1,o=0,q=1)
-                    model_3d = arch_model(df_inc3d, mean='ARX', p=1,o=0,q=1)
-                    model_5d = arch_model(df_inc5d, mean='ARX', p=1,o=0,q=1)
-                    res_2d = model_2d.fit(update_freq=10, disp='off')
-                    res_3d = model_3d.fit(update_freq=10, disp='off')
-                    res_5d = model_5d.fit(update_freq=10, disp='off')
+                    # model_1d = arch_model(df_inc1d, mean='ARX', p=1,o=0,q=1)
+                    model_2d = arch_model(df_inc2d, mean='AR', p=1,o=0,q=1)
+                    model_3d = arch_model(df_inc3d, mean='AR', p=1,o=0,q=1)
+                    model_5d = arch_model(df_inc5d, mean='AR', p=1,o=0,q=1)
+                    # res_1d = model_1d.fit(update_freq=10, disp='off')
+                    pool = Pool(3)
+                    res_2d, res_3d, res_5d = pool.map(lambda x: x.fit(update_freq = 0, disp = 'off'), [model_2d, model_3d, model_5d])
+                    # res_2d = model_2d.fit(update_freq=10, disp='off')
+                    # res_3d = model_3d.fit(update_freq=10, disp='off')
+                    # res_5d = model_5d.fit(update_freq=10, disp='off')
                     if flag != 1:
+                        # if row['inc1d'] < (res_1d.params['Const'] - 3 * res_1d.conditional_volatility[-1]):
+                        #     status, empty_days, position, action = 1, 0, self.ratio, 2
                         if row['inc2d'] < (res_2d.params['Const'] - 3 * res_2d.conditional_volatility[-1]):
                             status, empty_days, position, action = 1, 0, self.ratio, 2
                         elif row['inc3d'] < (res_3d.params['Const'] - 3 * res_3d.conditional_volatility[-1]):
                             status, empty_days, position, action = 1, 0, self.ratio, 3
-                        
+
                     if row['inc5d'] < (res_5d.params['Const'] - 3 * res_5d.conditional_volatility[-1]):
                         status, empty_days, position, action = 2, 0, 0, 5
                         flag = 1
@@ -127,10 +135,10 @@ class RiskMgrGARCH(object):
                 # 更新进度条
                 #
                 bar.update(1)
-        
+
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act})
         df_result.index.name = 'rm_date'
-        
+
         # Regular calc winrate and exception
         # df = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status':result_status})
         # # df.index.name = 'rm_date'
@@ -167,9 +175,6 @@ class RiskMgrGARCH(object):
         print "Lv2 Risk Ctrl Win: " + str(count2[count2<0].size)
         print "Overall Win Rate: " + str((count2[count2<0].size + 0.5* count1[count1<0].size) / (count2.size + 0.5*count1.size))
 
-
-
-
         return df_result;
 
 
@@ -184,5 +189,5 @@ def calcstatus(status, df):
                 i+=1
             result.append(tmp)
         else:
-            i+=1 
+            i+=1
     return result

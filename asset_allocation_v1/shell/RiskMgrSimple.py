@@ -107,7 +107,7 @@ class RiskMgrSimple(object):
                 # 更新进度条
                 #
                 bar.update(1)
-        
+
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act})
         df_result.index.name = 'rm_date'
 

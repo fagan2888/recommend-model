@@ -32,12 +32,14 @@ from RiskParity import cal_weight
 
 import traceback, code
 from ipdb import set_trace
+import copy
 
 logger = logging.getLogger(__name__)
 
-@click.group(invoke_without_command=True)  
+@click.group(invoke_without_command=True)
 @click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
 @click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
+@click.option('--limit/--no-limit', 'optlimit', default=False, help=u'calculate time varying limit')
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.option('--name', 'optname', default=None, help=u'specify highlow name')
 @click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
@@ -49,14 +51,15 @@ logger = logging.getLogger(__name__)
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
 @click.pass_context
-def highlow(ctx, optfull, optnew, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate):
+def highlow(ctx, optfull, optnew, optlimit, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(limit, optid=optid, optrisk=optrisk)
+            if optlimit:
+                ctx.invoke(limit, optid=optid, optrisk=optrisk)
             ctx.invoke(pos, optid=optid, optrisk=optrisk)
             ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
@@ -627,8 +630,6 @@ def pos_update(highlow, alloc):
     df_tosave = df.stack().to_frame('mz_ratio')
     df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0)]
 
-
-
     #print alloc
     #print df_tosave[df_tosave.index.duplicated()]
     #if alloc['mz_risk'] == 0.9:
@@ -702,8 +703,13 @@ def range_cons(x):
 def limit_update(highlow, alloc, ratio_hl):
     # ratio_hl = cal_limit(highlow, alloc)
     risk = alloc.mz_risk
-    ratio_hl /= 2.5
+
+    # ratio_hl = ratio_hl / 5
+    # ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.1)
+
+    ratio_hl = ratio_hl / 2.5
     ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.2)
+
     ratio_hl['ratio_h'] = ratio_hl['ratio_h'].apply(range_cons)
     ratio_hl['ratio_l'] = 1.0 - ratio_hl['ratio_h']
     ratio_hl.index.name = 'mz_date'

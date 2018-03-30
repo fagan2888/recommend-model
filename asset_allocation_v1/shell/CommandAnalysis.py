@@ -476,8 +476,6 @@ def online_nav(ctx, optsdate, optedate):
     print online_nav_df
 
 
-<<<<<<< HEAD
-=======
 #线上风险10和portfolio有费率数据月度收益率
 @analysis.command()
 @click.pass_context
@@ -543,7 +541,6 @@ def passive_fund_ratio(ctx):
     df.to_csv('active_passive_fund_ratio.csv')
     return
 
->>>>>>> fb9b4e08cbc22882e50ec09e11e1396c20c46102
 #基金收益率,剔除排名10%，20%，30%，40%，50%的基金的收益率
 @analysis.command()
 @click.pass_context

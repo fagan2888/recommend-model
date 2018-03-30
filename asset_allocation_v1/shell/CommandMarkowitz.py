@@ -1166,6 +1166,8 @@ def nav_update(markowitz, alloc):
         df_incs.append(df_inc)
     df_inc = pd.concat(df_incs)
 
+    # df_inc.to_csv('tmp/concat_data/df_inc.csv', index_label = 'date')
+
     # 计算复合资产净值
 
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
