@@ -28,6 +28,8 @@ from db.asset_factor_cluster import *
 from sqlalchemy import * 
 from sqlalchemy.orm import sessionmaker
 import warnings
+import factor_cluster
+
 warnings.filterwarnings('ignore')
 
 logger = logging.getLogger(__name__)
@@ -72,12 +74,30 @@ def factor_cluster_fund_pool(ctx):
     #factor_cluster_ids = ['FC.000001.3.1', 'FC.000001.3.2', 'FC.000001.3.3', 'FC.000001.3.4', 'FC.000001.3.5', 'FC.000001.3.6', 
     #        'FC.000001.3.7', 'FC.000001.3.8']
 
-    factor_cluster_ids = ['FC.000001.3.1', 'FC.000001.3.3', 'FC.000001.3.6']
-    pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+    #factor_cluster_ids = ['FC.000002.3.1', 'FC.000002.3.2', 'FC.000002.3.3', 'FC.000002.3.4', 'FC.000002.3.5', 'FC.000002.3.6', 'FC.000002.3.7']
 
-    factor_cluster.factor_cluster_fund_pool(factor_cluster_ids, pool_codes, 53, 5)
+    factor_cluster_ids_corr = {'FC.000002.3.1' : 0.85, 'FC.000002.3.2': 0.75, 'FC.000002.3.3':0.75, 'FC.000002.3.4':0.8, 'FC.000002.3.5':0.85, 'FC.000002.3.7':0.7}
+    stock_pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+    other_pool_codes = list(base_ra_fund.find_type_fund(4).ra_code.ravel())
+
+    pool_codes = stock_pool_codes + other_pool_codes
+
+    factor_cluster.factor_cluster_fund_pool(factor_cluster_ids_corr, pool_codes, 53, 5)
 
     return
+
+
+
+@fc.command()
+@click.pass_context
+def barra_stock_factor_fund_pool(ctx):
+
+    factor_cluster.barra_stock_factor_fund_pool(53, 5)
+
+    return
+
+
+
 
 
 @fc.command()
