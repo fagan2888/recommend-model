@@ -25,13 +25,16 @@ from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_samp
 from db.asset_stock_factor import *
 from db.asset_stock import *
 from db import asset_trade_dates, asset_ra_pool
-from multiprocessing import Pool
+#from multiprocessing import Pool
+from pathos.multiprocessing import ProcessingPool as Pool
 import math
 import scipy.stats as stats
 import json
 import statsmodels.api as sm
 import statsmodels
 import Portfolio as PF
+import Financial as fin
+import Const
 
 
 from sklearn.cluster import KMeans
@@ -1039,23 +1042,153 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     factor_layer_df = pd.DataFrame(factor_layers, index = dates)
     factor_layer_df[pd.isnull(factor_layer_df)] = np.nan
 
-    session.query(barra_stock_factor_valid_factor).delete()
-
-    for trade_date in factor_layer_df.index:
-        trade_date_factors = factor_layer_df.loc[trade_date].dropna()
-        for item in trade_date_factors.ravel():
-            bf_layer_id = str(item[0]) + '.' + str(item[1])
-
-            bsfvf = barra_stock_factor_valid_factor()
-            bsfvf.trade_date = trade_date
-            bsfvf.bf_layer_id = bf_layer_id
-
-            session.merge(bsfvf)
 
     session.commit()
     session.close()
 
-    print factor_layer_df
+
+    '''
+    all_stocks = stock_util.all_stock_info()
+    secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_sk_yieldindic.tradedate ,tq_sk_yieldindic.secode, tq_sk_yieldindic.Yield).filter(tq_sk_yieldindic.secode.in_(all_stocks.index)).statement
+    yield_df = pd.read_sql(sql, session.bind , index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']) / 100.0
+    yield_df = yield_df.unstack()
+    yield_df.columns = yield_df.columns.droplevel(0)
+    yield_df = yield_df.rename(columns = secode_globalid_dict)
+
+    yield_df.to_csv('yield.csv')
+
+    session.commit()
+    session.close()
+    '''
+
+
+    yield_df = pd.read_csv('yield.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+
+
+
+    #print yield_df.tail()
+    factor_layer_df = factor_layer_df[factor_layer_df.index >= '2010-01-01']
+
+
+    def valid_factor_by_fund(day):
+
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        codes = base_ra_fund.find_type_fund(1).ra_code.ravel()
+        dates = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=53)
+        df_nav_fund = base_ra_fund_nav.load_daily(dates[0], day, codes = codes)
+        df_nav_fund = df_nav_fund.loc[dates]
+        df_nav_fund = df_nav_fund.dropna(axis = 1, thresh = len(df_nav_fund) * 2.0 / 3)
+
+        for bf_id in factor_layer_df.loc[day].dropna():
+
+            if not hasattr(bf_id, '__iter__'):
+                continue
+
+            bf_id, origin_layer = bf_id
+            layers = all_factor_layer_stock_df.loc[day, bf_id]
+            if origin_layer == 0:
+                start_layer = min(layers.layer.ravel())
+            elif origin_layer == 1:
+                start_layer = max(layers.layer.ravel())
+
+            end_layer = max(layers.layer.ravel()) / 2
+
+            stocks = []
+
+            while True:
+
+                record = session.query(barra_stock_factor_layer_stocks.stock_ids).filter(and_(barra_stock_factor_layer_stocks.bf_id == bf_id, barra_stock_factor_layer_stocks.trade_date == day, barra_stock_factor_layer_stocks.layer == start_layer)).first()
+
+                print bf_id, start_layer, day
+
+                if origin_layer == 1 and start_layer < end_layer:
+                        print day, bf_id, start_layer ,'no fund, not a valid factor'
+                        break
+                elif origin_layer == 0 and start_layer > end_layer:
+                        print day, bf_id, start_layer, 'no fund, not a valid factor'
+                        break
+
+                layer_stocks = json.loads(record[0])
+                stocks.extend(layer_stocks)
+
+                pos = pd.DataFrame(1.0 / len(stocks), index = [date], columns = stocks)
+                tmp_yield_df = yield_df[stocks]
+                pos = pos.reindex(tmp_yield_df.index).fillna(method = 'bfill')
+                nav_df = (tmp_yield_df * pos).sum(axis = 1).dropna()
+                nav_df = ( nav_df + 1 ).cumprod()
+                nav_df = nav_df.to_frame()
+                nav_df.columns = [bf_id]
+
+
+                df_nav_index_fund = pd.concat([nav_df, df_nav_fund], axis = 1, join_axes = [df_nav_fund.index])
+                df_inc_index_fund = df_nav_index_fund.pct_change().fillna(0.0)
+
+                corr = df_inc_index_fund.corr()
+                bf_corr = corr.loc[bf_id]
+                bf_corr = bf_corr[bf_corr < 1]
+                bf_corr = bf_corr[bf_corr >= 0.90]
+
+                fund_jensens = {}
+                for fund_code in bf_corr.index:
+                    fund_jensens[fund_code] = fin.jensen(df_inc_index_fund[fund_code], df_inc_index_fund[bf_id] ,Const.rf)
+                fund_jensens_ser = pd.Series(fund_jensens)
+                fund_jensens_ser = fund_jensens_ser[fund_jensens_ser >= -1.0 * 0.03 / 52]
+
+                #print bf_id, len(fund_jensens_ser)
+
+                if len(fund_jensens_ser) >= 3:
+                    break
+
+                if origin_layer == 0:
+                    start_layer = start_layer + 1
+                elif origin_layer == 1:
+                    start_layer = start_layer - 1
+
+
+            if origin_layer == 1 and start_layer < end_layer:
+                continue
+            elif origin_layer == 0 and start_layer > end_layer:
+                continue
+
+            pos = pd.DataFrame(1.0 / len(stocks), index = [date], columns = stocks)
+            tmp_yield_df = yield_df[stocks]
+            pos = pos.reindex(tmp_yield_df.index).fillna(method = 'bfill')
+            nav_df = (tmp_yield_df * pos).sum(axis = 1).dropna()
+            nav_df = ( nav_df + 1 ).cumprod()
+            nav_df = nav_df.to_frame()
+            bf_id = str(bf_id) + '.' + str(origin_layer)
+            nav_df.columns = [bf_id]
+
+            nav_df = nav_df[nav_df.index > '2010-01-10']
+            for nav_date in nav_df.index:
+                v = nav_df.loc[nav_date, bf_id]
+                bsfsfn = barra_stock_factor_selected_factor_nav()
+                bsfsfn.bf_id = bf_id
+                bsfsfn.trade_date = nav_date
+                bsfsfn.selected_date = day
+                bsfsfn.nav = v
+
+                session.merge(bsfsfn)
+
+        session.commit()
+        session.close()
+
+
+    pool = Pool(20)
+    pool.map(valid_factor_by_fund, factor_layer_df.index)
+    pool.close()
+    pool.join()
+
+
     return factor_layer_df
 
 

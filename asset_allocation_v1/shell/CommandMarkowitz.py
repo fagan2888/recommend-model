@@ -611,6 +611,7 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman, w
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_nav = df_nav.dropna(axis = 1 , how = 'all')
     df_inc  = df_nav.pct_change().fillna(0.0)
+    print df_inc
 
     return markowitz_r(df_inc, day, assets, bootstrap, cpu_count, blacklitterman, markowitz_id)
 
