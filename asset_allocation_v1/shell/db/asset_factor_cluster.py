@@ -87,6 +87,19 @@ class barra_stock_factor_valid_factor(Base):
     created_at = Column(DateTime)
 
 
+class barra_stock_factor_selected_factor_nav(Base):
+
+    __tablename__ = 'barra_stock_factor_selected_factor_nav'
+
+    bf_id  = Column(String, primary_key = True)
+    trade_date = Column(Date, primary_key = True)
+    selected_date = Column(Date, primary_key = True)
+
+    nav = Column(Float)
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
 def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -110,7 +123,6 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
         df = df.reindex(reindex, method='pad')
 
     return df['nav']
-
 
 
 def load_selected_factor_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):

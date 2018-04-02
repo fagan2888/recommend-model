@@ -2001,7 +2001,6 @@ def cash_ratio_factor():
     return cash_ratio_df
 
 
-
 #负债比率因子
 def debtequityratio_factor():
 
@@ -2033,7 +2032,6 @@ def debtequityratio_factor():
     stock_factor_util.update_factor_value('BF.000015', debtequity_df)
 
     return debtequity_df
-
 
 
 #金融杠杆率因子

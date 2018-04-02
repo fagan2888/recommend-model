@@ -22,8 +22,9 @@ from sklearn.cluster import KMeans, AgglomerativeClustering
 from scipy.spatial import distance
 #from starvine.bvcopula.copula import frank_copula
 
-from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, base_ra_index, base_trade_dates, asset_factor_cluster_nav, base_ra_fund
+from db import database, asset_barra_stock_factor_layer_nav, base_ra_index_nav, base_ra_index, base_trade_dates, asset_factor_cluster_nav, base_ra_fund, asset_factor_cluster
 from db.asset_factor_cluster import *
+from db import asset_factor_cluster
 # from sqlalchemy import MetaData, Table, select, func, literal_column
 from sqlalchemy import * 
 from sqlalchemy.orm import sessionmaker
@@ -98,8 +99,6 @@ def barra_stock_factor_fund_pool(ctx):
 
 
 
-
-
 @fc.command()
 @click.option('--id', 'optid', help=u'specify markowitz id')
 @click.pass_context
@@ -108,7 +107,7 @@ def fc_update(ctx, optid):
     Session = sessionmaker(bind = engine)
     session = Session()
 
-    sql = session.query(factor_cluster.globalid).filter(factor_cluster.globalid == optid)
+    sql = session.query(asset_factor_cluster.factor_cluster.globalid).filter(asset_factor_cluster.factor_cluster.globalid == optid)
     session.commit()
     session.close()
 
@@ -154,9 +153,9 @@ def fc_update_json(optid, fc):
     fc_json_struct = json.dumps(fc_json_struct)
 
     session.query(
-        factor_cluster.fc_json_struct
-        ).filter(factor_cluster.globalid == optid).\
-            update({factor_cluster.fc_json_struct:fc_json_struct})
+        asset_factor_cluster.factor_cluster.fc_json_struct
+        ).filter(asset_factor_cluster.factor_cluster.globalid == optid).\
+            update({asset_factor_cluster.factor_cluster.fc_json_struct:fc_json_struct})
 
     session.commit()
     session.close()
@@ -231,8 +230,8 @@ def fc_update_nav(ctx, optid):
     session = Session()
 
     sql1 = session.query(
-        distinct(factor_cluster.fc_json_struct),
-        ).filter(factor_cluster.globalid == optid)
+        distinct(asset_factor_cluster.factor_cluster.fc_json_struct),
+        ).filter(asset_factor_cluster.factor_cluster.globalid == optid)
 
     sql2 = session.query(
         distinct(barra_stock_factor_valid_factor.trade_date),
@@ -275,7 +274,10 @@ def fc_update_nav(ctx, optid):
                     continue
 
                 for factor in factors:
-                    factor_nav = load_nav_series(factor, reindex = trade_dates)
+                    if factor.startswith('BF'):
+                        factor_nav = asset_barra_stock_factor_layer_nav.load_series_selected(factor, reindex = trade_dates, selected_date = date)
+                    else:
+                        factor_nav = load_nav_series(factor, reindex = trade_dates)
                     factor_ret = factor_nav.pct_change().dropna()
                     factor_ret = factor_ret.loc[date - datetime.timedelta(365): date + datetime.timedelta(31)]
                     layer_ret.append(factor_ret)
@@ -634,9 +636,6 @@ class FactorCluster():
 
         mean_corr = np.mean(corr.values())
 
-        # print corr
-        # print mean_corr
-
         return mean_corr
 
 
@@ -707,27 +706,19 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             sr = pd.Series()
     else:
         if prefix == 'AP':
-            #
-            # 基金池资产
-            #
+
             sr = asset_ra_pool_nav.load_series(
                 asset_id, 0, 9, reindex=reindex, begin_date=begin_date, end_date=end_date)
         elif prefix == 'FD':
-            #
-            # 基金资产
-            #
+
             sr = base_ra_fund_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         elif prefix == 'RS':
-            #
-            # 修型资产
-            #
+
             sr = asset_rs_reshape_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         elif prefix == 'IX':
-            #
-            # 指数资产
-            #
+
             sr = base_ra_index_nav.load_series(
                 asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
         elif prefix == 'ER':
@@ -791,10 +782,6 @@ def sumple_update(assets, fl_id):
     df['sumple'] = sumple_x
 
     return sumple_df
-
-
-
-
 
 
 if __name__ == '__main__':

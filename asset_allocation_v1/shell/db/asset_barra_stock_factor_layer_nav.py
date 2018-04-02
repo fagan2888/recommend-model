@@ -73,6 +73,36 @@ def load_series_2(id_, reindex=None, begin_date=None, end_date=None):
     return df['nav']
 
 
+def load_series_selected(id_, selected_date, reindex=None, begin_date=None, end_date=None):
+    # layer = int(id_[-1])
+    # id_ = id_[:-2]
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('barra_stock_factor_selected_factor_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.trade_date.label('date'),
+        t1.c.nav.label('nav'),
+    ]
+
+    s = select(columns)\
+            .where(t1.c.bf_id == id_)\
+            .where(t1.c.selected_date == selected_date)
+
+    if begin_date is not None:
+        s = s.where(t1.c.trade_date >= begin_date)
+
+    if end_date is not None:
+        s = s.where(t1.c.end_date >= end_date)
+
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+
+    return df['nav']
+
+
 def load_layer_id():
     db = database.connection('asset')
     metadata = MetaData(bind=db)
