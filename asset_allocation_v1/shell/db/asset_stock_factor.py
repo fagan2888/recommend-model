@@ -137,6 +137,19 @@ class barra_stock_factor_layer_nav(Base):
     created_at = Column(DateTime)
 
 
+class barra_stock_factor_selected_factor_nav(Base):
+
+    __tablename__ = 'barra_stock_factor_selected_factor_nav'
+
+    bf_id = Column(String, primary_key = True)
+    trade_date = Column(Date, primary_key = True)
+    selected_date = Column(Date, primary_key = True)
+    nav = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
 class barra_stock_factor_layer_ic(Base):
 
     __tablename__ = 'barra_stock_factor_layer_ic'
