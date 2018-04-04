@@ -792,13 +792,17 @@ def turnover_update_category(pool, category):
     df['mask'] = 1
     df.set_index('ra_fund_code', append=True, inplace=True)
     df = df.unstack(fill_value=0)
+    #print df
     df_prev = df.shift(1).fillna(0).astype(int)
 
     df_prev.iloc[0] = df.iloc[0]
     
     df_and = np.bitwise_and(df, df_prev)
+    #print df_and
 
     df_new = (1 - df_and.sum(axis=1) / df_prev.sum(axis=1)).to_frame('ra_turnover')
+    #print df_new
+    #print df_new.mean()
     df_new['ra_pool'] = pool['id']
     df_new['ra_category'] = category
 

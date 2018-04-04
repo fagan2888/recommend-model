@@ -127,7 +127,6 @@ def load_selected_factor_series(id_, reindex=None, begin_date=None, end_date=Non
     month_last_trade_date_df = month_last_trade_date_df.sort_index(ascending = True)
     factor_selected_date = month_last_trade_date_df.index[-1]
 
-
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('factor_cluster_nav', metadata, autoload=True)

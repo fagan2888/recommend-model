@@ -302,20 +302,35 @@ def barra_regression_tree_spliter(ctx):
 @click.pass_context
 def export_barra_stock_factor_nav(ctx):
 
-    bf_id = 'BF.000001'
-
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
 
 
-    sql = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.layer, barra_stock_factor_layer_nav.nav).filter(barra_stock_factor_layer_nav.bf_id == bf_id).statement
+    sql = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.bf_id ,barra_stock_factor_layer_nav.layer, barra_stock_factor_layer_nav.nav).statement
 
-    df = pd.read_sql(sql ,session.bind, index_col = ['trade_date', 'layer'], parse_dates = ['trade_date'])
+    df = pd.read_sql(sql ,session.bind, index_col = ['trade_date', 'bf_id','layer'], parse_dates = ['trade_date'])
     session.commit()
     session.close()
 
+    df = df.unstack([1,2])
+    df.columns = df.columns.droplevel(0)
+    df = df.dropna()
+    df_inc = df.pct_change().fillna(0.0)
+    #print df_inc.corr().mean()
+    #df_inc.corr().to_csv('corr.csv')
 
+    df_inc = df_inc.loc[:,['BF.000001','BF.000006']]
+
+    df_inc.columns = list('abcd')
+    df_corr = df_inc.rolling(60).corr().dropna()
+    df_corr = df_corr[df_corr.index.get_level_values(1) == 'a'][::60]
+
+
+    for i in df_corr.columns:
+        corr = df_corr[i]
+        print np.corrcoef(corr[1:].values, corr[:-1].values)
+    '''
     hs300 = base_ra_index_nav.load_series(120000002)
 
     df = df.unstack()
@@ -335,6 +350,8 @@ def export_barra_stock_factor_nav(ctx):
     #print df.sum(axis = 1).tail()
 
     df.to_csv('nav.csv')
+    '''
+
     return
 
 
@@ -364,6 +381,61 @@ def export_barra_stock_factor_ic(ctx):
     df = df.mean(axis = 0)
     print df
     return
+
+
+@bsf.command()
+@click.pass_context
+def barra_stock_factor_turnover(ctx):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(barra_stock_factor_valid_factor.trade_date, barra_stock_factor_valid_factor.bf_layer_id).statement
+
+    df = pd.read_sql(sql ,session.bind, index_col = ['trade_date', 'bf_layer_id'], parse_dates = ['trade_date'])
+    session.commit()
+    session.close()
+
+    df['tag'] = 1
+    df = df.unstack()
+    df.columns = df.columns.droplevel(0)
+    df = df[df.index >= '2012-07-01']
+
+
+    #print df.apply(np.nansum, axis = 1)
+    print df.div(df.apply(np.nansum, axis = 1), axis = 0)
+    df = df.div(df.apply(np.nansum, axis = 1), axis = 0).fillna(0.0)
+    print df.diff().abs().fillna(0.0).sum().sum() / 2
+
+
+
+@bsf.command()
+@click.pass_context
+def fund_pool_turnover(ctx):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(barra_stock_factor_valid_factor.trade_date, barra_stock_factor_valid_factor.bf_layer_id).statement
+
+    df = pd.read_sql(sql ,session.bind, index_col = ['trade_date', 'bf_layer_id'], parse_dates = ['trade_date'])
+    session.commit()
+    session.close()
+
+    df['tag'] = 1
+    df = df.unstack()
+    df.columns = df.columns.droplevel(0)
+    df = df[df.index >= '2012-07-01']
+
+
+    #print df.apply(np.nansum, axis = 1)
+    print df.div(df.apply(np.nansum, axis = 1), axis = 0)
+    df = df.div(df.apply(np.nansum, axis = 1), axis = 0).fillna(0.0)
+    print df.diff().abs().fillna(0.0).sum().sum() / 2
+
+
 
 
 
