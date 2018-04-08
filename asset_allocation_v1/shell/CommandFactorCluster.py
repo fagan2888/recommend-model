@@ -28,6 +28,7 @@ from db import asset_factor_cluster
 # from sqlalchemy import MetaData, Table, select, func, literal_column
 from sqlalchemy import * 
 from sqlalchemy.orm import sessionmaker
+import DBData
 import warnings
 import factor_cluster
 
@@ -303,14 +304,79 @@ def fc_update_nav(ctx, optid):
             bar.update(1)
 
 
+@fc.command()
+@click.option('--id', 'optid', help=u'specify cluster id')
+@click.pass_context
+def fc_rolling(ctx, optid):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind = engine)
+    session = Session()
+
+    sql = session.query(asset_factor_cluster.factor_cluster.globalid).filter(asset_factor_cluster.factor_cluster.globalid == optid)
+    session.commit()
+    session.close()
+
+    if len(sql.all()) == 0:
+        logger.info('id {} doesn\'t exist'.format(optid))
+        return
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind = engine)
+    session = Session()
+
+    sql1 = session.query(
+        factor_cluster_argv.fc_key,
+        factor_cluster_argv.fc_value,
+        ).filter(factor_cluster_argv.globalid == optid)
+
+    sql2 = session.query(
+        factor_cluster_asset.fc_asset_id
+        ).filter(factor_cluster_asset.globalid == optid)
+
+    pool = [asset[0] for asset in sql2.all()]
+    argv = {k:int(v) for k,v in sql1.all()}
+    trade_dates = DBData.trade_dates(start_date = '2012-01-01', end_date = '2018-01-01')
+    for date in trade_dates[::12]:
+        tmp_argv = copy.deepcopy(argv)
+        tmp_argv['end_date'] = date
+        fc = FactorCluster(pool, **tmp_argv)
+        fc.handle()
+        iter_num = 0
+        print 'past score:', fc.past_inner_corr, fc.past_outter_corr
+        while fc.past_inner_corr < 0.85:
+            tmp_argv['h_num'] += 1
+            fc = FactorCluster(pool, **tmp_argv)
+            fc.handle()
+            print 'past score:', fc.past_inner_corr, fc.past_outter_corr
+            iter_num += 1
+            if iter_num >= 5:
+                break
+
+        print date
+        print 'score:', fc.inner_score, fc.outter_score
+        for i in np.arange(1, tmp_argv['h_num']+1):
+            print fc.h_pool_cluster[i]
+        print
+        print
+
+    session.commit()
+    session.close()
+
+
 class FactorCluster():
 
-    def __init__(self, pool = None, h_num = 8, m_num = 2, l_num = 1, window = 60, base_pool_only = True, hml_num = 3):
+    def __init__(self, pool = None, h_num = 8, m_num = 2, l_num = 1, window = 60, base_pool_only = True, hml_num = 3, end_date = None):
 
         if pool is None:
             self._pool = FactorCluster.get_pool(base_pool_only)
         else:
             self._pool = pool
+
+        if end_date is not None:
+            self.end_date = end_date
+        else:
+            self.end_date = datetime.datetime.today()
 
         self.window = window
         #self.baseline = 'BF.000001.1'
@@ -464,7 +530,7 @@ class FactorCluster():
 
 
     @staticmethod
-    def cal_corr(id1, id2, window):
+    def cal_corr(id1, id2, window, end_date = None):
         asset1 = load_nav_series(id1)
         asset2 = load_nav_series(id2)
         if asset1.index[0].date() > datetime.date(2010, 1, 5):
@@ -500,6 +566,9 @@ class FactorCluster():
         df = pd.rolling_corr(asset1, asset2, window).dropna()
         df = df.to_frame(name = id2)
         df = df[df.index >= '2010-01-04']
+        if end_date is not None:
+            end_date = end_date.strftime('%Y-%m-%d')
+            df = df[df.index <= end_date]
 
         return df
 
@@ -512,9 +581,9 @@ class FactorCluster():
                 for asset in self.h_pool:
                     # print asset,
                     if df is None:
-                        df = self.cal_corr(self.baseline, asset, self.window)
+                        df = self.cal_corr(self.baseline, asset, self.window, self.end_date)
                     else:
-                        tmp_df = self.cal_corr(self.baseline, asset, self.window)
+                        tmp_df = self.cal_corr(self.baseline, asset, self.window, self.end_date)
                         if tmp_df is 0:
                             pass
                         else:
@@ -619,8 +688,9 @@ class FactorCluster():
         return asset_cluster
 
 
-    def cal_mean_corr(self, pool):
+    def cal_mean_corr_future(self, pool):
         corr = {}
+        all_layers = []
         for k,v in pool.iteritems():
             layer_assets = []
             for asset in v:
@@ -629,14 +699,47 @@ class FactorCluster():
                 tmp_ret = tmp_ret.replace(0.0, np.nan).dropna()
                 layer_assets.append(tmp_ret)
             layer_df = pd.concat(layer_assets, 1)
-            layer_df = layer_df[layer_df.index >= '2012-07-27']
+            layer_df = layer_df[layer_df.index >= self.end_date.strftime('%Y-%m-%d')]
+            layer_df = layer_df[layer_df.index <= (self.end_date + datetime.timedelta(90)).strftime('%Y-%m-%d')]
             layer_df = layer_df.dropna()
             layer_df = layer_df.rolling(5).sum()[::5]
-            corr[k] = layer_df.corr().mean().mean()
+            all_layers.append(layer_df.mean(1))
+            # corr[k] = layer_df.corr().mean().mean()
+            corr[k] = cal_corr(layer_df)
 
-        mean_corr = np.mean(corr.values())
+        inner_corr = np.mean(corr.values())
 
-        return mean_corr
+        df_all_layers = pd.concat(all_layers, 1)
+        outter_corr = cal_corr(df_all_layers)
+
+        return inner_corr, outter_corr
+
+
+    def cal_mean_corr(self, pool):
+        corr = {}
+        all_layers = []
+        for k,v in pool.iteritems():
+            layer_assets = []
+            for asset in v:
+                tmp_nav = load_nav_series(asset)
+                tmp_ret = tmp_nav.pct_change()
+                tmp_ret = tmp_ret.replace(0.0, np.nan).dropna()
+                layer_assets.append(tmp_ret)
+            layer_df = pd.concat(layer_assets, 1)
+            layer_df = layer_df[layer_df.index <= self.end_date.strftime('%Y-%m-%d')]
+            layer_df = layer_df[layer_df.index >= (self.end_date - datetime.timedelta(365)).strftime('%Y-%m-%d')]
+            layer_df = layer_df.dropna()
+            layer_df = layer_df.rolling(5).sum()[::5]
+            all_layers.append(layer_df.mean(1))
+            # corr[k] = layer_df.corr().mean().mean()
+            corr[k] = cal_corr(layer_df)
+
+        inner_corr = np.mean(corr.values())
+
+        df_all_layers = pd.concat(all_layers, 1)
+        outter_corr = cal_corr(df_all_layers)
+
+        return inner_corr, outter_corr
 
 
     def handle(self):
@@ -649,7 +752,8 @@ class FactorCluster():
 
         self.df_rho = self.cal_mul_rhos(method = 'corr')
         self.high_layer()
-        self.score = self.cal_mean_corr(self.h_pool_cluster)
+        self.past_inner_corr, self.past_outter_corr = self.cal_mean_corr(self.h_pool_cluster)
+        self.inner_score, self.outter_score = self.cal_mean_corr_future(self.h_pool_cluster)
 
         ## 低风险只有货币和短融，无需分类
         self.low_layer()
@@ -664,6 +768,16 @@ class FactorCluster():
 #         df = base_ra_index_nav.load_series(id_)
 
 #     return df
+
+def cal_corr(df):
+    if len(df.columns) == 1:
+        return 1
+    else:
+        df1 = df.corr()
+        df1 = df1[df1 != 1]
+        corr = np.nanmean(df1.values)
+
+        return corr
 
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):

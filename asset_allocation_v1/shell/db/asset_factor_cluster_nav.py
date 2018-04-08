@@ -58,7 +58,7 @@ def load_all(globalid):
     return df
 
 
-def load_nav(globalid, fc_cluster_id, factor_selected_date):
+def load_nav(globalid, fc_cluster_id = None, factor_selected_date = None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('factor_cluster_nav', metadata, autoload=True)
@@ -71,32 +71,17 @@ def load_nav(globalid, fc_cluster_id, factor_selected_date):
         t1.c.nav,
     ]
 
-    s = select(columns)\
-            .where(t1.c.globalid == globalid)\
-            .where(t1.c.fc_cluster_id == fc_cluster_id)\
-            .where(t1.c.factor_selected_date == factor_selected_date)
+    s = select(columns).where(t1.c.globalid == globalid)
+
+    if fc_cluster_id is not None:
+        s = s.where(t1.c.fc_cluster_id == fc_cluster_id)
+
+    if factor_selected_date is not None:
+        s = s.where(t1.c.factor_selected_date == factor_selected_date)
 
     df = pd.read_sql(s, db, index_col = ['globalid', 'fc_cluster_id', 'date', 'factor_selected_date'], parse_dates=['date', 'factor_selected_date'])
 
     return df
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

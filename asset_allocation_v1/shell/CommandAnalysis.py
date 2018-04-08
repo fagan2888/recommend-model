@@ -2,6 +2,7 @@
 
 
 import string
+import json
 import os
 import sys
 sys.path.append('shell')
@@ -24,9 +25,13 @@ from dateutil.parser import parse
 from Const import datapath
 #from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_factor_cluster, asset_factor_cluster_nav
+from db.asset_factor_cluster import *
 from util import xdict
+from DBData import trade_dates
 from db.asset_fund import *
+from ipdb import set_trace
+from CommandFactorCluster import load_nav_series
 
 import traceback, code
 
@@ -681,3 +686,65 @@ def index_corr(ctx):
     index_id = ['120000001','120000001']
 
     return
+
+
+
+@analysis.command()
+@click.pass_context
+def max_corr(ctx):
+    engine = database.connection('asset')
+    Session = sessionmaker(bind = engine)
+    session = Session()
+
+
+    layers = ['FC.000002.3.%d'%i for i in range(1,8)]
+    dates = trade_dates('2010-01-01', '2018-01-01')
+    sql1 = session.query(factor_cluster.fc_json_struct).filter(factor_cluster.globalid == 'FC.000002')
+    fc_json_struct = json.loads(sql1.all()[0][0])
+    fc_json_struct = fc_json_struct['FC.000002']['FC.000002.3']
+    inner_corr = []
+    outter_corr = []
+
+    asset_navs = {}
+    for layer in fc_json_struct.values():
+        for asset in layer:
+            asset_navs[asset] = load_nav_series(asset)
+
+    for i in range(len(dates) - 15):
+        all_ret = []
+        layer_corr = []
+        for layer in layers:
+            assets = fc_json_struct[layer]
+            layer_ret = []
+            for asset in assets:
+                # asset_nav = load_nav_series(asset)
+                asset_nav = asset_navs[asset]
+                asset_nav = asset_nav.reindex(dates[i:i+13])
+                asset_ret = asset_nav.pct_change().dropna()
+                layer_ret.append(asset_ret)
+            df_layer_ret = pd.concat(layer_ret, 1)
+            layer_corr.append(cal_corr(df_layer_ret))
+            df_layer_ret = df_layer_ret.mean(1)
+            all_ret.append(df_layer_ret)
+        df_all_ret = pd.concat(all_ret, 1)
+        outter_corr.append(cal_corr(df_all_ret))
+        inner_corr.append(np.mean(layer_corr))
+        print dates[i],',', inner_corr[-1],',', outter_corr[-1]
+    # set_trace()
+
+
+
+def cal_corr(df):
+    # if type(df) == pd.core.series.Series:
+    if len(df.columns) == 1:
+        return 1
+    else:
+        df1 = df.corr()
+        df1 = df1[df1 !=1]
+        df1_v = df1.values
+        corr = np.nanmean(df1_v)
+
+        return corr
+
+
+

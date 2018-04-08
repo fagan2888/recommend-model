@@ -25,7 +25,7 @@ def all_trade_dates():
     conn.autocommit(True)
 
     sql = "SELECT td_date FROM trade_dates WHERE td_date >= '2002-01-04' AND td_type & 0x02 ORDER by td_date ASC";
-    
+
     # sql = 'select iv_time from (select iv_time,DATE_FORMAT(`iv_time`,"%Y%u") week from (select * from index_value where iv_index_id =120000001  order by iv_time desc) as a group by iv_index_id,week order by week asc) as b'
 
 
