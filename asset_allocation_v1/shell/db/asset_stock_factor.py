@@ -12,6 +12,7 @@ from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from db.asset_stock_factor import *
 from db.asset_stock import *
+from db import asset_trade_dates
 
 
 logger = logging.getLogger(__name__)
@@ -249,4 +250,42 @@ def load_factor_nav_series(asset_id, reindex=None, begin_date=None, end_date=Non
 
     return ser
 
+
+def load_selected_factor_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
+
+    #bf_ids = asset_id.strip().split('.')
+    #layer = int(bf_ids[-1])
+    #bf_id = '.'.join(bf_ids[0:2])
+
+    bf_id = asset_id
+
+    month_last_trade_date_df = asset_trade_dates.load_month_last_trade_date()
+    month_last_trade_date_df = month_last_trade_date_df[month_last_trade_date_df.index <= end_date]
+    month_last_trade_date_df = month_last_trade_date_df.sort_index(ascending = True)
+    factor_selected_date = month_last_trade_date_df.index[-1]
+
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(barra_stock_factor_selected_factor_nav.trade_date ,barra_stock_factor_selected_factor_nav.nav).filter(and_(barra_stock_factor_selected_factor_nav.bf_id == bf_id, barra_stock_factor_selected_factor_nav.selected_date == factor_selected_date))
+
+    if begin_date is not None:
+        sql = sql.filter(barra_stock_factor_selected_factor_nav.trade_date >= begin_date)
+
+    if end_date is not None:
+        sql = sql.filter(barra_stock_factor_selected_factor_nav.trade_date <= end_date)
+
+    df = pd.read_sql(sql.statement, session.bind, index_col=['trade_date'], parse_dates=['trade_date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+
+    ser = df.nav
+    ser.index.name = 'date'
+    session.commit()
+    session.close()
+
+    return ser
 

@@ -997,7 +997,7 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
 
     #print layer_ic_df
     #layer_ic_df = abs(layer_ic_df)
-    layer_ic_df = layer_ic_df.rolling(6).mean()
+    layer_ic_df = layer_ic_df.rolling(14).mean()
     layer_ic_abs = abs(layer_ic_df)
 
     sql = session.query(barra_stock_factor_layer_stocks.layer, barra_stock_factor_layer_stocks.trade_date ,barra_stock_factor_layer_stocks.bf_id).statement
@@ -1012,9 +1012,10 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
         ic = ic.dropna()
         if len(ic) <= 4:
             continue
-        threshold = ic.iloc[3]
-        if threshold >= 0.3:
-            threshold = 0.3
+        #threshold = ic.iloc[4]
+        threshold = -1.0
+        #if threshold >= 0.3:
+        #    threshold = 0.3
         date_factor_layer = []
         for bf_id in ic.index:
             ic_v = ic.loc[bf_id]
@@ -1041,7 +1042,6 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
 
     factor_layer_df = pd.DataFrame(factor_layers, index = dates)
     factor_layer_df[pd.isnull(factor_layer_df)] = np.nan
-
 
     session.commit()
     session.close()
@@ -1088,6 +1088,8 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
         df_nav_fund = df_nav_fund.loc[dates]
         df_nav_fund = df_nav_fund.dropna(axis = 1, thresh = len(df_nav_fund) * 2.0 / 3)
 
+
+        valid_num = 0
         for bf_id in factor_layer_df.loc[day].dropna():
 
             if not hasattr(bf_id, '__iter__'):
@@ -1179,9 +1181,21 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
 
                 session.merge(bsfsfn)
 
-        session.commit()
-        session.close()
 
+            bsfvf = barra_stock_factor_valid_factor()
+            bsfvf.bf_layer_id = bf_id
+            bsfvf.trade_date = day
+
+            session.merge(bsfvf)
+
+            valid_num = valid_num + 1
+            if valid_num >= 5:
+                session.commit()
+                session.close()
+                return
+
+            session.commit()
+            session.close()
 
     pool = Pool(20)
     pool.map(valid_factor_by_fund, factor_layer_df.index)

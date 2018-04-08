@@ -94,7 +94,8 @@ def factor_cluster_fund_pool(ctx):
 @click.pass_context
 def barra_stock_factor_fund_pool(ctx):
 
-    factor_cluster.barra_stock_factor_fund_pool(53, 5)
+    #factor_cluster.barra_stock_factor_fund_pool(53, 5)
+    factor_cluster.barra_stock_factor_fund_pool_duplicated(53, 5)
 
     return
 
