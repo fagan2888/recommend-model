@@ -373,14 +373,18 @@ def signal(ctx, optid, optlist, optonline):
     #         bar.update(1)
     #         signal_update(riskmgr)
     for _, riskmgr in df_riskmgr.iterrows():
-        signal_update(riskmgr)
+        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5:
+            signal_update_garch(riskmgr)
+        else:
+            signal_update(riskmgr)
 
 def signal_update(riskmgr):
     riskmgr_id = riskmgr['globalid']
 
-    argv = {'e': 5}
+    argv = {'empty': 5}
+    argv = dict()
     if riskmgr['rm_argv'] != '':
-        argv.update({k: int(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(',')]})
+        argv.update({k: json.loads(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(';')]})
     
     # 加载择时信号
     sr_timing = asset_tc_timing_signal.load_series(riskmgr['rm_timing_id'])
@@ -400,25 +404,75 @@ def signal_update(riskmgr):
     #tdates = base_trade_dates.load_other_index(riskmgr['rm_asset_id'], sdate)
     tdates = base_trade_dates.load_origin_index_trade_date(riskmgr['rm_asset_id'], sdate)
     sr_nav = database.load_nav_series(riskmgr['rm_asset_id'], reindex=tdates, begin_date=sdate)
+    if 'FC' in riskmgr['rm_asset_id']:
+        sr_nav = load_fc_nav_series(riskmgr['rm_asset_id'], begin_date=sdate)
+
     if sr_timing.empty:
         sr_timing = pd.Series(1, index=sr_nav.index)
+    sr_timing = sr_timing.reindex(sr_nav.index)
 
     df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing})
 
     if riskmgr['rm_algo'] == 1:
         risk_mgr = RiskManagement.RiskManagement()
     elif riskmgr['rm_algo'] == 2:
-        risk_mgr = RiskMgrSimple.RiskMgrSimple(empty=argv['e'])
+        risk_mgr = RiskMgrSimple.RiskMgrSimple(**argv)
     elif riskmgr['rm_algo'] == 3:
         risk_mgr = RiskMgrLow.RiskMgrLow()
-    elif riskmgr['rm_algo'] == 4:
-        risk_mgr = RiskMgrGARCH.RiskMgrGARCH()
     else:
         click.echo(click.style("\nunsupported riskmgr algo (%d, %d)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
         return false
     
     df_result = risk_mgr.perform(riskmgr_id, df)
     # df_result.drop(['nav', 'timing'], axis=1, inplace=True)
+    df_result = DFUtil.filter_same_with_last(df_result)
+
+    # df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'rm_nav'}).copy()
+    df_result.index.name = 'rm_date'
+    df_result['rm_riskmgr_id'] = riskmgr_id
+    df_tosave = df_result.reset_index().set_index(['rm_riskmgr_id', 'rm_date'])
+
+    asset_rm_riskmgr_signal.save(riskmgr_id, df_tosave)
+
+
+def signal_update_garch(riskmgr):
+    riskmgr_id = riskmgr['globalid']
+    argv = dict()
+    #Parse argvs
+    if riskmgr['rm_argv'] != '':
+        argv.update({k: json.loads(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(';')]})
+    
+    if riskmgr['rm_algo'] == 4:
+        #Univariate GARCH
+        codes = {riskmgr['rm_name'] : {"code" : riskmgr['rm_asset_id'], "timing" : riskmgr['rm_timing_id']}}
+
+    if riskmgr['rm_algo'] == 5:
+        #Multivariate GARCH
+        tmp_df_riskmgrs = asset_rm_riskmgr.load(argv['assets'])
+        tmp_df_riskmgrs = tmp_df_riskmgrs.append(riskmgr)
+        codes = {}
+        for _, row in tmp_df_riskmgrs.iterrows():
+            codes[row['rm_name']] = {"code" : row['rm_asset_id'], "timing" : row['rm_timing_id']}
+
+    target = riskmgr['rm_name']
+
+    #Load datas from DB
+    tdates = {k: base_trade_dates.load_origin_index_trade_date(v['code']) for k, v in codes.items()}
+    #For each other assets, filter the tradedates by the target one
+    for i in codes:
+        if i != target:
+            tdates[i] = tdates[target].intersection(tdates[i])
+    df_nav = pd.DataFrame({k: database.load_nav_series(v['code'], reindex=tdates[k]) for k, v in codes.items()})
+    timing = pd.DataFrame({k: asset_tc_timing_signal.load_series(v['timing']).reindex(tdates[k]) for k,v in codes.items()})
+
+    risk_mgr = RiskMgrGARCH.RPyGARCH(codes, target, tdates, df_nav, timing)
+
+    if riskmgr['rm_algo'] == 4:
+        df_result = risk_mgr.calc_garch(target)
+    elif riskmgr['rm_algo'] == 5:
+        df_result = risk_mgr.calc_mult_garch()
+
+    df_result = df_result.drop(columns=['rm_status'])
     df_result = DFUtil.filter_same_with_last(df_result)
 
     # df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'rm_nav'}).copy()
@@ -468,7 +522,9 @@ def nav_update(riskmgr):
 
 
     sr_nav = database.load_nav_series(
-        riskmgr['rm_asset_id'], begin_date=min_date, end_date=max_date);
+        riskmgr['rm_asset_id'], begin_date=min_date, end_date=max_date)
+    if 'FC' in riskmgr['rm_asset_id']:
+        sr_nav = load_fc_nav_series(riskmgr['rm_asset_id'], begin_date=min_date, end_date=max_date)
     df_inc = sr_nav.pct_change().fillna(0.0).to_frame(riskmgr_id)
 
     # 计算复合资产净值
@@ -481,3 +537,31 @@ def nav_update(riskmgr):
     df_result = df_result.reset_index().set_index(['rm_riskmgr_id', 'rm_date'])
     
     asset_rm_riskmgr_nav.save(riskmgr_id, df_result)
+
+def load_fc_nav_series(id_, reindex=None, begin_date=None, end_date=None):
+    from sqlalchemy import MetaData, Table, select, func
+    from db import database
+    import MySQLdb
+    import config
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('factor_cluster_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.date.label('date'),
+        t1.c.nav.label('nav'),
+    ]
+
+    s = select(columns).where(t1.c.fc_cluster_id == id_)
+    
+    if begin_date is not None:
+        s = s.where(t1.c.date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.date <= end_date)
+
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+
+    return df['nav']

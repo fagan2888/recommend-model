@@ -67,6 +67,7 @@ class RiskMgrSimple(object):
 
         result_pos = {} # 结果仓位
         result_act = {} # 结果动作
+        result_status = {}
         with click.progressbar(length=len(df.index), label='riskmgr %-20s' % (asset)) as bar:
             for day, row in df.iterrows():
                 #
@@ -101,6 +102,7 @@ class RiskMgrSimple(object):
 
                 result_act[day] = action
                 result_pos[day] = position
+                result_status[day] = status
                 #
                 # 更新进度条
                 #
@@ -109,4 +111,24 @@ class RiskMgrSimple(object):
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act})
         df_result.index.name = 'rm_date'
 
+        df = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
+        inc = np.log(1+df_input['nav'].pct_change().fillna(0))
+        status = calcstatus(1, df)
+        count = np.array([inc.iloc[i].sum() for i in status])
+        print "Triggered: %d" % count.size
+        print "Winned %d" % count[count<0].size
         return df_result;
+
+def calcstatus(status, df):
+    i = 1
+    result = []
+    while i < len(df):
+        if df.iloc[i-1].rm_status != status and df.iloc[i].rm_status == status:
+            tmp = []
+            while i < len(df) and df.iloc[i].rm_status == status:
+                tmp.append(i)
+                i+=1
+            result.append(tmp)
+        else:
+            i+=1 
+    return result
