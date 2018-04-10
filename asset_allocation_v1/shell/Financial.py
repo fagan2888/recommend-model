@@ -400,6 +400,34 @@ def jensen(portfolio, market, rf):
 
 
 
+def beta(portfolio, market, rf):
+
+    p = []
+    m = []
+    for i in range(0, len(portfolio)):
+        #print portfolio[i], market[i]
+        p.append(portfolio[i] - rf)
+        m.append(market[i] - rf)
+
+    p = np.array(p)
+    m = np.array(m)
+
+    clf       = linear_model.LinearRegression()
+    clf.fit(m.reshape(len(m),1), p.reshape(len(p), 1))
+    #clf.fit(m, p)
+    alpha = clf.intercept_[0]
+    beta  = clf.coef_[0][0]
+
+    #if np.isnan(alpha) or np.isinf(alpha):
+    #    alpha = 0.0
+
+    return beta
+
+
+
+
+
+
 #sharp
 def sharp(portfolio, rf):
     r         =    np.mean(portfolio)

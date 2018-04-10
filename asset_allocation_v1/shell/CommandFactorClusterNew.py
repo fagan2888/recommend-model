@@ -226,7 +226,7 @@ def fc_update_nav(ctx, optid):
 
 class FactorCluster(object):
 
-    def __init__(self, assets, n_clusters, start_date, end_date, fdate, method = 'corr'):
+    def __init__(self, assets, n_clusters, start_date, end_date, fdate, method = 'exp'):
         self.ret = self.cal_asset_ret(assets, start_date, end_date)
         self.fret = self.cal_asset_ret(assets, end_date, fdate)
         self.n_clusters = n_clusters
@@ -243,13 +243,14 @@ class FactorCluster(object):
         # df_ret = np.exp(df_ret*52) - 1
         # df_assets = df_assets/df_assets.iloc[0]
         df_ret = df_assets.pct_change().dropna()
+        #df_ret = np.exp(df_ret * 52)
 
         # return df_ret
         return df_ret
 
 
     @staticmethod
-    def train(ret, n_clusters, method = 'corr'):
+    def train(ret, n_clusters, method = 'exp'):
 
         def pearson_affinity(M):
             # print np.array([[pearsonr(a,b)[0] for a in M] for b in M])
@@ -263,6 +264,9 @@ class FactorCluster(object):
         if method == 'corr':
             cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity=pearson_affinity)
         elif method == 'lp':
+            cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity=pearson_affinity)
+        elif method == 'exp':
+            ret = np.exp(ret * 13)
             cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity=pearson_affinity)
 
         cluster.fit(ret.T)

@@ -221,7 +221,6 @@ class tq_sk_businfo(Base):
     corebizcostrto = Column(Float)
 
 
-
 def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
     engine = database.connection('base')

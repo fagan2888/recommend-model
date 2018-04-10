@@ -37,6 +37,7 @@ import CommandBarraStockFactor
 import CommandFactorCluster
 import CommandFactorClusterNew
 import CommandView
+import CommandETFFund
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -278,4 +279,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandFactorCluster.fc)
     roboadvisor.add_command(CommandFactorClusterNew.fcn)
     roboadvisor.add_command(CommandView.view)
+    roboadvisor.add_command(CommandETFFund.etf)
     roboadvisor(obj={})
