@@ -467,10 +467,19 @@ def signal_update_garch(riskmgr):
 
     risk_mgr = RiskMgrGARCH.RPyGARCH(codes, target, tdates, df_nav, timing)
 
+    dirpath = os.path.join('mgarchcache', riskmgr_id)
+
+    import ipdb
+    ipdb.set_trace()
+
     if riskmgr['rm_algo'] == 4:
         df_result = risk_mgr.calc_garch(target)
     elif riskmgr['rm_algo'] == 5:
         df_result = risk_mgr.calc_mult_garch()
+
+    #Save the result to cache, used for debugging
+
+    risk_mgr.dump(dirpath)
 
     df_result = df_result.drop(columns=['rm_status'])
     df_result = DFUtil.filter_same_with_last(df_result)

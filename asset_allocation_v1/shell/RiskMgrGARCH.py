@@ -15,6 +15,7 @@ from ipdb import set_trace
 from pathos.multiprocessing import ProcessingPool as Pool
 from RiskMgrMGARCH import RiskMgrMGARCH
 import time
+import pickle
 
 from db import *
 
@@ -42,8 +43,8 @@ class RPyGARCH(object):
     def __init__(self, codes, target, tdates, df_nav, timing):
         s_time = time.time()
         self.empty = 5
-        self.ratio = 0.5
-        self.joint = 0.3
+        self.ratio = 0
+        self.joint = 0.5
         self.codes = codes
         self.target = target
         #Cache for VaRs calculated by R
@@ -94,7 +95,7 @@ class RPyGARCH(object):
         if target == self.target:
             return None
         if target is None:
-            return pd.DataFrame({k: self.calc_joint(k) for k in codes if k != self.target}).fillna(False)
+            return pd.DataFrame({k: self.calc_joint(k) for k in self.codes if k != self.target}).fillna(False)
         if not (target in self.joints):
             print "Start multivariable GARCH fitting for %s" % target
             s_time = time.time()
@@ -195,10 +196,10 @@ class RPyGARCH(object):
                     if df_joint.loc[day].any():
                         for idx in df_joint.loc[day][df_joint.loc[day]].keys():
                             if status == 0:
-                                if df_result_garch[idx].loc[day]['rm_status'] == 2:
+                                if df_result_garch[idx].loc[day]['rm_status'] != 0:
                                     status, empty_days, position, action = 1, 0, self.joint, 4
                             if status == 2:
-                                if df_result_garch[idx].loc[day]['rm_status'] == 2:
+                                if df_result_garch[idx].loc[day]['rm_status'] != 0:
                                     status, empty_days, position, action = 4, 0, 0, 6
             if status == 0:
                 #不在风控中
@@ -262,6 +263,23 @@ class RPyGARCH(object):
         print "Half winned: %d" % count_half[count_half<0].size
         print "Full triggered: %d" % count_full.size
         print "Full winned: %d" % count_full[count_full<0].size
+    
+    def dump(self, dirpath):
+        if not os.path.exists(dirpath):
+            os.mkdir(dirpath)
+        with open(os.path.join(dirpath, 'vars'), 'w') as f:
+            pickle.dump(self.vars, f)
+        with open(os.path.join(dirpath, 'joints'), 'w') as f:
+            pickle.dump(self.joints, f)
+    
+    def load(self, dirpath):
+        if not os.path.exists(dirpath):
+            print "Cannot find the file!"
+        else:
+            with open(os.path.join(dirpath, 'vars')) as f:
+                self.vars = pickle.load(f)
+            with open(os.path.join(dirpath, 'joints')) as f:
+                self.joints = pickle.load(f)
 
 
 
