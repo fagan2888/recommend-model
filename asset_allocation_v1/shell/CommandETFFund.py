@@ -208,7 +208,6 @@ def fund_stock_resolve(ctx):
         result = scipy.optimize.minimize(fund_resolve_obj_func, w, (x_records, y_record), method='SLSQP', constraints=constrain, bounds=bound)
         ws = result.x
 
-
         print trade_date, (abs(y_record - np.dot(x_records, ws))).sum()
         for item in sorted(zip(ws, x_record_df.columns), reverse = True)[0:10]:
             print item[0], item[1]

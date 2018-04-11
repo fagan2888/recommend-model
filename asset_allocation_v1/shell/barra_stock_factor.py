@@ -1218,7 +1218,6 @@ def factor_index_boot_pos():
     all_stocks = stock_util.all_stock_info()
     secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
 
-
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
