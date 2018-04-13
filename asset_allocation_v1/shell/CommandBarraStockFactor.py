@@ -206,7 +206,7 @@ def barra_stock_factor_ic(ctx):
     pool.close()
     pool.join()
 
-    #regression_tree_factor_layer_ic(bf_ids[3])
+    #regression_tree_factor_layer_ic(bf_ids[0])
     return
 
 
@@ -400,9 +400,10 @@ def barra_stock_factor_turnover(ctx):
     df.columns = df.columns.droplevel(0)
     df = df[df.index >= '2012-07-01']
 
+    #print df.sum(axis = 1)
 
     #print df.apply(np.nansum, axis = 1)
-    print df.div(df.apply(np.nansum, axis = 1), axis = 0)
+    #print df.div(df.apply(np.nansum, axis = 1), axis = 0)
     df = df.div(df.apply(np.nansum, axis = 1), axis = 0).fillna(0.0)
     print df.diff().abs().fillna(0.0).sum().sum() / 2
 

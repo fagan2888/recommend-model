@@ -861,7 +861,7 @@ def regression_tree_factor_layer_ic(bf_id):
 
     #yield_df.to_csv('yieldm.csv')
 
-    #yield_df = pd.read_csv('yieldm.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+    #yield_df = pd.read_csv('barra_stock_factor/yieldm.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
 
     session.commit()
     session.close()
@@ -878,9 +878,10 @@ def regression_tree_factor_layer_ic(bf_id):
     all_factor_layer_stock_df.columns = all_factor_layer_stock_df.columns.droplevel(0)
 
 
-    for i in range(0, len(all_factor_layer_stock_df.index) - 1):
+    interval = 1
+    for i in range(0, len(all_factor_layer_stock_df.index) - interval):
         layer_stock_date = all_factor_layer_stock_df.index[ i ]
-        yieldm_date = all_factor_layer_stock_df.index[ i + 1 ]
+        yieldm_date = all_factor_layer_stock_df.index[ i + interval ]
 
         layer_stocks = all_factor_layer_stock_df.loc[layer_stock_date].dropna()
         layer_stocks = layer_stocks.sort_index(ascending=True)
@@ -895,12 +896,17 @@ def regression_tree_factor_layer_ic(bf_id):
             layer_yieldm.append(yieldm)
 
         ic = np.corrcoef(layer_exposure, layer_yieldm)[0][1]
+        #if stats.spearmanr(layer_exposure, layer_yieldm)[1] < 0.05:
+        #    ic = stats.spearmanr(layer_exposure, layer_yieldm)[0]
+        #else:
+        #    ic = 0
         print bf_id, yieldm_date, ic
 
         bsfli = barra_stock_factor_layer_ic()
         bsfli.bf_id = bf_id
         bsfli.trade_date = yieldm_date
         bsfli.ic = ic
+        bsfli.updated_at = datetime.now()
         session.merge(bsfli)
 
 
@@ -1012,8 +1018,8 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
         ic = ic.dropna()
         if len(ic) <= 4:
             continue
-        #threshold = ic.iloc[4]
-        threshold = -1.0
+        threshold = ic.iloc[4]
+        #threshold = -1.0
         #if threshold >= 0.3:
         #    threshold = 0.3
         date_factor_layer = []
@@ -1046,8 +1052,6 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     session.commit()
     session.close()
 
-
-    '''
     all_stocks = stock_util.all_stock_info()
     secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
 
@@ -1065,10 +1069,9 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
 
     session.commit()
     session.close()
-    '''
 
 
-    yield_df = pd.read_csv('yield.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+    #yield_df = pd.read_csv('yield.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
 
 
 
@@ -1203,6 +1206,7 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     pool.join()
 
 
+    print factor_layer_df
     return factor_layer_df
 
 
@@ -1213,7 +1217,6 @@ def factor_index_boot_pos():
             'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
 
     #bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012']
-    factor_pos_df = regression_tree_ic_factor_layer_selector(bf_ids)
 
     all_stocks = stock_util.all_stock_info()
     secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
@@ -1222,8 +1225,11 @@ def factor_index_boot_pos():
     Session = sessionmaker(bind=engine)
     session = Session()
 
+    sql = session.query(barra_stock_factor_valid_factor.trade_date, barra_stock_factor_valid_factor.bf_layer_id).statement
+    factor_pos_df = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
 
-    dates = factor_pos_df.index[165:]
+    dates = list(set(factor_pos_df.index[120:]))
+    dates.sort()
     #dates = factor_pos_df.index[235:]
 
 
@@ -1233,11 +1239,9 @@ def factor_index_boot_pos():
     for date in dates:
         factor_index_data = {}
         date_factor_pos_df = factor_pos_df.loc[date].dropna()
-        for bf_id in date_factor_pos_df:
-            bf_id, layer = bf_id[0], bf_id[1]
-            sql = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.nav).filter(and_(barra_stock_factor_layer_nav.bf_id == bf_id, barra_stock_factor_layer_nav.layer == layer)).statement
-            nav_df = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
-            factor_index_data[(bf_id,  layer)] = nav_df.nav
+        for bf_id in date_factor_pos_df.values:
+            bf_id = bf_id[0]
+            factor_index_data[bf_id] = load_selected_factor_nav_series(bf_id, end_date = date)
 
         factor_index_df = pd.DataFrame(factor_index_data)
         df_inc = factor_index_df.pct_change().fillna(0.0)
@@ -1248,15 +1252,16 @@ def factor_index_boot_pos():
         for asset in df_inc.columns:
             bound.append({'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0})
 
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=36, bootstrap_count=0)
+        #risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=36, bootstrap_count=0)
 
+        ws = np.ones(len(df_inc.columns)) / len(df_inc.columns)
         print date ,df_inc.columns, ws
 
         positions = []
         for i in range(0, len(ws)):
             bf_id = df_inc.columns[i]
             w = ws[i]
-            positions.append((bf_id[0], bf_id[1], w))
+            positions.append((bf_id, w))
 
         barra_factor_dates.append(date)
         barra_factor_positions.append(positions)
@@ -1266,21 +1271,20 @@ def factor_index_boot_pos():
 
     barra_factor_pos_df = pd.DataFrame(barra_factor_positions, index = barra_factor_dates)
 
+
     all_barra_factor_pos_cols = []
     for  bf_id in bf_ids:
         all_barra_factor_pos_cols.append(str(bf_id) + '.0')
-        all_barra_factor_pos_cols.append(str(bf_id) + '.1')
 
     all_barra_factor_pos_df = pd.DataFrame(0, index = barra_factor_pos_df.index, columns = all_barra_factor_pos_cols)
     for date in barra_factor_pos_df.index:
         for record in barra_factor_pos_df.loc[date].ravel():
             if record is None:
                 continue
-            col = str(record[0]) + '.' + str(record[1])
-            w = record[2]
-            all_barra_factor_pos_df.loc[date, col] = w
+            w = record[1]
+            all_barra_factor_pos_df.loc[date, record[0]] = w
 
-    return all_barra_factor_pos_df
+    return all_barra_factor_pos_df.fillna(0.0)
 
 
 

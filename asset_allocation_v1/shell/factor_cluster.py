@@ -369,25 +369,46 @@ def barra_stock_factor_fund_pool_duplicated(lookback, limit):
 
 
         #计算每个因子可使用的基金
-        bf_avaible_funds = {}
+        #bf_avaible_funds = {}
+        funds = set()
         for bf_id in valid_factors:
-            bf_corr = corr.loc[bf_id]
-            bf_corr = bf_corr.loc[bf_corr.index.difference(valid_factors)]
-            bf_corr.sort_values(inplace=True, ascending=False)
+            #bf_corr = corr.loc[bf_id]
+            #bf_corr = bf_corr.loc[bf_corr.index.difference(valid_factors)]
+            #bf_corr.sort_values(inplace=True, ascending=False)
 
 
-            bf_corr = bf_corr[bf_corr < 1.0]
-            bf_corr = bf_corr[bf_corr >= 0.70]
-            bf_corr.sort_values(inplace = True, ascending = False)
+            fund_beta = {}
+            for fund_code in df_nav_fund.columns:
+                fund_beta[fund_code] = fin.beta(df_inc_index_fund[fund_code], df_inc_index_fund[bf_id] ,Const.rf)
+            fund_beta_ser = pd.Series(fund_beta)
+            #fund_beta_ser.sort_values(inplace=True, ascending=False)
+            fund_beta_ser = fund_beta_ser[fund_beta_ser <= 1.1]
+            fund_beta_ser = fund_beta_ser[fund_beta_ser >= 0.9]
+            #bf_corr = bf_corr[bf_corr < 1.0]
+            #bf_corr = bf_corr[bf_corr >= 0.70]
+            #bf_corr.sort_values(inplace = True, ascending = False)
 
             fund_jensens = {}
-            for fund_code in bf_corr.index:
-                fund_jensens[fund_code] = abs(1 - fin.beta(df_inc_index_fund[fund_code], df_inc_index_fund[bf_id] ,Const.rf))
+            for fund_code in fund_beta_ser.index:
+                fund_jensens[fund_code] = fin.jensen(df_inc_index_fund[fund_code], df_inc_index_fund[bf_id] ,Const.rf)
             fund_jensens_ser = pd.Series(fund_jensens)
-            fund_jensens_ser.sort_values(inplace=True, ascending=True)
-            num = len(fund_jensens_ser) / 5 if len(fund_jensens_ser) / 5 >= 20 else 20
-            bf_avaible_funds[bf_id] = fund_jensens_ser.iloc[0 : num].index.ravel()
+            #fund_jensens_ser = fund_jensens_ser[fund_jensens_ser >= 0.0 / 52]
+            fund_jensens_ser.sort_values(inplace=True, ascending=False)
+            fund_jensens_ser = fund_jensens_ser.iloc[0:10]
+            #num = len(fund_jensens_ser) / 5 if len(fund_jensens_ser) / 5 >= 20 else 20
+            #bf_avaible_funds[bf_id] = fund_jensens_ser.iloc[0 : num].index.ravel()
 
+            for code in fund_jensens_ser.index:
+                funds.add(code)
+
+        df_inc_fund = df_inc_fund[list(funds)]
+        df_inc_fund = df_inc_fund.sum()
+        df_inc_fund.sort_values(inplace=True, ascending=False)
+        print day, df_inc_fund.index[0:5]
+        save_cluster_fund(day, 'FC.000004.1', df_inc_fund.index[0:5])
+
+
+        '''
         this_fund_pool = {}
 
         for bf_id in valid_factors:
@@ -442,8 +463,9 @@ def barra_stock_factor_fund_pool_duplicated(lookback, limit):
         pre_fund_pool = this_fund_pool
         print day, pd.Series(this_fund_pool)
 
-
         save_factor_cluster_fund_pool(day, 'FC.000002.3', pd.Series(this_fund_pool))
+        '''
+
 
     return 0
 

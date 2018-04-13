@@ -1113,7 +1113,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman = False, wavelet = False)
 
-
     elif algo == 18:
         #rank = argv['rank']
         #df = stock_factor.compute_rankcorr_multi_factor_pos(string.atoi(rank.strip()))
@@ -1167,7 +1166,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     if algo == 1:
         pass
     else:
-        df = df.rolling(window = 4, min_periods = 1).mean()
+        df = df.rolling(window = 1, min_periods = 1).mean()
     if optappend:
         df = df.iloc[3:,:]
 
