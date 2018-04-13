@@ -206,6 +206,7 @@ def barra_stock_factor_ic(ctx):
     pool.close()
     pool.join()
 
+<<<<<<< HEAD
     # regression_tree_factor_layer_ic(bf_ids[3])
     return
 
@@ -223,6 +224,9 @@ def barra_stock_factor_fund_ic(ctx):
     # pool.join()
 
     regression_tree_factor_layer_fund_ic(bf_ids[0])
+=======
+    #regression_tree_factor_layer_ic(bf_ids[0])
+>>>>>>> origin/jy-114-bl-fc
     return
 
 

@@ -73,6 +73,14 @@ def jensenmeasure(funddf, indexdf, rf):
     return jensen
 
 
+def returnmeasure(funddf):
+
+    funddfr = funddf.pct_change().fillna(0.0)
+    ret = {}
+    for col in funddfr.columns:
+        ret[col] = funddfr[col].mean()
+    return ret
+
 
 #按照sortino测度过滤
 def sortinomeasure(funddf, rf):
@@ -454,6 +462,8 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
     stability_measure = stabilitymeasure(df_nav_fund)
     stability_data    = ratio_filter(stability_measure, 3.0 / 3)
 
+    return_measure = returnmeasure(df_nav_fund)
+    return_data    = ratio_filter(return_measure, 3.0 / 3)
     #stability_data = sf.stabilityfilter(funddf, 1.0)
 
     sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
@@ -464,9 +474,10 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
         'sortino': sortino_measure,
         'ppw': ppw_measure,
         'stability': stability_measure,
+        'return': return_measure,
     });
     
-    columns=['sharpe','jensen','sortino','ppw','stability']
+    columns=['sharpe','jensen','sortino','ppw','stability', 'return']
     df_indicator.index.name = 'code'
     df_indicator.to_csv(datapath('stock_indicator_' + daystr + '.csv'), columns=columns)
 
@@ -475,7 +486,8 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
         'jensen': {k:v for (k, v) in jensen_data},
         'sortino': {k:v for (k, v) in sortino_data},
         'ppw': {k:v for (k, v) in ppw_data},
-        'stability': {k:v for (k, v) in stability_data}
+        'stability': {k:v for (k, v) in stability_data},
+        'return': {k:v for (k, v) in return_data}
     }, columns=columns);
 
     df_result.index.name = 'code'

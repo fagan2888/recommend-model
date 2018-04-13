@@ -865,7 +865,11 @@ def regression_tree_factor_layer_ic(bf_id):
 
     #yield_df.to_csv('yieldm.csv')
 
+<<<<<<< HEAD
     yield_df = pd.read_csv('data/yieldm.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+=======
+    #yield_df = pd.read_csv('barra_stock_factor/yieldm.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+>>>>>>> origin/jy-114-bl-fc
 
     session.commit()
     session.close()
@@ -905,7 +909,15 @@ def regression_tree_factor_layer_ic(bf_id):
         # else:
         #     ic = 0
         ic = np.corrcoef(layer_exposure, layer_yieldm)[0][1]
+<<<<<<< HEAD
+        # print bf_id, yieldm_date, ic
+=======
+        #if stats.spearmanr(layer_exposure, layer_yieldm)[1] < 0.05:
+        #    ic = stats.spearmanr(layer_exposure, layer_yieldm)[0]
+        #else:
+        #    ic = 0
         print bf_id, yieldm_date, ic
+>>>>>>> origin/jy-114-bl-fc
 
         bsfli = barra_stock_factor_layer_ic()
         bsfli.bf_id = bf_id
@@ -1186,6 +1198,15 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
         if len(ic) <= 4:
             continue
         threshold = ic.iloc[4]
+<<<<<<< HEAD
+        # threshold = 0.2
+        # if threshold >= 0.3:
+           # threshold = 0.3
+=======
+        #threshold = -1.0
+        #if threshold >= 0.3:
+        #    threshold = 0.3
+>>>>>>> origin/jy-114-bl-fc
         date_factor_layer = []
         for bf_id in ic.index:
             ic_v = ic.loc[bf_id]
@@ -1217,6 +1238,10 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     session.commit()
     session.close()
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> origin/jy-114-bl-fc
     all_stocks = stock_util.all_stock_info()
     secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
 
@@ -1236,7 +1261,11 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     session.close()
 
 
+<<<<<<< HEAD
     # yield_df = pd.read_csv('data/yield_day.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+=======
+    #yield_df = pd.read_csv('yield.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+>>>>>>> origin/jy-114-bl-fc
 
 
 
