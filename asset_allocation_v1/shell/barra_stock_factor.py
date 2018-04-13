@@ -46,6 +46,7 @@ import stock_util
 import stock_factor_util
 import CommandPool
 
+from ipdb import set_trace
 
 logger = logging.getLogger(__name__)
 
@@ -627,10 +628,12 @@ def factor_regression_tree_layer_nav(bf_id):
 
     sql = session.query(tq_sk_yieldindic.tradedate ,tq_sk_yieldindic.secode, tq_sk_yieldindic.Yield).filter(tq_sk_yieldindic.secode.in_(all_stocks.index)).statement
     yield_df = pd.read_sql(sql, session.bind , index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']) / 100.0
+    # yield_df.to_csv('data/yield_df.csv')
+    # yield_df = pd.read_csv('data/yield_df.csv', index_col = ['tradedate', 'secode'], parse_dates = ['tradedate'])
     yield_df = yield_df.unstack()
     yield_df.columns = yield_df.columns.droplevel(0)
     yield_df = yield_df.rename(columns = secode_globalid_dict)
-
+    # yield_df.to_csv('data/yield_day.csv')
 
     session.commit()
     session.close()
@@ -645,8 +648,10 @@ def factor_regression_tree_layer_nav(bf_id):
         layer_stock = layer_stock.sort_index()
         #print layer_stock.index
         min_max_layer.append([layer_stock.iloc[0], layer_stock.iloc[-1]])
+        # min_max_layer.append(layer_stock.values.tolist())
 
     layer_stock_df = pd.DataFrame(min_max_layer, index = layer_stock_df.index, columns = [0, 1])
+    # layer_stock_df = pd.DataFrame(min_max_layer, index = layer_stock_df.index, columns = range(8))
 
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
@@ -669,6 +674,7 @@ def factor_regression_tree_layer_nav(bf_id):
 
         nav_df = (tmp_yield_df * stock_pos_df).sum(axis = 1).dropna()
         nav_df = ( nav_df + 1 ).cumprod()
+        print nav_df
 
         for date in nav_df.index:
             bsfln = barra_stock_factor_layer_nav()
@@ -824,8 +830,6 @@ def factor_layer_ic(bf_id):
     session.close()
 
 
-
-
 #计算因子的分层IC值
 def regression_tree_factor_layer_ic(bf_id):
 
@@ -853,15 +857,15 @@ def regression_tree_factor_layer_ic(bf_id):
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    sql = session.query(tq_sk_yieldindic.tradedate ,tq_sk_yieldindic.secode, tq_sk_yieldindic.yieldm).filter(tq_sk_yieldindic.secode.in_(all_stocks.index)).statement
-    yield_df = pd.read_sql(sql, session.bind , index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']) / 100.0
-    yield_df = yield_df.unstack()
-    yield_df.columns = yield_df.columns.droplevel(0)
-    yield_df = yield_df.rename(columns = secode_globalid_dict)
+    # sql = session.query(tq_sk_yieldindic.tradedate ,tq_sk_yieldindic.secode, tq_sk_yieldindic.yieldm).filter(tq_sk_yieldindic.secode.in_(all_stocks.index)).statement
+    # yield_df = pd.read_sql(sql, session.bind , index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']) / 100.0
+    # yield_df = yield_df.unstack()
+    # yield_df.columns = yield_df.columns.droplevel(0)
+    # yield_df = yield_df.rename(columns = secode_globalid_dict)
 
     #yield_df.to_csv('yieldm.csv')
 
-    #yield_df = pd.read_csv('yieldm.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+    yield_df = pd.read_csv('data/yieldm.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
 
     session.commit()
     session.close()
@@ -894,13 +898,19 @@ def regression_tree_factor_layer_ic(bf_id):
             layer_exposure.append(exposure)
             layer_yieldm.append(yieldm)
 
+        # rank_coef = stats.spearmanr(layer_exposure, layer_yieldm)
+        # if rank_coef[1] < 0.05:
+        #     ic = np.sign(rank_coef[0])
+        # else:
+        #     ic = 0
         ic = np.corrcoef(layer_exposure, layer_yieldm)[0][1]
-        print bf_id, yieldm_date, ic
+        # print bf_id, yieldm_date, ic
 
         bsfli = barra_stock_factor_layer_ic()
         bsfli.bf_id = bf_id
         bsfli.trade_date = yieldm_date
         bsfli.ic = ic
+        bsfli.updated_at = datetime.now()
         session.merge(bsfli)
 
 
@@ -927,6 +937,168 @@ def regression_tree_factor_layer_ic(bf_id):
 
     session.commit()
     session.close()
+
+    return
+
+
+#计算因子的分层IC值
+def regression_tree_factor_layer_fund_ic(bf_id):
+
+    all_stocks = stock_util.all_stock_info()
+    secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(barra_stock_factor_layer_stocks.trade_date, barra_stock_factor_layer_stocks.layer, barra_stock_factor_layer_stocks.stock_ids).filter(barra_stock_factor_layer_stocks.bf_id == bf_id).statement
+    layer_stock_df = pd.read_sql(sql, session.bind , index_col = ['trade_date', 'layer'], parse_dates = ['trade_date'])
+
+    session.commit()
+    session.close()
+
+    layer_stock_df = layer_stock_df.unstack()
+    layer_stock_df.columns = layer_stock_df.columns.droplevel(0)
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+
+    all_stocks = stock_util.all_stock_info()
+    secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    #导出factor exposure
+
+    sql = session.query(barra_stock_factor_exposure.trade_date, barra_stock_factor_exposure.stock_id ,barra_stock_factor_exposure.factor_exposure).filter(barra_stock_factor_exposure.bf_id == bf_id).filter(barra_stock_factor_exposure.trade_date.in_(stock_factor_util.month_last_day())).statement
+    factor_df = pd.read_sql(sql, session.bind , index_col = ['trade_date', 'stock_id'], parse_dates = ['trade_date'])
+
+    factor_df = factor_df.unstack()
+    factor_df.columns = factor_df.columns.droplevel(0)
+
+    session.commit()
+    session.close()
+
+
+    # engine = database.connection('caihui')
+    # Session = sessionmaker(bind=engine)
+    # session = Session()
+
+    # sql = session.query(tq_sk_yieldindic.tradedate ,tq_sk_yieldindic.secode, tq_sk_yieldindic.Yield).filter(tq_sk_yieldindic.secode.in_(all_stocks.index)).statement
+    # yield_df = pd.read_sql(sql, session.bind , index_col = ['tradedate', 'secode'], parse_dates = ['tradedate']) / 100.0
+    # yield_df = yield_df.unstack()
+    # yield_df.columns = yield_df.columns.droplevel(0)
+    yield_df = pd.read_csv('data/yield_day.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+    yield_df = yield_df.rename(columns = secode_globalid_dict)
+
+
+    layer_stock_df = layer_stock_df.loc[layer_stock_df.index & stock_factor_util.month_last_day()]
+
+    dates = layer_stock_df.index[layer_stock_df.index > '2012-12-01']
+    for date in dates[:-1]:
+        next_date = dates[dates > date][0]
+        layer_stock = layer_stock_df.loc[date].dropna()
+        layer_stock = layer_stock.sort_index()
+        #print layer_stock.index
+        # min_max_layer.append([layer_stock.iloc[0], layer_stock.iloc[-1]])
+        all_layers = layer_stock.values
+        # layer_stock_df = pd.DataFrame(all_layers, index = layer_stock_df.index, columns = range(layer_nums))
+
+        layer_loc = 0
+        yieldm = []
+        index = base_trade_dates.trade_date_lookback_index(end_date=date, lookback=52)
+        start_date = index.min().strftime("%Y-%m-%d")
+        end_date = date.strftime("%Y-%m-%d")
+        pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+        df_nav_fund  = base_ra_fund_nav.load_daily(start_date, end_date, codes = pool_codes)
+
+        for stock_ser in all_layers:
+            stock_pos = {}
+            stocks = json.loads(stock_ser)
+            stock_pos[layer_stock_df.index[0]] = stocks
+
+            stock_pos_df = stock_util.stock_pos_2_weight(stock_pos)
+
+            # stock_ids = yield_df.columns & stock_pos_df.columns
+            stock_ids = yield_df.columns & stock_pos_df.columns
+            tmp_yield_df = yield_df[stock_ids]
+            stock_pos_df = stock_pos_df[stock_ids]
+
+            stock_pos_df = stock_pos_df.reindex(tmp_yield_df.index).shift(1).fillna(method = 'pad')
+
+            nav_df = (tmp_yield_df*stock_pos_df).sum(axis = 1).dropna()
+            nav_df = (nav_df + 1).cumprod()
+
+            # adjust_point = CommandPool.get_multifactor_adjust_point(startdate = '2011-01-01', enddate=None, label_period=1)
+
+            engine = database.connection('asset')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            tmp_bf_id = '%s.%s'%(bf_id, layer_loc)
+            record = session.query(asset_ra_pool.ra_pool.id).filter(asset_ra_pool.ra_pool.ra_index_id == tmp_bf_id).first()
+            pool_id = record[0]
+            session.commit()
+            session.close()
+
+            df_pool = CommandPool.load_pools([pool_id])
+
+            pool = df_pool.iloc[0]
+
+            #adjust_point = adjust_point[-3:]
+            # CommandPool.fund_multifactor_corr_jensen(pool, adjust_point, 5, True)
+
+
+            fund_codes = CommandPool.cal_pool_index(pool, date, 52, 5, nav_df, df_nav_fund)
+
+            if len(fund_codes) == 0:
+                yieldm.append(-1)
+            else:
+                fund_nav = CommandPool.cal_pool_nav(fund_codes, layer_stock_df.index[0])
+                yieldm.append((fund_nav.loc[next_date]/fund_nav.loc[date] - 1).values[0])
+            print tmp_bf_id, fund_codes
+            layer_loc += 1
+
+        yieldm = np.array(yieldm)
+
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        sql = session.query(barra_stock_factor_layer_stocks.layer, barra_stock_factor_layer_stocks.trade_date, barra_stock_factor_layer_stocks.stock_ids).filter(barra_stock_factor_layer_stocks.bf_id == bf_id).filter(barra_stock_factor_layer_stocks.trade_date >= '2010-01-01').statement
+        all_factor_layer_stock_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'layer'])
+        all_factor_layer_stock_df = all_factor_layer_stock_df.unstack()
+        all_factor_layer_stock_df.columns = all_factor_layer_stock_df.columns.droplevel(0)
+
+        layer_stocks = all_factor_layer_stock_df.loc[date].dropna()
+        layer_stocks = layer_stocks.sort_index(ascending=True)
+        layer_exposure = []
+
+        for layer in layer_stocks.index:
+            stocks = json.loads(layer_stocks[layer])
+            exposure = factor_df.loc[date, stocks].mean()
+            layer_exposure.append(exposure)
+
+        layer_exposure = np.array(layer_exposure)
+        if len(yieldm[yieldm != -1]) < 2:
+            ic = 0
+        else:
+            print layer_exposure
+            print yieldm
+            ic = np.corrcoef(layer_exposure[yieldm != -1], yieldm[yieldm != -1])[0][1]
+
+        print bf_id, next_date, ic, stats.spearmanr(layer_exposure[yieldm != -1], yieldm[yieldm != -1])
+
+        bsfli = barra_stock_factor_layer_ic()
+        bsfli.bf_id = bf_id
+        bsfli.trade_date = next_date
+        bsfli.ic = ic
+        session.merge(bsfli)
+
+        session.commit()
+        session.close()
 
     return
 
@@ -1012,10 +1184,10 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
         ic = ic.dropna()
         if len(ic) <= 4:
             continue
-        #threshold = ic.iloc[4]
-        threshold = -1.0
-        #if threshold >= 0.3:
-        #    threshold = 0.3
+        threshold = ic.iloc[4]
+        # threshold = 0.2
+        # if threshold >= 0.3:
+           # threshold = 0.3
         date_factor_layer = []
         for bf_id in ic.index:
             ic_v = ic.loc[bf_id]
@@ -1042,12 +1214,12 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
 
     factor_layer_df = pd.DataFrame(factor_layers, index = dates)
     factor_layer_df[pd.isnull(factor_layer_df)] = np.nan
+    print factor_layer_df
 
     session.commit()
     session.close()
 
 
-    '''
     all_stocks = stock_util.all_stock_info()
     secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
 
@@ -1061,14 +1233,13 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     yield_df.columns = yield_df.columns.droplevel(0)
     yield_df = yield_df.rename(columns = secode_globalid_dict)
 
-    yield_df.to_csv('yield.csv')
+    yield_df.to_csv('data/yield.csv')
 
     session.commit()
     session.close()
-    '''
 
 
-    yield_df = pd.read_csv('yield.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
+    # yield_df = pd.read_csv('data/yield_day.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
 
 
 
@@ -1185,6 +1356,7 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
             bsfvf = barra_stock_factor_valid_factor()
             bsfvf.bf_layer_id = bf_id
             bsfvf.trade_date = day
+            bsfvf.updated_at = datetime.now()
 
             session.merge(bsfvf)
 

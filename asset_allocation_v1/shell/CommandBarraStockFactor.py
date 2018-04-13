@@ -153,12 +153,12 @@ def barra_stock_factor_layer_index_nav(ctx):
     bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
             'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
 
-    pool = Pool(20)
-    pool.map(factor_regression_tree_layer_nav, bf_ids)
-    pool.close()
-    pool.join()
+    # pool = Pool(20)
+    # pool.map(factor_regression_tree_layer_nav, bf_ids)
+    # pool.close()
+    # pool.join()
 
-    #factor_regression_tree_layer_nav(bf_ids[0])
+    factor_regression_tree_layer_nav(bf_ids[0])
 
     return
 
@@ -206,7 +206,23 @@ def barra_stock_factor_ic(ctx):
     pool.close()
     pool.join()
 
-    #regression_tree_factor_layer_ic(bf_ids[3])
+    # regression_tree_factor_layer_ic(bf_ids[3])
+    return
+
+
+@bsf.command()
+@click.pass_context
+def barra_stock_factor_fund_ic(ctx):
+
+    bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
+            'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
+
+    # pool = Pool(20)
+    # pool.map(regression_tree_factor_layer_fund_ic, bf_ids)
+    # pool.close()
+    # pool.join()
+
+    regression_tree_factor_layer_fund_ic(bf_ids[0])
     return
 
 

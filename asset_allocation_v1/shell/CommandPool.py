@@ -31,6 +31,7 @@ import LabelAsset
 import Financial as fin
 
 from datetime import datetime, timedelta
+from ipdb import set_trace
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
@@ -38,6 +39,7 @@ from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_ra_pool
 from db.asset_stock_factor import *
+
 
 import traceback, code
 
@@ -970,8 +972,6 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
 
 
 def multifactor_pool_by_corr_jensen(pool, day, lookback, limit, pre_codes):
-    import ipdb
-    ipdb.set_trace()
 
     index = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=lookback)
 
@@ -1075,6 +1075,100 @@ def multifactor_pool_by_corr_jensen(pool, day, lookback, limit, pre_codes):
             #print corr_threshold
 
         return final_codes
+
+
+def cal_pool_index(pool, day, lookback, limit, df_nav_index, df_nav_fund):
+
+    index = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=lookback)
+    df_nav_index = df_nav_index.reindex(index)
+
+    # start_date = index.min().strftime("%Y-%m-%d")
+    # end_date = day.strftime("%Y-%m-%d")
+
+    # df_nav_index.columns = ['nav']
+    df_nav_index = df_nav_index.to_frame(name = 'nav')
+
+    if len(df_nav_index.index) == 0:
+        return []
+
+    # pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+
+    # df_nav_fund  = base_ra_fund_nav.load_daily(start_date, end_date, codes = pool_codes)
+
+    if len(df_nav_fund) == 0:
+        return []
+
+    df_nav_fund  = df_nav_fund.reindex(pd.date_range(df_nav_index.index[0], df_nav_index.index[-1]))
+    df_nav_fund  = df_nav_fund.fillna(method = 'pad')
+    df_nav_fund  = df_nav_fund.loc[df_nav_index.index]
+    fund_index_df = pd.concat([df_nav_index, df_nav_fund], axis = 1, join_axes = [df_nav_index.index])
+    df_nav_fund  = df_nav_fund.dropna(axis = 0, how = 'all')
+
+    fund_index_corr_df = fund_index_df.pct_change().fillna(0.0).corr().fillna(0.0)
+
+    corr = fund_index_corr_df['nav'][1:]
+    corr = corr.sort_values(ascending = False)
+
+    code_jensen = {}
+    for code in df_nav_fund.columns:
+        jensen = fin.jensen(df_nav_fund[code].pct_change().fillna(0.0), df_nav_index['nav'].pct_change().fillna(0.0) ,Const.rf)
+        code_jensen.setdefault(code, jensen)
+
+    if len(code_jensen) == 0:
+        logger.info('No FUND')
+        return None
+    else:
+        final_codes = []
+        x = code_jensen
+        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+
+        #print sorted_x[0:10]
+        # corr_threshold = np.percentile(corr.values, 90)
+        # corr_threshold = 0.7 if corr_threshold <= 0.7 else corr_threshold
+        # corr_threshold = 0.9 if corr_threshold >= 0.9 else corr_threshold
+        corr_threshold = 0.9
+        #corr_threshold = 0.9
+        for i in range(0, len(sorted_x)):
+            code, jensen = sorted_x[i]
+            if corr[code] >= corr_threshold:
+                final_codes.append(code)
+
+        final_codes = final_codes[0: limit]
+
+        return final_codes
+
+
+def cal_pool_nav(fund_codes, date):
+    # 加载基金列表
+    df = pd.DataFrame(data = fund_codes, index = np.repeat(date, len(fund_codes)), columns = ['ra_fund_code'])
+
+    # 构建均分仓位
+    df['ra_ratio'] = 1.0
+    df.set_index('ra_fund_code', append=True, inplace=True)
+    df['ra_ratio'] = df['ra_ratio'].groupby(level=0, group_keys=False).apply(lambda x: x / len(x))
+    df_position = df.unstack().fillna(0.0)
+    df_position.columns = df_position.columns.droplevel(0)
+
+
+    # 加载基金收益率
+    min_date = df_position.index.min()
+    #max_date = df_position.index.max()
+    max_date = (datetime.now() - timedelta(days=1)) # yesterday
+
+
+    df_nav = DBData.db_fund_value_daily(
+        min_date, max_date, codes=df_position.columns)
+    if '000000' in df_position.columns:
+        df_nav['000000'] = 1
+    df_inc = df_nav.pct_change().fillna(0.0)
+
+    # 计算复合资产净值
+    df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
+
+    df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'ra_nav'}).copy()
+    df_result.index.name = 'ra_date'
+
+    return df_result
 
 
 @pool.command()
