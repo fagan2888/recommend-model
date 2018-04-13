@@ -13,13 +13,9 @@ from scipy import stats
 import random
 from ipdb import set_trace
 from pathos.multiprocessing import ProcessingPool as Pool
-from RiskMgrMGARCH import RiskMgrMGARCH
+import RiskMgrGARCHHelper
 import time
 import pickle
-
-from db import *
-
-mgarch = RiskMgrMGARCH()
 
 # codes = {'sh300':{
 #             'code': '120000001',
@@ -38,27 +34,22 @@ mgarch = RiskMgrMGARCH()
 #              'timing':'21120500'}
 #          }
 
-
-class RPyGARCH(object):
-    def __init__(self, codes, target, tdates, df_nav, timing):
-        s_time = time.time()
+class RiskMgrGARCHPrototype(object):
+    def __init__(self, codes, target, df_nav, timing, vars_):
         self.empty = 5
-        self.ratio = 0
-        self.joint = 0.5
         self.codes = codes
         self.target = target
         #Cache for VaRs calculated by R
-        self.vars = {}
+        self.vars = vars_
         #Cache for the status if the joint distribution got brokedown
         self.joints = {}
-        self.tdates = tdates
         self.df_nav = df_nav
         self.timings = timing
 
     def timing(self, target=None):
         if target is None:
             target = self.target
-        return self.timings[target].reindex(self.tdates[target])
+        return self.timings[target].reindex(self.df_nav[target].index)
     
     def inc(self, target=None, raw = False):
         if target is None or target == self.target:
@@ -90,20 +81,33 @@ class RPyGARCH(object):
                              'inc3d': self.inc3d(target, raw=True), 
                              'inc5d': self.inc5d(target, raw=True),
                              'timing': self.timing(target)})
+    def dump(self, dirpath):
+        if not os.path.exists(dirpath):
+            os.mkdir(dirpath)
+        with open(os.path.join(dirpath, 'vars'), 'w') as f:
+            pickle.dump(self.vars, f)
+        with open(os.path.join(dirpath, 'joints'), 'w') as f:
+            pickle.dump(self.joints, f)
     
-    def calc_joint(self, target=None):
-        if target == self.target:
-            return None
-        if target is None:
-            return pd.DataFrame({k: self.calc_joint(k) for k in self.codes if k != self.target}).fillna(False)
-        if not (target in self.joints):
-            print "Start multivariable GARCH fitting for %s" % target
-            s_time = time.time()
-            self.joints[target] = mgarch.perform_joint(self.inc5d(target))
-            print "Complete multivariable GARCH fitting! Elapsed time: %s" % time.strftime("%M:%S", time.gmtime(time.time()-s_time))
-        return self.joints[target]
+    def load(self, dirpath):
+        if not os.path.exists(dirpath):
+            print "Cannot find the file!"
+        else:
+            with open(os.path.join(dirpath, 'vars')) as f:
+                self.vars = pickle.load(f)
+            with open(os.path.join(dirpath, 'joints')) as f:
+                self.joints = pickle.load(f)
 
-    def calc_garch(self, target, disp=True):
+
+
+class RiskMgrGARCH(RiskMgrGARCHPrototype):
+    def __init__(self, codes, target, df_nav, timing, vars_):
+        super(RiskMgrGARCH, self).__init__(codes, target, df_nav, timing, vars_)
+        self.ratio = 0.5
+
+    def perform(self, target=None, disp=True):
+        if target is None:
+            target = self.target
         print "Start Risk Ctrl for %s" % target
         df = self.generate_df_for_garch(target)
         s_time = time.time()
@@ -111,7 +115,7 @@ class RPyGARCH(object):
         if target in self.vars:
             df_vars = self.vars[target]
         else:
-            df_vars = mgarch.perform_single(df.drop(columns=['timing']))
+            df_vars = RiskMgrGARCHHelper.perform_single(df.drop(columns=['timing']))
             self.vars[target] = df_vars
         print "Complete VaR calculation for %s! Elapsed time: %s" % (target, time.strftime("%M:%S", time.gmtime(time.time()-s_time)))
         status, empty_days, action = 0, 0, 0
@@ -124,11 +128,11 @@ class RPyGARCH(object):
                 pass
             else:
                 if status != 2:
-                    if row['inc2d'] < df_vars.loc[day]['VaR2d']:
+                    if row['inc2d'] < df_vars.loc[day]['var_2d']:
                         status, empty_days, position, action = 1, 0, self.ratio, 2
-                    elif row['inc3d'] < df_vars.loc[day]['VaR3d']:
+                    elif row['inc3d'] < df_vars.loc[day]['var_3d']:
                         status, empty_days, position, action = 1, 0, self.ratio, 3
-                if row['inc5d'] < df_vars.loc[day]['VaR5d']:
+                if row['inc5d'] < df_vars.loc[day]['var_5d']:
                     status, empty_days, position, action = 2, 0, 0, 5
 
             if status == 0:
@@ -159,11 +163,44 @@ class RPyGARCH(object):
         if disp:
             self.calc_winrate(df_result)
         return df_result
+    
+    def calc_winrate(self, df_result):
+        inc = np.log(1+self.df_nav[self.target].pct_change())
+        status_half = calcstatus(1, df_result)
+        status_full = calcstatus(2, df_result)
+        count = lambda x: np.array([inc.iloc[i].sum() for i in x])
+        count_half = count(status_half)
+        count_full = count(status_full)
+        print "Half triggered: %d" %  count_half.size
+        print "Half winned: %d" % count_half[count_half<0].size
+        print "Full triggered: %d" % count_full.size
+        print "Full winned: %d" % count_full[count_full<0].size
+
+
+
+class RiskMgrMGARCH(RiskMgrGARCHPrototype):
+    def __init__(self, codes, target, df_nav, timing, vars_):
+        super(RiskMgrMGARCH, self).__init__(codes, target, df_nav, timing, vars_)
+        self.ratio = 0
+        self.joint = 0.5
+        self.garch = RiskMgrGARCH(codes, target, df_nav, timing, vars_)
+    
+    def calc_joint(self, target=None):
+        if target == self.target:
+            return None
+        if target is None:
+            return pd.DataFrame({k: self.calc_joint(k) for k in self.codes if k != self.target}).fillna(False)
+        if not (target in self.joints):
+            print "Start multivariable GARCH fitting for %s" % target
+            s_time = time.time()
+            self.joints[target] = RiskMgrGARCHHelper.perform_joint(self.inc5d(target))
+            print "Complete multivariable GARCH fitting! Elapsed time: %s" % time.strftime("%M:%S", time.gmtime(time.time()-s_time))
+        return self.joints[target]
      
-    def calc_mult_garch(self):
+    def perform(self):
         # Calculate where the joint distribution get exceeded
         df_joint = self.calc_joint()
-        df_result_garch = {k:self.calc_garch(k, disp=False) for k in self.codes if k != self.target}
+        df_result_garch = {k:self.garch.perform(k, disp=False) for k in self.codes if k != self.target}
         # Start the RiskMgr DF for the target asset
         print "Start joint fitting"
         df = self.generate_df_for_garch(self.target)
@@ -171,7 +208,7 @@ class RPyGARCH(object):
         if self.target in self.vars:
             df_vars = self.vars[self.target]
         else:
-            df_vars = mgarch.perform_single(df.drop(columns=['timing']))
+            df_vars = RiskMgrGARCHHelper.perform_single(df.drop(columns=['timing']))
             self.vars[self.target] = df_vars
         print "Complete VaR calculation for %s! Elapsed time: %s" % (self.target, time.strftime("%M:%S", time.gmtime(time.time()-s_time)))
         status, empty_days, action = 0, 0, 0
@@ -184,12 +221,12 @@ class RPyGARCH(object):
                 pass
             else:
                 if status < 3:
-                    if row['inc2d'] < df_vars.loc[day]['VaR2d']:
+                    if row['inc2d'] < df_vars.loc[day]['var_2d']:
                         status, empty_days, position, action = 2, 0, self.ratio, 2
-                    elif row['inc3d'] < df_vars.loc[day]['VaR3d']:
+                    elif row['inc3d'] < df_vars.loc[day]['var_3d']:
                         status, empty_days, position, action = 2, 0, self.ratio, 3
                 
-                if row['inc5d'] < df_vars.loc[day]['VaR5d']:
+                if row['inc5d'] < df_vars.loc[day]['var_5d']:
                     status, empty_days, position, action = 3, 0, 0, 5
                 
                 if day in df_joint.index:
@@ -251,35 +288,6 @@ class RPyGARCH(object):
         print "Joint half winned: %d" % count_joint_half[count_joint_half<0].size
         print "Joint full triggered: %d" % count_joint_full.size
         print "Joint full winned: %d" % count_joint_full[count_joint_full<0].size
-    
-    def calc_winrate(self, df_result):
-        inc = np.log(1+self.df_nav[self.target].pct_change())
-        status_half = calcstatus(1, df_result)
-        status_full = calcstatus(2, df_result)
-        count = lambda x: np.array([inc.iloc[i].sum() for i in x])
-        count_half = count(status_half)
-        count_full = count(status_full)
-        print "Half triggered: %d" %  count_half.size
-        print "Half winned: %d" % count_half[count_half<0].size
-        print "Full triggered: %d" % count_full.size
-        print "Full winned: %d" % count_full[count_full<0].size
-    
-    def dump(self, dirpath):
-        if not os.path.exists(dirpath):
-            os.mkdir(dirpath)
-        with open(os.path.join(dirpath, 'vars'), 'w') as f:
-            pickle.dump(self.vars, f)
-        with open(os.path.join(dirpath, 'joints'), 'w') as f:
-            pickle.dump(self.joints, f)
-    
-    def load(self, dirpath):
-        if not os.path.exists(dirpath):
-            print "Cannot find the file!"
-        else:
-            with open(os.path.join(dirpath, 'vars')) as f:
-                self.vars = pickle.load(f)
-            with open(os.path.join(dirpath, 'joints')) as f:
-                self.joints = pickle.load(f)
 
 
 

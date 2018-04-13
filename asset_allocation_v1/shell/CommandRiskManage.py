@@ -19,6 +19,7 @@ import RiskManagement
 import RiskMgrSimple
 import RiskMgrLow
 import RiskMgrGARCH
+import RiskMgrVaRs
 import DFUtil
 
 from datetime import datetime, timedelta
@@ -27,6 +28,7 @@ from Const import datapath
 from tabulate import tabulate
 from sqlalchemy import MetaData, Table, select, func
 from db import *
+from Queue import Queue
 
 import traceback, code
 
@@ -41,6 +43,7 @@ def riskmgr(ctx, optid, optonline):
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
+        ctx.invoke(calc_vars, optid=optid)
         ctx.invoke(signal, optid=optid, optonline=optonline)
         ctx.invoke(nav, optid=optid)
     else:
@@ -345,6 +348,89 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
 @riskmgr.command()
 @click.option('--id', 'optid', help=u'risk mgr id')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.pass_context
+def calc_vars(ctx, optid, optlist):
+    '''calculate VaRs
+    '''
+    if optid is not None:
+        ids = [s.strip() for s in optid.split(',')]
+    else:
+        ids = None
+
+    xtypes = None
+
+    df_riskmgr = asset_rm_riskmgr.load(ids, xtypes)
+
+    if optlist:
+        df_riskmgr['rm_name'] = df_riskmgr['rm_name'].map(lambda e: e.decode('utf-8'))
+        print tabulate(df_riskmgr, headers='keys', tablefmt='psql')
+        return 0
+    
+    # with click.progressbar(length=len(df_riskmgr), label='update riskmgr signal') as bar:
+    #     for _, riskmgr in df_riskmgr.iterrows():
+    #         bar.update(1)
+    #         signal_update(riskmgr)
+    for _, riskmgr in df_riskmgr.iterrows():
+        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5:
+            vars_update(riskmgr)
+        else:
+            pass
+
+
+def vars_update(riskmgr):
+    riskmgr_id = riskmgr['globalid']
+    argv = dict()
+    #Parse argvs
+    if riskmgr['rm_argv'] != '':
+        argv.update({k: json.loads(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(';')]})
+    
+    if riskmgr['rm_algo'] == 4:
+        #Univariate GARCH
+        codes = [riskmgr['rm_asset_id']]
+
+    if riskmgr['rm_algo'] == 5:
+        #Multivariate GARCH
+        tmp_df_riskmgrs = asset_rm_riskmgr.load(argv['assets'])
+        tmp_df_riskmgrs = tmp_df_riskmgrs.append(riskmgr)
+        codes = [row['rm_asset_id'] for _, row in tmp_df_riskmgrs.iterrows()]
+
+
+    VaR = RiskMgrVaRs.RiskMgrVaRs()
+    #Load datas from DB
+    tdates = {_id: base_trade_dates.load_origin_index_trade_date(_id) for _id in codes}
+    vars_ = {_id: asset_rm_riskmgr_vars.load_series(_id) for _id in codes}
+    for _id in codes:
+        tdate = tdates[_id]
+        # Check if the VaRs table is empty
+        if vars_[_id].empty:
+            nav = database.load_nav_series(_id, reindex=tdate)
+            df_vars = VaR.perform(nav)
+            df_vars.index.name = 'ix_date'
+            df_vars['index_id'] = _id
+            df_tosave = df_vars.reset_index().set_index(['index_id', 'ix_date'])
+            asset_rm_riskmgr_vars.save(_id, df_tosave)
+        else:
+            #If not empty, check if it needs to update
+            df_vars = vars_[_id]
+            missing_days = tdate[600:].difference(df_vars.index)
+            if not missing_days.empty:
+                nav = database.load_nav_series(_id, reindex=tdate)
+                idxs = [i for i in range(600, len(tdate)) if tdate[i] in missing_days]
+                idxs = filter(lambda i: tdate[i] in missing_days, range(600, len(tdate)))
+                df_tmp = VaR.perform_days(nav, idxs)
+                df_vars = pd.concat([df_vars, df_tmp])
+                df_vars.index.name = 'ix_date'
+                df_vars['index_id'] = _id
+                df_tosave = df_vars.reset_index().set_index(['index_id', 'ix_date'])
+                asset_rm_riskmgr_vars.save(_id, df_tosave)
+            else:
+                pass
+        
+
+
+@riskmgr.command()
+@click.option('--id', 'optid', help=u'risk mgr id')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--online/--no-online', 'optonline', default=False, help=u'include online instance')
 @click.pass_context
 def signal(ctx, optid, optlist, optonline):
@@ -444,7 +530,7 @@ def signal_update_garch(riskmgr):
     
     if riskmgr['rm_algo'] == 4:
         #Univariate GARCH
-        codes = {riskmgr['rm_name'] : {"code" : riskmgr['rm_asset_id'], "timing" : riskmgr['rm_timing_id']}}
+        codes = {riskmgr['rm_name'] : {"id" : riskmgr['rm_asset_id'], "timing" : riskmgr['rm_timing_id']}}
 
     if riskmgr['rm_algo'] == 5:
         #Multivariate GARCH
@@ -452,35 +538,26 @@ def signal_update_garch(riskmgr):
         tmp_df_riskmgrs = tmp_df_riskmgrs.append(riskmgr)
         codes = {}
         for _, row in tmp_df_riskmgrs.iterrows():
-            codes[row['rm_name']] = {"code" : row['rm_asset_id'], "timing" : row['rm_timing_id']}
+            codes[row['rm_name']] = {"id" : row['rm_asset_id'], "timing" : row['rm_timing_id']}
 
     target = riskmgr['rm_name']
 
     #Load datas from DB
-    tdates = {k: base_trade_dates.load_origin_index_trade_date(v['code']) for k, v in codes.items()}
+    tdates = {k: base_trade_dates.load_origin_index_trade_date(v['id']) for k, v in codes.items()}
     #For each other assets, filter the tradedates by the target one
     for i in codes:
         if i != target:
             tdates[i] = tdates[target].intersection(tdates[i])
-    df_nav = pd.DataFrame({k: database.load_nav_series(v['code'], reindex=tdates[k]) for k, v in codes.items()})
+    df_nav = pd.DataFrame({k: database.load_nav_series(v['id'], reindex=tdates[k]) for k, v in codes.items()})
     timing = pd.DataFrame({k: asset_tc_timing_signal.load_series(v['timing']).reindex(tdates[k]) for k,v in codes.items()})
-
-    risk_mgr = RiskMgrGARCH.RPyGARCH(codes, target, tdates, df_nav, timing)
-
-    dirpath = os.path.join('mgarchcache', riskmgr_id)
-
-    import ipdb
-    ipdb.set_trace()
+    vars_ = {k: asset_rm_riskmgr_vars.load_series(v['id']) for k,v in codes.items()}
 
     if riskmgr['rm_algo'] == 4:
-        df_result = risk_mgr.calc_garch(target)
+        risk_mgr = RiskMgrGARCH.RiskMgrGARCH(codes, target, df_nav, timing, vars_)
     elif riskmgr['rm_algo'] == 5:
-        df_result = risk_mgr.calc_mult_garch()
+        risk_mgr = RiskMgrGARCH.RiskMgrMGARCH(codes, target, df_nav, timing, vars_)
 
-    #Save the result to cache, used for debugging
-
-    risk_mgr.dump(dirpath)
-
+    df_result = risk_mgr.perform()
     df_result = df_result.drop(columns=['rm_status'])
     df_result = DFUtil.filter_same_with_last(df_result)
 

@@ -39,6 +39,7 @@ import asset_ra_portfolio_pos
 import asset_rm_riskmgr
 import asset_rm_riskmgr_signal
 import asset_rm_riskmgr_nav
+import asset_rm_riskmgr_vars
 import asset_rm_risk_mgr
 import asset_rs_reshape
 import asset_rs_reshape_nav
