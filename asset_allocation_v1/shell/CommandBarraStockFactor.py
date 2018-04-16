@@ -462,3 +462,20 @@ def barra_stock_factor_2_composite_asset(ctx):
     bf_ids = ['BF.000001.0', 'BF.000002.0', 'BF.000003.0', 'BF.000004.0', 'BF.000005.0','BF.000006.0','BF.000007.0','BF.000008.0','BF.000009.0','BF.000010.0','BF.000011.0','BF.000012.0', 'BF.000013.0', 'BF.000014.0', 'BF.000015.0', 'BF.000016.0', 'BF.000017.0', 'BF.000001.1', 'BF.000002.1', 'BF.000003.1', 'BF.000004.1', 'BF.000005.1','BF.000006.1','BF.000007.1','BF.000008.1','BF.000009.1','BF.000010.1','BF.000011.1','BF.000012.1', 'BF.000013.1', 'BF.000014.1', 'BF.000015.1', 'BF.000016.1', 'BF.000017.1']
 
     pass
+
+
+@bsf.command()
+@click.pass_context
+def valid_factor_performance(ctx):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(barra_stock_factor_valid_factor.trade_date, barra_stock_factor_valid_factor.bf_layer_id).statement
+
+    df = pd.read_sql(sql ,session.bind, index_col = ['trade_date', 'bf_layer_id'], parse_dates = ['trade_date'])
+    session.commit()
+    session.close()
+
+    pass

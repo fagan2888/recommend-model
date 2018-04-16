@@ -1229,7 +1229,6 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     yield_df.columns = yield_df.columns.droplevel(0)
     yield_df = yield_df.rename(columns = secode_globalid_dict)
 
-    yield_df.to_csv('data/yield.csv')
 
     session.commit()
     session.close()
@@ -1370,8 +1369,6 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     pool.close()
     pool.join()
 
-
-    print factor_layer_df
     return factor_layer_df
 
 
