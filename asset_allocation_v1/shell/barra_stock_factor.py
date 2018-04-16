@@ -1151,7 +1151,6 @@ def corr_factor_layer_selector(bf_ids):
 
     factor_layer_df.to_csv('factor_layer_df.csv')
 
-    print factor_layer_df
     return factor_layer_df
 
 
@@ -1234,11 +1233,6 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     session.close()
 
 
-    # yield_df = pd.read_csv('data/yield_day.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
-
-
-
-    #print yield_df.tail()
     factor_layer_df = factor_layer_df[factor_layer_df.index >= '2010-01-01']
 
 
@@ -1288,7 +1282,7 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
                 layer_stocks = json.loads(record[0])
                 stocks.extend(layer_stocks)
 
-                pos = pd.DataFrame(1.0 / len(stocks), index = [date], columns = stocks)
+                pos = pd.DataFrame(1.0 / len(stocks), index = [yield_df.index[-1]], columns = stocks)
                 tmp_yield_df = yield_df[stocks]
                 pos = pos.reindex(tmp_yield_df.index).fillna(method = 'bfill')
                 nav_df = (tmp_yield_df * pos).sum(axis = 1).dropna()
@@ -1327,7 +1321,7 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
             elif origin_layer == 0 and start_layer > end_layer:
                 continue
 
-            pos = pd.DataFrame(1.0 / len(stocks), index = [date], columns = stocks)
+            pos = pd.DataFrame(1.0 / len(stocks), index = [yield_df.index[-1]], columns = stocks)
             tmp_yield_df = yield_df[stocks]
             pos = pos.reindex(tmp_yield_df.index).fillna(method = 'bfill')
             nav_df = (tmp_yield_df * pos).sum(axis = 1).dropna()

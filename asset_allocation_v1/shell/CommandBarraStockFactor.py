@@ -464,18 +464,99 @@ def barra_stock_factor_2_composite_asset(ctx):
     pass
 
 
+
 @bsf.command()
 @click.pass_context
 def valid_factor_performance(ctx):
+
+    bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
+            'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
+
 
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    sql = session.query(barra_stock_factor_valid_factor.trade_date, barra_stock_factor_valid_factor.bf_layer_id).statement
+    sql = session.query(barra_stock_factor_layer_ic.trade_date, barra_stock_factor_layer_ic.bf_id, barra_stock_factor_layer_ic.ic).filter(barra_stock_factor_layer_ic.bf_id.in_(bf_ids)).statement
+    layer_ic_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'bf_id'], parse_dates = ['trade_date'])
+    layer_ic_df = layer_ic_df.unstack()
+    layer_ic_df.columns = layer_ic_df.columns.droplevel(0)
 
-    df = pd.read_sql(sql ,session.bind, index_col = ['trade_date', 'bf_layer_id'], parse_dates = ['trade_date'])
+
+    layer_ic_df = layer_ic_df.rolling(14).mean()
+    layer_ic_abs = abs(layer_ic_df)
+
+    sql = session.query(barra_stock_factor_layer_stocks.layer, barra_stock_factor_layer_stocks.trade_date ,barra_stock_factor_layer_stocks.bf_id).statement
+    all_factor_layer_stock_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'bf_id'])
+
+    dates = []
+    factor_layers = []
+    for i in range(0, len(layer_ic_abs.index)):
+        date = layer_ic_abs.index[i]
+        ic = layer_ic_abs.loc[date]
+        ic = ic.sort_values(ascending = False)
+        ic = ic.dropna()
+        if len(ic) <= 4:
+            continue
+        threshold = ic.iloc[4]
+        date_factor_layer = []
+        for bf_id in ic.index:
+            ic_v = ic.loc[bf_id]
+            if ic_v >= threshold:
+                if layer_ic_df.loc[date , bf_id] > 0:
+                    date_factor_layer.append(bf_id + '.1')
+                else:
+                    date_factor_layer.append(bf_id + '.0')
+
+        factor_layers.append( date_factor_layer )
+        dates.append(date)
+
+    factor_layer_df = pd.DataFrame(factor_layers, index = dates)
+    factor_layer_df[pd.isnull(factor_layer_df)] = np.nan
+    factor_layer_df = factor_layer_df[factor_layer_df.index >= '2010-01-01']
+
+    layer_nav_dfs = []
+    for bf_id in bf_ids:
+        sql = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.layer, barra_stock_factor_layer_nav.nav).filter(barra_stock_factor_layer_nav.bf_id == bf_id).statement
+        layer_nav_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'layer'], parse_dates = ['trade_date'])
+
+        layer_nav_df = layer_nav_df.unstack()
+        layer_nav_df.columns = layer_nav_df.columns.droplevel(0)
+        cols = []
+        for col in layer_nav_df.columns:
+            cols.append(bf_id + '.' + str(col))
+
+        layer_nav_df.columns = cols
+        #print layer_nav_df.tail()
+        layer_nav_dfs.append(layer_nav_df)
+
+    layer_nav_df = pd.concat(layer_nav_dfs, axis = 1)
+    layer_nav_df = layer_nav_df[layer_nav_df.index >= '2010-01-01']
+
+    dates = factor_layer_df.index
+    all_ranks = []
+    for i in range(len(dates) - 3):
+        start_date = dates[i]
+        end_date = dates[i + 3]
+
+        tmp_layer_nav_df = layer_nav_df[layer_nav_df.index <= end_date]
+        tmp_layer_nav_df = tmp_layer_nav_df[tmp_layer_nav_df.index >= start_date]
+        tmp_layer_nav_df = tmp_layer_nav_df.iloc[-1] / tmp_layer_nav_df.iloc[0] - 1
+
+        tmp_layer_nav_df = tmp_layer_nav_df.sort_values(ascending = False)
+
+        valid_factors = factor_layer_df.loc[start_date]
+
+        factor_sorted = list(tmp_layer_nav_df.index.ravel())
+        ranks = []
+        for factor in valid_factors.values:
+            ranks.append(factor_sorted.index(factor))
+        print start_date, np.mean(ranks)
+        all_ranks.append(np.mean(ranks))
+
+    print np.mean(all_ranks)
+
     session.commit()
     session.close()
 
-    pass
+
