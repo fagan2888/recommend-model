@@ -19,6 +19,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import distinct
 from tabulate import tabulate
 from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund
 from db.asset_stock_factor import *
@@ -115,8 +116,10 @@ def percentile20nan(x):
     return x
 
 
+
 #插入股票合法性表
 def stock_valid_table():
+
 
     all_stocks = stock_util.all_stock_info()
     st_stocks = stock_util.stock_st()
@@ -178,6 +181,15 @@ def stock_valid_table():
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
+
+    records = session.query(distinct(stock_factor_stock_valid.trade_date)).all()
+    dates = [record[0] for record in records]
+
+    dates.sort()
+    last_date = dates[-20]
+
+    quotation = quotation[quotation.index >= last_date.strftime('%Y-%m-%d')]
+
     for date in quotation.index:
         records = []
         for secode in quotation.columns:
@@ -192,12 +204,11 @@ def stock_valid_table():
             stock_valid.trade_date = date
             stock_valid.valid = valid
 
-            records.append(stock_valid)
-            #session.merge(stock_valid)
+            session.merge(stock_valid)
 
-        session.add_all(records)
         session.commit()
         logger.info('stock validation date %s done' % date.strftime('%Y-%m-%d'))
+
     session.commit()
     session.close()
 
@@ -305,25 +316,30 @@ def update_factor_value(bf_id, factor_df):
     Session = sessionmaker(bind=engine)
     session = Session()
 
+    records = session.query(distinct(barra_stock_factor_exposure.trade_date)).filter(barra_stock_factor_exposure.bf_id == bf_id).all()
+
+    dates = [record[0] for record in records]
+    dates.sort()
+
+    last_date = dates[-20]
+
     for stock_id in factor_df.columns:
         ser = factor_df[stock_id].dropna()
-        records = []
+        ser = ser[ser.index >= last_date.strftime('%Y-%m-%d')]
         for date in ser.index:
             bsfe = barra_stock_factor_exposure()
             bsfe.bf_id = bf_id
             bsfe.stock_id = stock_id
             bsfe.trade_date = date
             bsfe.factor_exposure = ser.loc[date]
-            #session.merge(bsfe)
-            records.append(bsfe)
+            session.merge(bsfe)
 
-        session.add_all(records)
         session.commit()
 
-        #print bf_id, stock_id
 
     session.close()
     logger.info('update barra stock factor exposure done')
+
     return
 
 

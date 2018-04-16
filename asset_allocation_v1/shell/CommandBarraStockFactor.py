@@ -69,17 +69,17 @@ def barra_stock_factor_exposure(ctx):
     #factor_funcs = [ep_ttm_factor, free_capital_factor, bp_factor]
 
 
-    #factor_funcs = [ep_ttm_factor, bp_factor, free_capital_factor, ln_price_factor, turn_rate_factor, trade_amount_factor, holder_avgpct_factor, roe_factor,
-    #        roa_factor, weight_strength_factor, relative_strength_factor, std_factor, current_ratio_factor, cash_ratio_factor, debtequityratio_factor, 
-    #        finalcial_leverage_factor, grossprofit_factor]
-    #pool = Pool(len(factor_funcs))
-    #for func in factor_funcs:
-    #    pool.apply_async(func)
-    #pool.close()
-    #pool.join()
+    factor_funcs = [ep_ttm_factor, bp_factor, free_capital_factor, ln_price_factor, turn_rate_factor, trade_amount_factor, holder_avgpct_factor, roe_factor,
+            roa_factor, weight_strength_factor, relative_strength_factor, std_factor, current_ratio_factor, cash_ratio_factor, debtequityratio_factor, 
+            finalcial_leverage_factor, grossprofit_factor]
+    pool = Pool(len(factor_funcs))
+    for func in factor_funcs:
+        pool.apply_async(func)
+    pool.close()
+    pool.join()
 
 
-    ln_price_factor()
+    #ln_price_factor()
     return
 
 

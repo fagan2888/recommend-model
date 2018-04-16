@@ -253,7 +253,6 @@ def layer_index_fund(bf_id):
 
 
 
-
 #利用回归树对因子分层
 def regression_tree_factor_layer(bf_id):
 
@@ -290,7 +289,6 @@ def regression_tree_factor_layer(bf_id):
     session.close()
 
 
-
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -299,8 +297,9 @@ def regression_tree_factor_layer(bf_id):
     dates = factor_df.index & yield_df.index & stock_factor_util.month_last_day()
     look_back = 6
 
+
     stock_pos = {}
-    for i in range(look_back + 1, len(dates) - 1):
+    for i in range(look_back + 1, len(dates)):
 
         date = dates[i]
         print bf_id, date
