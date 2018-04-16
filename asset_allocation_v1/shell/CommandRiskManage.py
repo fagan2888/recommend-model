@@ -558,7 +558,7 @@ def signal_update_garch(riskmgr):
         risk_mgr = RiskMgrGARCH.RiskMgrMGARCH(codes, target, df_nav, timing, vars_)
 
     df_result = risk_mgr.perform()
-    df_result = df_result.drop(columns=['rm_status'])
+    df_result = df_result.drop(['rm_status'], axis=1)
     df_result = DFUtil.filter_same_with_last(df_result)
 
     # df_result = df_nav_portfolio[['portfolio']].rename(columns={'portfolio':'rm_nav'}).copy()
