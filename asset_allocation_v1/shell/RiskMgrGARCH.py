@@ -108,16 +108,9 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
     def perform(self, target=None, disp=True):
         if target is None:
             target = self.target
-        print "Start Risk Ctrl for %s" % target
         df = self.generate_df_for_garch(target)
         s_time = time.time()
-        #Check if the vars for target is in the cache
-        if target in self.vars:
-            df_vars = self.vars[target]
-        else:
-            df_vars = RiskMgrGARCHHelper.perform_single(df.drop(columns=['timing']))
-            self.vars[target] = df_vars
-        print "Complete VaR calculation for %s! Elapsed time: %s" % (target, time.strftime("%M:%S", time.gmtime(time.time()-s_time)))
+        df_vars = self.vars[target]
         status, empty_days, action = 0, 0, 0
         flag = 0
         result_status = {}
@@ -159,7 +152,6 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
         
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
         df_result.index.name = 'rm_date'
-        print "Accomplished Risk Ctrl for %s" % target
         if disp:
             self.calc_winrate(df_result)
         return df_result
@@ -205,12 +197,7 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
         print "Start joint fitting"
         df = self.generate_df_for_garch(self.target)
         s_time = time.time()
-        if self.target in self.vars:
-            df_vars = self.vars[self.target]
-        else:
-            df_vars = RiskMgrGARCHHelper.perform_single(df.drop(columns=['timing']))
-            self.vars[self.target] = df_vars
-        print "Complete VaR calculation for %s! Elapsed time: %s" % (self.target, time.strftime("%M:%S", time.gmtime(time.time()-s_time)))
+        df_vars = self.vars[self.target]
         status, empty_days, action = 0, 0, 0
         flag = 0
         result_status = {}

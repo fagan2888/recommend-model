@@ -6,7 +6,7 @@ on the R interactive shell introduced by RPy2.
 '''
 
 import sys
-sys.path.append('shell')
+# sys.path.append('shell')
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -176,9 +176,10 @@ def joint_status_days(days, df, q):
         try: 
             calc_joint_status(day, df, q)
         except rpy2.rinterface.RRuntimeError, error:
-            print 'Day: %s' % df.index[day].strftime('%Y/%m/%d')
-            print error
-            print 
+            pass
+            # print 'Day: %s' % df.index[day].strftime('%Y/%m/%d')
+            # print error
+            # print 
 
 def calc_joint_status(i, df, q):
     day = df.index[i]
@@ -191,7 +192,6 @@ def calc_joint_status(i, df, q):
     #Here, we calculated the *Mahalanobis distance* from x to mu, where x denotes today's actual compounded return.
     #It's like the generalized Z-score in multivariate senario.
     if np.dot((today - mu), np.dot(linalg.inv(cov), (today - mu))) > -2 * np.log(0.01) and (today < 0).all():
-        print day
         status = True
     else:
         status = False
