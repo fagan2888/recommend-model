@@ -745,7 +745,8 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(and_(asset_ra_bl.ra_bl_view.globalid == bl_view_id, asset_ra_bl.ra_bl_view.bl_date <= today)).statement
+        # sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(and_(asset_ra_bl.ra_bl_view.globalid == bl_view_id, asset_ra_bl.ra_bl_view.bl_date <= today)).statement
+        sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(asset_ra_bl.ra_bl_view.globalid == bl_view_id).filter(asset_ra_bl.ra_bl_view.bl_date <= today).statement
 
 
         view_df = pd.read_sql(sql, session.bind, index_col = ['bl_date', 'bl_index_id'], parse_dates =  ['bl_date'])
@@ -1168,7 +1169,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     if algo == 1:
         pass
     else:
-        df = df.rolling(window = 1, min_periods = 1).mean()
+        df = df.rolling(window = 4, min_periods = 1).mean()
     if optappend:
         df = df.iloc[3:,:]
 

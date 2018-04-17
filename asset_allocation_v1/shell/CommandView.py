@@ -51,7 +51,6 @@ def signal(ctx, optid, optonline):
     #         bar.update(1)
     #         if view['bl_method'] == 2:
     #             signal_update_wavelet(view)
-
     for _, view in df_view.iterrows():
         if view['bl_method'] == 1:
             signal_update_macro(view)

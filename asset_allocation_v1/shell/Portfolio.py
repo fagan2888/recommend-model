@@ -258,6 +258,10 @@ def m_markowitz_bl(queue, random_index, df_inc, P, eta, alpha, bound):
 
 
 def markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count = 0, bootstrap_count=0):
+    print df_inc
+    print P
+    print eta
+    print alpha
 
     os.environ['OMP_NUM_THREADS'] = '1'
 

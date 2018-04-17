@@ -316,12 +316,15 @@ def fc_update_bflayer_nav(ctx, optid):
     asset_ids = [asset[0] for asset in sql1.all()]
     assets = {}
     for asset_id in asset_ids:
+        print asset_id
         assets[asset_id] = load_nav_series(asset_id)
 
     start_date = '2010-01-01'
-    end_date = '2018-12-01'
+    # end_date = '2018-12-01'
+    end_date = datetime.datetime.now().strftime('%Y-%m-%d')
     # trade_dates = DBData.trade_dates(start_date = '2010-01-01', end_date = '2018-12-01')
-    trade_dates = base_trade_dates.load_trade_dates(begin_date = '2010-01-01', end_date = '2018-12-01').index
+    # trade_dates = base_trade_dates.load_trade_dates(begin_date = '2010-01-01', end_date = '2018-12-01').index
+    trade_dates = base_trade_dates.load_trade_dates(begin_date = '2010-01-01', end_date = end_date).index
     df_assets = pd.DataFrame(assets)
     df_assets = df_assets[df_assets.index >= start_date]
     df_assets = df_assets[df_assets.index <= end_date]

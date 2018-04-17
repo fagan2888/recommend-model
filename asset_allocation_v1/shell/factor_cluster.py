@@ -319,7 +319,6 @@ def barra_stock_factor_fund_pool(lookback, limit):
 #根据选择的有效因子计算基金池
 def barra_stock_factor_fund_pool_duplicated(lookback, limit):
 
-
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -337,7 +336,8 @@ def barra_stock_factor_fund_pool_duplicated(lookback, limit):
 
 
     #adjust_points = adjust_points[adjust_points >= '2014-01-01']
-    pre_fund_pool = {}
+    pre_funds = None
+    delete_cluster_fund_all('FC.000004.1')
     for day in adjust_points:
 
         valid_factors = valid_factor_df.loc[day, 'bf_layer_id'].ravel()
@@ -371,41 +371,69 @@ def barra_stock_factor_fund_pool_duplicated(lookback, limit):
         #计算每个因子可使用的基金
         #bf_avaible_funds = {}
         funds = set()
+
         for bf_id in valid_factors:
-            #bf_corr = corr.loc[bf_id]
-            #bf_corr = bf_corr.loc[bf_corr.index.difference(valid_factors)]
-            #bf_corr.sort_values(inplace=True, ascending=False)
+            # bf_corr = corr.loc[bf_id]
+            # bf_corr = bf_corr.loc[bf_corr.index.difference(valid_factors)]
+            # bf_corr.sort_values(inplace=True, ascending=False)
 
 
             fund_beta = {}
             for fund_code in df_nav_fund.columns:
                 fund_beta[fund_code] = fin.beta(df_inc_index_fund[fund_code], df_inc_index_fund[bf_id] ,Const.rf)
             fund_beta_ser = pd.Series(fund_beta)
-            #fund_beta_ser.sort_values(inplace=True, ascending=False)
+            # fund_beta_ser.sort_values(inplace=True, ascending=False)
             fund_beta_ser = fund_beta_ser[fund_beta_ser <= 1.1]
-            fund_beta_ser = fund_beta_ser[fund_beta_ser >= 0.9]
-            #bf_corr = bf_corr[bf_corr < 1.0]
-            #bf_corr = bf_corr[bf_corr >= 0.70]
-            #bf_corr.sort_values(inplace = True, ascending = False)
+            fund_beta_ser = fund_beta_ser[fund_beta_ser >= 0.85]
+            # bf_corr = bf_corr[bf_corr < 1.0]
+            # bf_corr = bf_corr[bf_corr >= 0.70]
+            # bf_corr.sort_values(inplace = True, ascending = False)
 
             fund_jensens = {}
             for fund_code in fund_beta_ser.index:
                 fund_jensens[fund_code] = fin.jensen(df_inc_index_fund[fund_code], df_inc_index_fund[bf_id] ,Const.rf)
             fund_jensens_ser = pd.Series(fund_jensens)
-            #fund_jensens_ser = fund_jensens_ser[fund_jensens_ser >= 0.0 / 52]
+            # fund_jensens_ser = fund_jensens_ser[fund_jensens_ser >= 0.0 / 52]
             fund_jensens_ser.sort_values(inplace=True, ascending=False)
-            fund_jensens_ser = fund_jensens_ser.iloc[0:10]
-            #num = len(fund_jensens_ser) / 5 if len(fund_jensens_ser) / 5 >= 20 else 20
-            #bf_avaible_funds[bf_id] = fund_jensens_ser.iloc[0 : num].index.ravel()
+            fund_jensens_ser = fund_jensens_ser.iloc[:15]
+            # num = len(fund_jensens_ser) / 5 if len(fund_jensens_ser) / 5 >= 20 else 20
+            # bf_avaible_funds[bf_id] = fund_jensens_ser.iloc[0 : num].index.ravel()
 
             for code in fund_jensens_ser.index:
                 funds.add(code)
 
-        df_inc_fund = df_inc_fund[list(funds)]
-        df_inc_fund = df_inc_fund.sum()
-        df_inc_fund.sort_values(inplace=True, ascending=False)
-        print day, df_inc_fund.index[0:5]
-        save_cluster_fund(day, 'FC.000004.1', df_inc_fund.index[0:5])
+        df_inc_new_fund = df_inc_fund[list(funds)]
+        df_inc_new_fund = df_inc_new_fund.sum()
+        df_inc_new_fund.sort_values(inplace=True, ascending=False)
+        funds = df_inc_new_fund.index
+        fund_num = 11
+
+        if pre_funds is not None:
+            # new_funds = np.intersect1d(pre_funds, funds)
+            df_inc_pre_fund = df_inc_fund[list(pre_funds)]
+            df_inc_pre_fund = df_inc_pre_fund.sum()
+            df_inc_pre_fund.sort_values(inplace=True, ascending=False)
+            new_funds = df_inc_pre_fund.index[:9]
+            for fund in funds:
+                if (len(new_funds) < fund_num) and (fund not in new_funds):
+                    new_funds = np.append(new_funds, fund)
+                    # new_funds = (list(new_funds) + list(funds))[:10]
+            print len(new_funds),len(np.intersect1d(pre_funds, new_funds)), sorted(new_funds)
+            pre_funds = new_funds
+
+        else:
+            new_funds = funds[:fund_num]
+            pre_funds = new_funds
+        # print len(new_funds), new_funds
+
+            # pre_funds = funds
+
+        # df_inc_fund = df_inc_fund[list(funds)]
+        # df_inc_fund = df_inc_fund.sum()
+        # df_inc_fund.sort_values(inplace=True, ascending=False)
+        # print day, df_inc_fund.index[0:5]
+        # save_cluster_fund(day, 'FC.000004.1', df_inc_fund.index[0:5])
+        save_cluster_fund(day, 'FC.000004.1', new_funds)
 
 
         '''
@@ -470,7 +498,6 @@ def barra_stock_factor_fund_pool_duplicated(lookback, limit):
     return 0
 
 
-
 def delete_cluster_fund(day, cluster_id):
 
     engine = database.connection('asset')
@@ -490,7 +517,6 @@ def delete_cluster_fund(day, cluster_id):
     session.close()
 
 
-
 def save_cluster_fund(day, cluster_id, fund_codes):
 
     engine = database.connection('base')
@@ -508,6 +534,7 @@ def save_cluster_fund(day, cluster_id, fund_codes):
 
     record = session.query(asset_ra_pool.ra_pool.id).filter(asset_ra_pool.ra_pool.ra_index_id == cluster_id).first()
     pool_id = record[0]
+    # sql1 = session.query(asset_ra_pool.ra_pool_fund).filter(asset_ra_pool.ra_pool_fund.ra_pool == pool_id).delete()
 
     for code in code_id_df.index:
 
@@ -519,12 +546,25 @@ def save_cluster_fund(day, cluster_id, fund_codes):
         rpf.ra_fund_code = code
         rpf.ra_date = day
 
-        session.merge(rpf)
+        # session.merge(rpf)
+        session.add(rpf)
 
     session.commit()
     session.close()
 
 
+def delete_cluster_fund_all(cluster_id):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    record = session.query(asset_ra_pool.ra_pool.id).filter(asset_ra_pool.ra_pool.ra_index_id == cluster_id).first()
+    pool_id = record[0]
+    sql1 = session.query(asset_ra_pool.ra_pool_fund).filter(asset_ra_pool.ra_pool_fund.ra_pool == pool_id).delete()
+
+    session.commit()
+    session.close()
 
 
 def save_factor_cluster_fund_pool(day, factor_cluster_id, stock_factor_funds):
