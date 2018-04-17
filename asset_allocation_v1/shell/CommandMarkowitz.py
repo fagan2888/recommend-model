@@ -702,7 +702,6 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
     #read new parameters from csv
     if len(df_inc.columns) == 1:
         risk, returns, ws, sharpe = 0.0, 0.0, [1.0], 0.0
-
     elif bootstrap is None:
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     elif blacklitterman:
@@ -717,7 +716,6 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        # sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(and_(asset_ra_bl.ra_bl_view.globalid == bl_view_id, asset_ra_bl.ra_bl_view.bl_date <= today)).statement
         sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(asset_ra_bl.ra_bl_view.globalid == bl_view_id).filter(asset_ra_bl.ra_bl_view.bl_date <= today).statement
 
 
@@ -741,16 +739,14 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
         P = np.diag(np.sign(views))
         P = np.array([i for i in P if i.sum()!=0])
 
-        if eta.size == 0:           #If there is no view, run as non-blacklitterman
-            P=alpha=risk_parity=None
-            eta = np.array([])
+        #print eta, P
 
+        if eta.size == 0:           #If there is no view, run as non-blacklitterman
+            P = alpha = None
+            eta = np.array([])
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
-    elif bootstrap is None:
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     else:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
-
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
