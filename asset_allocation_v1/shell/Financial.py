@@ -577,7 +577,7 @@ def black_litterman(initialvalue, Sigma, P, eta, alpha):
     #Use the weight coming from risk parity to do reverse optimization
     pi = initialvalue
 
-    var_view = np.dot(np.dot(P, Sigma), P.T) 
+    var_view = np.dot(np.dot(P, Sigma), P.T)
 
     Q = [P[k].dot(pi) + eta[k] * np.sqrt(var_view[k,k]) for k in range(P.shape[0])]
     Q = np.array(np.matrix(Q).T)
@@ -596,32 +596,6 @@ def black_litterman(initialvalue, Sigma, P, eta, alpha):
     # posteriorcov = Sigma - Sigma.dot(P.T).dot(middle).dot(P).dot(Sigma)
     return er
 
-
-def ewcm(data, smooth):
-    # data gives the daily returns to extract the covariance matrix from. 
-    # smooth is a smoothing parameter
-    (row_data, col_data) = data.shape
-    cov_mat = np.zeros((row_data, row_data))
-    for i in range(0, row_data):
-        for j in range(0, row_data):
-            mean_1 = np.mean(data.iloc[i])
-            mean_2 = np.mean(data.iloc[j])
-            total = 0
-            for k in range(0, col_data):
-                total = total + smooth**(col_data-1-k-1)*(data.iloc[i][k] - mean_1)*(data.iloc[j][k] - mean_2)                
-            total = total*(1 - smooth)
-            cov_mat[i][j] = total
-    return np.matrix(cov_mat)
-
-    #for m in range(0, len(portfolios)):
-    #    print portfolios[m]
-    #    print
-    #m1 = np.polyfit(returns, risks, 2)
-    #x1 = np.sqrt(m1[2] / m1[0])
-    # CALCULATE THE OPTIMAL PORTFOLIO
-    #wt = solvers.qp(cvxopt.matrix(x1 * S), -pbar, G, h, A, b)['x']
-    #print portfolios[0], portfolios[1], portfolios[2]
-    #print wt[0] , wt[1] , wt[2]
 
 if __name__ == '__main__':
 
