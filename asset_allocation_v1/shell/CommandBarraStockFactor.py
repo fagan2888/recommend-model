@@ -535,9 +535,10 @@ def valid_factor_performance(ctx):
 
     dates = factor_layer_df.index
     all_ranks = []
-    for i in range(len(dates) - 3):
+    interval = 1
+    for i in range(len(dates) - interval):
         start_date = dates[i]
-        end_date = dates[i + 3]
+        end_date = dates[i + interval]
 
         tmp_layer_nav_df = layer_nav_df[layer_nav_df.index <= end_date]
         tmp_layer_nav_df = tmp_layer_nav_df[tmp_layer_nav_df.index >= start_date]

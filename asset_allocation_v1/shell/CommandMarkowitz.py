@@ -645,41 +645,14 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
     #
     s = 'perform %-12s' % label
     data = {}
-    if bootstrap is None:
-        count = multiprocessing.cpu_count() / 2
-        process_adjust_indexs = [[] for i in range(0, count)]
-        for i in range(0, len(adjust_index)):
-           process_adjust_indexs[i % count].append(adjust_index[i])
-
-
-        engine = database.connection('base')
-        engine.dispose()
-        engine = database.connection('asset')
-        engine.dispose()
-
-        manager = Manager()
-        q = manager.Queue()
-        processes = []
-        for indexs in process_adjust_indexs:
-            p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, blacklitterman, wavelet, wavelet_filter_num, markowitz_id))
-            processes.append(p)
-            p.start()
-
-        for p in processes:
-            p.join()
-
-        for m in range(0, q.qsize()):
-            record = q.get(m)
-            data[record[0]] = record[1]
-    else:
-        with click.progressbar(
-                adjust_index, label=s.ljust(30),
-                item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
-            for day in bar:
-                # bar.update(1)
-                logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
-                # 高风险资产配置
-                data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman, wavelet, wavelet_filter_num, markowitz_id)
+    with click.progressbar(
+            adjust_index, label=s.ljust(30),
+            item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+        for day in bar:
+            # bar.update(1)
+            logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+            # 高风险资产配置
+            data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman, wavelet, wavelet_filter_num, markowitz_id)
 
     return pd.DataFrame(data).T
 
@@ -713,7 +686,6 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman, w
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_nav = df_nav.dropna(axis = 1 , how = 'all')
     df_inc  = df_nav.pct_change().fillna(0.0)
-    # print df_inc
 
     return markowitz_r(df_inc, day, assets, bootstrap, cpu_count, blacklitterman, markowitz_id)
 
@@ -801,29 +773,29 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
             (pool_id, category) = (asset_id / 100, asset_id % 100)
             ttype = pool_id / 10000
             sr = asset_ra_pool_nav.load_series(
-                pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                pool_id, category, ttype, reindex=None, end_date=end_date)
         elif xtype == 3:
             #
             # 基金池资产
             #
             sr = base_ra_fund_nav.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         elif xtype == 4:
             #
             # 修型资产
             #
             sr = asset_rs_reshape_nav.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         elif xtype == 12:
             #
             # 指数资产
             #
             sr = base_ra_index_nav.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None,  end_date=end_date)
         elif xtype == 'ERI':
 
             sr = base_exchange_rate_index_nav.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         else:
             sr = pd.Series()
     else:
@@ -832,53 +804,53 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
             # 基金池资产
             #
             sr = asset_ra_pool_nav.load_series(
-                asset_id, 0, 9, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, 0, 9, reindex=None,  end_date=end_date)
         elif prefix == 'FD':
             #
             # 基金资产
             #
             sr = base_ra_fund_nav.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         elif prefix == 'RS':
             #
             # 修型资产
             #
             sr = asset_rs_reshape_nav.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         elif prefix == 'IX':
             #
             # 指数资产
             #
             sr = base_ra_index_nav.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         elif prefix == 'ER':
             #
             # 人民币计价的指数资产
             #
             sr = base_exchange_rate_index_nav.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         elif prefix == 'SK':
             #
             # 股票资产
             #
             sr = asset_stock.load_stock_nav_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         elif prefix == 'MZ':
             #
             # markowitz配置资产
             #
             sr = asset_mz_markowitz_nav.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         elif prefix == 'BF':
             #
             # markowitz配置资产
             #
             sr = asset_stock_factor.load_factor_nav_series(
-                    asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                    asset_id, reindex=None, end_date=end_date)
         elif prefix == 'FC':
 
             sr = asset_factor_cluster.load_series(
-                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id, reindex=None, end_date=end_date)
         else:
             sr = pd.Series()
 
