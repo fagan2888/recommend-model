@@ -522,6 +522,8 @@ def average_days(start_date, end_date, assets):
 
     df.index = pd.to_datetime(df.index)
 
+    # df = df.fillna(method = 'pad')
+
     return df
 
 
@@ -529,7 +531,7 @@ def markowitz_factor_days(start_date, end_date, assets, label, lookback, adjust_
     '''perform markowitz asset for days
     '''
     # 加载时间轴数据
-    index = DBData.trade_date_index(start_date, end_date=end_date)
+    index = DBData.trade_date_index(sdate, end_date=end_date)
 
     # 根据调整间隔抽取调仓点
     if adjust_period:
@@ -693,6 +695,8 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman, w
 def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, markowitz_id):
     '''perform markowitz
     '''
+    # print 
+    # print df_inc
 
     bound = []
     for asset in df_inc.columns:
@@ -703,7 +707,48 @@ def markowitz_r(df_inc, today, limits, bootstrap, cpu_count, blacklitterman, mar
     if len(df_inc.columns) == 1:
         risk, returns, ws, sharpe = 0.0, 0.0, [1.0], 0.0
     elif bootstrap is None:
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+        if blacklitterman:
+            df_argv = asset_mz_markowitz_argv.load([markowitz_id])
+            df_argv.reset_index(level=0, inplace=True)
+            argv = df_argv['mz_value'].to_dict()
+
+            bl_view_id = argv['bl_view_id']
+
+            engine = database.connection('asset')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+
+            # sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(and_(asset_ra_bl.ra_bl_view.globalid == bl_view_id, asset_ra_bl.ra_bl_view.bl_date <= today)).statement
+            sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(asset_ra_bl.ra_bl_view.globalid == bl_view_id).filter(asset_ra_bl.ra_bl_view.bl_date <= today).statement
+
+
+            view_df = pd.read_sql(sql, session.bind, index_col = ['bl_date', 'bl_index_id'], parse_dates =  ['bl_date'])
+            view_df = view_df.unstack()
+            view_df.columns = view_df.columns.droplevel(0)
+            view_df = view_df.sort_index()
+
+            if len(view_df) == 0:
+                last_view = pd.Series(0, index = df_inc.columns)
+            else:
+                last_view = view_df.iloc[-1]
+
+            session.commit()
+            session.close()
+
+
+            alpha = float(argv['bl_confidence'])
+            views = last_view.reindex(df_inc.columns).fillna(0)
+            eta = np.array(abs(views[views!=0]))
+            P = np.diag(np.sign(views))
+            P = np.array([i for i in P if i.sum()!=0])
+
+            if eta.size == 0:           #If there is no view, run as non-blacklitterman
+                P=alpha=risk_parity=None
+                eta = np.array([])
+
+            risk, returns, ws, sharpe = PF.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
+        else:
+            risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
     elif blacklitterman:
 
         df_argv = asset_mz_markowitz_argv.load([markowitz_id])
@@ -845,7 +890,7 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
                     asset_id, reindex=None, end_date=end_date)
         elif prefix == 'FC':
 
-            sr = asset_factor_cluster.load_series(
+            sr = asset_factor_cluster.load_selected_factor_series(
                 asset_id, reindex=None, end_date=end_date)
         else:
             sr = pd.Series()
@@ -1058,6 +1103,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
                 asset_pos.fillna(method = 'pad', inplace=True)
                 asset_pos.fillna(0.0, inplace=True)
                 mz_pos_df = mz_pos_df.mul(asset_pos, axis = 0)
+                mz_pos_df = mz_pos_df.fillna(method = 'pad')
                 df = df.drop(asset, axis = 1)
                 df = pd.concat([df, mz_pos_df], axis = 1, join_axes = [mz_pos_df.index])
         df = df.T
@@ -1079,6 +1125,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman=True, wavelet = False, markowitz_id = markowitz_id)
+    elif algo == 6:
+        df = markowitz_days(
+            sdate, edate, assets,
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, blacklitterman=True, wavelet = True, markowitz_id = markowitz_id)
     elif algo == 20:
         df = markowitz_factor_days(
             sdate, edate, assets,
@@ -1244,6 +1294,9 @@ def nav_update(markowitz, alloc):
             data[asset_id] = load_nav_series(asset_id, begin_date=begin_date, end_date=end_date)
         df_nav = pd.DataFrame(data).fillna(method='pad')
         df_inc  = df_nav.pct_change().fillna(0.0).iloc[1:]
+        # print len(df_inc)
+        # if len(df_inc) != 0:
+        #     df_incs.append(df_inc)
         df_incs.append(df_inc)
     df_inc = pd.concat(df_incs)
 

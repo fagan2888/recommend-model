@@ -229,7 +229,7 @@ def markowitz_r_spe_bl(funddfr, P, eta, alpha, bounds):
     final_sharp = -10000000000000000000000000.0
     final_codes = []
 
-    
+
     risks, returns, ws = fin.efficient_frontier_spe_bl(funddfr, P, eta, alpha, bounds)
 
     for j in range(0, len(risks)):
@@ -258,10 +258,6 @@ def m_markowitz_bl(queue, random_index, df_inc, P, eta, alpha, bound):
 
 
 def markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count = 0, bootstrap_count=0):
-    print df_inc
-    print P
-    print eta
-    print alpha
 
     os.environ['OMP_NUM_THREADS'] = '1'
 

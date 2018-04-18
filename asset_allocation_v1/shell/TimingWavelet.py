@@ -43,6 +43,7 @@ class TimingWt(object):
         for i in range(numwires):
             # Decompose the signal
             c = pywt.wavedec(data[i,:], wname, level = self.maxlevel)
+
             #print c
             # Destroy the approximation coefficients
             #for j in self.filter_level:

@@ -50,8 +50,9 @@ logger = logging.getLogger(__name__)
 @click.option('--riskmgr/--no-riskmgr', 'optriskmgr', default=True, help=u'with riskmgr or not')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.option('--end-date', 'optenddate', default=None, help=u'calc end date for nav')
+@click.option('--start-date', 'optstartdate', default='2012-07-06', help=u'start date')
 @click.pass_context
-def highlow(ctx, optfull, optnew, optlimit, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate):
+def highlow(ctx, optfull, optnew, optlimit, optid, optname, opttype, optreplace, opthigh, optlow, optriskmgr, optrisk, optenddate, optstartdate):
 
     '''markowitz group
     '''
@@ -59,7 +60,7 @@ def highlow(ctx, optfull, optnew, optlimit, optid, optname, opttype, optreplace,
         # click.echo('I was invoked without subcommand')
         if optnew:
             if optlimit:
-                ctx.invoke(limit, optid=optid, optrisk=optrisk)
+                ctx.invoke(limit, optid=optid, optrisk=optrisk, optstartdate=optstartdate)
             ctx.invoke(pos, optid=optid, optrisk=optrisk)
             ctx.invoke(nav, optid=optid, optenddate=optenddate)
             ctx.invoke(turnover, optid=optid)
@@ -644,8 +645,9 @@ def pos_update(highlow, alloc):
 @click.option('--id', 'optid', help=u'ids of highlow to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--start-date', 'optstartdate', default='2012-07-06', help=u'start date')
 @click.pass_context
-def limit(ctx, optid, optlist, optrisk):
+def limit(ctx, optid, optlist, optrisk, optstartdate):
     ''' calc pool nav and inc
     '''
     if optid is not None:
@@ -668,15 +670,15 @@ def limit(ctx, optid, optlist, optrisk):
         print tabulate(df_highlow, headers='keys', tablefmt='psql')
         return 0
     for _, highlow in df_highlow.iterrows():
-        limit_update_alloc(highlow, optrisk)
+        limit_update_alloc(highlow, optrisk, optstartdate)
 
 
-def limit_update_alloc(highlow, optrisk):
+def limit_update_alloc(highlow, optrisk, optstartdate):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'], risks)
 
     # df_alloc = df_alloc[df_alloc.mz_risk == 1.0]
-    ratio_hl = cal_limit(highlow)
+    ratio_hl = cal_limit(highlow, optstartdate)
     for _, alloc in df_alloc.iterrows():
         limit_update(highlow, alloc, ratio_hl)
 
@@ -722,7 +724,7 @@ def limit_update(highlow, alloc, ratio_hl):
     asset_mz_highlow_limit.save(alloc.mz_highlow_id, risk, ratio_hl)
 
 
-def cal_limit(highlow):
+def cal_limit(highlow, optstartdate):
     lookback = 26
     large_number = 1e4
     high = highlow['mz_high_id']
@@ -752,7 +754,8 @@ def cal_limit(highlow):
     # # risk_budget = [(risk-1)/9.0, (10-risk)/9.0]
 
     trade_dates = DBData.trade_date_index(start_date = '2009-01-01')
-    test_dates = DBData.trade_date_index(start_date = '2012-07-06')
+    # test_dates = DBData.trade_date_index(start_date = '2012-07-06')
+    test_dates = DBData.trade_date_index(start_date = optstartdate)
     # test_dates = DBData.trade_date_index(start_date = '2018-01-02')
 
     high_nav = asset_mz_markowitz_nav.load_series(high)
