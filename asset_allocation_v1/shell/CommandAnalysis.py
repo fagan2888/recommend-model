@@ -747,4 +747,36 @@ def cal_corr(df):
         return corr
 
 
+#计算最长多久回正
+@analysis.command()
+@click.pass_context
+def longest_return(ctx):
 
+    for i in range(0 , 10):
+        gid = str(800000 + i)
+        online_nav_ser = asset_on_online_nav.load_series(gid, 8)
+        navs = list(online_nav_ser.ravel())
+        max_days = 0
+        max_date = None
+        date = None
+        for p in range(1,len(navs)):
+
+            _navs = navs[0:p]
+            max_nav = max(_navs)
+            q = _navs.index(max_nav)
+            if (navs[p] >= max_nav) and (max_days <= p - q):
+                max_days = p - q
+                max_date = online_nav_ser.index[q]
+                date = online_nav_ser.index[p]
+
+            #p_nav = navs[p]
+            #args = np.argwhere(navs > p_nav).ravel()
+            #args = args[args > p]
+            #if len(args) == 0:
+            #    continue
+            #if max_days <= min(args) - p:
+            #    max_days = min(args) - p
+            #    max_date = online_nav_ser.index[min(args)]
+            #    date = online_nav_ser.index[p]
+
+        print i, max_date, date, max_days
