@@ -79,7 +79,6 @@ class RiskMgrSimple(object):
                 elif row['cnfdn'] is not None and row['inc5d'] < row['cnfdn']: #and row['inc5d'] < self.mindd:
                     status, empty_days, position, action = 1, 0, 0, 5
 
-                print row
                 #
                 # 根据当前的风控状态进行处理
                 #
