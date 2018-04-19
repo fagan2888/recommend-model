@@ -189,12 +189,17 @@ def calc_joint_status(i, df, q):
     #we have to flatten the (1,2) matrix to (0,2) vector.
     mu = mu.flatten()
     today = df_used.iloc[-1].values
-    #Here, we calculated the *Mahalanobis distance* from x to mu, where x denotes today's actual compounded return.
-    #It's like the generalized Z-score in multivariate senario.
-    if np.dot((today - mu), np.dot(linalg.inv(cov), (today - mu))) > -2 * np.log(0.01) and (today < 0).all():
-        status = True
+            # In the following code, we calculated the *Mahalanobis distance* from x to mu, where x denotes today's actual compounded return.
+            # It's like the generalized Z-score in multivariate senario.
+            # if np.dot((today - mu), np.dot(linalg.inv(cov), (today - mu))) > -2 * np.log(0.01) and (today < 0).all():
+    # *Actually* right now we figured that the Mahalanobis distance method may not be vaild for calculating if the VaR got breakthrough.
+    # The reason is that, it is more likely to be the extension of *confidence interval* under multivariable case instead of just quantile.
+    # Here we use a more intuitive way: just calculate the cdf of corresponding vector and see if its value is larger than the threshold.
+    # It is basically similar to comparing `today` and quantile(0.0013, mu, sigma) in univariable case.
+    if stats.multivariate_normal.cdf(today, mean=mu, cov=cov) < 0.0013:
+        status = 1
     else:
-        status = False
+        status = 0
     q.put((day, status, mu, cov))
 
 

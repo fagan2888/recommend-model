@@ -358,7 +358,7 @@ def calc_vars(ctx, optid, optlist):
         ids = None
 
     xtypes = None
-
+    
     df_riskmgr = asset_rm_riskmgr.load(ids, xtypes)
 
     if optlist:
@@ -405,27 +405,53 @@ def vars_update(riskmgr):
         if vars_[_id].empty:
             nav = database.load_nav_series(_id, reindex=tdate)
             df_vars = VaR.perform(nav)
-            df_vars.index.name = 'ix_date'
-            df_vars['index_id'] = _id
-            df_tosave = df_vars.reset_index().set_index(['index_id', 'ix_date'])
-            asset_rm_riskmgr_vars.save(_id, df_tosave)
         else:
             #If not empty, check if it needs to update
             df_vars = vars_[_id]
             missing_days = tdate[600:].difference(df_vars.index)
-            if not missing_days.empty:
+            if missing_days.empty:
+                continue
+            else:
                 nav = database.load_nav_series(_id, reindex=tdate)
                 idxs = [i for i in range(600, len(tdate)) if tdate[i] in missing_days]
                 idxs = filter(lambda i: tdate[i] in missing_days, range(600, len(tdate)))
                 df_tmp = VaR.perform_days(nav, idxs)
                 df_vars = pd.concat([df_vars, df_tmp])
-                df_vars.index.name = 'ix_date'
-                df_vars['index_id'] = _id
-                df_tosave = df_vars.reset_index().set_index(['index_id', 'ix_date'])
-                asset_rm_riskmgr_vars.save(_id, df_tosave)
-            else:
-                pass
+        df_vars.index.name = 'ix_date'
+        df_vars['index_id'] = _id
+        df_tosave = df_vars.reset_index().set_index(['index_id', 'ix_date'])
+        asset_rm_riskmgr_vars.save(_id, df_tosave)
+    if riskmgr['rm_algo'] == 5:
+        mgarch_update(tmp_df_riskmgrs, riskmgr_id, tdates)
+
         
+def mgarch_update(riskmgr, target, _tdates):
+    Joint = RiskMgrVaRs.RiskMgrJoint()
+    codes = {row['globalid']:row['rm_asset_id'] for _, row in riskmgr.iterrows()}
+    tdates = {global_id: _tdates[asset_id] for global_id, asset_id in codes.items()}
+    for i in codes:
+        if i != target:
+            tdates[i] = tdates[target].intersection(tdates[i])
+    df_joint = asset_rm_riskmgr_mgarch_signal.load_series(target)
+    if df_joint.empty:
+        df_nav = pd.DataFrame({global_id: database.load_nav_series(asset_id, reindex=tdates[global_id]) for global_id, asset_id in codes.items()})
+        df_joint = Joint.perform(df_nav, target)
+    else:
+        missing_days = tdates[target].difference(df_joint.index)
+        if missing_days.empty:
+            return None
+        else:
+            df_nav = pd.DataFrame({global_id: database.load_nav_series(asset_id, reindex=tdates[global_id]) for global_id, asset_id in codes.items()})
+            df_tmp = Joint.perform_days(df_nav, target, missing_days)
+            df_joint = pd.concat([df_joint, df_tmp])
+    df_joint = df_joint.reindex(tdates[target]).fillna(0)
+    df_joint.columns.name = 'target_rm_riskmgr_id'
+    df_joint.index.name='rm_date'
+    df_joint['rm_riskmgr_id'] = target
+    df_joint = df_joint.reset_index().set_index(['rm_riskmgr_id', 'rm_date'])
+    df_joint = df_joint.stack().to_frame()
+    df_joint.columns = ['rm_signal']
+    asset_rm_riskmgr_mgarch_signal.save(target, df_joint)
 
 
 @riskmgr.command()
@@ -530,7 +556,7 @@ def signal_update_garch(riskmgr):
     
     if riskmgr['rm_algo'] == 4:
         #Univariate GARCH
-        codes = {riskmgr['rm_name'] : {"id" : riskmgr['rm_asset_id'], "timing" : riskmgr['rm_timing_id']}}
+        codes = {riskmgr['globalid'] : {"id" : riskmgr['rm_asset_id'], "timing" : riskmgr['rm_timing_id']}}
 
     if riskmgr['rm_algo'] == 5:
         #Multivariate GARCH
@@ -538,24 +564,26 @@ def signal_update_garch(riskmgr):
         tmp_df_riskmgrs = tmp_df_riskmgrs.append(riskmgr)
         codes = {}
         for _, row in tmp_df_riskmgrs.iterrows():
-            codes[row['rm_name']] = {"id" : row['rm_asset_id'], "timing" : row['rm_timing_id']}
+            codes[row['globalid']] = {"id" : row['rm_asset_id'], "timing" : row['rm_timing_id']}
 
-    target = riskmgr['rm_name']
+    target = riskmgr_id
 
     #Load datas from DB
     tdates = {k: base_trade_dates.load_origin_index_trade_date(v['id']) for k, v in codes.items()}
     #For each other assets, filter the tradedates by the target one
-    for i in codes:
-        if i != target:
-            tdates[i] = tdates[target].intersection(tdates[i])
+    # for i in codes:
+    #     if i != target:
+    #         tdates[i] = tdates[target].intersection(tdates[i])
     df_nav = pd.DataFrame({k: database.load_nav_series(v['id'], reindex=tdates[k]) for k, v in codes.items()})
     timing = pd.DataFrame({k: asset_tc_timing_signal.load_series(v['timing']).reindex(tdates[k]) for k,v in codes.items()})
     vars_ = {k: asset_rm_riskmgr_vars.load_series(v['id']) for k,v in codes.items()}
 
     if riskmgr['rm_algo'] == 4:
-        risk_mgr = RiskMgrGARCH.RiskMgrGARCH(codes, target, df_nav, timing, vars_)
+        risk_mgr = RiskMgrGARCH.RiskMgrGARCH(codes, target, tdates, df_nav, timing, vars_)
     elif riskmgr['rm_algo'] == 5:
-        risk_mgr = RiskMgrGARCH.RiskMgrMGARCH(codes, target, df_nav, timing, vars_)
+        others = [k for k in codes if k != target]
+        joint = asset_rm_riskmgr_mgarch_signal.load_series(riskmgr_id).loc[:, others]
+        risk_mgr = RiskMgrGARCH.RiskMgrMGARCH(codes, target, tdates, df_nav, timing, vars_, joint)
 
     df_result = risk_mgr.perform()
     df_result = df_result.drop(['rm_status'], axis=1)
