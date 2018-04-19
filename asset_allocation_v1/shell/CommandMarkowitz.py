@@ -526,6 +526,8 @@ def average_days(start_date, end_date, assets):
 
     return df
 
+def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, blacklitterman = False, wavelet = False, wavelet_filter_num = 0, markowitz_id = None):
+    '''perform markowitz asset for days
 
     '''
     # 加载时间轴数据
