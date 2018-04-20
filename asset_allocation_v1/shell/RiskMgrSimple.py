@@ -76,7 +76,7 @@ class RiskMgrSimple(object):
                     status, empty_days, position, action = 1, 0, 0, 2
                 elif row['inc3d'] < self.maxdd:
                     status, empty_days, position, action = 1, 0, 0, 3
-                elif row['cnfdn'] is not None and row['inc5d'] < row['cnfdn']: #and row['inc5d'] < self.mindd:
+                elif row['cnfdn'] is not None and row['inc5d'] < row['cnfdn'] and row['inc5d'] < self.mindd:
                     status, empty_days, position, action = 1, 0, 0, 5
 
                 #
