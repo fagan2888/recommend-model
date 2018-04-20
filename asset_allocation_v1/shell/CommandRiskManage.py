@@ -380,7 +380,7 @@ def calc_vars(ctx, optid, optlist):
 def vars_update(riskmgr):
     riskmgr_id = riskmgr['globalid']
     argv = dict()
-    #Parse argvs
+    #Parse argv by json.
     if riskmgr['rm_argv'] != '':
         argv.update({k: json.loads(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(';')]})
     
@@ -390,6 +390,7 @@ def vars_update(riskmgr):
 
     if riskmgr['rm_algo'] == 5:
         #Multivariate GARCH
+        #In this case, we concern others assets that will involve into multivarate distribution fitting.
         tmp_df_riskmgrs = asset_rm_riskmgr.load(argv['assets'])
         tmp_df_riskmgrs = tmp_df_riskmgrs.append(riskmgr)
         codes = [row['rm_asset_id'] for _, row in tmp_df_riskmgrs.iterrows()]
@@ -429,14 +430,17 @@ def mgarch_update(riskmgr, target, _tdates):
     Joint = RiskMgrVaRs.RiskMgrJoint()
     codes = {row['globalid']:row['rm_asset_id'] for _, row in riskmgr.iterrows()}
     tdates = {global_id: _tdates[asset_id] for global_id, asset_id in codes.items()}
+    #filter tradedays by target asset
     for i in codes:
         if i != target:
             tdates[i] = tdates[target].intersection(tdates[i])
     df_joint = asset_rm_riskmgr_mgarch_signal.load_series(target)
+    #check if the table loaded from db is empty
     if df_joint.empty:
         df_nav = pd.DataFrame({global_id: database.load_nav_series(asset_id, reindex=tdates[global_id]) for global_id, asset_id in codes.items()})
         df_joint = Joint.perform(df_nav, target)
     else:
+        #since the table is not empty, check if the table above needs update.
         missing_days = tdates[target].difference(df_joint.index)
         if missing_days.empty:
             return None

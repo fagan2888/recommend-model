@@ -145,8 +145,14 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
                             .reindex(df_joint.index) \
                             .fillna(method='pad')    \
                             .fillna(0)
-        #对每个资产, 检查是否联合分布被击穿, 且其处于风控状态, 并最后求或
-        if_joint_controlled = pd.DataFrame({k: df_joint[k] & df_result_garch[k]!=0 for k in others}).any(1)
+        #df_joint的row为日期, col为对应于目标资产的其他资产, entries为某日的目标资产与col对应资产的联合分布是否被击穿
+        #例: 目标资产(self.target) => 61110403 (沪深300), col为['61110501'(中证500), '61110601'(标普500), '61110701'(恒生)]
+        #则 df_joint.loc[day, '61110501']对应于指定日期(day)中, 沪深300与中证500构成的联合分布是否被击穿
+        #df_result_garch的row, col同理, entries为某日的某资产仅被GARCH模型风控的状态
+        #例: df_result_garch[day, '61110501']为指定日期(day)中, 中证500在GARCH模型下的风控状态(0 => 无风控, 1=> 风控一半(弃用), 2=>空仓)
+        
+        #对每个资产, 检查是否联合分布被击穿, 且其处于风控状态, 并最后求或(any(axis=1))
+        if_joint_controlled = pd.DataFrame({k: (df_joint[k]!=0) & (df_result_garch[k]!=0) for k in others}).any(1)
 
         # Start the RiskMgr DF for the target asset
         df = self.generate_df_for_garch(self.target)
