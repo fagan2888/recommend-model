@@ -845,7 +845,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
                 asset_pos = asset_pos.reindex(dates)
                 asset_pos.fillna(method = 'pad', inplace=True)
                 asset_pos.fillna(0.0, inplace=True)
-                mz_pos_df = mz_pos_df.mul(asset_pos, axis = 0)
+                mz_pos_df = mz_pos_df.mul(asset_pos, axis = 0).fillna(method = 'pad')
                 df = df.drop(asset, axis = 1)
                 df = pd.concat([df, mz_pos_df], axis = 1, join_axes = [mz_pos_df.index])
         df = df.T
