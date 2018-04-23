@@ -426,7 +426,7 @@ def pos_update(portfolio, alloc):
         return
 
     df_raw.sort_index(inplace=True)
-    
+
     df_tmp = df_raw[['ra_fund_ratio']]
 
     #print gid, df_tmp
@@ -439,8 +439,8 @@ def pos_update(portfolio, alloc):
     df_tmp = df_tmp.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df_tmp = DFUtil.filter_same_with_last(df_tmp)          # 过滤掉相同
     if turnover >= 0.01:
-        df_tmp = DFUtil.filter_by_turnover(df_tmp, turnover)   # 基于换手率进行规律
-        #df_tmp = DFUtil.filter_by_turnover_and_riskmgr(df_tmp, turnover)   # 基于换手率进行规律
+        # df_tmp = DFUtil.filter_by_turnover(df_tmp, turnover)   # 基于换手率进行规律
+        df_tmp = DFUtil.filter_by_turnover_and_riskmgr(df_tmp, turnover)   # 基于换手率进行规律
         df_tmp.index.name = 'ra_date'
     df_tmp = df_tmp.stack([1, 2])
     df = df_tmp.merge(df_raw[['ra_fund_code', 'ra_fund_type']], how='left', left_index=True, right_index=True)
@@ -473,7 +473,7 @@ def kun(portfolio, alloc):
     if df_ratio.empty:
         click.echo(click.style("empty highlow_pos [%s] dected, will abort!" % gid, fg="yellow"))
         return None
-       
+
 
     # print df_ratio.sum(axis=1)
     if '11310100' not in df_ratio.columns:

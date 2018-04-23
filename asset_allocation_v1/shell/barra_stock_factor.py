@@ -1169,6 +1169,9 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
 
     #print layer_ic_df
     #layer_ic_df = abs(layer_ic_df)
+
+    # layer_ic_df.to_csv('layer_ic_df.csv', index_label = 'date')
+    # sys.exit(0)
     layer_ic_df = layer_ic_df.rolling(14).mean()
     layer_ic_abs = abs(layer_ic_df)
 
