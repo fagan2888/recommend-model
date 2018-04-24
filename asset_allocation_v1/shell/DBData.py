@@ -114,6 +114,24 @@ def trade_date_index(start_date, end_date=None):
 
     return df.index
 
+def trade_date_index_month(start_date, end_date=None):
+    conn  = MySQLdb.connect(**config.db_base)
+
+    if not end_date:
+        sql = "SELECT max(td_date) as td_date FROM trade_dates WHERE td_date != CURDATE()"
+        end_date = db_pluck(conn, 'td_date', sql)
+
+    if not end_date:
+        yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)); 
+        end_date = yesterday.strftime("%Y-%m-%d").date()
+
+    sql = "SELECT td_date as date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND (td_type & 0x08 OR td_date = '%s') ORDER By td_date ASC" % (start_date, end_date, end_date);
+
+    df = pd.read_sql(sql, conn, index_col = 'date', parse_dates=['date'])
+    conn.close()
+
+    return df.index
+
 def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True):
     if include_end_date:
         condition = "(td_type & 0x02 OR td_date = '%s')" % (end_date)

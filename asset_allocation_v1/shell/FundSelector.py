@@ -17,7 +17,7 @@ from Const import datapath
 fund_num = Const.fund_num
 
 def select_stock_new(day, df_label, df_indicator, limit=5):
-    daystr = day.strftime("%Y-%m-%d")
+    daystr = day.strftime("%Y-%m-%d") 
     # df = df_label.merge(df_indicator, left_index=True, right_index=True)
     categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
     

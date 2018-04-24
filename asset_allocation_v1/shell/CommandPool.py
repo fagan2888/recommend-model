@@ -41,6 +41,12 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
+
+from ipdb import set_trace
+from FundFilter import jensenmeasure, sortinomeasure, ppwmeasure, stabilitymeasure
+from FundIndicator import fund_sharp_annual
+
+
 @click.group(invoke_without_command=True)
 @click.option('--id', 'optid', default='12101,12201', help=u'reshape id')
 @click.option('--datadir', '-d', type=click.Path(exists=True), help=u'dir used to store tmp data')
@@ -95,6 +101,7 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, op
         adjust_points=pd.DatetimeIndex(optpoints.split(','))
     else:
         adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate)
+        # adjust_points = get_adjust_point(label_period=0, startdate=startdate)
 
     print "adjust point:"
     for date in adjust_points:
@@ -202,17 +209,54 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
         # 计算每个调仓点的最新配置
         #
         data_fund = {}
-        with click.progressbar(length=len(adjust_points), label=('calc pool %s' % (pool.id)).ljust(30)) as bar:
-            for day in adjust_points:
-                bar.update(1)
-                if pool['ra_fund_type'] == 1:
-                    data_fund[day] = LabelAsset.label_asset_stock_per_day(day, lookback, limit)
-                else:
-                    data_fund[day] = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
+        # with click.progressbar(length=len(adjust_points), label=('calc pool %s' % (pool.id)).ljust(30)) as bar:
+        #     for day in adjust_points:
+        #         bar.update(1)
+        #         if pool['ra_fund_type'] == 1:
+        #             data_fund[day] = LabelAsset.label_asset_stock_per_day(day, lookback, limit)
+        #         else:
+        #             data_fund[day] = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
 
-
-        df_fund = pd.concat(data_fund, names=['ra_date', 'ra_category', 'ra_fund_code'])
-
+        # df_fund = pd.concat(data_fund, names=['ra_date', 'ra_category', 'ra_fund_code'])
+# ============================================================
+        dropped_ratio = 0.2
+        categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
+        new_data_fund = {}
+        # new_data_fund[adjust_points[0]] = data_fund[adjust_points[0]][:limit]
+        # Initialize, filter the first one by limit
+        df_first = LabelAsset.label_asset_stock_per_day(adjust_points[0], lookback, limit)
+        data_first = {}
+        for category in categories:
+            data_first[category] = df_first.loc[category]
+        new_data_fund[adjust_points[0]] = pd.concat(data_first, names=['category','code'])
+        with click.progressbar(length=(len(adjust_points)-1)*len(categories), label=('calc adjusted pool %s' % (pool.id)).ljust(30)) as bar:
+            for idx in range(1, len(adjust_points)):
+                df_per_category = {}
+                current = adjust_points[idx]
+                last = adjust_points[idx-1]
+                data_fund[current] = LabelAsset.label_asset_stock_per_day(current, lookback, limit)
+                for category in categories:
+                    bar.update(1)
+                    # get_sorted_funds = lambda dict_fund, day, category: dict_fund[day].loc[category].sort_values(by=['jensen'], ascending=False).index
+                    df_current = data_fund[current].loc[category]
+                    df_last = new_data_fund[last].loc[category]
+                    current_funds = df_current.index
+                    last_funds = df_last.index
+                    sorted_last_funds = calc_by_funds(current, lookback, last_funds).sort_values(by=['jensen'], ascending=False).index
+                    if int(len(last_funds)*dropped_ratio) == 0:
+                        funds_being_dropped = sorted_last_funds
+                    else:
+                        funds_being_dropped = sorted_last_funds[:-int(len(last_funds)*dropped_ratio)]
+                    available_new_funds = current_funds.difference(funds_being_dropped)
+                    sorted_available_new_funds = df_current.loc[available_new_funds].sort_values(by=['jensen'], ascending=False).index
+                    new_funds = funds_being_dropped.union(sorted_available_new_funds[:limit-len(sorted_last_funds)])
+                    # sorted_new_funds = df_current.loc[new_funds].sort_values(by=['jensen'], ascending=False)
+                    df_sorted_new_funds = calc_by_funds(current, lookback, new_funds).sort_values(by=['jensen'], ascending=False)
+                    df_per_category[category] = df_sorted_new_funds
+                new_data_fund[current] = pd.concat(df_per_category, names=['category','code'])
+        
+        df_fund = pd.concat(new_data_fund, names=['ra_date', 'ra_category', 'ra_fund_code'])
+# ============================================================
         df_new = df_fund.rename(index=DFUtil.categories_types(True), columns={'date':'ra_date', 'category':'ra_category', 'code':'ra_fund_code', 'sharpe':'ra_sharpe',  'jensen':'ra_jensen', 'sortino':'ra_sortino', 'ppw':'ra_ppw'})
         df_new.drop('stability', axis=1, inplace=True)
 
@@ -317,6 +361,7 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=13):
         enddate = yesterday.strftime("%Y-%m-%d")        
 
     index = DBData.trade_date_index(startdate, end_date=enddate)
+    # index = DBData.trade_date_index_month(startdate, end_date=enddate)
     
     if label_period > 1:
         label_index = index[::label_period]
@@ -843,3 +888,30 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
         final_codes = final_codes[0 : limit]
         return final_codes
 
+def calc_by_funds(day, lookback, funds):
+    index = DBData.trade_date_lookback_index(end_date=day, lookback=lookback)
+    start_date = index.min().strftime("%Y-%m-%d")
+    end_date = day.strftime("%Y-%m-%d")
+    df_nav_stock = DBData.stock_fund_value(start_date, end_date)
+    df_nav_index = DBData.index_value(start_date, end_date)
+    df_nav_stock = df_nav_stock.reindex(index, method='pad')
+    df_nav_index = df_nav_index.reindex(index, method='pad')
+    df_nav_fund = df_nav_stock.loc[:, funds]
+    df_nav_index = df_nav_index[Const.hs300_code]
+    daystr = day.strftime("%Y-%m-%d")
+    rf = Const.rf
+    jensen_measure = jensenmeasure(df_nav_fund, df_nav_index, rf)
+    sortino_measure = sortinomeasure(df_nav_fund, rf)
+    ppw_measure = ppwmeasure(df_nav_fund, df_nav_index, rf)
+    stability_measure = stabilitymeasure(df_nav_fund)
+    sharpe_data = fund_sharp_annual(df_nav_fund)
+    columns=['sharpe','jensen','sortino','ppw','stability']
+    df_indicator = pd.DataFrame({
+        'sharpe': {k:v for (k, v) in  sharpe_data},
+        'jensen': jensen_measure,
+        'sortino': sortino_measure,
+        'ppw': ppw_measure,
+        'stability': stability_measure,
+    }, columns=columns)
+    df_indicator.index.name = 'code'
+    return df_indicator
