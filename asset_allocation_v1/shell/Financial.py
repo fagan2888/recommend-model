@@ -226,6 +226,32 @@ def jensen(portfolio, market, rf):
     return alpha
 
 
+def rsquare(portfolio, market, rf):
+
+    p = []
+    m = []
+    for i in range(0, len(portfolio)):
+        #print portfolio[i], market[i]
+        p.append(portfolio[i] - rf)
+        m.append(market[i] - rf)
+
+    p = np.array(p)
+    m = np.array(m)
+
+    clf       = linear_model.LinearRegression()
+    x = m.reshape(len(m),1)
+    y = p.reshape(len(p), 1)
+    clf.fit(x, y)
+    #clf.fit(m, p)
+    # alpha = clf.intercept_[0]
+    # beta  = clf.coef_[0]
+    rs = clf.score(x, y)
+
+    #if np.isnan(alpha) or np.isinf(alpha):
+    #    alpha = 0.0
+
+    return rs
+
 
 #sharp
 def sharp(portfolio, rf):

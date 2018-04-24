@@ -26,6 +26,7 @@ def select_stock_new(day, df_label, df_indicator, limit=5):
         index_codes = df_label[df_label[category] == 1].index
         df_tmp = df_indicator.loc[index_codes]
         data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:limit]
+        # data[category] = df_tmp.sort_values(by='rs', ascending=False)[0:limit]
         
     df_result = pd.concat(data, names=['category','code'])
     #df_result.to_csv(datapath('stock_pool_' + daystr + '.csv'))
