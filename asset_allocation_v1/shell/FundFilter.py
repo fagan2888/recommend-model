@@ -73,6 +73,31 @@ def jensenmeasure(funddf, indexdf, rf):
     return jensen
 
 
+#按照Rsquare测度过滤
+def rsmeasure(funddf, indexdf, rf):
+
+    funddfr = funddf.pct_change().fillna(0.0)
+    indexdfr = indexdf.pct_change().fillna(0.0)
+
+    jensen = {}
+    cols = funddfr.columns
+    for col in cols:
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        indexrs = indexdfr.values
+        for i in range(0, len(rs)):
+            if isnan(rs[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexrs[i])
+
+        jensen[col] = fin.rsquare(p, m, rf)
+
+    return jensen
+
 
 #按照sortino测度过滤
 def sortinomeasure(funddf, rf):
@@ -456,6 +481,11 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
 
     #stability_data = sf.stabilityfilter(funddf, 1.0)
 
+    #按照rsquare测度过滤
+    rs_measure = rsmeasure(df_nav_fund, df_nav_index, rf)
+    rs_data    = ratio_filter(rs_measure, 1.0)
+    #jensen_data    = sf.jensenfilter(funddf, indexdf, rf, 1.0)
+
     sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
 
     df_indicator = pd.DataFrame({
@@ -464,9 +494,10 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
         'sortino': sortino_measure,
         'ppw': ppw_measure,
         'stability': stability_measure,
+        'rs': rs_measure,
     });
-    
-    columns=['sharpe','jensen','sortino','ppw','stability']
+
+    columns=['sharpe','jensen','sortino','ppw','stability','rs']
     df_indicator.index.name = 'code'
     df_indicator.to_csv(datapath('stock_indicator_' + daystr + '.csv'), columns=columns)
 
@@ -475,7 +506,8 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
         'jensen': {k:v for (k, v) in jensen_data},
         'sortino': {k:v for (k, v) in sortino_data},
         'ppw': {k:v for (k, v) in ppw_data},
-        'stability': {k:v for (k, v) in stability_data}
+        'stability': {k:v for (k, v) in stability_data},
+        'rs': {k:v for (k, v) in rs_data}
     }, columns=columns);
 
     df_result.index.name = 'code'

@@ -1179,7 +1179,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
 def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     daystr = day.strftime("%Y-%m-%d")
-    
+
     dates = df_nav_index.index.values
     dates.sort()
     end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
@@ -1244,7 +1244,7 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     columns = ['largecap', 'smallcap', 'rise', 'decline', 'oscillation', 'growth', 'value']
     df_result = pd.DataFrame(0, index=df_label.index, columns=columns)
 
-    mask = (df_label['largecap_prefer'] == 1) & (df_label['largecap_fitness'] == 1) 
+    mask = (df_label['largecap_prefer'] == 1) & (df_label['largecap_fitness'] == 1)
     df_result.loc[mask, 'largecap'] = 1
 
     mask = (df_label['smallcap_prefer'] == 1) & (df_label['smallcap_fitness'] == 1) 
