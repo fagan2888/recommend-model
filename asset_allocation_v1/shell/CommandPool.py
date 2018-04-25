@@ -69,7 +69,7 @@ def pool(ctx, optid, datadir):
 @click.option('--id', 'optid', help=u'fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--calc/--no-calc', 'optcalc', default=True, help=u're calc label')
-@click.option('--limit', 'optlimit', type=int, default=10, help=u'how many fund selected for each category')
+@click.option('--limit', 'optlimit', type=int, default=20, help=u'how many fund selected for each category')
 @click.option('--points', 'optpoints', help=u'Adjust points')
 @click.pass_context
 def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):

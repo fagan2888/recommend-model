@@ -25,6 +25,7 @@ from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_samp
 from db.asset_stock_factor import *
 from db.asset_stock import *
 from db import asset_trade_dates, asset_ra_pool
+import DBData
 #from multiprocessing import Pool
 from pathos.multiprocessing import ProcessingPool as Pool
 import math
@@ -1366,6 +1367,58 @@ def regression_tree_ic_factor_layer_selector(bf_ids):
     return factor_layer_df
 
 
+
+#根据各层秩相关选取因子
+def factor_layer_selector_for_boot(bf_ids):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(barra_stock_factor_layer_ic.trade_date, barra_stock_factor_layer_ic.bf_id, barra_stock_factor_layer_ic.ic).filter(barra_stock_factor_layer_ic.bf_id.in_(bf_ids)).statement
+    layer_ic_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'bf_id'], parse_dates = ['trade_date'])
+    layer_ic_df = layer_ic_df.unstack()
+    layer_ic_df.columns = layer_ic_df.columns.droplevel(0)
+
+    layer_ic_df = layer_ic_df.rolling(6).mean()
+    layer_ic_abs = abs(layer_ic_df)
+
+    sql = session.query(barra_stock_factor_layer_stocks.layer, barra_stock_factor_layer_stocks.trade_date ,barra_stock_factor_layer_stocks.bf_id).statement
+    all_factor_layer_stock_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'bf_id'])
+
+    dates = []
+    factor_layers = []
+    for i in range(0, len(layer_ic_abs.index)):
+        date = layer_ic_abs.index[i]
+        ic = layer_ic_abs.loc[date]
+        ic = ic.sort_values(ascending = False)
+        ic = ic.dropna()
+        if len(ic) <= 4:
+            continue
+        threshold = ic.iloc[4]
+        date_factor_layer = []
+        for bf_id in ic.index:
+            ic_v = ic.loc[bf_id]
+            if ic_v >= threshold:
+                if layer_ic_df.loc[date , bf_id] > 0:
+                    date_factor_layer.append((bf_id , 1))
+                else:
+                    date_factor_layer.append((bf_id , 0))
+        factor_layers.append( date_factor_layer )
+        dates.append(date)
+
+    factor_layer_df = pd.DataFrame(factor_layers, index = dates)
+    factor_layer_df[pd.isnull(factor_layer_df)] = np.nan
+
+    session.commit()
+    session.close()
+
+    print factor_layer_df
+    return factor_layer_df
+
+
+
+
 #根据秩相关选取因子，然后利用bootstrap计算净值
 def factor_index_boot_pos():
 
@@ -1450,9 +1503,7 @@ def factor_boot_pos():
     bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
             'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
 
-    #bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012']
-    factor_pos_df = regression_tree_ic_factor_layer_selector(bf_ids)
-
+    factor_pos_df = factor_layer_selector_for_boot(bf_ids)
 
     all_stocks = stock_util.all_stock_info()
     secode_globalid_dict = dict(zip(all_stocks.index.ravel(), all_stocks.globalid.ravel()))
@@ -1468,33 +1519,34 @@ def factor_boot_pos():
     yield_df.columns = yield_df.columns.droplevel(0)
     yield_df = yield_df.rename(columns = secode_globalid_dict)
 
+
     session.commit()
     session.close()
 
+    #yield_df = pd.read_csv('barra_stock_factor/yield.csv', index_col = ['tradedate'], parse_dates = ['tradedate'])
 
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
     session = Session()
 
 
-    dates = factor_pos_df.index[160:]
-    all_stocks_globalids = list(set(all_stocks.globalid) & set(yield_df.columns))
-    stock_pos_df = pd.DataFrame(0, index = dates, columns = all_stocks_globalids)
+    dates = factor_pos_df.index[100:]
+    index = DBData.trade_date_index(dates[0], end_date=dates[-1])
 
+    all_stocks_globalids = list(set(all_stocks.globalid) & set(yield_df.columns))
+    stock_pos_df = pd.DataFrame(0, index = index, columns = all_stocks_globalids)
 
     barra_factor_positions = []
     barra_factor_dates = []
 
-    for date in dates:
+    for date in index:
+        factor_date = dates[dates <= date][-1]
         factor_index_data = {}
         factor_stocks = {}
-        date_factor_pos_df = factor_pos_df.loc[date].dropna()
+        date_factor_pos_df = factor_pos_df.loc[factor_date].dropna()
         for bf_id in date_factor_pos_df:
             bf_id, layer = bf_id[0], bf_id[1]
-            record = session.query(barra_stock_factor_layer_stocks.stock_ids).filter(and_(barra_stock_factor_layer_stocks.bf_id == bf_id, barra_stock_factor_layer_stocks.trade_date == date, barra_stock_factor_layer_stocks.layer == layer)).first()
-
-            if record is None:
-                continue
+            record = session.query(barra_stock_factor_layer_stocks.stock_ids).filter(and_(barra_stock_factor_layer_stocks.bf_id == bf_id, barra_stock_factor_layer_stocks.trade_date == factor_date, barra_stock_factor_layer_stocks.layer == layer)).first()
 
             stocks = json.loads(record[0])
             factor_stocks[(bf_id, layer)] = stocks
@@ -1517,115 +1569,25 @@ def factor_boot_pos():
         for asset in df_inc.columns:
             bound.append({'sum1': 0,    'sum2' : 0,   'upper': 1.0,  'lower': 0.0})
 
-
         record = pd.Series(0, index = all_stocks.globalid)
-        if len(df_inc.columns) == 0:
-            record = 1.0 / len(record)
-        else:
-            if len(df_inc.columns) == 1:
-                ws = [1.0]
-            else:
-                risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=32, bootstrap_count=0)
 
-            print date ,df_inc.columns, ws
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=32, bootstrap_count=0)
 
-            for i in range(0, len(ws)):
-                #tmp_record = pd.Series(0, index = all_stocks.globalid)
-                bf_id = df_inc.columns[i]
-                stocks = factor_stocks[bf_id]
-                stocks = list(set(stocks) & set(all_stocks.globalid.ravel()))
-                w = ws[i]
-                #sql = session.query(barra_stock_factor_exposure.stock_id, barra_stock_factor_exposure.factor_exposure).filter(and_(barra_stock_factor_exposure.bf_id == bf_id[0], barra_stock_factor_exposure.trade_date == date)).statement
-                #factor_exposure_df = pd.read_sql(sql, session.bind, index_col = ['stock_id'])
-                #factor_exposure_df = factor_exposure_df.loc[stocks]
-                #factor_exposure_df = factor_exposure_df / factor_exposure_df.sum()
-                #for stock_id in factor_exposure_df.index:
-                #    record.loc[stock_id] = record.loc[stock_id] + w * factor_exposure_df.loc[stock_id].ravel()[0]
-                for stock_id in stocks:
-                    record.loc[stock_id] = record.loc[stock_id] + w * 1.0 / len(stocks)
+        print date ,df_inc.columns, ws
 
-            positions = []
-            for i in range(0, len(ws)):
-                bf_id = df_inc.columns[i]
-                w = ws[i]
-                positions.append((bf_id[0], bf_id[1], w))
-
-            barra_factor_dates.append(date)
-            barra_factor_positions.append(positions)
+        for i in range(0, len(ws)):
+            bf_id = df_inc.columns[i]
+            stocks = factor_stocks[bf_id]
+            stocks = list(set(stocks) & set(all_stocks.globalid.ravel()))
+            w = ws[i]
+            for stock_id in stocks:
+                record.loc[stock_id] = record.loc[stock_id] + w * 1.0 / len(stocks)
 
         stock_pos_df.loc[date] = record
 
-    barra_factor_pos_df = pd.DataFrame(barra_factor_positions, index = barra_factor_dates)
-    barra_factor_pos_df.to_csv('barra_factor_pos.csv')
     session.commit()
     session.close()
 
-    all_barra_factor_pos_cols = []
-    for  bf_id in bf_ids:
-        all_barra_factor_pos_cols.append(str(bf_id) + '_0')
-        all_barra_factor_pos_cols.append(str(bf_id) + '_1')
-
-    all_barra_factor_pos_df = pd.DataFrame(0, index = barra_factor_pos_df.index, columns = all_barra_factor_pos_cols)
-    for date in barra_factor_pos_df.index:
-        for record in barra_factor_pos_df.loc[date].ravel():
-            col = str(record[0]) + '_' + str(record[1])
-            w = record[2]
-            all_barra_factor_pos_df.loc[date, col] = w
-
-    print all_barra_factor_pos_df
-    return all_barra_factor_pos_df
-
-
-
-    #stock_pos_df.index.name = 'date'
-    #stock_pos_df.to_csv('stock_pos.csv')
-
-
-    '''
-    engine = database.connection('asset')
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    for date in stock_pos_df.index:
-        record = stock_pos_df.loc[date]
-        record = record[record > 0]
-        for stock in record.index:
-            w = record.loc[stock]
-
-            bsfsa = barra_stock_factor_stock_allocate()
-            bsfsa.trade_date = date
-            bsfsa.stock_id = stock
-            bsfsa.weight = w
-
-            session.merge(bsfsa)
-        session.commit()
-
-
-        stocks = list(record.index.ravel())
-        pos = pd.DataFrame(0, index = [date], columns = stocks)
-        for stock in stocks:
-            pos.loc[date, stock] = record.loc[stock]
-        tmp_yield_df = yield_df[stocks]
-        tmp_yield_df = tmp_yield_df[tmp_yield_df.index <= date]
-        tmp_yield_df = tmp_yield_df.iloc[-252:,]
-        pos = pos.reindex(tmp_yield_df.index).fillna(method = 'bfill')
-        nav_df = (tmp_yield_df * pos).sum(axis = 1).dropna()
-        nav_df = ( nav_df + 1 ).cumprod()
-        print nav_df.tail()
-        for nav_date in nav_df.index:
-            v = nav_df.loc[nav_date]
-            bsfan = barra_stock_factor_allocate_nav()
-            bsfan.allocate_date = date
-            bsfan.nav_date = nav_date
-            bsfan.nav = v
-
-            session.merge(bsfan)
-        session.commit()
-
-
-    session.commit()
-    session.close()
-    '''
     return stock_pos_df
 
 

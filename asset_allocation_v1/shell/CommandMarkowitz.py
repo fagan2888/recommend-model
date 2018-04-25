@@ -31,7 +31,7 @@ from sqlalchemy import MetaData, Table, select, func
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_factor_cluster, asset_stock_factor
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_factor_cluster, asset_stock_factor, asset_stock
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
 from util import xdict
 from util.xdebug import dd
@@ -1039,7 +1039,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #factor_df = pd.read_csv('barra_stock_factor/bp_factor.csv', index_col =['tradedate'], parse_dates = ['tradedate'])
         #df = barra_stock_factor.factor_layer(factor_df)
         #df = stock_factor.compute_rankcorr_multi_factor_pos()
-        df = barra_stock_factor.factor_index_boot_pos()
+        #df = barra_stock_factor.factor_index_boot_pos()
+        df = barra_stock_factor.factor_boot_pos()
         #bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005', 'BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
         #    'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
         #df = barra_stock_factor.regression_tree_factor_spliter(bf_ids)
@@ -1178,24 +1179,26 @@ def nav_update(markowitz, alloc):
     #max_date = df_pos.index.max()
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
-    df_incs = []
-    for i in range(1, len(df_pos.index) + 1):
-        begin_date = df_pos.index[i - 1]
-        if i == len(df_pos.index):
-            end_date = datetime.now()
-        else:
-            end_date = df_pos.index[i]
-        data = {}
-        for asset_id in df_pos.columns:
-            data[asset_id] = load_nav_series(asset_id, begin_date=begin_date, end_date=end_date)
-        df_nav = pd.DataFrame(data).fillna(method='pad')
-        df_inc  = df_nav.pct_change().fillna(0.0).iloc[1:]
-        # print len(df_inc)
-        # if len(df_inc) != 0:
-        #     df_incs.append(df_inc)
-        df_incs.append(df_inc)
-    df_inc = pd.concat(df_incs)
+    #df_incs = []
+    #for i in range(1, len(df_pos.index) + 1):
+    #    begin_date = df_pos.index[i - 1]
+    #    if i == len(df_pos.index):
+    #        end_date = datetime.now()
+    #    else:
+    #        end_date = df_pos.index[i]
+    #    data = {}
+    #    for asset_id in df_pos.columns:
+    #        data[asset_id] = load_nav_series(asset_id, begin_date=begin_date, end_date=end_date)
+    #    df_nav = pd.DataFrame(data).fillna(method='pad')
+    #    df_inc  = df_nav.pct_change().fillna(0.0).iloc[1:]
+    #    df_incs.append(df_inc)
+    #df_inc = pd.concat(df_incs)
 
+    data = {}
+    for asset_id in df_pos.columns:
+        data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
+    df_nav = pd.DataFrame(data).fillna(method='pad')
+    df_inc  = df_nav.pct_change().fillna(0.0)
     # df_inc.to_csv('tmp/concat_data/df_inc.csv', index_label = 'date')
 
     # 计算复合资产净值
