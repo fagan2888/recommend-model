@@ -22,8 +22,10 @@ def select_stock_new(day, df_label, df_indicator, limit=5):
     categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
     
     data = {}
+    pufa_code = pd.read_csv('pufa_code.csv').values.ravel()
     for category in categories:
         index_codes = df_label[df_label[category] == 1].index
+        index_codes = np.intersect1d(index_codes, pufa_code)
         df_tmp = df_indicator.loc[index_codes]
         data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:limit]
         
@@ -125,16 +127,18 @@ def select_bond_new(day, df_label, df_indicator, limit=5):
     daystr = day.strftime("%Y-%m-%d")
     # df = df_label.merge(df_indicator, left_index=True, right_index=True)
     categories = ['ratebond','creditbond','convertiblebond']
-    
+
     data = {}
+    pufa_code = pd.read_csv('pufa_code.csv').values.ravel()
     for category in categories:
         index_codes = df_label[df_label[category] == 1].index
+        index_codes = np.intersect1d(index_codes, pufa_code)
         df_tmp = df_indicator.loc[index_codes]
         data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:limit]
-        
+
     df_result = pd.concat(data, names=['category','code'])
     df_result.to_csv(datapath('bond_pool_' + daystr + '.csv'))
-    
+
     return df_result
 
 def select_bond(funddf, fund_tags, indexdf):
