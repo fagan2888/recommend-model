@@ -33,5 +33,41 @@ version = '1.0'
 verbose = False
 datadir = "./tmp"
 
+bound = {
+    '120000001':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    'ERI000001':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    'ERI000002':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000014':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000052':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000053':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000054':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000055':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000056':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000057':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000058':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000059':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000060':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000061':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000062':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000063':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000064':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000065':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000066':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000067':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000068':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000069':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000070':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000071':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000072':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000073':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000074':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000075':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000076':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000077':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000078':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+    '120000079':  {'sum1': 0, 'sum2' : 0,'upper': 0.70, 'lower': 0.0},
+}
+
+
 def datapath(filepath) :
     return os.path.join(datadir, filepath)

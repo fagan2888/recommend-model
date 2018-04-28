@@ -28,6 +28,7 @@ from util import xdict
 from util.xdebug import dd
 
 import traceback, code
+from ipdb import set_trace
 
 logger = logging.getLogger(__name__)
 
@@ -456,7 +457,7 @@ def pos(ctx, optid, opttype, optlist, optrisk):
         df_highlow = asset_mz_highlow.load(highlows)
     else:
         df_highlow = asset_mz_highlow.load(highlows, xtypes)
-        
+
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_highlow, headers='keys', tablefmt='psql')
