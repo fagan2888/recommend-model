@@ -70,7 +70,21 @@ def find(globalid):
     s = select(columns).where(t.c.id == globalid)
 
     return s.execute().first()
-    
+
+
+def find_pool_id(asset):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('ra_pool', metadata, autoload=True)
+
+    columns = [
+        t.c.id,
+    ]
+
+    s = select(columns).where(t.c.ra_index_id == asset)
+
+    return s.execute().first()
+
 
 def match_asset_pool(gid):
 

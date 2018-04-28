@@ -31,8 +31,10 @@ from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
+from FactorForecast import ValidFactor
 from util import xdict
 from util.xdebug import dd
+from ipdb import set_trace
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate
@@ -73,7 +75,7 @@ def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optrepla
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid, optappend=optappend)
+            ctx.invoke(pos, optid=optid, optappend=optappend, sdate=startdate)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -736,8 +738,11 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
 
     wt = TimingWt(sr)
     filtered_data = wt.wavefilter(sr, wavelet_filter_num)
-    filtered_data = filtered_data[filtered_data.index >= begin_date]
-    filtered_data = filtered_data.loc[reindex]
+    filtered_data = filtered_data.fillna(0.0)
+    if begin_date is not None:
+        filtered_data = filtered_data[filtered_data.index >= begin_date]
+    if reindex is not None:
+        filtered_data = filtered_data.loc[reindex]
 
     return filtered_data
 
@@ -971,6 +976,25 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
         allocate = MzBlAllocate('ALC.000001', assets, views, trade_date, lookback)
         df = allocate.allocate()
+        df = markowitz_days(
+            sdate, edate, assets,
+            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+    elif algo == 10:
+        factor_ids = ['1200000%d'%i for i in range(52, 80)]
+        # start_date = '2004-01-01'
+        # start_date = '2010-06-01'
+        start_date = '2005-06-01'
+        end_date = '2018-04-24'
+        vf = ValidFactor(factor_ids, start_date, end_date)
+        df = vf.allocate()
+    elif algo == 11:
+        factor_ids = ['1200000%d'%i for i in range(52, 80)]
+        # start_date = '2004-01-01'
+        # start_date = '2010-06-01'
+        start_date = '2005-06-01'
+        end_date = '2018-04-24'
+        vf = ValidFactor(factor_ids, start_date, end_date)
+        df = vf.allocate_wave()
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -982,7 +1006,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     #if optappend:
     #    df = pd.concat([df_pos_old, df]).fillna(0.0)
-
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -1071,7 +1094,7 @@ def nav(ctx, optid, opttype, optrisk, optlist):
         df_markowitz = asset_mz_markowitz.load(markowitzs)
     else:
         df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
-        
+
     if optlist:
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
@@ -1087,7 +1110,7 @@ def nav(ctx, optid, opttype, optrisk, optlist):
 def nav_update_alloc(markowitz, optrisk):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
-    
+
     for _, alloc in df_alloc.iterrows():
         nav_update(markowitz, alloc)
 
@@ -1106,7 +1129,7 @@ def nav_update(markowitz, alloc):
     for asset_id in df_pos.columns:
         data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
-    df_inc  = df_nav.pct_change().fillna(0.0)
+    df_inc = df_nav.pct_change().fillna(0.0)
 
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
@@ -1161,7 +1184,7 @@ def turnover(ctx, optid, opttype, optrisk, optlist):
     print(tabulate(data, headers=headers, tablefmt="psql"))
     # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
     # print(tabulate(data, headers=headers, tablefmt="grid"))
-    
+
 def turnover_update_alloc(markowitz, optrisk):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
@@ -1292,7 +1315,7 @@ def copy(ctx, optsrc, optdst, optlist):
     df_xtab = df_markowitz_alloc[['globalid', 'old']].copy()
 
     df_markowitz_alloc.drop(['old'], axis=1, inplace=True)
-    
+
     df_markowitz_alloc.set_index(['globalid'], inplace=True)
     asset_mz_markowitz_alloc.save(optdst, df_markowitz_alloc)
 
@@ -1322,6 +1345,3 @@ def copy(ctx, optsrc, optdst, optlist):
     df_markowitz_asset = df_markowitz_asset.set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
 
     asset_mz_markowitz_asset.save(df_xtab['globalid'], df_markowitz_asset)
-
-
-

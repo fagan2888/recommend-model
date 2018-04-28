@@ -114,26 +114,29 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, opteliminat
 @click.option('--id', 'optid', help=u'fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--calc/--no-calc', 'optcalc', default=True, help=u're calc label')
+@click.option('--if/--no-if', 'optif', default=False, help=u'cal industry factors')
 @click.option('--limit', 'optlimit', type=int, default=3, help=u'how many fund selected for each category')
 @click.option('--points', 'optpoints', help=u'Adjust points')
 @click.pass_context
-def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
+def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optif, optperiod, optpoints):
     '''run constant risk model
-    ''' 
+    '''
     if datadir is None:
         datadir = "./tmp"
     Const.datadir = datadir
 
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
     if optid is not None:
         pools = [s.strip() for s in optid.split(',')]
     else:
         pools = None
 
-    #All industry factors
-    pools = [u'111107%02d'%i for i in range(1, 29)]
+    if optif:
+        #All industry factors
+        pools = [u'111107%02d'%i for i in range(1, 29)]
+
     df_pool = load_pools(pools)
 
     if optlist:
@@ -173,9 +176,24 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
 
         data = []
         with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
+            pre_codes = None
             for day in adjust_points:
                 bar.update(1)
                 codes = pool_by_corr_jensen(pool, day, lookback, limit)
+                if pre_codes is not None:
+                    final_codes = []
+                    for pre_code in pre_codes:
+                        if pre_code in codes:
+                            final_codes.append(pre_code)
+                    for code in codes:
+                        if (code not in final_codes) and (len(final_codes) < limit):
+                            final_codes.append(code)
+                    codes = pre_codes = final_codes
+                else:
+                    codes = codes[:3]
+                    pre_codes = codes
+
+                print day, codes
                 # print day, codes
                 if codes is None or len(codes) == 0:
                     continue
@@ -385,14 +403,14 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
     #     '2016-08-05',
     #     '2016-11-05',
     # ])
-  
     return label_index
 
 @pool.command()
 @click.option('--id', 'optid', help=u'ids of fund pool to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--if/--no-if', 'optif', default=False, help=u'cal industry factors')
 @click.pass_context
-def nav(ctx, optid, optlist):
+def nav(ctx, optid, optlist, optif):
     ''' calc pool nav and inc
     '''
     db_asset = create_engine(config.db_asset_uri)
@@ -405,7 +423,9 @@ def nav(ctx, optid, optlist):
     else:
         pools = None
 
-    # pools = [u'111107%02d'%i for i in range(1, 29)]
+    if optif:
+        #All industry factors
+        pools = [u'111107%02d'%i for i in range(1, 29)]
     df_pool = load_pools(pools)
 
     if optlist:
@@ -675,8 +695,9 @@ def query_max_pool_id_between(min_id, max_id):
 @pool.command()
 @click.option('--id', 'optid', help=u'specify fund pool id (e.g. 12101,92101')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
+@click.option('--if/--no-if', 'optif', default=False, help=u'cal industry factors')
 @click.pass_context
-def turnover(ctx, optid, optlist):
+def turnover(ctx, optid, optlist, optif):
     ''' calc pool turnover
     '''
     if optid is not None:
@@ -684,6 +705,11 @@ def turnover(ctx, optid, optlist):
     else:
         pools = None
     # pools = [u'111107%02d'%i for i in range(1, 29)]
+
+    if optif:
+        #All industry factors
+        pools = [u'111107%02d'%i for i in range(1, 29)]
+
     df_pool = load_pools(pools)
 
     if optlist:
@@ -813,7 +839,6 @@ def corr_update_category(pool, category, lookback):
 
     df_new = df_new.applymap("{:.4f}".format)
 
-
     db = database.connection('asset')
     # 加载旧数据
     t2 = Table('ra_pool_criteria', MetaData(bind=db), autoload=True)
@@ -839,7 +864,6 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
     start_date = index.min().strftime("%Y-%m-%d")
     end_date = day.strftime("%Y-%m-%d")
 
-
     ra_index_id = pool['ra_index_id']
     pool_id     = pool['id']
     df_nav_index = base_ra_index_nav.index_value(start_date, end_date, ra_index_id)
@@ -859,7 +883,6 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
     df_nav_fund  = df_nav_fund.dropna(axis = 1)
     df_nav_fund  = df_nav_fund.loc[df_nav_index.index]
     fund_index_df = pd.concat([df_nav_index, df_nav_fund], axis = 1, join_axes = [df_nav_index.index])
-
 
     fund_index_corr_df = fund_index_df.pct_change().fillna(0.0).corr().fillna(0.0)
     corr = fund_index_corr_df[ra_index_id][1:]
@@ -893,8 +916,9 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
             final_codes.append(fund_code)
             jensens.append(jensen)
 
-        final_codes = final_codes[0 : limit]
-        jensens = jensens[0 : limit]
-        print ' ', day, final_codes, np.round(jensens, 2)
+        # final_codes = final_codes[0 : limit]
+        # jensens = jensens[0 : limit]
+        final_codes = final_codes[0 : 10]
+        jensens = jensens[0 : 10]
+        # print ' ', day, final_codes, np.round(jensens, 2)
         return final_codes
-

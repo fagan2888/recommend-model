@@ -32,7 +32,7 @@ def load_weekly(begin_date, end_date, fund_ids=None, codes=None):
         .select_from(t1.join(t2, t1.c.ra_date == t2.c.td_date)) \
         .where(t1.c.ra_date.between(begin_date, end_date)) \
         .where(t2.c.td_date.between(begin_date, end_date) & (t2.c.td_type.op('&')(0x02) | (t2.c.td_date == end_date)))
-    
+
     if fund_ids is not None:
         s = s.where(t1.c.ra_fund_id.in_(fund_ids))
 
