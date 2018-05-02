@@ -37,8 +37,8 @@ class RiskMgrGARCHPrototype(object):
         inc2d = inc.rolling(2).sum().fillna(0)
         inc3d = inc.rolling(3).sum().fillna(0)
         inc5d = inc.rolling(5).sum().fillna(0)
-        return pd.DataFrame({'inc2d': inc2d, 
-                             'inc3d': inc3d, 
+        return pd.DataFrame({'inc2d': inc2d,
+                             'inc3d': inc3d,
                              'inc5d': inc5d,
                              'timing': timing})
 
@@ -90,13 +90,13 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
             result_status[day] = status
             result_act[day] = action
             result_pos[day] = position
-        
+
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
         df_result.index.name = 'rm_date'
         if disp:
             self.calc_winrate(df_result, target)
         return df_result
-    
+
     def calc_winrate(self, df_result, target):
         nav = self.df_nav[target].reindex(self.tdates[target])
         inc = np.log(1+nav.pct_change()).fillna(0)
@@ -131,7 +131,7 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
     #         self.joints[target] = RiskMgrGARCHHelper.perform_joint(self.inc5d(target))
     #         print "Complete multivariable GARCH fitting! Elapsed time: %s" % time.strftime("%M:%S", time.gmtime(time.time()-s_time))
     #     return self.joints[target]
-     
+
     def perform(self):
         # Calculate where the joint distribution get exceeded
         # df_joint = self.calc_joint()
@@ -150,7 +150,7 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
         #则 df_joint.loc[day, '61110501']对应于指定日期(day)中, 沪深300与中证500构成的联合分布是否被击穿
         #df_result_garch的row, col同理, entries为某日的某资产仅被GARCH模型风控的状态
         #例: df_result_garch[day, '61110501']为指定日期(day)中, 中证500在GARCH模型下的风控状态(0 => 无风控, 1=> 风控一半(弃用), 2=>空仓)
-        
+
         #对每个资产, 检查是否联合分布被击穿, 且其处于风控状态, 并最后求或(any(axis=1))
         if_joint_controlled = pd.DataFrame({k: (df_joint[k]!=0) & (df_result_garch[k]!=0) for k in others}).any(1)
 
@@ -174,11 +174,11 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
                     status, empty_days, position, action = 2, 0, 0, 3
                 elif row['inc5d'] < df_vars.loc[day]['var_5d']:
                     status, empty_days, position, action = 2, 0, 0, 5
-                
+
                 if row['joint_status']:
                     if status == 0:
                         status, empty_days, position, action = 1, 0, self.joint_ratio, 4
-                
+
                 #联合分布是否被击穿有时可能没有数据, 判断这一天是否有对应数据
                 # if day in df_joint.index:
                 #     #判断当前天是否有被击穿
@@ -215,7 +215,7 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
             result_status[day] = status
             result_act[day] = action
             result_pos[day] = position
-        
+
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
         df_result.index.name = 'rm_date'
         self.calc_winrate_joint(df_result)
@@ -247,5 +247,5 @@ def calcstatus(status, df):
                 i+=1
             result.append(tmp)
         else:
-            i+=1 
+            i+=1
     return result

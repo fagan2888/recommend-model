@@ -6,7 +6,6 @@ on the R interactive shell introduced by RPy2.
 '''
 
 import sys
-# sys.path.append('shell')
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,7 +21,6 @@ import warnings
 #Import rpy2
 import rpy2
 import rpy2.robjects as ro
-# import rpy2.robjects.packages
 from rpy2.robjects import pandas2ri, numpy2ri
 
 #Load basic libs from R
@@ -99,7 +97,7 @@ def perform_single(df):
         var2d_res[day] = var2d
         var3d_res[day] = var3d
         var5d_res[day] = var5d
-    
+
     df_result = pd.DataFrame({'var_2d': var2d_res, 'var_3d': var3d_res, 'var_5d': var5d_res})
     return df_result
 
@@ -118,14 +116,14 @@ def calc_var(i, df, q):
     fit = map(r.garch, inc)
     VaRs = map(lambda x: genVaR(*x), fit)
     q.put(tuple([day]+VaRs))
-    
+
 
 def genVaR(mu, sigma):
     '''
     Here is the definition of the specific way we calculate the VaR from mu and sigma (in univariate case)
     For instance, if we use the Student's t distribution and we wanna have the alpha quantile as the VaR,
     we shall return `stats.t.ppf(alpha, nu, mu, sigma)`, where the parameters coming from the fitted GARCH model.
-    
+
     Currently we use normal distribution, and the quantile is approx. 0.00135 (3 sigmas off the mu).
     '''
     return mu - 3 * sigma
@@ -161,10 +159,10 @@ def perform_joint(df):
         status_res[day] = status
         mu_res[day] = mu
         cov_res[day] = cov
-    
+
     sr_result = pd.Series(status_res)
     return sr_result
-    
+
 def joint_status_days(days, df, q):
     '''
     Sometimes, the model cannot got fitted by a reasonable bunch of parameters.
@@ -173,19 +171,19 @@ def joint_status_days(days, df, q):
     signal to trigger the joint risk control.
     '''
     for day in days:
-        try: 
+        try:
             calc_joint_status(day, df, q)
         except rpy2.rinterface.RRuntimeError, error:
             pass
             # print 'Day: %s' % df.index[day].strftime('%Y/%m/%d')
             # print error
-            # print 
+            # print
 
 def calc_joint_status(i, df, q):
     day = df.index[i]
     df_used = df[i::-5][::-1].fillna(0)
     mu, cov = map(np.array, r.mgarch(df_used))
-    #Cuz the type we retrieved from the R interactive environment is `Matrix`, 
+    #Cuz the type we retrieved from the R interactive environment is `Matrix`,
     #we have to flatten the (1,2) matrix to (0,2) vector.
     mu = mu.flatten()
     today = df_used.iloc[-1].values
