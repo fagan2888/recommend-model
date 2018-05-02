@@ -65,7 +65,7 @@ def pool(ctx, optid, datadir):
 @click.option('--id', 'optid', help=u'fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--calc/--no-calc', 'optcalc', default=True, help=u're calc label')
-@click.option('--limit', 'optlimit', type=int, default=20, help=u'how many fund selected for each category')
+@click.option('--limit', 'optlimit', type=int, default=10, help=u'how many fund selected for each category')
 @click.option('--points', 'optpoints', help=u'Adjust points')
 @click.pass_context
 def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
@@ -112,7 +112,7 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, op
 @click.option('--id', 'optid', help=u'fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--calc/--no-calc', 'optcalc', default=True, help=u're calc label')
-@click.option('--limit', 'optlimit', type=int, default=20, help=u'how many fund selected for each category')
+@click.option('--limit', 'optlimit', type=int, default=10, help=u'how many fund selected for each category')
 @click.option('--points', 'optpoints', help=u'Adjust points')
 @click.pass_context
 def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
@@ -258,7 +258,8 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
     df_old = pd.read_sql(stmt_select, db, index_col=['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'])
     if not df_old.empty:
         df_old = df_old.applymap(lambda x: '%.4f' % (x) if type(x) == float else x)
-
+    
+    print df_new
     database.batch(db, ra_pool_fund, df_new, df_old)
 
 def fund_code_to_globalid(codes):
