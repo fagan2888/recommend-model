@@ -44,7 +44,7 @@ require(rmgarch)
 garchOrder <- c(1,1)
 armaOrder <- c(1,0)
 varModel <- list(model="gjrGARCH", garchOrder = garchOrder)
-spec <- ugarchspec(varModel, mean.model = list(armaOrder = armaOrder), distribution.model="std")
+spec <- ugarchspec(varModel, mean.model = list(armaOrder = armaOrder), distribution.model="norm")
 uspec <- multispec(replicate(2, spec))
 dspec <- dccspec(uspec=uspec, dccOrder = c(1,1), distribution='mvnorm')
 
