@@ -172,13 +172,18 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
         db = database.connection('asset')
         # ra_pool_sample_t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
         ra_pool_fund_t= Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+        today = datetime.now().strftime('%Y-%m-%d')
+        dates = base_trade_dates.trade_date_lookback_index(today, 500)
+        pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+        start_date = dates.min().strftime("%Y-%m-%d")
+        df_nav_fund  = base_ra_fund_nav.load_daily(start_date, today, codes = pool_codes)
 
         data = []
         with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
             pre_codes = None
             for day in adjust_points:
                 bar.update(1)
-                codes = pool_by_corr_jensen(pool, day, lookback, limit)
+                codes = pool_by_corr_jensen(pool, day, lookback, limit, df_nav_fund)
                 if pre_codes is not None:
                     final_codes = []
                     for pre_code in pre_codes:
@@ -818,7 +823,7 @@ def corr_update_category(pool, category, lookback):
     database.batch(db, t2, df_new, df_old, timestamp=False)
 
 
-def pool_by_corr_jensen(pool, day, lookback, limit):
+def pool_by_corr_jensen(pool, day, lookback, limit, df_nav_fund):
 
     index = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=lookback)
 
@@ -833,16 +838,17 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
     if len(df_nav_index.index) == 0:
         return []
     # pool_codes = asset_ra_pool_sample.load(pool_id)['ra_fund_code'].values
-    pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
 
-    df_nav_fund  = base_ra_fund_nav.load_daily(start_date, end_date, codes = pool_codes)
+    # pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+    # df_nav_fund  = base_ra_fund_nav.load_daily(start_date, end_date, codes = pool_codes)
     if len(df_nav_fund) == 0:
         return []
 
-    df_nav_fund  = df_nav_fund.reindex(pd.date_range(df_nav_index.index[0], df_nav_index.index[-1]))
-    df_nav_fund  = df_nav_fund.fillna(method = 'pad')
-    df_nav_fund  = df_nav_fund.dropna(axis = 1)
-    df_nav_fund  = df_nav_fund.loc[df_nav_index.index]
+    df_nav_fund = df_nav_fund.loc[start_date:end_date]
+    df_nav_fund = df_nav_fund.reindex(pd.date_range(df_nav_index.index[0], df_nav_index.index[-1]))
+    df_nav_fund = df_nav_fund.fillna(method = 'pad')
+    df_nav_fund = df_nav_fund.dropna(axis = 1)
+    df_nav_fund = df_nav_fund.loc[df_nav_index.index]
     fund_index_df = pd.concat([df_nav_index, df_nav_fund], axis = 1, join_axes = [df_nav_index.index])
 
     fund_index_corr_df = fund_index_df.pct_change().fillna(0.0).corr().fillna(0.0)
@@ -850,36 +856,37 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
     corr = corr.sort_values(ascending = False)
 
     code_jensen = {}
-    # for code in df_nav_fund.columns:
-        # jensen = fin.jensen(df_nav_fund[code].pct_change().fillna(0.0), df_nav_index[ra_index_id].pct_change().fillna(0.0) ,Const.rf)
-        # code_jensen.setdefault(code, jensen)
+    for code in df_nav_fund.columns:
+        jensen = fin.jensen(df_nav_fund[code].pct_change().fillna(0.0), df_nav_index[ra_index_id].pct_change().fillna(0.0) ,Const.rf)
+        code_jensen.setdefault(code, jensen)
 
-    # code_rs = {}
+    code_rs = {}
     for fund_code in df_nav_fund.columns:
         rs = fin.rsquare(df_nav_fund[fund_code].pct_change().fillna(0.0), df_nav_index[ra_index_id].pct_change().fillna(0.0) ,Const.rf)
-        code_jensen.setdefault(fund_code, rs)
+        code_rs.setdefault(fund_code, rs)
 
-    if len(code_jensen) == 0:
+    if len(code_rs) == 0:
         logger.info('No FUND')
         return None
     else:
         final_codes = []
-        jensens = []
-        x = code_jensen
+        rss = []
+        x = code_rs
         sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
-        # corr_threshold = np.percentile(corr.values, 80)
-        # corr_threshold = 0.7 if corr_threshold <= 0.7 else corr_threshold
-        # corr_threshold = 0.9 if corr_threshold >= 0.9 else corr_threshold
         for i in range(0, len(sorted_x)):
-            fund_code, jensen = sorted_x[i]
-            # if corr[fund_code] >= corr_threshold:
-                # final_codes.append(fund_code)
+            fund_code, rs = sorted_x[i]
             final_codes.append(fund_code)
-            jensens.append(jensen)
+            rss.append(rs)
 
-        # final_codes = final_codes[0 : limit]
-        # jensens = jensens[0 : limit]
         final_codes = final_codes[0 : 10]
-        jensens = jensens[0 : 10]
-        # print ' ', day, final_codes, np.round(jensens, 2)
+        rss = rss[0 : 10]
+        print
+        print final_codes
+
+        filtered_code_jensen = dict((key, value) for key, value in code_jensen.iteritems() if key in final_codes)
+        x = filtered_code_jensen
+        sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+        final_codes = [x[0] for x in sorted_x]
+        print final_codes
+        # print ' ', day, final_codes, np.round(rss, 2)
         return final_codes
