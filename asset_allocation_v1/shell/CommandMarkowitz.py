@@ -995,6 +995,15 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         end_date = '2018-04-24'
         vf = ValidFactor(factor_ids, start_date, end_date)
         df = vf.allocate_wave()
+    elif algo == 12:
+        factor_ids = ['1200000%d'%i for i in range(52, 80)]
+        # start_date = '2004-01-01'
+        # start_date = '2010-06-01'
+        start_date = '2005-06-01'
+        end_date = '2018-04-24'
+        vf = ValidFactor(factor_ids, start_date, end_date)
+        df = vf.allocate_avg()
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;

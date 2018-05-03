@@ -30,7 +30,8 @@ class ValidFactor(object):
         self.factor_ids = factor_ids
         # self.base_ids = ['120000001', '120000002', '120000018']
         self.base_ids = ['120000001', '120000002']
-        self.other_ids = ['120000001', 'ERI000001', '120000014', 'ERI000002']
+        # self.other_ids = ['120000001', 'ERI000001', '120000014', 'ERI000002']
+        self.other_ids = []
         self.trade_dates = DBData.trade_dates(start_date, end_date)
 
         self.asset_navs, self.asset_incs = self.load_asset_nav(factor_ids, start_date, end_date)
@@ -123,7 +124,8 @@ class ValidFactor(object):
         dates = self.trade_dates[self.trade_dates >= datetime.datetime(2012, 7, 27).date()]
         # dates = self.trade_dates[self.trade_dates >= datetime.datetime(2018, 3, 1).date()]
         asset_incs = pd.concat([self.asset_incs, self.other_incs], 1)
-        df_valid_assets = self.cal_valid_assets()
+        # df_valid_assets = self.cal_valid_assets()
+        df_valid_assets = pd.read_csv('data/df_valid_assets.csv', index_col = ['date'], parse_dates = ['date'])
         bound = []
         for asset in asset_incs.columns:
             bound.append(Const.bound[asset])
@@ -149,7 +151,8 @@ class ValidFactor(object):
         dates = self.trade_dates[self.trade_dates >= datetime.datetime(2012, 7, 27).date()]
         # dates = self.trade_dates[self.trade_dates >= datetime.datetime(2018, 3, 1).date()]
         asset_incs = pd.concat([self.asset_incs, self.other_incs], 1)
-        df_valid_assets = self.cal_valid_assets()
+        # df_valid_assets = self.cal_valid_assets()
+        df_valid_assets = pd.read_csv('data/df_valid_assets.csv', index_col = ['date'], parse_dates = ['date'])
         bound = []
         for asset in asset_incs.columns:
             bound.append(Const.bound[asset])
@@ -170,8 +173,38 @@ class ValidFactor(object):
 
             df_inc = df_inc.loc[:date]
             df_inc = df_inc.tail(26)
-            risks, returns, ws, sharpes = PF.markowitz_r_spe(df_inc, bound)
+            if len(df_inc.columns) == 1:
+                risks, returns, ws, sharpes = 0, 0, [1.0], 0
+            else:
+                risks, returns, ws, sharpes = PF.markowitz_r_spe(df_inc, bound)
             df_result.loc[date, assets] = np.array(ws).ravel()
+            df_result.loc[date, ['sharpe', 'risk', 'return']] = [sharpes, risks, returns]
+            df_result = df_result.fillna(0.0)
+            # print df_result
+
+        return df_result
+
+
+    def allocate_avg(self):
+        dates = self.trade_dates[self.trade_dates >= datetime.datetime(2012, 7, 27).date()]
+        # dates = self.trade_dates[self.trade_dates >= datetime.datetime(2018, 3, 1).date()]
+        asset_incs = pd.concat([self.asset_incs, self.other_incs], 1)
+        # df_valid_assets = self.cal_valid_assets()
+        df_valid_assets = pd.read_csv('data/df_valid_assets.csv', index_col = ['date'], parse_dates = ['date'])
+        bound = []
+        for asset in asset_incs.columns:
+            bound.append(Const.bound[asset])
+
+        df_result = pd.DataFrame(columns = np.append(asset_incs.columns.values, ['sharpe', 'risk', 'return']))
+        for date in dates:
+            print date
+            valid_assets = df_valid_assets[df_valid_assets.index < date.strftime('%Y-%m-%d')].tail(1)
+            valid_assets = valid_assets[valid_assets == 1].dropna(1).columns.values
+            assets = np.append(valid_assets, self.other_ids)
+            df_inc = asset_incs.loc[:date, assets]
+            df_inc = df_inc.tail(26)
+            risks, returns, ws, sharpes = 0, 0, np.repeat(1.0/len(df_inc.columns), len(df_inc.columns)), 0
+            df_result.loc[date, assets] = ws
             df_result.loc[date, ['sharpe', 'risk', 'return']] = [sharpes, risks, returns]
             df_result = df_result.fillna(0.0)
             # print df_result
