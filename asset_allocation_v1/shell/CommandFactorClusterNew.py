@@ -345,13 +345,14 @@ def fc_update_bflayer_nav(ctx, optid):
 
     df_new = pd.DataFrame(columns = ['date', 'nav', 'fc_cluster_id', 'factor_selected_date'])
     for date in select_dates:
+        print date
         bf_ids = valid_factors.loc[date].values.ravel()
         factors_ret = df_ret.loc[:, bf_ids]
         layer_ret = factors_ret.mean(1)
         layer_nav = (1 + layer_ret).cumprod()
         layer_nav = layer_nav.to_frame(name = 'nav')
         layer_nav.index.name = 'date'
-        layer_nav['fc_cluster_id'] = '%s.%d'%(optid, 1)
+        layer_nav['fc_cluster_id'] = '%s.%d'%(optid, 2)
         layer_nav = layer_nav.reset_index()
 
         layer_nav['factor_selected_date'] = date

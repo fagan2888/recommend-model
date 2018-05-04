@@ -25,13 +25,18 @@ from dateutil.parser import parse
 from Const import datapath
 #from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_factor_cluster, asset_factor_cluster_nav
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_factor_cluster, asset_factor_cluster_nav, asset_mz_markowitz_pos
 from db.asset_factor_cluster import *
 from util import xdict
 from DBData import trade_dates
 from db.asset_fund import *
+from db.asset_stock_factor import *
 from ipdb import set_trace
 from CommandFactorCluster import load_nav_series
+import matplotlib
+matplotlib.use('pdf')
+import matplotlib.pyplot as plt
+plt.style.use('seaborn')
 
 import traceback, code
 
@@ -633,7 +638,6 @@ def online_portfolio_month_nav(ctx):
     df.to_csv('线上新模型有费率和标杆组合风险10有费率每月收益率.csv')
 
 
-
 #线上风险10权益类资产被动管理型基金占比
 @analysis.command()
 @click.pass_context
@@ -678,15 +682,19 @@ def passive_fund_ratio(ctx):
     return
 
 
-
 @analysis.command()
 @click.pass_context
-def index_corr(ctx):
-
-    index_id = ['120000001','120000001']
+def markowitz_pos_diff(ctx):
+    base_id = "MZ.JH0040"
+    mz_pools = ["MZ.BL00%d0"%i for i in range(1, 10)]
+    base_pos = asset_mz_markowitz_pos.load(base_id)
+    for markowitz_id in mz_pools:
+        tmp_pos = asset_mz_markowitz_pos.load(markowitz_id)
+        pos_diff = np.abs(tmp_pos - base_pos)
+        pos_diff = pos_diff.sum().sum()/len(pos_diff)
+        print markowitz_id, pos_diff
 
     return
-
 
 
 @analysis.command()
@@ -733,7 +741,6 @@ def max_corr(ctx):
     # set_trace()
 
 
-
 def cal_corr(df):
     # if type(df) == pd.core.series.Series:
     if len(df.columns) == 1:
@@ -746,6 +753,121 @@ def cal_corr(df):
 
         return corr
 
+@analysis.command()
+@click.pass_context
+def valid_factor_pdf(ctx):
+
+    # engine = database.connection('asset')
+    # Session = sessionmaker(bind=engine)
+    # session = Session()
+
+    # sql = session.query(barra_stock_factor_valid_factor.trade_date, barra_stock_factor_valid_factor.bf_layer_id).statement
+    # df = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
+    # set_trace()
+
+    bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012',
+            'BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
+    factor_layer_df = regression_tree_ic_factor_layer_selector(bf_ids)
+
+    for bf_id in bf_ids:
+        for layer in ['.0', '.1']:
+            factor = bf_id+layer
+            tmp_df = factor_layer_df.mask(factor_layer_df != factor, 0)
+            tmp_df = tmp_df.mask(tmp_df == factor, 1)
+            tmp_df = tmp_df.sum(1)
+            count = []
+            tmp_count = 0
+            for valid in tmp_df.values:
+                if valid == 1:
+                    tmp_count += valid
+                else:
+                    if tmp_count != 0:
+                        count.append(tmp_count)
+                    tmp_count = 0
+
+            sucount = sorted(np.unique(count))
+            valid_counts = []
+            freqs = []
+            for valid_count in sucount:
+                # print valid_count, count.count(valid_count)
+                valid_counts.append(valid_count)
+                freqs.append(count.count(valid_count))
+
+            if len(count) != 0:
+                fig = plt.figure(figsize = (30, 20))
+                ax = fig.add_subplot(111)
+                ax.bar(valid_counts, freqs)
+                plt.xticks(range(1, int(max(count))+1))
+                ax.set_title('factor %s probability density function'%factor, {'fontsize': 30})
+                fig.savefig('figure/' + factor + '.png')
+
+            else:
+                print factor
+
+    return 0
+
+
+def regression_tree_ic_factor_layer_selector(bf_ids):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    # sql = session.query(barra_stock_factor_layer_ic.trade_date, barra_stock_factor_layer_ic.bf_id, barra_stock_factor_layer_ic.ic).filter(barra_stock_factor_layer_ic.bf_id.in_(bf_ids)).statement
+    # layer_ic_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'bf_id'], parse_dates = ['trade_date'])
+    # layer_ic_df = layer_ic_df.unstack()
+    # layer_ic_df.columns = layer_ic_df.columns.droplevel(0)
+
+    sql = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.bf_id, barra_stock_factor_layer_nav.nav).filter(barra_stock_factor_layer_nav.bf_id.in_(bf_ids)).statement
+    layer_ic_df = {}
+    for bf_id in bf_ids:
+        for layer in ['.0', '.1']:
+            factor = bf_id + layer
+            layer_ic_df[factor] = load_factor_nav_series(factor, begin_date= '2010-01-01')
+    layer_ic_df =  pd.DataFrame(layer_ic_df)
+    layer_ic_df = layer_ic_df.resample('m').last()
+    #print layer_ic_df
+    #layer_ic_df = abs(layer_ic_df)
+
+    # layer_ic_df.to_csv('layer_ic_df.csv', index_label = 'date')
+    # sys.exit(0)
+    # layer_ic_df = layer_ic_df.rolling(1).mean()
+    # layer_ic_abs = abs(layer_ic_df)
+    layer_ic_abs = layer_ic_df.pct_change().dropna()
+
+    # sql = session.query(barra_stock_factor_layer_stocks.layer, barra_stock_factor_layer_stocks.trade_date ,barra_stock_factor_layer_stocks.bf_id).statement
+    # all_factor_layer_stock_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'bf_id'])
+
+    dates = []
+    factor_layers = []
+    for i in range(0, len(layer_ic_abs.index)):
+        date = layer_ic_abs.index[i]
+        ic = layer_ic_abs.loc[date]
+        ic = ic.sort_values(ascending = False)
+        ic = ic.dropna()
+        if len(ic) <= 6:
+            continue
+        threshold = ic.iloc[6]
+        date_factor_layer = []
+        for bf_id in ic.index:
+            ic_v = ic.loc[bf_id]
+            #if ic_v >= 0.75:
+            #    date_factor_layer.append((bf_id , 1))
+            #    date_factor_layer.append((bf_id , 0))
+            if ic_v >= threshold:
+            #    layers = all_factor_layer_stock_df.loc[date].loc[bf_id]
+            #    max_layer = max(layers.layer)
+            #    min_layer = min(layers.layer)
+                date_factor_layer.append(bf_id)
+            #else:
+            #    date_factor_layer.append(np.nan)
+            #layers = all_factor_layer_stock_df.loc[date].loc[bf_id]
+            #max_layer = max(layers.layer)
+            #min_layer = min(layers.layer)
+            #date_factor_layer.append((bf_id , max_layer))
+            #date_factor_layer.append((bf_id , min_layer))
+        factor_layers.append(date_factor_layer)
+        dates.append(date)
 
 #计算最长多久回正
 @analysis.command()
@@ -780,3 +902,7 @@ def longest_return(ctx):
             #    date = online_nav_ser.index[p]
 
         print i, max_date, date, max_days
+    factor_layer_df = pd.DataFrame(factor_layers, index = dates)
+    factor_layer_df[pd.isnull(factor_layer_df)] = np.nan
+
+    return factor_layer_df

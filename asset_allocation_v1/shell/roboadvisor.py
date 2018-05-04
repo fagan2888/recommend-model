@@ -38,7 +38,6 @@ import CommandFactorCluster
 import CommandFactorClusterNew
 import CommandView
 import CommandETFFund
-
 from util import ProgressBar
 from util.xdebug import dd
 from db import *

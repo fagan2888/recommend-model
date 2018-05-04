@@ -29,7 +29,7 @@ def load(gid, use_markowitz_ratio=False, included_markowitz_id=False):
     else:
         columns.append(t1.c.mz_ratio)
 
-    
+
     if included_markowitz_id:
         columns.insert(0, t1.c.mz_markowitz_id)
         index_col.insert(0, 'mz_markowitz_id')
@@ -42,7 +42,7 @@ def load(gid, use_markowitz_ratio=False, included_markowitz_id=False):
         return None
     # if xtypes is not None:
     #     s = s.where(t1.c.mz_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['mz_date'])
 
     df = df.unstack().fillna(0.0)

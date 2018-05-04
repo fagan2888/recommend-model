@@ -709,8 +709,11 @@ def limit_update(highlow, alloc, ratio_hl):
     # ratio_hl = ratio_hl / 5
     # ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.1)
 
-    ratio_hl = ratio_hl / 2.5
-    ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.2)
+    # ratio_hl = ratio_hl / 2.5
+    # ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.2)
+
+    ratio_hl = ratio_hl / 1.25
+    ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.4)
 
     ratio_hl['ratio_h'] = ratio_hl['ratio_h'].apply(range_cons)
     ratio_hl['ratio_l'] = 1.0 - ratio_hl['ratio_h']
