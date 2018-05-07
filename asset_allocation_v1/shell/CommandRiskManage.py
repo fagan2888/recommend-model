@@ -415,7 +415,7 @@ def vars_update(riskmgr):
             else:
                 nav = database.load_nav_series(_id, reindex=tdate)
                 idxs = [i for i in range(600, len(tdate)) if tdate[i] in missing_days]
-                idxs = filter(lambda i: tdate[i] in missing_days, range(600, len(tdate)))
+                #  idxs = filter(lambda i: tdate[i] in missing_days, range(600, len(tdate)))
                 df_tmp = VaR.perform_days(nav, idxs)
                 df_vars = pd.concat([df_vars, df_tmp])
         df_vars.index.name = 'ix_date'

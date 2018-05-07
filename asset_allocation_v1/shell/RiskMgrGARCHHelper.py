@@ -51,15 +51,15 @@ dspec <- dccspec(uspec=uspec, dccOrder = c(1,1), distribution='mvnorm')
 last <- (function(x) x[length(x)])
 
 garch <- function(sr) {
-    fit <- ugarchfit(sr, spec=spec, solver='hybrid')
+    fit <- ugarchfit(sr, spec=spec, solver='hybrid', solver.control=list(tol=1e-6))
     mu <- last(fitted(fit))
     sigma <- last(sigma(fit))
     return(c(mu, sigma))
 }
 
 mgarch <- function(df) {
-    multf <- multifit(uspec, df)
-    fit <- dccfit(dspec, data=df, fit.control=list(eval.se=TRUE), fit=multf)
+    multf <- multifit(uspec, df, solver.control=list(tol=1e-6))
+    fit <- dccfit(dspec, data=df, fit.control=list(eval.se=TRUE), solver.control=list(tol=1e-6), fit=multf)
     mu. <- fitted(fit)
     mu <- mu.[dim(mu.)[1],]
     cov. <- rcov(fit)

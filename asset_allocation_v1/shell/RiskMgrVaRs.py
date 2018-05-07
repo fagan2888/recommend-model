@@ -61,7 +61,8 @@ class RiskMgrJoint():
                 inc = np.log(1+nav.dropna().pct_change().fillna(0))*100
                 inc5d = inc.rolling(5).sum().fillna(0)
                 joints[global_id] = perform_joint(inc5d)
-        df_result = pd.DataFrame(joints).fillna(False)
+        #Actually there is used to be fillna(False)
+        df_result = pd.DataFrame(joints).fillna(0)
         return df_result
 
     def perform_days(self, df_nav, target, missing_days):
