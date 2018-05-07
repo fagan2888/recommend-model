@@ -14,6 +14,8 @@ import time
 import logging
 import re
 import util_numpy as npu
+from ipdb import set_trace
+from scipy.stats import rankdata
 import MySQLdb
 import config
 
@@ -31,7 +33,6 @@ from util import xdict
 from DBData import trade_dates
 from db.asset_fund import *
 from db.asset_stock_factor import *
-from ipdb import set_trace
 from CommandFactorCluster import load_nav_series
 import matplotlib
 matplotlib.use('pdf')
@@ -805,6 +806,182 @@ def valid_factor_pdf(ctx):
                 print factor
 
     return 0
+
+
+@analysis.command()
+@click.pass_context
+def valid_factor_forecast(ctx):
+
+    bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005','BF.000006','BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012','BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
+    # bf_ids = ['1200000%d'%x for x in range(52, 80)]
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.bf_id, barra_stock_factor_layer_nav.nav).filter(barra_stock_factor_layer_nav.bf_id.in_(bf_ids)).statement
+    layer_ic_df = {}
+
+    for bf_id in bf_ids:
+        for layer in ['.0', '.1']:
+            factor = bf_id + layer
+            layer_ic_df[factor] = load_factor_nav_series(factor, begin_date= '2010-01-01')
+
+    # for bf_id in bf_ids:
+    #     factor = bf_id
+        # layer_ic_df[factor] = load_nav_series(factor, begin_date= '2010-01-01')
+
+    layer_ic_df =  pd.DataFrame(layer_ic_df)
+    layer_ic_df = layer_ic_df.resample('m').last()
+    #print layer_ic_df
+    #layer_ic_df = abs(layer_ic_df)
+
+    # layer_ic_df.to_csv('layer_ic_df.csv', index_label = 'date')
+    # sys.exit(0)
+    # layer_ic_df = layer_ic_df.rolling(1).mean()
+    # layer_ic_abs = abs(layer_ic_df)
+    layer_ret_df = layer_ic_df.pct_change().dropna()
+
+    '''
+    for cycle in range(2, 12):
+        layer_valid_df = layer_ret_df.apply(valid, axis = 1)
+        layer_valid_df = layer_valid_df.rolling(cycle).sum().dropna()
+        layer_valid_percent = layer_valid_df.apply(lambda x: valid_count(x, cycle), axis = 1)
+        print cycle, layer_valid_percent.mean(), layer_valid_percent.std()
+    set_trace()
+    layer_valid_percent.plot()
+    plt.savefig('figure/valid_percent/valid_percent_industry.png')
+    '''
+
+    '''
+    for i in range(1000):
+        arr = np.random.binomial(1, 0.5, 100)
+        consist_mean, consist_std = count_consist(arr)
+        print consist_mean, consist_std
+
+    '''
+    for k in range(40):
+        print
+        for i in range(0, 34, 2):
+            tmp_layer_ret_df = layer_ret_df.iloc[k:k+60, [i, i+1]]
+            tmp_layer_valid_df = tmp_layer_ret_df.apply(valid, axis = 1)
+            # tmp_layer_valid_df = tmp_layer_valid_df.rolling(cycle).sum().dropna()
+            print tmp_layer_valid_df.index[0], tmp_layer_valid_df.index[-1]
+            factors = tmp_layer_valid_df.columns
+            for j in [0, 1]:
+                arr = tmp_layer_valid_df.iloc[:, j].values
+                consist_mean, consist_std = count_consist(arr)
+                if consist_mean - 2*consist_std > 2:
+                    print factors[j], 'valid', consist_mean, consist_std
+                else:
+                    print factors[j], 'invalid', consist_mean, consist_std
+
+
+@analysis.command()
+@click.pass_context
+def valid_factor_rank(ctx):
+
+    bf_ids = ['BF.000003', 'BF.000004', 'BF.000005','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012','BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
+    # bf_ids = ['BF.000001', 'BF.000002', 'BF.000003', 'BF.000004', 'BF.000005', 'BF.000006', 'BF.000007','BF.000008','BF.000009','BF.000010','BF.000011','BF.000012','BF.000013','BF.000014','BF.000015','BF.000016','BF.000017']
+
+    # bf_ids = ['1200000%d'%x for x in range(52, 80)]
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(barra_stock_factor_layer_nav.trade_date, barra_stock_factor_layer_nav.bf_id, barra_stock_factor_layer_nav.nav).filter(barra_stock_factor_layer_nav.bf_id.in_(bf_ids)).statement
+    layer_ic_df = {}
+    dates = trade_dates('2010-01-01', '2018-04-30')
+
+    for bf_id in bf_ids:
+        for layer in ['.0', '.1']:
+            factor = bf_id + layer
+            layer_ic_df[factor] = load_factor_nav_series(factor, begin_date = '2010-01-01')
+
+    # for bf_id in bf_ids:
+    #     factor = bf_id
+        # layer_ic_df[factor] = load_nav_series(factor, begin_date= '2010-01-01')
+
+    t2 = 12
+    for t1 in range(1, 100):
+    # for t1 in [12]:
+        layer_ic_df = pd.DataFrame(layer_ic_df)
+        layer_ic_df = layer_ic_df.reindex(dates).dropna()
+        # layer_ic_df = layer_ic_df.resample('m').last()
+        layer_ret_df = layer_ic_df.pct_change(t1).dropna()
+        layer_ret_df_future = layer_ic_df.pct_change(t2).shift(-t2).dropna()
+
+        layer_ret_past = layer_ret_df.apply(lambda x: bestn(x, 5), 1)
+        # layer_ret_past = layer_ret_df.apply(lambda x: worstn(x, 1), 1)
+        layer_ret_future = layer_ret_df_future.apply(lambda x: rankdata(sorted(x)), 1)
+        df_rank = layer_ret_past * layer_ret_future
+        df_rank = df_rank.dropna()
+        result = df_rank.sum(1)/5
+
+        print t1, result.mean()/(len(bf_ids)*2), result.std(), len(result)
+        # print t1, result.mean()/(len(bf_ids)+1), result.std(), len(result)
+
+
+def bestn(x, n):
+
+    rankn = sorted(x, reverse = True)[n-1]
+    result = []
+    for i in x:
+        if i >=rankn:
+            result.append(1)
+        else:
+            result.append(0)
+
+    return np.array(result)
+
+
+def worstn(x, n):
+
+    rankn = sorted(x)[n-1]
+    result = []
+    for i in x:
+        if i <=rankn:
+            result.append(1)
+        else:
+            result.append(0)
+
+    return np.array(result)
+
+
+def count_consist(arr):
+
+    count = []
+    tmp_count = 0
+    for i in arr:
+        if i == 1:
+            tmp_count+=1
+        elif tmp_count != 0:
+            count.append(tmp_count)
+            tmp_count = 0
+
+    return np.mean(count), np.std(count)/np.sqrt(len(count))
+
+
+def valid(x):
+    result = []
+    med = np.median(x)
+    for item in x:
+        if item > med:
+            result.append(1)
+        else:
+            result.append(0)
+
+    return np.array(result)
+
+
+def valid_count(x, cycle):
+    result = 0
+    for item in x:
+        if item >= cycle:
+            result += 1
+
+    return result/float(len(x))
 
 
 def regression_tree_ic_factor_layer_selector(bf_ids):

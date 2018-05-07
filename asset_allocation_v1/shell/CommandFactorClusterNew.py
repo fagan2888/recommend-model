@@ -151,12 +151,14 @@ def fc_rolling(ctx, optid):
             fc.handle()
         '''
 
-        method = 'beta'
+        method = 'corr'
         scores = {}
         models = {}
         # bf_ids = None
-        for i in range(5, 6):
-            fc = FactorCluster(assets, i, sdate, edate, fdate, method = method, bf_ids = used_ids)
+        for i in range(2, 10):
+        # for i in [4]:
+            # fc = FactorCluster(assets, i, sdate, edate, fdate, method = method, bf_ids = used_ids)
+            fc = FactorCluster(assets, i, sdate, edate, fdate, method = method, bf_ids = None)
             fc.handle()
             print i, 'silhouette_samples_value:', fc.silhouette_samples_value
             score = fc.silhouette_samples_value
@@ -447,12 +449,14 @@ class FactorCluster(object):
             #     print layer_asset_ret.corr(method = 'spearman').loc['BF.000001.0', 'BF.000001.1']
             # except:
             #     pass
-            inner_score.append(cal_score(layer_asset_ret, method = 'outter'))
+            # inner_score.append(cal_score(layer_asset_ret, method = 'outter'))
+            inner_score.append(cal_score(layer_asset_ret))
             layer_nav_ret = layer_asset_ret.mean(1)
             all_nav_ret.append(layer_nav_ret)
 
         df_all_nav = pd.concat(all_nav_ret, 1)
-        outter_score = cal_score(df_all_nav, method = 'outter')
+        # outter_score = cal_score(df_all_nav, method = 'outter')
+        outter_score = cal_score(df_all_nav)
         # print np.mean(inner_score), outter_score
 
         return np.mean(inner_score), outter_score
@@ -499,12 +503,14 @@ class FactorCluster(object):
             #     print layer_asset_ret.corr(method = 'spearman').loc['BF.000001.0', 'BF.000001.1']
             # except:
             #     pass
-            inner_score.append(cal_score(layer_asset_ret, method = 'outter'))
+            # inner_score.append(cal_score(layer_asset_ret, method = 'outter'))
+            inner_score.append(cal_score(layer_asset_ret))
             layer_nav_ret = layer_asset_ret.mean(1)
             all_nav_ret.append(layer_nav_ret)
 
         df_all_nav = pd.concat(all_nav_ret, 1)
-        outter_score = cal_score(df_all_nav, method = 'outter')
+        # outter_score = cal_score(df_all_nav, method = 'outter')
+        outter_score = cal_score(df_all_nav)
         # print np.mean(inner_score), outter_score
 
         return np.mean(inner_score), outter_score
