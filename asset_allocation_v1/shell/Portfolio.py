@@ -24,177 +24,6 @@ from util.xdebug import dd
 
 logger = logging.getLogger(__name__)
 
-#strategicallocation
-
-
-#indexallocation
-
-
-#technicallocation
-
-
-#中类资产配置
-def indexallocation(indexdf):
-
-    indexdfr = indexdf.pct_change()
-
-    indexdfr = indexdfr.fillna(0.0)
-
-    codes = indexdfr.columns
-
-    return_rate = []
-    for code in codes:
-        return_rate.append(indexdfr[code].values)
-
-    #print return_rate
-    risks, returns, ws = fin.efficient_frontier_index(return_rate)
-
-    rf = const.rf
-
-    final_risk = 0
-    final_return = 0
-    final_ws = []
-    final_sharp = -1000
-
-
-    for i in range(0, len(risks)):
-
-
-        sharp = (returns[i] - rf) / risks[i]
-
-        if sharp > final_sharp:
-
-                final_risk = risks[i]
-                final_return = returns[i]
-                final_ws     = ws[i]
-                final_sharp  = sharp
-
-    return final_risk, final_return, final_ws, final_sharp
-
-
-
-#细类资产配置
-def technicallocation(funddf, fund_rank):
-
-    rf = const.rf
-
-    funddfr = funddf.pct_change()
-
-    funddfr = funddfr.fillna(0.0)
-
-    final_risk = 0
-    final_return = 0
-    final_ws = []
-    final_sharp = -10000000000000000.0
-    final_codes = []
-
-    for i in range(2, min(11, len(fund_rank))):
-
-        codes = fund_rank[0 : i]
-        dfr = funddfr[codes]
-
-        #dfr.fillna(0.0)
-
-        return_rate = []
-        for code in codes:
-            return_rate.append(dfr[code].values)
-
-        #print return_rate
-        risks, returns, ws = fin.efficient_frontier_fund(return_rate)
-
-
-        for j in range(0, len(risks)):
-
-            sharp = (returns[j] - rf) / risks[j]
-            if sharp > final_sharp:
-
-                final_risk = risks[i]
-                final_return = returns[i]
-                final_ws     = ws[i]
-                final_sharp  = sharp
-
-
-    return final_risk, final_return, final_ws, final_sharp
-
-
-#markowitz
-def markowitz(funddf, bounds, d):
-
-    rf = const.rf
-    funddfr = funddf.pct_change()
-    funddfr = funddfr.fillna(0.0)
-
-    final_risk = 0
-    final_return = 0
-    final_ws = []
-    final_sharp = -10000000000000000000000000.0
-    final_codes = []
-
-
-    codes = funddfr.columns
-
-
-    return_rate = []
-
-
-    for code in codes:
-        return_rate.append(funddfr[code].values)
-
-
-    risks, returns, ws = fin.efficient_frontier(return_rate, bounds)
-
-    for j in range(0, len(risks)):
-        sharp = (returns[j] - rf) / risks[j]
-        if sharp > final_sharp:
-            final_risk = risks[j]
-            final_return = returns[j]
-            final_ws = ws[j]
-            final_sharp = sharp
-
-    f_str = '%s, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n'
-    f = open(datapath('ef_' + d + '.csv'),'w')
-    f.write('date, risk, return, largecap, smallcap, rise, oscillation, decline ,growth ,value, ratebond, creditbond, convertiblebond, money1, money2, SP500.SPI, SPGSGCTR.SPI, HSCI.HI\n')
-    #for j in range(0, len(risks)):
-    #    f.write(f_str % (d,risks[j], returns[j], ws[j][0], ws[j][1], ws[j][2], ws[j][3], ws[j][4], ws[j][5], ws[j][6], ws[j][7], ws[j][8], ws[j][9], ws[j][10], ws[j][11], ws[j][12], ws[j][13], ws[j][14] ))
-
-    f.flush()
-    f.close()
-
-    return final_risk, final_return, final_ws, final_sharp
-
-
-def markowitz_r(funddfr, bounds):
-
-    rf = Const.rf
-
-    final_risk = 0
-    final_return = 0
-    final_ws = []
-    final_sharp = -10000000000000000000000000.0
-    final_codes = []
-
-
-    codes = funddfr.columns
-
-
-    return_rate = []
-
-    for code in codes:
-        return_rate.append(funddfr[code].values)
-
-
-    risks, returns, ws = fin.efficient_frontier(return_rate, bounds)
-
-    for j in range(0, len(risks)):
-        sharp = (returns[j] - rf) / risks[j]
-        if sharp > final_sharp:
-            final_risk = risks[j]
-            final_return = returns[j]
-            final_ws = ws[j]
-            final_sharp = sharp
-
-    return final_risk, final_return, final_ws, final_sharp
-
 
 def markowitz_r_spe(funddfr, bounds):
 
@@ -208,10 +37,7 @@ def markowitz_r_spe(funddfr, bounds):
 
 
     codes = funddfr.columns
-
-
     return_rate = []
-
     for code in codes:
         return_rate.append(funddfr[code].values)
 
@@ -228,11 +54,122 @@ def markowitz_r_spe(funddfr, bounds):
 
     return final_risk, final_return, final_ws, final_sharp
 
+
+def markowitz_r_spe_bl(funddfr, P, eta, alpha, bounds):
+
+    rf = Const.rf
+
+    final_risk = 0
+    final_return = 0
+    final_ws = []
+    final_sharp = -10000000000000000000000000.0
+    final_codes = []
+
+    codes = funddfr.columns
+    return_rate = []
+    for code in codes:
+        return_rate.append(funddfr[code].values)
+
+    if eta.size == 0:
+        risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds)
+    else:
+        risks, returns, ws = fin.efficient_frontier_spe_bl(return_rate, P, eta, alpha, bounds)
+
+    for j in range(0, len(risks)):
+        sharp = (returns[j] - rf) / risks[j]
+        if sharp > final_sharp:
+            final_risk = risks[j]
+            final_return = returns[j]
+            final_ws = ws[j]
+            final_sharp = sharp
+
+    return final_risk, final_return, final_ws, final_sharp
+
+
+
+
 def m_markowitz(queue, random_index, df_inc, bound):
     for index in random_index:
         tmp_df_inc = df_inc.iloc[index]
         risk, returns, ws, sharpe = markowitz_r_spe(tmp_df_inc, bound)
         queue.put((risk, returns, ws, sharpe))
+
+
+def m_markowitz_bl(queue, random_index, df_inc, P, eta, alpha, bound):
+    for index in random_index:
+        tmp_df_inc = df_inc.iloc[index]
+        risk, returns, ws, sharpe = markowitz_r_spe_bl(tmp_df_inc, P, eta, alpha, bound)
+        queue.put((risk, returns, ws, sharpe))
+
+
+def markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count = 0, bootstrap_count=0):
+
+    os.environ['OMP_NUM_THREADS'] = '1'
+
+    if cpu_count == 0:
+        count = multiprocessing.cpu_count()
+        cpu_count = count if count > 0 else 1
+
+    look_back = len(df_inc)
+    if bootstrap_count <= 0:
+        loop_num = look_back * 4
+    elif bootstrap_count % 2:
+        loop_num = bootstrap_count + 1
+    else:
+        loop_num = bootstrap_count
+
+    # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
+    process_indexs = [[] for i in range(0, cpu_count)]
+
+    #print process_indexs
+    #loop_num = 20
+    rep_num = loop_num * (look_back / 2) / look_back
+    day_indexs = range(0, look_back) * rep_num
+    random.shuffle(day_indexs)
+    #print day_indexs
+    day_indexs = np.array(day_indexs)
+
+
+    day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
+    for m in range(0, len(day_indexs)):
+        indexs = day_indexs[m]
+        mod = m % cpu_count
+        process_indexs[mod].append(list(indexs))
+
+
+    manager = Manager()
+    q = manager.Queue()
+    processes = []
+    for indexs in process_indexs:
+        if eta.size == 0:
+            p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound,))
+        else:
+            p = multiprocessing.Process(target = m_markowitz_bl, args = (q, indexs, df_inc, P, eta, alpha, bound))
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
+
+    wss = np.zeros(len(df_inc.columns))
+    risks = []
+    returns = []
+    sharpes = []
+    for m in range(0, q.qsize()):
+        record = q.get(m)
+        ws = record[2]
+        for n in range(0, len(ws)):
+            w = ws[n]
+            wss[n] = wss[n] + w
+        risks.append(record[0])
+        returns.append(record[1])
+        sharpes.append(record[3])
+
+
+    ws = wss / loop_num
+    return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
+
+
 
 
 def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
