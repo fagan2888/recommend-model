@@ -61,14 +61,15 @@ def pool(ctx, optid, datadir):
 @click.option('--datadir', '-d', type=click.Path(exists=True), help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
-@click.option('--period', 'optperiod', type=int, default=13, help=u'adjust period by week')
+@click.option('--period', 'optperiod', type=int, default=1, help=u'adjust period by month')
 @click.option('--id', 'optid', help=u'fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--calc/--no-calc', 'optcalc', default=True, help=u're calc label')
 @click.option('--limit', 'optlimit', type=int, default=20, help=u'how many fund selected for each category')
+@click.option('--eliminate_ratio', 'opteliminateratio', type=float, default=0.2, help=u'ratio to eliminate fund')
 @click.option('--points', 'optpoints', help=u'Adjust points')
 @click.pass_context
-def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
+def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, opteliminateratio, optcalc, optperiod, optpoints):
     '''run constant risk model
     '''    
     if datadir is None:
@@ -101,7 +102,7 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, op
         print date.strftime("%Y-%m-%d")
 
     for _, pool in df_pool.iterrows():
-        fund_update(pool, adjust_points, optlimit, optcalc)
+        fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc)
 
 
 @pool.command()
@@ -191,7 +192,33 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
         database.batch(db, ra_pool_fund_t, df_new, df_old)
 
 
-def fund_update(pool, adjust_points, optlimit, optcalc):
+def fund_lowliest_elimination(df_pre_fund, df_indicator, df_label, ratio, limit):
+
+    categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
+
+    data = {}
+    for category in categories:
+        index_codes = df_label[df_label[category] == 1].index
+        df_tmp = df_indicator.loc[index_codes]
+        if df_pre_fund is None:
+            data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:limit]
+        else:
+            pre_fund = df_indicator.loc[df_pre_fund.loc[category].index]
+            eliminate_num = int(ratio * len(pre_fund))
+            pre_fund = pre_fund.sort_values(by='jensen', ascending=False)[0:len(pre_fund) - eliminate_num]
+            df_tmp = df_tmp.loc[df_tmp.index.difference(pre_fund.index)]
+            df_tmp = df_tmp.sort_values(by='jensen', ascending=False)
+            df_tmp = pd.concat([pre_fund, df_tmp], axis = 0)
+            #print pre_fund
+            #print df_tmp[0:limit]
+            data[category] = df_tmp[0:limit]
+
+    df_result = pd.concat(data, names=['category','code'])
+
+    return df_result
+
+
+def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
     ''' re calc fund for single fund pool
     '''
     lookback = pool.ra_lookback
@@ -204,11 +231,21 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
         data_fund = {}
         with click.progressbar(length=len(adjust_points), label=('calc pool %s' % (pool.id)).ljust(30)) as bar:
             for day in adjust_points:
+                #print day
                 bar.update(1)
                 if pool['ra_fund_type'] == 1:
-                    data_fund[day] = LabelAsset.label_asset_stock_per_day(day, lookback, limit)
+                    df_indicator, df_label = LabelAsset.label_asset_stock_per_day(day, lookback, limit)
                 else:
-                    data_fund[day] = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
+                    df_indicator, df_label = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
+
+                fund_dates = np.array(data_fund.keys())
+                fund_date = fund_dates[fund_dates < day]
+                fund_date = list(fund_date)
+                fund_date.sort()
+                if len(fund_date) == 0:
+                    data_fund[day] = fund_lowliest_elimination(None, df_indicator, df_label, opteliminateratio, optlimit)
+                else:
+                    data_fund[day] = fund_lowliest_elimination(data_fund[fund_date[-1]], df_indicator, df_label, opteliminateratio, optlimit)
 
 
         df_fund = pd.concat(data_fund, names=['ra_date', 'ra_category', 'ra_fund_code'])
@@ -229,7 +266,7 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
         df_new = df_new.reindex_axis(['ra_pool', 'ra_category',  'ra_date', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_level', 'ra_sharpe', 'ra_jensen', 'ra_sortino', 'ra_ppw'], axis='columns')
         df_new.sort_values(by=['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'], inplace=True)
         
-        df_new.to_csv(datapath('pool_%s.csv' % (pool['id'])), index=False)
+        #df_new.to_csv(datapath('pool_%s.csv' % (pool['id'])), index=False)
         
     else:
         df_new = pd.read_csv(datapath('pool_%s.csv' % (pool['id'])), parse_dates=['ra_date'], dtype={'ra_fund_code': str})
@@ -260,6 +297,7 @@ def fund_update(pool, adjust_points, optlimit, optcalc):
         df_old = df_old.applymap(lambda x: '%.4f' % (x) if type(x) == float else x)
 
     database.batch(db, ra_pool_fund, df_new, df_old)
+
 
 def fund_code_to_globalid(codes):
     db = database.connection('base')
@@ -310,14 +348,16 @@ def load_pools(pools, pool_type=None):
     return df_pool
         
 
-def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=13):
+def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
     # 加载时间轴数据
     if not enddate:
         yesterday = (datetime.now() - timedelta(days=1)); 
         enddate = yesterday.strftime("%Y-%m-%d")        
 
-    index = DBData.trade_date_index(startdate, end_date=enddate)
-    
+    index = base_trade_dates.load_trade_dates(startdate, end_date=enddate)
+    index = index[index.td_type >= 8].index
+    #index = DBData.trade_date_index(startdate, end_date=enddate)
+
     if label_period > 1:
         label_index = index[::label_period]
         if index.max() not in label_index:
@@ -341,7 +381,7 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=13):
     #     '2016-08-05',
     #     '2016-11-05',
     # ])
-    
+  
     return label_index
 
 @pool.command()

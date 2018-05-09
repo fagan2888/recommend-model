@@ -33,5 +33,6 @@ version = '1.0'
 verbose = False
 datadir = "./tmp"
 
+
 def datapath(filepath) :
     return os.path.join(datadir, filepath)

@@ -108,7 +108,7 @@ def label_asset_nav(start_date, end_date):
             bar.update(1)
 
     df_result = pd.DataFrame(data)
-    df_result.to_csv(datapath('labelasset.csv'))
+    #df_result.to_csv(datapath('labelasset.csv'))
 
     return df_result
         
@@ -124,7 +124,7 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     df_nav_stock = DBData.stock_fund_value(start_date, end_date)
     df_nav_index = DBData.index_value(start_date, end_date)
     
-    df_nav_stock.to_csv(datapath('stock_' + day.strftime('%Y-%m-%d') + '.csv'))
+    #df_nav_stock.to_csv(datapath('stock_' + day.strftime('%Y-%m-%d') + '.csv'))
     
     #
     # 根据时间轴进行重采样
@@ -144,18 +144,21 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     df_indicator = FundFilter.stock_fund_filter_new(
         day, df_nav_stock, df_nav_index[Const.hs300_code])
 
+
     #
     # 打标签确定所有备选基金
     #
     df_nav_indicator = df_nav_stock[df_indicator.index]
     df_label = ST.tag_stock_fund_new(day, df_nav_indicator, df_nav_index)
 
+    return df_indicator, df_label
+
     #
     # 选择基金
     #
-    df_stock_fund = FundSelector.select_stock_new(day, df_label, df_indicator, limit)
+    #df_stock_fund = FundSelector.select_stock_new(day, df_label, df_indicator, limit)
 
-    return df_stock_fund
+    #return df_stock_fund
 
 def label_asset_bond_per_day(day, lookback, limit = 5):
     # 加载时间轴数据
@@ -194,13 +197,14 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
     df_nav_indicator = df_nav_bond[df_indicator.index]
     df_label = ST.tag_bond_fund_new(day, df_nav_indicator, df_nav_index)
 
+    return df_indicator, df_label
     #
     # 选择基金
     #
     # print day, df_label, df_indicator
-    df_bond_fund = FundSelector.select_bond_new(day, df_label, df_indicator, limit)
+    #df_bond_fund = FundSelector.select_bond_new(day, df_label, df_indicator, limit)
 
-    return df_bond_fund
+    #return df_bond_fund
 
 def label_asset_money_per_day(day, lookback, limit = 1):
     # 加载时间轴数据
