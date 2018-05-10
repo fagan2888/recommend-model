@@ -18,8 +18,29 @@ import time
 import pickle
 
 
+def calc_drawdown(sr_nav):
+    max_nav = sr_nav[0]
+    drawdown = []
+    for day in sr_nav:
+        if max_nav < day:
+            max_nav = day
+        drawdown.append((day - max_nav)/max_nav)
+    return pd.Series(drawdown)
+
+def calc_max_drawdown(sr_nav):
+    drawdown = calc_drawdown(sr_nav)
+    max_dd = [drawdown[:i].min() for i in range(1, len(drawdown))]
+    max_dd.append(drawdown.min())
+    return pd.Series(max_dd, index=sr_nav.index)
+
+def calc_nav(inc, pos, name):
+    new_inc = inc * df.pos_new.shift(1).fillna(1)
+    new_nav = np.exp(new_inc.cumsum())
+
 class RiskMgrGARCHPrototype(object):
     def __init__(self, codes, target, tdates, df_nav, timing, vars_):
+        self.maxdd = -0.10
+        self.ddlookback = 5
         self.empty = 5
         self.codes = codes
         self.target = target
@@ -30,10 +51,18 @@ class RiskMgrGARCHPrototype(object):
         #Cache for the status if the joint distribution got brokedown
         self.joints = {}
 
+    def nav(self, target):
+        return self.df_nav.loc[:, target].reindex(self.tdates[target])
+
+    def inc(self, target):
+        return np.log(1+self.nav(target).dropna().pct_change().fillna(0))
+
+
     def generate_df_for_garch(self, target):
         timing = self.timings[target].reindex(self.tdates[target])
-        nav = self.df_nav.loc[:, target].reindex(self.tdates[target])
-        inc = np.log(1+nav.dropna().pct_change().fillna(0))*100
+        #  nav = self.df_nav.loc[:, target].reindex(self.tdates[target])
+        #  inc = np.log(1+nav.dropna().pct_change().fillna(0))*100
+        inc = self.inc(target)*100
         inc2d = inc.rolling(2).sum().fillna(0)
         inc3d = inc.rolling(3).sum().fillna(0)
         inc5d = inc.rolling(5).sum().fillna(0)
@@ -52,6 +81,7 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
         if target is None:
             target = self.target
         df = self.generate_df_for_garch(target)
+        sr_nav = self.nav(target)
         df_vars = self.vars[target]
         status, empty_days, action = 0, 0, 0
         result_status = {}
@@ -61,7 +91,13 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
             if not (day in df_vars.index):
                 pass
             else:
+                tmp_nav = sr_nav.loc[:day]
+                local_max = tmp_nav.iloc[-self.ddlookback:].max()
+                local_drawdown = (sr_nav[day] - local_max)/local_max
                 # if status != 2:
+                if local_drawdown < self.maxdd:
+                    status, empty_days, position, action = 2, 0, 0, 6
+                    #  set_trace()
                 if row['inc2d'] < df_vars.loc[day]['var_2d']:
                     status, empty_days, position, action = 2, 0, 0, 2
                 elif row['inc3d'] < df_vars.loc[day]['var_3d']:

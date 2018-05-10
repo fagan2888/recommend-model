@@ -111,12 +111,12 @@ class RiskMgrSimple(object):
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act})
         df_result.index.name = 'rm_date'
 
-        df = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
-        inc = np.log(1+df_input['nav'].pct_change().fillna(0))
-        status = calcstatus(1, df)
-        count = np.array([inc.iloc[i].sum() for i in status])
-        print "Triggered: %d" % count.size
-        print "Winned %d" % count[count<0].size
+        #  df = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
+        #  inc = np.log(1+df_input['nav'].pct_change().fillna(0))
+        #  status = calcstatus(1, df)
+        #  count = np.array([inc.iloc[i].sum() for i in status])
+        #  print "Triggered: %d" % count.size
+        #  print "Winned %d" % count[count<0].size
         return df_result;
 
 def calcstatus(status, df):
