@@ -91,12 +91,12 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
             if not (day in df_vars.index):
                 pass
             else:
-                tmp_nav = sr_nav.loc[:day]
-                local_max = tmp_nav.iloc[-self.ddlookback:].max()
-                local_drawdown = (sr_nav[day] - local_max)/local_max
-                # if status != 2:
-                if local_drawdown < self.maxdd:
-                    status, empty_days, position, action = 2, 0, 0, 6
+                #  tmp_nav = sr_nav.loc[:day]
+                #  local_max = tmp_nav.iloc[-self.ddlookback:].max()
+                #  local_drawdown = (sr_nav[day] - local_max)/local_max
+                #  # if status != 2:
+                #  if local_drawdown < self.maxdd:
+                    #  status, empty_days, position, action = 2, 0, 0, 6
                     #  set_trace()
                 if row['inc2d'] < df_vars.loc[day]['var_2d']:
                     status, empty_days, position, action = 2, 0, 0, 2
