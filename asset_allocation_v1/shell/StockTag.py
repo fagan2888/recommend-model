@@ -979,7 +979,7 @@ def hmmeasure(funddf, indexdf):
 def tagstockfund(allocationdata, funddf, indexdf):
 
     dates = indexdf.index.values
-    
+
     dates.sort()
     end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
     start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
@@ -1125,7 +1125,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
             #print code
             final_codes.add(code)
             codes.append(code)
-    fund_tags['risefitness'] = codes        
+    fund_tags['risefitness'] = codes
 
     #print 'decline'
     codes = []
@@ -1134,14 +1134,14 @@ def tagstockfund(allocationdata, funddf, indexdf):
             #print code
             final_codes.add(code)
             codes.append(code)
-    fund_tags['declinefitness'] = codes        
+    fund_tags['declinefitness'] = codes
 
     #print 'oscillation'
     codes = []
     for code in oscillation_set:
         final_codes.add(code)
         codes.append(code)
-    fund_tags['oscillationfitness'] = codes        
+    fund_tags['oscillationfitness'] = codes
 
     #print 'largecap'
     codes = []
@@ -1155,7 +1155,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
 
     #print 'smallcap'
-    codes = []    
+    codes = []
     for code in smallcapprefer_set:
         if code in smallcapfitness_set:
             #print code
@@ -1522,7 +1522,7 @@ def tag_bond_fund_new(day, df_nav_fund, df_nav_index):
     };
 
     columns=["ratebond","creditbond", "convertiblebond"]
-    
+
     df_label = pd.DataFrame(data, columns=columns)
     df_label.index.name = 'code'
     df_label.to_csv(datapath('bond_blabel_' + daystr + '.csv'))

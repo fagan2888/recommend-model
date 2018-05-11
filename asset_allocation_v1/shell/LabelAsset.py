@@ -221,7 +221,7 @@ def label_asset_money_per_day(day, lookback, limit = 1):
     df_nav_money = DBData.money_fund_value(start_date, end_date)
 
     df_nav_money.to_csv(datapath('money_' + day.strftime('%Y-%m-%d') + '.csv'))
-    
+
     #
     # 根据时间轴进行重采样
     #
@@ -256,7 +256,7 @@ def label_asset_other_per_day(day, lookback, limit):
     df_nav_other = DBData.other_fund_value(start_date, end_date)
     df_nav_other = df_nav_other[['SP500.SPI','GLNC','HSCI.HI']]
     df_nav_other.to_csv(datapath('other_' + day.strftime('%Y-%m-%d') + '.csv'))
-    
+
     #
     # 根据时间轴进行重采样
     #
@@ -337,7 +337,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
             #print
             #print time.time()
-            
+
             label_stock_df.to_csv(datapath('stock_' + dates[i].strftime('%Y-%m-%d') + '.csv'))
 
             codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[Const.hs300_code])
@@ -604,7 +604,7 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
             last_end_date = dates[-1]
             if i + interval < len(dates):
                  last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
-                 
+
             last_end_date = '2015-04-03'
 
 

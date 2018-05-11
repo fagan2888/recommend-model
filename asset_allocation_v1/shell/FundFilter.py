@@ -648,7 +648,7 @@ def bondfundfilter(allocationdata, funddf, indexdf):
 
     indicator_selected_df = indicator_df.loc[codes]
     indicator_selected_df.to_csv(datapath('bond_indicator_selected_' + end_date + '.csv'))
-    
+
     allocationdata.bond_fund_measure[end_date] = indicator_df
 
 

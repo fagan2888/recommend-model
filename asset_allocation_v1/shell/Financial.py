@@ -56,7 +56,7 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
 
     G = matrix(0.0, (3 * n_asset + 2,  n_asset))
     h = matrix(0.0, (3 * n_asset + 2, 1) )
- 
+
     h[3* n_asset, 0] = sum1
     h[3* n_asset + 1, 0] = sum2
     for i in range(0, n_asset):
