@@ -535,7 +535,7 @@ def index_value(start_date, end_date):
     date_sql = build_sql_trade_date_weekly(start_date, end_date)
 
     sql = "SELECT ra_date as date, ra_index_code, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date ORDER BY ra_date" % (date_sql)
-    
+
     # sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
 
 
@@ -549,8 +549,6 @@ def index_value(start_date, end_date):
     df.columns = df.columns.droplevel(0)
 
     return df
-
-
 
 
 def index_day_value(start_date, end_date):

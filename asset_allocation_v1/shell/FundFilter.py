@@ -270,7 +270,7 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 
     dates = funddf.index.values
     dates.sort()
-    
+
     end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
     start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
@@ -431,6 +431,7 @@ def stockfundfilter(allocationdata, funddf, indexdf):
     print "aa codes", end_date, codes
 
     return codes, indicator
+
 
 def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
 

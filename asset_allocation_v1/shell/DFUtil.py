@@ -336,6 +336,7 @@ def categories_types(as_int=False):
             'decline'         : 15, # 下跌
             'growth'          : 16, # 成长
             'value'           : 17, # 价值
+            'consumption'     : 18, # 消费
 
             'ratebond'        : 21, # 利率债
             'creditbond'      : 22, # 信用债
@@ -359,6 +360,7 @@ def categories_types(as_int=False):
         'decline'         : '15', # 下跌
         'growth'          : '16', # 成长
         'value'           : '17', # 价值
+        'consumption'     : '18', # 消费
 
         'ratebond'        : '21', # 利率债
         'creditbond'      : '22', # 信用债
@@ -380,6 +382,7 @@ def categories_name(category, default='unknown'):
         15 : 'decline'        , # 下跌
         16 : 'growth'         , # 成长
         17 : 'value'          , # 价值
+        18 : 'consumption'    , # 消费
         
         21 : 'ratebond'       , # 利率债
         22 : 'creditbond'     , # 信用债

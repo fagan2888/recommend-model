@@ -17,6 +17,7 @@ import AllocationData
 
 from Const import datapath
 from dateutil.parser import parse
+from ipdb import set_trace
 
 #大盘适应度
 def largecapfitness(funddf, indexdf, ratio):
@@ -82,7 +83,6 @@ def largecapfitness(funddf, indexdf, ratio):
 
 
     return result
-
 
 
 #小盘适应度
@@ -208,7 +208,6 @@ def risefitness(funddf, indexdf, ratio):
     result = []
     for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
         result.append(sorted_fitness[i])
-
 
     return result
 
@@ -399,6 +398,72 @@ def growthfitness(funddf, indexdf, ratio):
     return result
 
 
+#消费适应度
+def consumptionfitness(funddf, indexdf, ratio):
+
+    funddfr = funddf.pct_change()
+    indexdfr = indexdf.pct_change()
+
+
+    growthcaptag = {}
+
+    growthcap = []
+
+    cols   = indexdfr.columns
+
+    indexr = []
+    indexr.append(0)
+    for i in range(1 ,len(indexdfr[cols[0]].values)):
+        indexr.append(indexdfr['801120'].values[i])
+
+
+    for i in range(4, len(indexr)):
+        n = 0
+        for j in range(0, 4):
+            v = indexr[i - j]
+            if v >= 0:
+                n = n + 1
+            else:
+                n = n - 1
+
+        if n == 0:
+            growthcap.append(0)
+        elif n > 0:
+            growthcap.append(1)
+        else:
+            growthcap.append(-1)
+
+
+    for code in funddfr.columns:
+
+        fundr = funddfr[code].values
+        growthcapr = []
+        for i in range(0, len(growthcap)):
+            tag = growthcap[i]
+            if tag == 1 and (not isnan(fundr[i + 4])):
+                growthcapr.append(fundr[i + 4])
+
+        growthcaptag[code] = growthcapr
+
+
+    fitness = {}
+    for code in growthcaptag.keys():
+        rs = growthcaptag[code]
+        fitness[code] = (np.mean(rs), np.std(rs), (np.mean(rs) - Const.rf) / np.std(rs))
+
+
+    x = fitness
+    sorted_x = sorted(x.iteritems(), key=lambda x : x[1][2], reverse=True)
+    sorted_fitness = sorted_x
+
+
+    result = []
+    for i in range(0, (int)(math.ceil(len(sorted_fitness) * ratio))):
+        result.append(sorted_fitness[i])
+
+
+    return result
+
 
 #价值适应度
 def valuefitness(funddf, indexdf, ratio):
@@ -576,7 +641,6 @@ def smallcapprefer(funddf, indexdf, ratio):
     return result
 
 
-
 def growthcapprefer(funddf, indexdf, ratio):
 
     growthcapprefer = {}
@@ -621,6 +685,50 @@ def growthcapprefer(funddf, indexdf, ratio):
 
     return result
 
+
+def consumptionprefer(funddf, indexdf, ratio):
+
+    growthcapprefer = {}
+
+
+    funddfr = funddf.pct_change()
+    indexdfr = indexdf.pct_change()
+
+    cols = indexdfr.columns
+
+    indexr = []
+    indexr.append(0)
+    for i in range(1 ,len(indexdfr[cols[0]].values)):
+        indexr.append(indexdfr['801120'].values[i])
+
+    cols = funddfr.columns
+    for col in cols:
+        p = []
+        m = []
+        rs = funddfr[col].values
+        #print col, rs
+        for i in range(0, len(rs)):
+            if isnan(rs[i]) or isnan(indexr[i]):
+                continue
+            else:
+                p.append(rs[i])
+                m.append(indexr[i])
+
+        #print p
+        #print np.corrcoef(p,m)
+        growthcapprefer[col] = np.corrcoef(p, m)[0][1]
+
+
+    x = growthcapprefer
+    sorted_x = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+    sorted_growthcapprefer = sorted_x
+
+
+    result = []
+    for i in range(0, (int)(math.ceil(len(sorted_growthcapprefer) * ratio))):
+        result.append(sorted_growthcapprefer[i])
+
+    return result
 
 
 def valuecapprefer(funddf, indexdf, ratio):
@@ -1179,7 +1287,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
 def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     daystr = day.strftime("%Y-%m-%d")
-    
+
     dates = df_nav_index.index.values
     dates.sort()
     end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
@@ -1187,10 +1295,13 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
 
     capindexdf = df_nav_index[['399314.SZ', '399316.SZ']]
-    largecapindexdf = df_nav_index[['399314.SZ']]
-    smallcapindexdf = df_nav_index[['399316.SZ']]
+    # largecapindexdf = df_nav_index[['399314.SZ']]
+    # smallcapindexdf = df_nav_index[['399316.SZ']]
+    largecapindexdf = df_nav_index[['000300.SH']]
+    smallcapindexdf = df_nav_index[['000905.SH']]
     hs300indexdf = df_nav_index[['000300.SH']]
     growthvalueindexdf = df_nav_index[['399372.SZ', '399373.SZ', '399376.SZ', '399377.SZ']]
+    consumptionindexdf = df_nav_index[['801120']]
 
 
     codes = df_nav_fund.columns
@@ -1209,16 +1320,19 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
     largecapfitness_result    = largecapfitness(df_nav_fund, capindexdf, 0.5)
     smallcapfitness_result    = smallcapfitness(df_nav_fund, capindexdf, 0.5)
-    risefitness_result    = risefitness(df_nav_fund, hs300indexdf, 0.5)
+    risefitness_result        = risefitness(df_nav_fund, hs300indexdf, 0.5)
     declinefitness_result     = declinefitness(df_nav_fund, hs300indexdf, 0.5)
     oscillationfitness_result = oscillationfitness(df_nav_fund, hs300indexdf,  0.5)
     growthfitness_result      = growthfitness(df_nav_fund, growthvalueindexdf, 0.5)
-    valuefitness_result       = valuefitness(df_nav_fund,  growthvalueindexdf, 0.5)
+    valuefitness_result       = valuefitness(df_nav_fund, growthvalueindexdf, 0.5)
+    consumptionfitness_result = consumptionfitness(df_nav_fund, consumptionindexdf, 0.5)
+
     positionprefer_result     = positionprefer(positiondf, 0.5)
     largecapprefer_result     = largecapprefer(df_nav_fund, largecapindexdf, 0.5)
     smallcapprefer_result     = smallcapprefer(df_nav_fund, smallcapindexdf, 0.5)
     growthcapprefer_result    = growthcapprefer(df_nav_fund, growthvalueindexdf, 0.5)
     valuecapprefer_result     = valuecapprefer(df_nav_fund, growthvalueindexdf, 0.5)
+    consumptionprefer_result  = consumptionprefer(df_nav_fund, consumptionindexdf, 0.5)
 
     data = {
         'high_position_prefer': {k:1 for (k, v) in positionprefer_result},
@@ -1226,45 +1340,50 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
         'smallcap_prefer': {k:1 for (k, v) in smallcapprefer_result},
         'growth_prefer': {k:1 for (k, v) in growthcapprefer_result},
         'value_prefer': {k:1 for (k, v) in valuecapprefer_result},
+        'consumption_prefer': {k:1 for (k, v) in consumptionprefer_result},
         'largecap_fitness': {k:1 for (k, v) in largecapfitness_result},
         'smallcap_fitness': {k:1 for (k, v) in smallcapfitness_result},
         'rise_fitness': {k:1 for (k, v) in risefitness_result},
         'decline_fitness': {k:1 for (k, v) in declinefitness_result},
         'oscillation_fitness': {k:1 for (k, v) in oscillationfitness_result},
         'growth_fitness': {k:1 for (k, v) in growthfitness_result},
-        'value_fitness': {k:1 for (k, v) in valuefitness_result}
-    };
+        'value_fitness': {k:1 for (k, v) in valuefitness_result},
+        'consumption_fitness': {k:1 for (k, v) in consumptionfitness_result},
+    }
 
-    df_label = pd.DataFrame(data, columns=["high_position_prefer","largecap_prefer","smallcap_prefer","growth_prefer","value_prefer","largecap_fitness","smallcap_fitness","rise_fitness","decline_fitness","oscillation_fitness","growth_fitness","value_fitness"])
+    df_label = pd.DataFrame(data, columns=["high_position_prefer","largecap_prefer","smallcap_prefer","growth_prefer","value_prefer","consumption_prefer","largecap_fitness","smallcap_fitness","rise_fitness","decline_fitness","oscillation_fitness","growth_fitness","value_fitness","consumption_fitness"])
     df_label.index.name = 'code'
     df_label.fillna(0, inplace=True)
     df_label = df_label.applymap(lambda x: int(round(x)))
     #df_label.to_csv(datapath('stock_blabel_' + daystr + '.csv'))
 
-    columns = ['largecap', 'smallcap', 'rise', 'decline', 'oscillation', 'growth', 'value']
+    columns = ['largecap', 'smallcap', 'rise', 'decline', 'oscillation', 'growth', 'value', 'consumption']
     df_result = pd.DataFrame(0, index=df_label.index, columns=columns)
 
-    mask = (df_label['largecap_prefer'] == 1) & (df_label['largecap_fitness'] == 1) 
+    mask = (df_label['largecap_prefer'] == 1) & (df_label['largecap_fitness'] == 1)
     df_result.loc[mask, 'largecap'] = 1
 
-    mask = (df_label['smallcap_prefer'] == 1) & (df_label['smallcap_fitness'] == 1) 
+    mask = (df_label['smallcap_prefer'] == 1) & (df_label['smallcap_fitness'] == 1)
     df_result.loc[mask, 'smallcap'] = 1
-    
-    mask = (df_label['high_position_prefer'] == 1) & (df_label['rise_fitness'] == 1) 
+
+    mask = (df_label['high_position_prefer'] == 1) & (df_label['rise_fitness'] == 1)
     df_result.loc[mask, 'rise'] = 1
-    
-    mask = (df_label['high_position_prefer'] == 0) & (df_label['decline_fitness'] == 1) 
+
+    mask = (df_label['high_position_prefer'] == 0) & (df_label['decline_fitness'] == 1)
     df_result.loc[mask, 'decline'] = 1
-    
+
     mask = (df_label['oscillation_fitness'] == 1)
     df_result.loc[mask, 'oscillation'] = 1
-    
-    mask = (df_label['growth_prefer'] == 1) & (df_label['growth_fitness'] == 1) 
+
+    mask = (df_label['growth_prefer'] == 1) & (df_label['growth_fitness'] == 1)
     df_result.loc[mask, 'growth'] = 1
 
-    mask = (df_label['value_prefer'] == 1) & (df_label['value_fitness'] == 1) 
+    mask = (df_label['value_prefer'] == 1) & (df_label['value_fitness'] == 1)
     df_result.loc[mask, 'value'] = 1
-    
+
+    mask = (df_label['consumption_prefer'] == 1) & (df_label['consumption_fitness'] == 1)
+    df_result.loc[mask, 'consumption'] = 1
+
     #df_result.to_csv(datapath('stock_label_' + daystr + '.csv'))
 
     return df_result
@@ -1274,7 +1393,7 @@ def tagbondfund(allocationdata, funddf, indexdf):
 
 
     dates = indexdf.index.values
-    
+
     dates.sort()
     end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
     start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
