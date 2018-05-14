@@ -25,12 +25,21 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func
+from sqlalchemy import *
+from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
-from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
 from util import xdict
 from util.xdebug import dd
+
+from asset import Asset, WaveletAsset
+from allocate import Allocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate
+from trade_date import ATradeDate
+from view import View
+
 
 import traceback, code
 
@@ -517,7 +526,7 @@ def average_days(start_date, end_date, assets):
     return df
 
 
-def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, wavelet = False, wavelet_filter_num = 0):
+def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period, bootstrap, cpu_count=0, blacklitterman = False, wavelet = False, wavelet_filter_num = 0, markowitz_id = None):
     '''perform markowitz asset for days
     '''
     # 加载时间轴数据
@@ -552,7 +561,7 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
         q = manager.Queue()
         processes = []
         for indexs in process_adjust_indexs:
-            p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num,))
+            p = multiprocessing.Process(target = m_markowitz_day, args = (q, indexs, lookback, assets, bootstrap, cpu_count, blacklitterman ,wavelet, wavelet_filter_num, markowitz_id))
             processes.append(p)
             p.start()
 
@@ -570,18 +579,18 @@ def markowitz_days(start_date, end_date, assets, label, lookback, adjust_period,
                 # bar.update(1)
                 logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
                 # 高风险资产配置
-                data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
+                data[day] = markowitz_day(day, lookback, assets, bootstrap, cpu_count, blacklitterman ,wavelet, wavelet_filter_num, markowitz_id)
 
     return pd.DataFrame(data).T
 
 
-def m_markowitz_day(queue, days, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
+def m_markowitz_day(queue, days, lookback, assets, bootstrap, cpu_count, blacklitterman ,wavelet, wavelet_filter_num, markowitz_id):
     for day in days:
-        sr = markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num)
+        sr = markowitz_day(day, lookback, assets, bootstrap,  cpu_count, blacklitterman ,wavelet, wavelet_filter_num, markowitz_id)
         queue.put((day, sr))
 
 
-def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_filter_num):
+def markowitz_day(day, lookback, assets, bootstrap,  cpu_count, blacklitterman, wavelet, wavelet_filter_num, markowitz_id):
     '''perform markowitz for single day
     '''
 
@@ -603,19 +612,34 @@ def markowitz_day(day, lookback, assets, bootstrap, cpu_count, wavelet, wavelet_
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
-    return markowitz_r(df_inc, assets, bootstrap, cpu_count)
+    return markowitz_r(df_inc, day, assets, bootstrap, cpu_count, blacklitterman, markowitz_id)
 
-def markowitz_r(df_inc, limits, bootstrap, cpu_count):
+
+
+
+def markowitz_r(df_inc, day, limits, bootstrap, cpu_count, blacklitterman, markowitz_id):
     '''perform markowitz
     '''
     bound = []
     for asset in df_inc.columns:
         bound.append(limits[asset])
 
-    if bootstrap is None:
+
+    if blacklitterman:
+        P, eta, alpha = load_bl_view(day, df_inc, markowitz_id)
+
+    if len(df_inc.columns) == 1:
+        risk, returns, ws, sharpe = 0.0, 0.0, [1.0], 0.0
+    elif (bootstrap is None) and (not blacklitterman):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
-    else:
+    elif (bootstrap is None) and blacklitterman:
+        risk, returns, ws, sharpe = PF.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
+    elif (not bootstrap is None) and (not blacklitterman):
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        print ws
+        exit(0)
+    elif (not bootstrap is None) and blacklitterman:
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
@@ -623,6 +647,47 @@ def markowitz_r(df_inc, limits, bootstrap, cpu_count):
     ])
 
     return sr_result
+
+
+def load_bl_view(day, df_inc, markowitz_id):
+
+        df_argv = asset_mz_markowitz_argv.load([markowitz_id])
+        df_argv.reset_index(level=0, inplace=True)
+        argv = df_argv['mz_value'].to_dict()
+
+        bl_view_id = argv['bl_view_id']
+
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(asset_ra_bl.ra_bl_view.globalid == bl_view_id).filter(asset_ra_bl.ra_bl_view.bl_date <= day).statement
+
+        view_df = pd.read_sql(sql, session.bind, index_col = ['bl_date', 'bl_index_id'], parse_dates =  ['bl_date'])
+        view_df = view_df.unstack()
+        view_df.columns = view_df.columns.droplevel(0)
+        view_df = view_df.sort_index()
+
+        if len(view_df) == 0:
+            last_view = pd.Series(0, index = df_inc.columns)
+        else:
+            last_view = view_df.iloc[-1]
+
+        session.commit()
+        session.close()
+
+
+        alpha = float(argv['bl_confidence'])
+        views = last_view.reindex(df_inc.columns).fillna(0)
+        eta = np.array(abs(views[views!=0]))
+        P = np.diag(np.sign(views))
+        P = np.array([i for i in P if i.sum()!=0])
+
+        if eta.size == 0:           #If there is no view, run as non-blacklitterman
+            P = alpha = None
+            eta = np.array([])
+
+        return P, eta, alpha
 
 
 def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=None, wavelet=None, wavelet_filter_num=None):
@@ -671,7 +736,6 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
 
     wt = TimingWt(sr)
     filtered_data = wt.wavefilter(sr, wavelet_filter_num)
-    filtered_data = filtered_data.fillna(0.0)
     filtered_data = filtered_data[filtered_data.index >= begin_date]
     filtered_data = filtered_data.loc[reindex]
 
@@ -749,6 +813,8 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             sr = pd.Series()
 
     return sr
+
+
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
@@ -831,6 +897,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     else:
         pass
 
+
     if algo == 1:
         optappend = False
         df = average_days(sdate, edate, assets)
@@ -845,24 +912,65 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
                 asset_pos = asset_pos.reindex(dates)
                 asset_pos.fillna(method = 'pad', inplace=True)
                 asset_pos.fillna(0.0, inplace=True)
-                mz_pos_df = mz_pos_df.mul(asset_pos, axis = 0)
+                mz_pos_df = mz_pos_df.mul(asset_pos, axis = 0).fillna(method = 'pad')
                 df = df.drop(asset, axis = 1)
                 df = pd.concat([df, mz_pos_df], axis = 1, join_axes = [mz_pos_df.index])
         df = df.T
         df = df.groupby(df.index).sum()
         df = df.T
     elif algo == 2:
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
     elif algo == 3:
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+        #print df.tail()
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzBootAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
     elif algo == 4:
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+    elif algo == 5:
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman = True, wavelet = False, wavelet_filter_num = wavelet_filter_num, markowitz_id = markowitz_id)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        views = {}
+        for asset_id in assets.keys():
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
+        allocate = MzBootBlAllocate('ALC.000001', assets, views, trade_date, lookback)
+        df = allocate.allocate()
+    elif algo == 6:
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, blacklitterman = True, wavelet = True, wavelet_filter_num = wavelet_filter_num,  markowitz_id = markowitz_id)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+        assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        views = {}
+        for asset_id in assets.keys():
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
+        allocate = MzBlAllocate('ALC.000001', assets, views, trade_date, lookback)
+        df = allocate.allocate()
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;

@@ -433,6 +433,7 @@ def stockfundfilter(allocationdata, funddf, indexdf):
     return codes, indicator
 
 def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
+
     daystr = day.strftime("%Y-%m-%d")
     #按照jensen测度过滤
     jensen_measure = jensenmeasure(df_nav_fund, df_nav_index, rf)
@@ -465,10 +466,10 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
         'ppw': ppw_measure,
         'stability': stability_measure,
     });
-    
+
     columns=['sharpe','jensen','sortino','ppw','stability']
     df_indicator.index.name = 'code'
-    df_indicator.to_csv(datapath('stock_indicator_' + daystr + '.csv'), columns=columns)
+    #df_indicator.to_csv(datapath('stock_indicator_' + daystr + '.csv'), columns=columns)
 
     df_result = pd.DataFrame({
         'sharpe':{k:v for (k, v) in  sharpe_data},
@@ -479,7 +480,7 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
     }, columns=columns);
 
     df_result.index.name = 'code'
-    df_result.to_csv(datapath('stock_bindicator_selected_' + daystr + '.csv'));
+    #df_result.to_csv(datapath('stock_bindicator_selected_' + daystr + '.csv'));
     #
     # 检查是否结果集为空, 如果不为空, 则取交集, 否则, 直接取jensen结果
     #
@@ -487,7 +488,7 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
         df_result.dropna(inplace=True)
     else:
         df_result = df_indicator.loc[df_result['jensen'].notnull()]
-    df_result.to_csv(datapath('stock_indicator_selected_' + daystr + '.csv'))
+    #df_result.to_csv(datapath('stock_indicator_selected_' + daystr + '.csv'))
 
     return df_result
 

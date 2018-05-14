@@ -1187,8 +1187,8 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
 
     capindexdf = df_nav_index[['399314.SZ', '399316.SZ']]
-    largecapindexdf = df_nav_index[['399314.SZ']]
-    smallcapindexdf = df_nav_index[['399316.SZ']]
+    largecapindexdf = df_nav_index[['000300.SH']]
+    smallcapindexdf = df_nav_index[['000905.SH']]
     hs300indexdf = df_nav_index[['000300.SH']]
     growthvalueindexdf = df_nav_index[['399372.SZ', '399373.SZ', '399376.SZ', '399377.SZ']]
 
@@ -1239,7 +1239,7 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     df_label.index.name = 'code'
     df_label.fillna(0, inplace=True)
     df_label = df_label.applymap(lambda x: int(round(x)))
-    df_label.to_csv(datapath('stock_blabel_' + daystr + '.csv'))
+    #df_label.to_csv(datapath('stock_blabel_' + daystr + '.csv'))
 
     columns = ['largecap', 'smallcap', 'rise', 'decline', 'oscillation', 'growth', 'value']
     df_result = pd.DataFrame(0, index=df_label.index, columns=columns)
@@ -1265,7 +1265,7 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
     mask = (df_label['value_prefer'] == 1) & (df_label['value_fitness'] == 1) 
     df_result.loc[mask, 'value'] = 1
     
-    df_result.to_csv(datapath('stock_label_' + daystr + '.csv'))
+    #df_result.to_csv(datapath('stock_label_' + daystr + '.csv'))
 
     return df_result
 

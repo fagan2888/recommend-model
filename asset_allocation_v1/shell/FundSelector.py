@@ -28,7 +28,7 @@ def select_stock_new(day, df_label, df_indicator, limit=5):
         data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:limit]
         
     df_result = pd.concat(data, names=['category','code'])
-    df_result.to_csv(datapath('stock_pool_' + daystr + '.csv'))
+    #df_result.to_csv(datapath('stock_pool_' + daystr + '.csv'))
     
     return df_result
 
