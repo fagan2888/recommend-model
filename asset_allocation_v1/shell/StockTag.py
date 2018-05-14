@@ -1187,8 +1187,8 @@ def tag_stock_fund_new(day, df_nav_fund, df_nav_index):
 
 
     capindexdf = df_nav_index[['399314.SZ', '399316.SZ']]
-    largecapindexdf = df_nav_index[['399314.SZ']]
-    smallcapindexdf = df_nav_index[['399316.SZ']]
+    largecapindexdf = df_nav_index[['000300.SH']]
+    smallcapindexdf = df_nav_index[['000905.SH']]
     hs300indexdf = df_nav_index[['000300.SH']]
     growthvalueindexdf = df_nav_index[['399372.SZ', '399373.SZ', '399376.SZ', '399377.SZ']]
 
