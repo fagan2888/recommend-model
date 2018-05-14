@@ -945,18 +945,18 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 5:
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman = True, wavelet = False, wavelet_filter_num = wavelet_filter_num, markowitz_id = markowitz_id)
-        #trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
-        #view_df = View.load_view(argv.get('bl_view_id'))
-        #confidence = float(argv.get('bl_confidence'))
-        #assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        #views = {}
-        #for asset_id in assets.keys():
-        #    views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
-        #allocate = MzBootBlAllocate('ALC.000001', assets, views, trade_date, lookback)
-        #df = allocate.allocate()
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman = True, wavelet = False, wavelet_filter_num = wavelet_filter_num, markowitz_id = markowitz_id)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        views = {}
+        for asset_id in assets.keys():
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
+        allocate = MzBootBlAllocate('ALC.000001', assets, views, trade_date, lookback)
+        df = allocate.allocate()
     elif algo == 6:
         #df = markowitz_days(
         #    sdate, edate, assets,
