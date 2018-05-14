@@ -34,6 +34,13 @@ from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav,
 from util import xdict
 from util.xdebug import dd
 
+from asset import Asset, WaveletAsset
+from allocate import Allocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate
+from trade_date import ATradeDate
+from view import View
+
+
 import traceback, code
 
 logger = logging.getLogger(__name__)
@@ -629,6 +636,8 @@ def markowitz_r(df_inc, day, limits, bootstrap, cpu_count, blacklitterman, marko
         risk, returns, ws, sharpe = PF.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
     elif (not bootstrap is None) and (not blacklitterman):
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        print ws
+        exit(0)
     elif (not bootstrap is None) and blacklitterman:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
@@ -727,7 +736,6 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
 
     wt = TimingWt(sr)
     filtered_data = wt.wavefilter(sr, wavelet_filter_num)
-    filtered_data = filtered_data.fillna(0.0)
     filtered_data = filtered_data[filtered_data.index >= begin_date]
     filtered_data = filtered_data.loc[reindex]
 
@@ -805,6 +813,8 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
             sr = pd.Series()
 
     return sr
+
+
 
 @markowitz.command()
 @click.option('--id', 'optid', help=u'ids of markowitz to update')
@@ -887,6 +897,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     else:
         pass
 
+
     if algo == 1:
         optappend = False
         df = average_days(sdate, edate, assets)
@@ -908,25 +919,58 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = df.groupby(df.index).sum()
         df = df.T
     elif algo == 2:
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
     elif algo == 3:
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+        #print df.tail()
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzBootAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
     elif algo == 4:
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
     elif algo == 5:
         df = markowitz_days(
             sdate, edate, assets,
             label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman = True, wavelet = False, wavelet_filter_num = wavelet_filter_num, markowitz_id = markowitz_id)
+        #trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        #view_df = View.load_view(argv.get('bl_view_id'))
+        #confidence = float(argv.get('bl_confidence'))
+        #assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        #views = {}
+        #for asset_id in assets.keys():
+        #    views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
+        #allocate = MzBootBlAllocate('ALC.000001', assets, views, trade_date, lookback)
+        #df = allocate.allocate()
     elif algo == 6:
-        df = markowitz_days(
-            sdate, edate, assets,
-            label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, blacklitterman = True, wavelet = True, wavelet_filter_num = wavelet_filter_num,  markowitz_id = markowitz_id)
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, blacklitterman = True, wavelet = True, wavelet_filter_num = wavelet_filter_num,  markowitz_id = markowitz_id)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+        assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        views = {}
+        for asset_id in assets.keys():
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
+        allocate = MzBlAllocate('ALC.000001', assets, views, trade_date, lookback)
+        df = allocate.allocate()
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
