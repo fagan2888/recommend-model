@@ -39,7 +39,7 @@ def calc_nav(inc, pos, name):
 
 class RiskMgrGARCHPrototype(object):
     def __init__(self, codes, target, tdates, df_nav, timing, vars_):
-        self.maxdd = -0.10
+        self.maxdd = -0.15
         self.ddlookback = 5
         self.empty = 5
         self.codes = codes
@@ -91,18 +91,27 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
             if not (day in df_vars.index):
                 pass
             else:
-                #  tmp_nav = sr_nav.loc[:day]
-                #  local_max = tmp_nav.iloc[-self.ddlookback:].max()
-                #  local_drawdown = (sr_nav[day] - local_max)/local_max
-                #  # if status != 2:
-                #  if local_drawdown < self.maxdd:
-                    #  status, empty_days, position, action = 2, 0, 0, 6
-                    #  set_trace()
-                if row['inc2d'] < df_vars.loc[day]['var_2d']:
+                #Remove the extreme values
+                tmp_vars = df_vars.loc[:day]
+                median = tmp_vars.median()
+                mad = np.abs(tmp_vars - median).median()*1.483
+                vars_today = tmp_vars.iloc[-1]
+                vars_today[vars_today < (median - 3*mad)] = (median - 3*mad)
+
+                # Trigger Risk Ctrl when the hard line of local drawdown is approached
+                tmp_nav = sr_nav.loc[:day]
+                local_max = tmp_nav.iloc[-self.ddlookback:].max()
+                local_drawdown = (sr_nav[day] - local_max)/local_max
+
+                if local_drawdown < self.maxdd*0.75:
+                    status, empty_days, position, action = 2, 0, 0, 6
+
+                # Regular Risk Ctrl by VaRs
+                if row['inc2d'] < vars_today['var_2d']:
                     status, empty_days, position, action = 2, 0, 0, 2
-                elif row['inc3d'] < df_vars.loc[day]['var_3d']:
+                elif row['inc3d'] < vars_today['var_3d']:
                     status, empty_days, position, action = 2, 0, 0, 3
-                elif row['inc5d'] < df_vars.loc[day]['var_5d']:
+                elif row['inc5d'] < vars_today['var_5d']:
                     status, empty_days, position, action = 2, 0, 0, 5
 
             if status == 0:
@@ -129,8 +138,8 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
 
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
         df_result.index.name = 'rm_date'
-        if disp:
-            self.calc_winrate(df_result, target)
+        #  if disp:
+            #  self.calc_winrate(df_result, target)
         return df_result
 
     def calc_winrate(self, df_result, target):
@@ -156,21 +165,9 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
         self.garch = RiskMgrGARCH(codes, target, tdates, df_nav, timing, vars_)
         self.joints = joints
 
-    # def calc_joint(self, target=None):
-    #     if target == self.target:
-    #         return None
-    #     if target is None:
-    #         return pd.DataFrame({k: self.calc_joint(k) for k in self.codes if k != self.target}).fillna(False)
-    #     if not (target in self.joints):
-    #         print "Start multivariable GARCH fitting for %s" % target
-    #         s_time = time.time()
-    #         self.joints[target] = RiskMgrGARCHHelper.perform_joint(self.inc5d(target))
-    #         print "Complete multivariable GARCH fitting! Elapsed time: %s" % time.strftime("%M:%S", time.gmtime(time.time()-s_time))
-    #     return self.joints[target]
 
     def perform(self):
         # Calculate where the joint distribution get exceeded
-        # df_joint = self.calc_joint()
         df_joint = self.joints
         others = df_joint.columns
         #取出其他资产仅用GARCH进行风控的结果
@@ -190,12 +187,12 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
         #对每个资产, 检查是否联合分布被击穿, 且其处于风控状态, 并最后求或(any(axis=1))
         if_joint_controlled = pd.DataFrame({k: (df_joint[k]!=0) & (df_result_garch[k]!=0) for k in others}).any(1)
 
-        # Start the RiskMgr DF for the target asset
+        # Start the Risk Ctrl for the target asset
         df = self.generate_df_for_garch(self.target)
         df['joint_status'] = if_joint_controlled
+        sr_nav = self.nav(self.target)
         df_vars = self.vars[self.target]
         status, empty_days, action = 0, 0, 0
-        flag = 0
         result_status = {}
         result_pos = {} # 结果仓位
         result_act = {} # 结果动作
@@ -203,7 +200,21 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
             if not (day in df_vars.index):
                 pass
             else:
-                # if status < 3:
+                #Remove the extreme values
+                tmp_vars = df_vars.loc[:day]
+                median = tmp_vars.median()
+                mad = np.abs(tmp_vars - median).median()*1.483
+                vars_today = tmp_vars.iloc[-1]
+                vars_today[vars_today < (median - 3*mad)] = (median - 3*mad)
+
+                # Trigger Risk Ctrl when the hard line of local drawdown is approached
+                tmp_nav = sr_nav.loc[:day]
+                local_max = tmp_nav.iloc[-self.ddlookback:].max()
+                local_drawdown = (sr_nav[day] - local_max)/local_max
+
+                if local_drawdown < self.maxdd*0.75:
+                    status, empty_days, position, action = 2, 0, 0, 6
+
                 if row['inc2d'] < df_vars.loc[day]['var_2d']:
                     status, empty_days, position, action = 2, 0, 0, 2
                 elif row['inc3d'] < df_vars.loc[day]['var_3d']:
@@ -254,7 +265,7 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
 
         df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
         df_result.index.name = 'rm_date'
-        self.calc_winrate_joint(df_result)
+        #  self.calc_winrate_joint(df_result)
         return df_result
 
     def calc_winrate_joint(self, df_result):
