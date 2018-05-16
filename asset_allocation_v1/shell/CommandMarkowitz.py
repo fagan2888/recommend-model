@@ -34,9 +34,9 @@ from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav,
 from util import xdict
 from util.xdebug import dd
 
-from asset import Asset, WaveletAsset
+from asset import Asset, WaveletAsset, RecentStdAsset
 from allocate import Allocate
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -933,6 +933,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #print df.tail()
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        #assets = dict([(asset_id , WaveletAsset(asset_id, 2)) for asset_id in list(assets.keys())])
+        #assets = dict([(asset_id , RecentStdAsset(asset_id, trade_dates = ATradeDate.week_trade_date())) for asset_id in list(assets.keys())])
         allocate = MzBootAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 4:
@@ -971,6 +973,13 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
         allocate = MzBlAllocate('ALC.000001', assets, views, trade_date, lookback)
         df = allocate.allocate()
+    elif algo == 7:
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , WaveletAsset(asset_id, 2)) for asset_id in list(assets.keys())])
+        allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -1012,6 +1021,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
+    #turnover = 0.4
     if turnover >= 0.01:
         df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
 

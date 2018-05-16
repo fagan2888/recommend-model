@@ -32,8 +32,10 @@ from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
 from util import xdict
+import copy
 from util.xdebug import dd
 from wavelet import Wavelet
+from trade_date import ATradeDate
 
 
 import traceback, code
@@ -161,10 +163,13 @@ class Asset(object):
 class WaveletAsset(Asset):
 
 
-    def __init__(self, globalid, wavelet_filter_num, name = None, nav_sr = None):
+    def __init__(self, globalid, wavelet_filter_num, wave_begin_date = None, name = None, nav_sr = None):
 
         super(WaveletAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
         self.__wavelet_filter_num = wavelet_filter_num
+        self.__wave_begin_date = wave_begin_date
+        if self.__wave_begin_date is None:
+            self.__wave_begin_date = '1900-01-01'
 
 
     @property
@@ -172,18 +177,19 @@ class WaveletAsset(Asset):
         return self.__wavelet_filter_num
 
 
-    def nav(self, wave_begin_date = None, wave_end_date = None, begin_date = None, end_date = None, reindex = None):
+    def nav(self, wave_end_date = None, begin_date = None, end_date = None, reindex = None):
 
-        if wave_begin_date is None:
-            wave_begin_date = '1900-01-01'
-        if wave_end_date is None:
-            if end_date is not None:
-                wave_end_date = end_date
-            elif reindex is not None:
-                reindex.sort(reverse = False)
-                wave_end_date = reindex[-1]
 
-        nav_sr = super(WaveletAsset, self).nav(begin_date = wave_begin_date, end_date = wave_end_date)
+        if reindex is not None:
+            reindex.sort(reverse = False)
+            begin_date = reindex[0]
+            end_date = reindex[-1]
+            wave_end_date = reindex[-1]
+        elif end_date is not None:
+            wave_end_date = end_date
+
+
+        nav_sr = super(WaveletAsset, self).nav(begin_date = self.__wave_begin_date, end_date = wave_end_date)
 
         wavelet_nav_sr = Wavelet.wavefilter(nav_sr, self.wavelet_filter_num)
 
@@ -197,6 +203,77 @@ class WaveletAsset(Asset):
         return wavelet_nav_sr
 
 
+class RecentStdAsset(Asset):
+
+    def __init__(self, globalid, recent_period = 13, trade_dates = None, name = None, nav_sr = None):
+
+        super(RecentStdAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
+        self.__recent_period = recent_period
+        self.__trade_dates = trade_dates
+
+    @property
+    def trade_dates(self):
+        return self.__trade_dates.copy()
+
+    @property
+    def recent_period(self):
+        return self.__recent_period
+
+
+    def nav(self, begin_date = None, end_date = None, reindex = None):
+
+        nav_sr = super(RecentStdAsset, self).nav()
+        nav_sr = nav_sr.loc[self.trade_dates]
+
+        if reindex is not None:
+            reindex.sort(reverse = False)
+            begin_date = reindex[0]
+            end_date = reindex[-1]
+        if begin_date is None:
+            begin_date = self.trade_dates[0]
+        if end_date is None:
+            end_date = self.trade_dates[-1]
+
+        recent_dates = self.recent_trade_dates(self.trade_dates, self.recent_period + 1, end_date)
+        recent_df_nav = nav_sr.loc[recent_dates]
+        recent_std = recent_df_nav.pct_change().dropna().std()
+
+        dates = self.trade_dates
+        dates = dates[dates >= begin_date]
+        dates = dates[dates <= end_date]
+
+        dates = list(dates)
+        dates.sort()
+
+        incs = []
+        for day in dates:
+            recent_dates = self.recent_trade_dates(self.trade_dates, self.recent_period + 1, day)
+            inc = nav_sr.loc[recent_dates].pct_change().dropna()
+            if len(inc) == self.recent_period:
+                #print day, end_date, inc.std(), recent_std, self.globalid
+                #print inc
+                #print inc / inc.std() * recent_std
+                #print
+                inc = (inc / inc.std() * recent_std).ravel()[-1]
+            else:
+                inc = 0
+            incs.append(inc)
+
+        sr_inc = pd.Series(incs, index = dates)
+        nav_sr = (1 + sr_inc).cumprod()
+
+        return nav_sr
+
+
+    def recent_trade_dates(self, trade_dates, recent_period, end_date):
+        if end_date is not None:
+            rtd = trade_dates[trade_dates <= end_date]
+        else:
+            rtd = trade_dates
+        rtd = rtd[-1 * recent_period:]
+
+        return rtd
+
 
 if __name__ == '__main__':
 
@@ -208,6 +285,5 @@ if __name__ == '__main__':
     #print asset.nav('2010-01-01', datetime.now()).tail()
     #print asset.origin_nav_sr.tail()
 
-    asset = ViewAsset('120000013')
-    #print asset.view('2000-01-01')
-    #print asset.origin_nav_sr.tail()
+    week_trade_dates = ATradeDate.week_trade_date()
+    asset = RecentStdAsset('120000001', trade_dates = week_trade_dates)

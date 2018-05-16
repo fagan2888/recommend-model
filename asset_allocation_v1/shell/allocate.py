@@ -173,8 +173,13 @@ class Allocate(object):
 
                 df_inc, bound = self.load_allocate_data(day, asset_ids)
 
-                ws = self.allocate_algo(day, df_inc, bound)
+                #df_inc[df_inc >= 0] = 0.00
+                #df_inc[df_inc < 0] = -0.01
+                #df_inc = df_inc.mul(range(0, 26), axis = 0)
+                #print df_inc
 
+                ws = self.allocate_algo(day, df_inc, bound)
+                #print ws
                 for asset_id in ws.keys():
                     pos_df.loc[day, asset_id] = ws[asset_id]
 
