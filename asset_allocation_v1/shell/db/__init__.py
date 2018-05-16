@@ -56,3 +56,4 @@ import base_fund_fee
 import base_fund_infos
 import base_fund_split
 import mapi_fp_da_question
+import caihui_fund
