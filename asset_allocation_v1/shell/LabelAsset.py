@@ -28,9 +28,9 @@ from dateutil.parser import parse
 def label_asset_tag(label_index, lookback=52):
     '''perform fund tagging along label_index.
     '''
-    
+
     # label_index = pd.DatetimeIndex(['2012-10-26', '2015-09-30', '2016-04-08', '2016-10-14'])
-    
+
     #
     # 计算每个调仓点的最新配置
     #
@@ -45,7 +45,7 @@ def label_asset_tag(label_index, lookback=52):
             data_money[day] = label_asset_money_per_day(day, lookback, Const.fund_num)
             data_other[day] = label_asset_other_per_day(day, lookback, Const.fund_num)
             bar.update(1)
-        
+
     df_stock = pd.concat(data_stock, names=['date', 'category', 'code'])
     df_bond = pd.concat(data_bond, names=['date', 'category', 'code'])
     df_money = pd.concat(data_money, names=['date', 'category', 'code'])
@@ -111,7 +111,7 @@ def label_asset_nav(start_date, end_date):
     #df_result.to_csv(datapath('labelasset.csv'))
 
     return df_result
-        
+
 
 def label_asset_stock_per_day(day, lookback, limit = 5):
     # 加载时间轴数据
@@ -123,9 +123,9 @@ def label_asset_stock_per_day(day, lookback, limit = 5):
     # 加载数据
     df_nav_stock = DBData.stock_fund_value(start_date, end_date)
     df_nav_index = DBData.index_value(start_date, end_date)
-    
+
     #df_nav_stock.to_csv(datapath('stock_' + day.strftime('%Y-%m-%d') + '.csv'))
-    
+
     #
     # 根据时间轴进行重采样
     #
@@ -172,7 +172,7 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
     df_nav_index = DBData.index_value(start_date, end_date)
 
     df_nav_bond.to_csv(datapath('bond_' + day.strftime('%Y-%m-%d') + '.csv'))
-    
+
     #
     # 根据时间轴进行重采样
     #
@@ -217,7 +217,7 @@ def label_asset_money_per_day(day, lookback, limit = 1):
     df_nav_money = DBData.money_fund_value(start_date, end_date)
 
     df_nav_money.to_csv(datapath('money_' + day.strftime('%Y-%m-%d') + '.csv'))
-    
+
     #
     # 根据时间轴进行重采样
     #
@@ -252,7 +252,7 @@ def label_asset_other_per_day(day, lookback, limit):
     df_nav_other = DBData.other_fund_value(start_date, end_date)
     df_nav_other = df_nav_other[['SP500.SPI','GLNC','HSCI.HI']]
     df_nav_other.to_csv(datapath('other_' + day.strftime('%Y-%m-%d') + '.csv'))
-    
+
     #
     # 根据时间轴进行重采样
     #
@@ -333,7 +333,7 @@ def stockLabelAsset(allocationdata, dates, his_week, interval):
 
             #print
             #print time.time()
-            
+
             label_stock_df.to_csv(datapath('stock_' + dates[i].strftime('%Y-%m-%d') + '.csv'))
 
             codes, indicator     = FundFilter.stockfundfilter(allocationdata, label_stock_df, indexdf[Const.hs300_code])
@@ -600,7 +600,7 @@ def moneyLabelAsset(allocationdata, dates, his_week, interval):
             last_end_date = dates[-1]
             if i + interval < len(dates):
                  last_end_date                 = dates[i + interval].strftime('%Y-%m-%d')
-                 
+
             last_end_date = '2015-04-03'
 
 

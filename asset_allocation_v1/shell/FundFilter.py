@@ -15,6 +15,7 @@ import Const
 import FundIndicator as fi
 import pandas as pd
 from dateutil.parser import parse
+from ipdb import set_trace
 
 
 from Const import datapath
@@ -246,6 +247,26 @@ def scalefilter(ratio):
     #print 'scale 000457 : ' ,scale['000457.OF']
 
 
+def scalemeasure():
+
+
+    fund_scale_df =  Data.scale_data()
+    stock_codes   =  Data.stock_fund_code()
+
+    scale = {}
+    for code in fund_scale_df.index:
+        v = fund_scale_df.loc[code].values
+        if code in stock_codes:
+            #if string.atof(v[0]) >= 10000000000.0:
+            continue
+
+        scale[code] = v[0]
+
+
+    return scale
+
+    #print 'scale 000457 : ' ,scale['000457.OF']
+
 
 def ratio_filter(measure, ratio):
 
@@ -264,13 +285,31 @@ def ratio_filter(measure, ratio):
     return result
 
 
+def ratio_filter_scale(measure, lower, upper):
+
+
+    x = measure
+    sorted_x       = sorted(x.iteritems(), key=lambda x : x[1], reverse=True)
+    sorted_measure = sorted_x
+
+    filtered_sorted_measure = []
+    for measure in sorted_measure:
+        if measure[1] > 2e8:
+            filtered_sorted_measure.append(measure)
+
+    result = []
+    for i in range((int)(math.ceil(len(sorted_measure) * lower)), (int)(math.ceil(len(sorted_measure) * upper))):
+        result.append(filtered_sorted_measure[i])
+
+    return result
+
 
 def stockfundfilter(allocationdata, funddf, indexdf):
 
 
     dates = funddf.index.values
     dates.sort()
-    
+
     end_date   = parse(str(dates[-1])).strftime('%Y-%m-%d')
     start_date = parse(str(dates[0])).strftime('%Y-%m-%d')
 
@@ -457,6 +496,10 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
 
     #stability_data = sf.stabilityfilter(funddf, 1.0)
 
+    #按照规模过滤
+    scale_measure  = scalemeasure()
+    scale_data     = ratio_filter_scale(scale_measure, 0.2, 0.4)
+
     sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
 
     df_indicator = pd.DataFrame({
@@ -465,9 +508,10 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
         'sortino': sortino_measure,
         'ppw': ppw_measure,
         'stability': stability_measure,
+        'scale': scale_measure,
     });
 
-    columns=['sharpe','jensen','sortino','ppw','stability']
+    columns=['sharpe','jensen','sortino','ppw','stability','scale']
     df_indicator.index.name = 'code'
     #df_indicator.to_csv(datapath('stock_indicator_' + daystr + '.csv'), columns=columns)
 
@@ -476,7 +520,8 @@ def stock_fund_filter_new(day, df_nav_fund, df_nav_index):
         'jensen': {k:v for (k, v) in jensen_data},
         'sortino': {k:v for (k, v) in sortino_data},
         'ppw': {k:v for (k, v) in ppw_data},
-        'stability': {k:v for (k, v) in stability_data}
+        'stability': {k:v for (k, v) in stability_data},
+        'scale': {k:v for (k, v) in scale_data},
     }, columns=columns);
 
     df_result.index.name = 'code'
@@ -647,7 +692,7 @@ def bondfundfilter(allocationdata, funddf, indexdf):
 
     indicator_selected_df = indicator_df.loc[codes]
     indicator_selected_df.to_csv(datapath('bond_indicator_selected_' + end_date + '.csv'))
-    
+
     allocationdata.bond_fund_measure[end_date] = indicator_df
 
 
