@@ -9,10 +9,11 @@ import matplotlib.pyplot as plt
 import click
 import sys
 sys.path.append('shell/')
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Lasso
 from scipy.stats import rankdata, spearmanr, pearsonr
 from sklearn.cluster import AgglomerativeClustering, KMeans
 from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import StandardScaler
 import statsmodels.api as sm
 import datetime
 from ipdb import set_trace
@@ -32,7 +33,7 @@ import DBData
 import CommandMarkowitz
 
 
-class FundCluster(object):
+class FundDecomp(object):
 
     def __init__(self, factor_ids, start_date, end_date):
 
@@ -108,80 +109,68 @@ class FundCluster(object):
                 if cond1:
                     valid_fund_codes.append(fund)
             tmp_fund_ret = tmp_fund_ret[valid_fund_codes]
-            tmp_fund_ret = tmp_fund_ret.merge(self.market_incs, left_index = True, right_index = True)
-            tmp_fund_alpha = pd.DataFrame(index = tmp_fund_ret.index)
-            y = tmp_fund_ret.iloc[:, -1].values
-            for fund in valid_fund_codes:
-                x = tmp_fund_ret[[fund]].values
-                res = sm.OLS(y, x).fit()
-                tmp_fund_alpha[fund] = res.resid
-            self.train(tmp_fund_ret, 200)
+            # tmp_fund_ret = tmp_fund_ret.merge(self.market_incs, left_index = True, right_index = True)
+            # tmp_fund_alpha = pd.DataFrame(index = tmp_fund_ret.index)
+            # y = tmp_fund_ret.iloc[:, -1].values
+            # for fund in valid_fund_codes:
+                # x = tmp_fund_ret[[fund]].values
+                # res = sm.OLS(y, x).fit()
+                # tmp_fund_alpha[fund] = res.resid
+            tmp_market_ret = self.market_incs.loc[start_date:end_date]
+            tmp_ind_ret = self.asset_incs.loc[start_date:end_date]
+            self.train(tmp_fund_ret, tmp_market_ret, tmp_ind_ret)
 
 
-    def train(self, ret, max_clusters):
-        valid_assets = ret.std()[ret.std() != 0].index
-        ret = ret.loc[:, valid_assets]
+    def train(self, ret, mret, iret):
+        # 用四个行业因子['周期','金融','消费','成长']的超额收益来回归基金的超额收益
+        fund_alpha, fund_rsquare = self.cal_alpha(ret, mret)
+        ind_alpha, ind_rsquare = self.cal_alpha(iret, mret)
 
-        asset_names = ret.columns
-        t1 = datetime.datetime.now()
-        # distance_matrix = pearson_affinity(ret.T.values)
-        distance_matrix = 1 - ret.corr().values
-        print datetime.datetime.now() - t1
-        for n_clusters in range(150, max_clusters):
-            # cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity=pearson_affinity)
-            cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity='precomputed')
-            # cluster = KMeans(n_clusters=n_clusters, precompute_distances = True, random_state = 0)
-            cluster.fit_predict(distance_matrix)
-            asset_cluster = {}
-            for i in np.arange(n_clusters):
-                asset_cluster[i] = asset_names[cluster.labels_ == i]
-            for i in np.arange(n_clusters):
-                assets = asset_cluster[i]
-                n_assets = len(assets)
-                if n_assets >= 5:
-                    tmp_ret = ret[assets]
-                    corr = tmp_ret.corr()
-                    corr_mean = np.nanmean(corr[corr != 1.0])
-                    plot_fund_nav(assets, '2016-01-01', '2018-01-01', 'layer_%d'%i, 'inner corr %.3f'%corr_mean)
-                    print i, n_assets, corr_mean
-            set_trace()
+        assets = ret.columns
+        dates = ret.index
 
-            silhouette_samples_value = silhouette_score(distance_matrix, cluster.labels_, 'precomputed')
-            # self.silhouette_samples_value = silhouette_samples_value
-            print n_clusters, silhouette_samples_value
-        set_trace()
+        scaler = StandardScaler()
+        x = scaler.fit_transform(ind_alpha)
+        # x = ind_alpha.values
+        # x = sm.add_constant(x)
+        df_result = pd.DataFrame(columns = ['rsquare', 'cycle', 'finance', 'consumption', 'growth'])
+        for asset in assets:
+            y = ret[[asset]].values
+            y = scaler.fit_transform(y)
+            # res = sm.OLS(y,x).fit()
+            # print res.summary(yname = asset, xname = ['constant', 'cycle', 'finance', 'consumption', 'growth'])
+            res = Lasso(alpha = 0, fit_intercept = True, positive = True).fit(x, y)
+            score = res.score(x,y)
+            contrib = res.coef_/res.coef_.sum()
+            score = np.round(score, 4)
+            contrib = np.round(contrib, 4)
+            df_result.loc[asset] = np.append(score, contrib)
+            print asset, score, contrib
+        df_fund = base_ra_fund.load()
+        df_fund = df_fund.loc[:, ['ra_code', 'ra_name']]
+        df_fund = df_fund.set_index('ra_code')
+        df_result = pd.merge(df_fund, df_result, left_index = True, right_index = True, how = 'right')
+        df_result.to_csv('data/factor_contrib.csv', index_label = 'fund_code', encoding = 'gbk')
 
 
-    def generate_black_list(self):
-        fund_incs = self.fund_incs
-        base_incs = self.base_incs
-        funds = fund_incs.columns
-        df_result = pd.DataFrame(columns = ['sh300_corr', 'zz500_corr', 'std_fund', 'flag'])
-        for fund in funds:
-            fund_inc = fund_incs.loc[:, [fund]]
-            fund_inc = fund_inc.dropna()
-            asset_incs = pd.merge(fund_inc, base_incs, left_index=True, right_index=True, how='left')
-            asset_incs = asset_incs.dropna()
-            corr = asset_incs.corr().values
-            corr_sh300 = corr[0,1]
-            corr_zz500 = corr[0,2]
-            std_fund = fund_inc.values.std()
-            std_sh300 = asset_incs['120000001'].std()
-            std_zz500 = asset_incs['120000002'].std()
+    def cal_alpha(self, ret, mret):
+        assets = ret.columns
+        dates = ret.index
+        df_alpha = pd.DataFrame(index = dates)
+        df_rsquare = {}
+        x = mret.values.ravel()
+        # x = sm.add_constant(x)
+        for asset in assets:
+            y = ret[asset].values
+            # res = sm.OLS(y,x).fit()
+            # df_alpha[asset] = res.resid
+            # df_rsquare[asset] = res.rsquared
+            # df_alpha[asset] = y - x
+            df_alpha[asset] = y
 
-            cond1 = ((corr_sh300 < 0.6) and (corr_zz500 < 0.6))
-            cond2 = (std_fund < std_sh300 / 2) and (std_fund < std_zz500 / 2)
-            cond3 = len(fund_inc) < 52
+        df_rsquare = pd.Series(df_rsquare)
 
-            if cond1 or cond2 or cond3:
-                flag = 1
-            else:
-                flag = 0
-
-            df_result.loc[fund] = [corr_sh300, corr_zz500, std_fund, flag]
-            print len(df_result), fund, corr_sh300, corr_zz500, std_fund
-
-        df_result.to_csv('data/fund_flag.csv', index_label = 'fund')
+        return df_alpha, df_rsquare
 
 
     def allocate(self):
@@ -245,8 +234,9 @@ def plot_fund_nav(fund_codes, start_date, end_date, name = None, title = None):
 if __name__ == '__main__':
 
     # factor_ids = ['1200000%d'%i for i in range(52, 80)]
+    # ['周期','金融','消费','成长']
     factor_ids = ['120000055', '120000056', '120000058', '120000078']
     start_date = '2016-01-01'
     end_date = '2018-05-01'
-    fc = FundCluster(factor_ids, start_date, end_date)
-    fc.handle()
+    fd = FundDecomp(factor_ids, start_date, end_date)
+    fd.handle()
