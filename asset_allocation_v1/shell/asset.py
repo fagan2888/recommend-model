@@ -180,7 +180,7 @@ class WaveletAsset(Asset):
             if end_date is not None:
                 wave_end_date = end_date
             elif reindex is not None:
-                reindex.sort(reverse = False)
+                reindex = reindex.sort_values()
                 wave_end_date = reindex[-1]
 
         nav_sr = super(WaveletAsset, self).nav(begin_date = wave_begin_date, end_date = wave_end_date)
