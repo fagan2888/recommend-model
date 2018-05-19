@@ -24,6 +24,28 @@ from util.xdebug import dd
 
 logger = logging.getLogger(__name__)
 
+def markowitz_r_spe_volatility_adjusted(funddfr,vol_df, bounds):
+
+    rf = Const.rf
+
+    final_risk = 0
+    final_return = 0
+    final_ws = []
+    final_sharp = -10000000000000000000000000.0
+    final_codes = []
+
+
+    risks, returns, ws = fin.efficient_frontier_spe_volatility_adjusted(funddfr, vol_df, bounds)
+
+    for j in range(0, len(risks)):
+        sharp = (returns[j] - rf) / risks[j]
+        if sharp > final_sharp:
+            final_risk = risks[j]
+            final_return = returns[j]
+            final_ws = ws[j]
+            final_sharp = sharp
+
+    return final_risk, final_return, final_ws, final_sharp
 
 def markowitz_r_spe(funddfr, bounds):
 

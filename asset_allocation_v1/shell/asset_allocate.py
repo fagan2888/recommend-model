@@ -147,45 +147,72 @@ class MzBootBlAllocate(MzBlAllocate):
         return ws
 
 
+class MzVolAdjAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(MzVolAdjAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate_algo(self, day, df_inc, bound):
+        tdate = ATradeDate.trade_date()
+        var_res = {}
+        for i in range(1, len(df_inc.index)):
+            day = df_inc.index[i]
+            tmp_var_res = {}
+            for code in df_inc.columns:
+                var = (self.assets[code].nav(reindex=tdate).pct_change()*100).loc[df_inc.index[i-1]:df_inc.index[i]].var()
+                tmp_var_res[code] = var
+            var_res[day]=tmp_var_res
+        df_volatility = pd.DataFrame(var_res).T
+        df_volatility.loc[df_inc.index[0]] = [1 for i in range(len(df_inc.columns))]
+        df_volatility = df_volatility.sort_index()
+        df_inc = df_inc / df_volatility
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
+
+
 
 
 if __name__ == '__main__':
 
-    asset = Asset('120000001')
-    print asset.nav().tail()
+    #  asset = Asset('120000001')
+    #  print asset.nav().tail()
 
-    asset = WaveletAsset('120000013', 2)
-    print asset.nav('1900-01-01', datetime.now()).tail()
+    #  asset = WaveletAsset('120000013', 2)
+    #  print asset.nav('1900-01-01', datetime.now()).tail()
 
     trade_date = ATradeDate.week_trade_date(begin_date = '2012-01-01')
-    print trade_date[-5:]
+    #  print trade_date[-5:]
 
-    asset_globalids = ['120000001', '120000002', '120000013', '120000014', '120000015']
-    assets = {}
-    for asset_id in asset_globalids:
-        assets[asset_id] = Asset(asset_id)
+    #  asset_globalids = ['120000001', '120000002', '120000013', '120000014', '120000015']
+    #  assets = {}
+    #  for asset_id in asset_globalids:
+        #  assets[asset_id] = Asset(asset_id)
         #assets[asset_id] = WaveletAsset(asset_id, 2)
 
-    allocate = AvgAllocate('ALC.000001', assets, trade_date, 14)
+    #  allocate = AvgAllocate('ALC.000001', assets, trade_date, 14)
     #print allocate.allocate().tail()
 
-    allocate = MzAllocate('ALC.000002', assets, trade_date, 14)
+    #  allocate = MzAllocate('ALC.000002', assets, trade_date, 14)
     #print allocate.allocate().tail()
 
-    allocate = MzBootAllocate('ALC.000002', assets, trade_date, 14)
+    #  allocate = MzBootAllocate('ALC.000002', assets, trade_date, 14)
     #print allocate.allocate().tail()
 
 
-    view_df = View.load_view('BL.000001')
+    #  view_df = View.load_view('BL.000001')
 
     asset_globalids = ['120000001', '120000002', 'ERI000001', '120000014', 'ERI000002']
     assets = {}
     for asset_id in asset_globalids:
-        assets[asset_id] = Asset(asset_id)
+        assets[asset_id] = WaveletAsset(asset_id, 2)
 
-    views = {}
-    for asset_id in asset_globalids:
-        views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
+    #  views = {}
+    #  for asset_id in asset_globalids:
+        #  views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
 
-    allocate = MzBootBlAllocate('ALC.000002', assets, views, trade_date, 26)
-    print allocate.allocate().tail()
+    #  allocate = MzBootBlAllocate('ALC.000002', assets, views, trade_date, 26)
+    #  print allocate.allocate().tail()
+
+    allocate = MzVolAdjAllocate('ALC.000001', assets, trade_date, 14)
+    print allocate.allocate().tail(10)

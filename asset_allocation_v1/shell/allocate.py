@@ -190,7 +190,7 @@ class Allocate(object):
         reindex = self.index[self.index <= day][-1 * self.lookback:]
         data = {}
         for asset_id in asset_ids_tmp:
-            data[asset_id] = self.assets[asset_id].nav(reindex = reindex.tolist())
+            data[asset_id] = self.assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
         df_inc  = df_nav.pct_change().fillna(0.0)
 
