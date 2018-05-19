@@ -36,6 +36,7 @@ import copy
 from util.xdebug import dd
 from wavelet import Wavelet
 from trade_date import ATradeDate
+from scipy.stats import pearsonr
 
 
 import traceback, code
@@ -275,6 +276,72 @@ class RecentStdAsset(Asset):
         return rtd
 
 
+
+class RollingAsset(Asset):
+
+
+    def __init__(self, globalid, rolling = 20,  name = None, nav_sr = None):
+
+        super(RollingAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
+        self.__rolling = rolling
+
+    @property
+    def rolling(self):
+        return self.__rolling
+
+    def nav(self, begin_date = None, end_date = None, reindex = None):
+
+        nav_sr = super(RollingAsset, self).nav()
+        nav_sr = nav_sr.rolling(self.rolling).mean()
+
+        if begin_date is not None:
+            nav_sr = nav_sr[nav_sr.index >= begin_date]
+        if reindex is not None:
+            nav_sr = nav_sr.reindex(reindex).fillna(method = 'pad')
+            nav_sr = nav_sr.loc[reindex]
+
+        return nav_sr
+
+
+
+
+class DoubleRollingAsset(Asset):
+
+
+    def __init__(self, globalid, quick_rolling = 20, slow_rolling = 60, name = None, nav_sr = None):
+
+        super(DoubleRollingAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
+        self.__quick_rolling = quick_rolling
+        self.__slow_rolling = slow_rolling
+
+    @property
+    def quick_rolling(self):
+        return self.__quick_rolling
+
+    @property
+    def slow_rolling(self):
+        return self.__slow_rolling
+
+    def nav(self, begin_date = None, end_date = None, reindex = None):
+
+
+        nav_sr = super(DoubleRollingAsset, self).nav()
+
+        quick_nav_sr = nav_sr.rolling(self.quick_rolling).mean()
+        slow_nav_sr = nav_sr.rolling(self.slow_rolling).mean()
+
+        nav_sr = quick_nav_sr / slow_nav_sr - 1
+
+        if begin_date is not None:
+            nav_sr = nav_sr[nav_sr.index >= begin_date]
+        if reindex is not None:
+            nav_sr = nav_sr.reindex(reindex).fillna(method = 'pad')
+            nav_sr = nav_sr.loc[reindex]
+
+        #nav_sr = nav_sr.cumprod()
+
+        return nav_sr
+
 if __name__ == '__main__':
 
     asset = Asset('120000001')
@@ -287,3 +354,25 @@ if __name__ == '__main__':
 
     week_trade_dates = ATradeDate.week_trade_date()
     asset = RecentStdAsset('120000001', trade_dates = week_trade_dates)
+
+
+
+    for i in range(1, 80):
+        asset = RollingAsset(str(120000000 + i), rolling = 5)
+        #print asset.nav()
+        #print asset.origin_nav_sr
+        sr = asset.origin_nav_sr.pct_change().shift(-1)
+        nav = asset.nav().pct_change()
+        #nav[nav < 0.02] = 0
+        df = pd.concat([sr, nav] ,axis = 1).dropna()
+        print i, pearsonr(df.iloc[:,0], df.iloc[:,1])
+
+    #for i in range(5, 60):
+    #    for j in [20, 60, 120, 250]:
+    #        asset = DoubleRollingAsset('120000015', quick_rolling = i, slow_rolling = j)
+    #        sr = asset.origin_nav_sr.pct_change().shift(-1)
+    #        nav = asset.nav()
+    #        df = pd.concat([sr, nav] ,axis = 1).dropna()
+    #        print i , j, pearsonr(df.iloc[:,0], df.iloc[:,1])
+
+

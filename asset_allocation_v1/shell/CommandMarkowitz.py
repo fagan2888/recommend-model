@@ -34,7 +34,7 @@ from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav,
 from util import xdict
 from util.xdebug import dd
 
-from asset import Asset, WaveletAsset, RecentStdAsset
+from asset import Asset, WaveletAsset, RecentStdAsset, DoubleRollingAsset
 from allocate import Allocate
 from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate
 from trade_date import ATradeDate
@@ -933,6 +933,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #print df.tail()
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        #assets = dict([(asset_id , DoubleRollingAsset(asset_id)) for asset_id in list(assets.keys())])
         #assets = dict([(asset_id , WaveletAsset(asset_id, 2)) for asset_id in list(assets.keys())])
         #assets = dict([(asset_id , RecentStdAsset(asset_id, trade_dates = ATradeDate.week_trade_date())) for asset_id in list(assets.keys())])
         allocate = MzBootAllocate('ALC.000001', assets, trade_date, lookback)
@@ -978,7 +979,14 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         assets = dict([(asset_id , WaveletAsset(asset_id, 2)) for asset_id in list(assets.keys())])
         allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
-
+    elif algo == 8:
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        #lookback = 120
+        #trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        #assets = dict([(asset_id , WaveletAsset(asset_id, 2)) for asset_id in list(assets.keys())])
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback, cpu_count = 70)
+        df = allocate.allocate()
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))

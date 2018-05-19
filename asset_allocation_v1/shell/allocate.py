@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 class AssetBound(object):
 
-    def __init__(self, globalid = None, asset_ids = None, bound = None, upper = 0.7):
+    def __init__(self, globalid = None, asset_ids = None, bound = None, upper = 1.0):
 
         self.__globalid = globalid
         #TODO : load from database by globalid
