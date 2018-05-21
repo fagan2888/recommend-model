@@ -24,6 +24,7 @@ from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
 from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
 from util import xdict
+from ipdb import set_trace
 
 import traceback, code
 
@@ -538,3 +539,62 @@ def passive_fund_ratio(ctx):
 
     df.to_csv('active_passive_fund_ratio.csv')
     return
+
+
+@analysis.command()
+@click.pass_context
+def expect_ret(ctx):
+
+    '''
+    nav = asset_on_online_nav.load_series(800000, 8)
+    ret = np.log(nav).diff().dropna()
+    df_result = {}
+    for n in range(1, 20):
+        tmp_ret = ret.rolling(22*n).sum()
+        tmp_ret = np.exp(tmp_ret) - 1
+        df_result[n] = tmp_ret.mean()
+        # print n, tmp_ret.mean()
+    df_result = pd.Series(df_result)
+    set_trace()
+    '''
+    for risk in range(10):
+        nav = asset_on_online_nav.load_series(800000+risk, 8)
+        ret = np.log(nav).diff().dropna()
+        df_result = {}
+        for n in range(1, 20):
+            tmp_ret = ret.rolling(22*n).sum()
+            tmp_ret = np.exp(tmp_ret) - 1
+            df_result[n] = tmp_ret.mean()
+            # print n, tmp_ret.mean()
+        df_result = pd.Series(df_result)
+        res = df_result.loc[4] - df_result.loc[1]
+        print risk, res
+
+
+@analysis.command()
+@click.pass_context
+def ret_ci(ctx):
+
+    '''
+    nav = asset_on_online_nav.load_series(800000, 8)
+    ret = np.log(nav).diff().dropna()
+    df_result = {}
+    for n in range(1, 20):
+        tmp_ret = ret.rolling(22*n).sum()
+        tmp_ret = np.exp(tmp_ret) - 1
+        df_result[n] = tmp_ret.mean()
+        # print n, tmp_ret.mean()
+    df_result = pd.Series(df_result)
+    set_trace()
+    '''
+    for risk in range(10):
+        nav = asset_on_online_nav.load_series(800000+risk, 8)
+        ret = np.log(nav).diff().dropna()
+        df_result = {}
+        tmp_ret = ret.rolling(3*252).sum()
+        tmp_ret = np.exp(tmp_ret) - 1
+        ret_mean = tmp_ret.mean()
+        ret_std = tmp_ret.std()
+        ci = [ret_mean - 1.44*ret_std, ret_mean + 1.44*ret_std]
+        print risk, ci
+
