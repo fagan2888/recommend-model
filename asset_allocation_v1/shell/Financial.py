@@ -17,6 +17,86 @@ from scipy import linalg
 #import pylab
 #import matplotlib.pyplot as plt
 
+def efficient_frontier_spe_volatility_adjusted(return_rate, df_volatility, bound, sum1 = 0.65, sum2 = 0.45):
+
+    solvers.options['show_progress'] = False
+
+    return_rate_tmp = return_rate / df_volatility
+    return_rate = return_rate.T
+    return_rate_tmp = return_rate_tmp.T
+
+    n_asset    =     len(return_rate)
+    asset_mean = np.mean(return_rate_tmp, axis = 1)
+    #print asset_mean
+    l = len(asset_mean)
+
+    cov        =     np.cov(return_rate)
+
+    S           =     matrix(cov)
+    l2 = matrix(S * np.eye(l))
+    l2 = l2 * 2
+    S = S + l2
+    #S = l2
+
+    pbar       =     matrix(asset_mean)
+
+    #
+    # 设置限制条件, 闲置条件的意思
+    #    GW <= H
+    # 其中:
+    #    G 是掩码矩阵, 其元素只有0,1,
+    #    W 是每个资产的权重,
+    #    H 是一个值
+    # 对于i行的意思是 sum(Gij * Wi | j=0..n_asset-1) <= Hi
+    #
+    # 具体地, 本函数有4类闲置条件:
+    #    1: Wi >= 0, 由G的0..(n_asset-1) 行控制
+    #    2: Wi下限, 由G的n_asset..(2*n_asset-1)行控制
+    #    3: Wi的上限,由G的2*n_asset..(3*n_asset-1)行控制
+    #    4: 某类资产之和的上限, 由G的3*n_asset 行控制
+    #
+
+    G = matrix(0.0, (3 * n_asset + 2,  n_asset))
+    h = matrix(0.0, (3 * n_asset + 2, 1) )
+ 
+    h[3* n_asset, 0] = sum1
+    h[3* n_asset + 1, 0] = sum2
+    for i in range(0, n_asset):
+        #
+        # Wi >= 0
+        #
+        # h[i, 0] = 0
+        G[i, i] = -1
+        #
+        # Wi的下限
+        #
+        G[n_asset + i, i ]     = -1
+        h[n_asset + i, 0] = -1.0 * bound[i]['lower']
+        #
+        # Wi的上限
+        #
+        G[2 * n_asset + i, i ] = 1
+        h[2 * n_asset + i, 0] = bound[i]['upper']
+        #
+        # 某类资产之和的上限
+        #
+        if bound[i]['sum1'] == True or bound[i]['sum1'] == 1:
+            G[3 * n_asset, i] = 1
+
+        if bound[i]['sum2'] == True or bound[i]['sum2'] == 1:
+            G[3 * n_asset + 1, i] = 1
+
+    A          =  matrix(1.0, (1, n_asset))
+    b          =  matrix(1.0)
+
+    N          = 200
+    mus        = [ 10**(5.0*t/N-1.0) for t in range(N) ]
+    portfolios = [ qp(mu*S, -pbar, G, h, A, b)['x'] for mu in mus ]
+    returns    = [ dot(pbar,x) for x in portfolios ]
+    risks      = [ sqrt(dot(x, S*x)) for x in portfolios ]
+
+
+    return risks, returns, portfolios
 
 def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
 

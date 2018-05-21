@@ -53,7 +53,8 @@ def markowitz_r_spe(funddfr, bounds):
 
     final_risk = 0
     final_return = 0
-    final_ws = []
+    #  final_ws = []
+    final_ws = np.array([])
     final_sharp = -10000000000000000000000000.0
     final_codes = []
 
@@ -66,13 +67,28 @@ def markowitz_r_spe(funddfr, bounds):
 
     risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds)
 
+    #  for j in range(0, len(risks)):
+        #  sharp = (returns[j] - rf) / risks[j]
+        #  if sharp > final_sharp:
+            #  final_risk = risks[j]
+            #  final_return = returns[j]
+            #  final_ws = ws[j]
+            #  final_sharp = sharp
+
     for j in range(0, len(risks)):
-        sharp = (returns[j] - rf) / risks[j]
-        if sharp > final_sharp:
-            final_risk = risks[j]
-            final_return = returns[j]
-            final_ws = ws[j]
-            final_sharp = sharp
+        if risks[j] == 0:
+            if np.sum(ws[j] ** 2) > np.sum(final_ws ** 2):
+                final_risk = risks[j]
+                final_return = returns[j]
+                final_ws = ws[j]
+                final_sharp = np.inf
+        else:
+            sharp = (returns[j] - rf) / risks[j]
+            if sharp > final_sharp:
+                final_risk = risks[j]
+                final_return = returns[j]
+                final_ws = ws[j]
+                final_sharp = sharp
 
     return final_risk, final_return, final_ws, final_sharp
 
@@ -98,12 +114,26 @@ def markowitz_r_spe_bl(funddfr, P, eta, alpha, bounds):
         risks, returns, ws = fin.efficient_frontier_spe_bl(return_rate, P, eta, alpha, bounds)
 
     for j in range(0, len(risks)):
-        sharp = (returns[j] - rf) / risks[j]
-        if sharp > final_sharp:
-            final_risk = risks[j]
-            final_return = returns[j]
-            final_ws = ws[j]
-            final_sharp = sharp
+        if risks[j] == 0:
+            if np.sum(ws[j] ** 2) > np.sum(final_ws ** 2):
+                final_risk = risks[j]
+                final_return = returns[j]
+                final_ws = ws[j]
+                final_sharp = np.inf
+        else:
+            sharp = (returns[j] - rf) / risks[j]
+            if sharp > final_sharp:
+                final_risk = risks[j]
+                final_return = returns[j]
+                final_ws = ws[j]
+                final_sharp = sharp
+    #  for j in range(0, len(risks)):
+        #  sharp = (returns[j] - rf) / risks[j]
+        #  if sharp > final_sharp:
+            #  final_risk = risks[j]
+            #  final_return = returns[j]
+            #  final_ws = ws[j]
+            #  final_sharp = sharp
 
     return final_risk, final_return, final_ws, final_sharp
 

@@ -118,6 +118,13 @@ class MzBootAllocate(Allocate):
             self.__cpu_count = cpu_count
         self.__bootstrap_count = bootstrap_count
 
+    @property
+    def cpu_count(self):
+        return self.__cpu_count
+
+    @property
+    def bootstrap_count(self):
+        return self.__bootstrap_count
 
     def allocate_algo(self, day, df_inc, bound):
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
@@ -147,26 +154,34 @@ class MzBootBlAllocate(MzBlAllocate):
         return ws
 
 
-class MzVolAdjAllocate(Allocate):
+class MzVolAdjAllocate(MzBootAllocate):
 
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
-        super(MzVolAdjAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+        super(MzVolAdjAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound, cpu_count, bootstrap_count)
 
     def allocate_algo(self, day, df_inc, bound):
+        from ipdb import set_trace
+        df_inc[df_inc>0] = 0
         tdate = ATradeDate.trade_date()
-        var_res = {}
-        for i in range(1, len(df_inc.index)):
-            day = df_inc.index[i]
-            tmp_var_res = {}
-            for code in df_inc.columns:
-                var = (self.assets[code].nav(reindex=tdate).pct_change()*100).loc[df_inc.index[i-1]:df_inc.index[i]].var()
-                tmp_var_res[code] = var
-            var_res[day]=tmp_var_res
-        df_volatility = pd.DataFrame(var_res).T
-        df_volatility.loc[df_inc.index[0]] = [1 for i in range(len(df_inc.columns))]
-        df_volatility = df_volatility.sort_index()
-        df_inc = df_inc / df_volatility
-        risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+        #  var_res = {}
+        #  for i in range(1, len(df_inc.index)):
+            #  day = df_inc.index[i]
+            #  tmp_var_res = {}
+            #  for code in df_inc.columns:
+                #  var = (self.assets[code].nav(reindex=tdate).pct_change()).loc[df_inc.index[i-1]:df_inc.index[i]].var()
+                #  tmp_var_res[code] = var
+            #  var_res[day]=tmp_var_res
+        #  df_volatility = pd.DataFrame(var_res).T
+        #  df_volatility = df_volatility / df_volatility.mean().mean()
+        #  df_volatility.loc[df_inc.index[0]] = [1 for i in range(len(df_inc.columns))]
+        #  df_volatility = df_volatility.sort_index()
+        #  df_inc = df_inc / df_volatility
+        #One month variation
+        var = np.array([self.assets[code].origin_nav_sr.reindex(tdate).pct_change().loc[df_inc.index[-5]:df_inc.index[-1]].var() for code in df_inc.columns])
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count = self.cpu_count, bootstrap_count = self.bootstrap_count)
+        ws = np.array(ws).ravel()
+        ws = ws/var
+        ws = ws/ws.sum()
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws
 
