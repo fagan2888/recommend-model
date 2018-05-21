@@ -20,6 +20,7 @@ import Portfolio as PF
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
+import talib
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -194,7 +195,6 @@ class WaveletAsset(Asset):
 
         wavelet_nav_sr = Wavelet.wavefilter(nav_sr, self.wavelet_filter_num)
 
-
         if begin_date is not None:
             wavelet_nav_sr = wavelet_nav_sr[wavelet_nav_sr.index >= begin_date]
         if reindex is not None:
@@ -342,30 +342,156 @@ class DoubleRollingAsset(Asset):
 
         return nav_sr
 
+
+
+class TechAsset(Asset):
+
+    def __init__(self, globalid, name = None, nav_sr = None):
+
+        super(TechAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
+
+
+    def nav(self, begin_date = None, end_date = None, reindex = None):
+
+        nav_sr = super(TechAsset, self).nav()
+
+        if begin_date is not None:
+            nav_sr = nav_sr[nav_sr.index >= begin_date]
+        if reindex is not None:
+            nav_sr = nav_sr.reindex(reindex).fillna(method = 'pad')
+            nav_sr = nav_sr.loc[reindex]
+
+        return nav_sr
+
+
+    @staticmethod
+    def macd_hist(close, fastperiod=12, slowperiod=26, signalperiod=9):
+        macd, macdsignal, macdhist = talib.MACD(close, fastperiod, slowperiod, signalperiod)
+        return 2.0 * macdhist
+    @staticmethod
+    def atr(high, low, close, timeperiod=14):
+        atr = talib.ATR(high, low, close, timeperiod)
+        return atr
+    @staticmethod
+    def cci(high, low, close, timeperiod=14):
+        cci = talib.CCI(high, low, close, timeperiod)
+        return cci
+    @staticmethod
+    def rsi(close, timeperiod=12):
+        rsi = talib.RSI(close, timeperiod)
+        return rsi
+    @staticmethod
+    def obv(close, volume):
+        obv = talib.OBV(close, volume)
+        return obv
+    @staticmethod
+    def mtm(close, timeperiod=6):
+        mtm = talib.MOM(close, timeperiod)
+        return mtm
+    @staticmethod
+    def apo(close, fastperiod=12, slowperiod=26, matype=0):
+        apo = talib.APO(close, fastperiod, slowperiod, matype)
+        return apo
+    @staticmethod
+    def roc(close, timeperiod=12):
+        roc = talib.ROC(close, timeperiod)
+        return roc
+    @staticmethod
+    def slowkd(high, low, close,  fastk_period=9, slowk_period=3, \
+                slowk_matype=0, slowd_period=3, slowd_matype=0):
+
+        slowk, slowd = talib.STOCH(high, low, close,  fastk_period, \
+                slowk_period, slowk_matype, slowd_period, slowd_matype)
+        return slowd
+    @staticmethod
+    def ad(high, low, close, volume):
+        ad = talib.AD(high, low, close, volume)
+        return ad
+    @staticmethod
+    def pct_chg(close):
+        pct_chg = close.pct_change()
+        return np.array(pct_chg)
+    @staticmethod
+    def pvt(close, volume):
+        pct_chg = CalTechIndic.get_pct_chg(close)
+        pct_chg[0] = 0.0
+        x = pct_chg * volume
+        pvt = np.add.accumulate(x)
+        return pvt
+    @staticmethod
+    def wvad(high, low, close, popen, volume):
+        a = close - popen
+        b = high - low
+        c = a / b * volume
+        c = np.nan_to_num(c)
+        wvad = np.add.accumulate(c)
+        return wvad
+    @staticmethod
+    def priceosc(close, fastperiod=12, slowperiod=26, matype=0):
+        ppo = talib.PPO(close, fastperiod, slowperiod, matype)
+        return ppo
+    @staticmethod
+    def bias(close, mavalue=12):
+        avg = close.rolling(window=mavalue).mean()
+        bias = ((close - avg) / avg ) * 100.0
+        return bias
+    @staticmethod
+    def vma(high, low, close, popen, timeperiod=6, matype=0):
+        mean_price = (high + low + close + popen) / 4.0
+        vma = talib.MA(mean_price, timeperiod, matype)
+        return vma
+    @staticmethod
+    def vstd(volume, timeperiod=12, nbdev=1):
+        vstd = talib.STDDEV(volume, timeperiod, nbdev)
+        return vstd
+
+
+class MacdAsset(TechAsset):
+
+    def __init__(self, globalid, name = None, nav_sr = None):
+        super(MacdAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
+
+
+    def nav(self, begin_date = None, end_date = None, reindex = None):
+
+        nav_sr = super(MacdAsset, self).nav()
+        macd_sr = pd.Series(TechAsset.macd_hist(close = nav_sr.ravel()), index = nav_sr.index)
+
+        if begin_date is not None:
+            macd_sr = macd_sr[macd_sr.index >= begin_date]
+        if reindex is not None:
+            macd_sr = macd_sr.reindex(reindex).fillna(method = 'pad')
+            macd_sr = macd_sr.loc[reindex]
+
+        macd_sr = (macd_sr / 100 + 1).cumprod()
+        return macd_sr
+
+
 if __name__ == '__main__':
 
-    asset = Asset('120000001')
+    #asset = Asset('120000001')
     #print asset.nav(begin_date = '2010-01-01').head()
     #print asset.origin_nav_sr.head()
 
-    asset = WaveletAsset('120000013', 2)
-    #print asset.nav('2010-01-01', datetime.now()).tail()
+    #asset = WaveletAsset('120000015', 2)
+    #print asset.nav(end_date = '2010-05-07').pct_change()
     #print asset.origin_nav_sr.tail()
 
-    week_trade_dates = ATradeDate.week_trade_date()
-    asset = RecentStdAsset('120000001', trade_dates = week_trade_dates)
+    #week_trade_dates = ATradeDate.week_trade_date()
+    #asset = RecentStdAsset('120000001', trade_dates = week_trade_dates)
 
+    asset = MacdAsset('120000001')
+    print asset.nav()
 
-
-    for i in range(1, 80):
-        asset = RollingAsset(str(120000000 + i), rolling = 5)
+    #for i in range(1, 80):
+    #    asset = RollingAsset(str(120000000 + i), rolling = 5)
         #print asset.nav()
         #print asset.origin_nav_sr
-        sr = asset.origin_nav_sr.pct_change().shift(-1)
-        nav = asset.nav().pct_change()
+    #    sr = asset.origin_nav_sr.pct_change().shift(-1)
+    #    nav = asset.nav().pct_change()
         #nav[nav < 0.02] = 0
-        df = pd.concat([sr, nav] ,axis = 1).dropna()
-        print i, pearsonr(df.iloc[:,0], df.iloc[:,1])
+    #    df = pd.concat([sr, nav] ,axis = 1).dropna()
+    #    print i, pearsonr(df.iloc[:,0], df.iloc[:,1])
 
     #for i in range(5, 60):
     #    for j in [20, 60, 120, 250]:
@@ -374,5 +500,3 @@ if __name__ == '__main__':
     #        nav = asset.nav()
     #        df = pd.concat([sr, nav] ,axis = 1).dropna()
     #        print i , j, pearsonr(df.iloc[:,0], df.iloc[:,1])
-
-

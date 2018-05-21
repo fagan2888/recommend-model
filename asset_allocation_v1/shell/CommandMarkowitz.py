@@ -34,7 +34,7 @@ from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav,
 from util import xdict
 from util.xdebug import dd
 
-from asset import Asset, WaveletAsset, RecentStdAsset, DoubleRollingAsset
+from asset import Asset, WaveletAsset, RecentStdAsset, DoubleRollingAsset, MacdAsset
 from allocate import Allocate
 from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate
 from trade_date import ATradeDate
@@ -636,8 +636,6 @@ def markowitz_r(df_inc, day, limits, bootstrap, cpu_count, blacklitterman, marko
         risk, returns, ws, sharpe = PF.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
     elif (not bootstrap is None) and (not blacklitterman):
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
-        print ws
-        exit(0)
     elif (not bootstrap is None) and blacklitterman:
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
@@ -975,18 +973,26 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzBlAllocate('ALC.000001', assets, views, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 7:
-        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
         assets = dict([(asset_id , WaveletAsset(asset_id, 2)) for asset_id in list(assets.keys())])
         allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 8:
-        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
         #lookback = 120
         #trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         #assets = dict([(asset_id , WaveletAsset(asset_id, 2)) for asset_id in list(assets.keys())])
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback, cpu_count = 70)
         df = allocate.allocate()
+    elif algo == 9:
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
+        assets = dict([(asset_id , MacdAsset(asset_id)) for asset_id in list(assets.keys())])
+        #allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback, cpu_count = 70)
+        allocate = MzBootAllocate('ALC.000001', assets, trade_date, lookback, cpu_count = 70)
+        df = allocate.allocate()
+
+
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
@@ -1022,6 +1028,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         pass
     else:
         df = df.rolling(window = 4, min_periods = 1).mean()
+        #df = df.rolling(window = 1, min_periods = 1).mean()
 
     if optappend:
         df = df.iloc[3:,:]

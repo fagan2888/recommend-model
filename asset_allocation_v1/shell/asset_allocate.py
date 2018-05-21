@@ -161,9 +161,9 @@ class MzBootDownRiskAllocate(Allocate):
 
 
     def allocate_algo(self, day, df_inc, bound):
-        #df_inc[df_inc >= 0] = 0.01
+        df_inc[df_inc >= 0] = 0.0
         #df_inc[df_inc < 0] = 0.01
-        df_inc = df_inc[['120000001','ERI000001','120000081']]
+        #df_inc = df_inc[['120000001','ERI000001','120000081']]
         #df_inc = df_inc[['120000001','ERI000001']]
         #df_inc['120000001'] = 0
         #df_inc.loc['2018-05-04','120000001'] = 0.2
@@ -181,9 +181,18 @@ class MzBootDownRiskAllocate(Allocate):
         #df_inc.loc['2018-05-04','ERI000002'] = -0.01
         #df_inc.loc['2018-04-27','ERI000002'] = -0.01
         #bound = bound[0:2]
+        #print df_inc
+        #hl_w = []
+        #T = len(df_inc)
+        #for t in range(1, T + 1):
+        #    hl_w.append(0.5 ** (1 - 1.0 * t / (T / 2)))
+        #df_inc = df_inc.mul(hl_w, axis = 0)
+        #print df_inc.mean()
+        #print df_inc.std()
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc.columns.ravel(), ws))
-        print
+        #print ws
+        #print
         #print df_inc
         #print df_inc.cov()
         #print df_inc.corr()
@@ -191,6 +200,10 @@ class MzBootDownRiskAllocate(Allocate):
         #print len(df_inc)
         #print ws
         return ws
+
+
+
+
 
 
 
