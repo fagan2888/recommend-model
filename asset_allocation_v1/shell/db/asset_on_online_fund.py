@@ -26,7 +26,7 @@ def load(gid, included_online_id=False):
         t1.c.on_fund_ratio,
     ]
     index_col = ['on_date']
-  
+
     if included_online_id:
         columns.insert(0, t1.c.on_online_id)
         index_col.insert(0, 'on_online_id')
@@ -39,7 +39,7 @@ def load(gid, included_online_id=False):
         return None
     # if xtypes is not None:
     #     s = s.where(t1.c.on_type.in_(xtypes))
-  
+
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['on_date'])
 
     #df = df.unstack()
@@ -59,7 +59,7 @@ def load_fund_pos(gid):
         t1.c.on_fund_ratio,
     ]
     index_col = ['on_date', 'on_pool_id', 'on_fund_id']
-    
+
     # if included_online_id:
     #     columns.insert(0, t1.c.on_online_id)
     #     index_col.insert(0, 'on_online_id')
@@ -72,7 +72,7 @@ def load_fund_pos(gid):
         return None
     # if xtypes is not None:
     #     s = s.where(t1.c.on_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['on_date'])
 
     #

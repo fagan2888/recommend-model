@@ -23,6 +23,7 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
 from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
+from db import *
 from util import xdict
 from ipdb import set_trace
 
@@ -597,4 +598,38 @@ def ret_ci(ctx):
         ret_std = tmp_ret.std()
         ci = [ret_mean - 1.44*ret_std, ret_mean + 1.44*ret_std]
         print risk, ci
+
+
+@analysis.command()
+@click.pass_context
+def avg_ratio(ctx):
+
+    fund_pos = asset_on_online_fund.load_fund_pos(800000)
+    funds = fund_pos.index.get_level_values(1).unique()
+    fund_type = base_ra_fund_type_brief.load_fund_type(funds)
+    fund_type = fund_type.to_dict()['ra_fund_type']
+    fund_pos = fund_pos.reset_index()
+    fund_pos.on_fund_id = fund_pos.on_fund_id.apply(lambda x: fund_type.get(x, 0))
+
+
+@analysis.command()
+@click.pass_context
+def fund_ci(ctx):
+
+    fi = pd.read_csv('data/fund_indicator.csv', index_col = ['date'], parse_dates = ['date'])
+    fi = fi[fi.bull == 0]
+    for year in [1, 3, 5, 7]:
+        days = year * 252
+        ret = fi.nav.rolling(days).apply(lambda x: x[-1]/x[0] - 1).dropna()
+        c1 = np.round(np.percentile(ret, 17), 2)
+        c2 = np.round(np.percentile(ret, 83), 2)
+        c3 = np.round(np.percentile(ret, 2.5), 2)
+        c4 = np.round(np.percentile(ret, 97.5), 2)
+        print year, [c1, c2], [c3, c4]
+
+
+
+
+
+
 

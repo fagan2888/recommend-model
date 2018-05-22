@@ -47,6 +47,7 @@ import asset_tc_timing
 import asset_tc_timing_nav
 import asset_tc_timing_signal
 import base_ra_fund
+import base_ra_fund_type_brief
 import base_ra_fund_bonus
 import base_ra_fund_nav
 import base_ra_index
