@@ -478,7 +478,7 @@ def asset_allocation(start_date, end_date, largecap_fund, smallcap_fund, P, Q):
 
 def riskparity(dfr):
     cov = dfr.cov()
-    cov = cov.values
+    cov = cov.values*1e4
     asset_num = len(cov)
     w = 1.0 * np.ones(asset_num) / asset_num
     bound = [ (0.0 , 1.0) for i in range(asset_num)]

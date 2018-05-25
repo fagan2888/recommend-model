@@ -38,7 +38,7 @@ from ipdb import set_trace
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzMomAllocate, MzMRAllocate, MzMRRevAllocate, RpAllocate, KellyAllocate, MvpAllocate, SptAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1004,6 +1004,65 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         vf = ValidFactor(factor_ids, start_date, end_date)
         df = vf.allocate_avg()
 
+    elif algo == 17:
+
+        trade_date = ATradeDate.month_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzMomAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 18:
+
+        trade_date = ATradeDate.month_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzRevAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 19:
+
+        trade_date = ATradeDate.month_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzMRAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 20:
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = RpAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 21:
+
+        trade_date = ATradeDate.month_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzMRAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate_le()
+
+    elif algo == 22:
+
+        lookback = 260
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = KellyAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 23:
+
+        lookback = 260
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MvpAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 24:
+
+        lookback = 120
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = SptAllocate('ALC.000001', assets, trade_date, lookback, period = 22)
+        df = allocate.allocate()
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -1033,7 +1092,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    if algo == 1:
+    norolling_algo = [1, 17, 18, 21, 24]
+    if algo in norolling_algo:
         pass
     else:
         df = df.rolling(window = 4, min_periods = 1).mean()

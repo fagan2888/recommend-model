@@ -14,6 +14,7 @@ import cvxopt
 from cvxopt import matrix, solvers
 from numpy import isnan
 from scipy import linalg
+from ipdb import set_trace
 #import pylab
 #import matplotlib.pyplot as plt
 
@@ -56,7 +57,7 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
 
     G = matrix(0.0, (3 * n_asset + 2,  n_asset))
     h = matrix(0.0, (3 * n_asset + 2, 1) )
- 
+
     h[3* n_asset, 0] = sum1
     h[3* n_asset + 1, 0] = sum2
     for i in range(0, n_asset):
@@ -96,6 +97,145 @@ def efficient_frontier_spe(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
 
     return risks, returns, portfolios
 
+
+def kelly_alloc(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
+
+    solvers.options['show_progress'] = False
+
+    n_asset    =     len(return_rate.columns)
+
+    asset_mean = np.mean(return_rate).values
+    #print asset_mean
+
+    cov = return_rate.cov().values
+
+    S           =     matrix(cov)
+    #S = l2
+
+    pbar       =     matrix(asset_mean)
+
+    #
+    # 设置限制条件, 闲置条件的意思
+    #    GW <= H
+    # 其中:
+    #    G 是掩码矩阵, 其元素只有0,1,
+    #    W 是每个资产的权重,
+    #    H 是一个值
+    # 对于i行的意思是 sum(Gij * Wi | j=0..n_asset-1) <= Hi
+    #
+    # 具体地, 本函数有4类闲置条件:
+    #    1: Wi >= 0, 由G的0..(n_asset-1) 行控制
+    #    2: Wi下限, 由G的n_asset..(2*n_asset-1)行控制
+    #    3: Wi的上限,由G的2*n_asset..(3*n_asset-1)行控制
+    #    4: 某类资产之和的上限, 由G的3*n_asset 行控制
+    #
+
+    G = matrix(0.0, (3 * n_asset + 2,  n_asset))
+    h = matrix(0.0, (3 * n_asset + 2, 1) )
+
+    h[3* n_asset, 0] = sum1
+    h[3* n_asset + 1, 0] = sum2
+    for i in range(0, n_asset):
+        #
+        # Wi >= 0
+        #
+        # h[i, 0] = 0
+        G[i, i] = -1
+        #
+        # Wi的下限
+        #
+        G[n_asset + i, i ]     = -1
+        h[n_asset + i, 0] = -1.0 * bound[i]['lower']
+        #
+        # Wi的上限
+        #
+        G[2 * n_asset + i, i ] = 1
+        h[2 * n_asset + i, 0] = bound[i]['upper']
+        #
+        # 某类资产之和的上限
+        #
+        if bound[i]['sum1'] == True or bound[i]['sum1'] == 1:
+            G[3 * n_asset, i] = 1
+
+        if bound[i]['sum2'] == True or bound[i]['sum2'] == 1:
+            G[3 * n_asset + 1, i] = 1
+
+    A          =  matrix(1.0, (1, n_asset))
+    b          =  matrix(1.0)
+
+    ws = qp(S*0.5, -pbar, G, h, A, b)['x']
+
+    return ws
+
+
+def mvp_alloc(return_rate, bound, sum1 = 0.65, sum2 = 0.45):
+
+    solvers.options['show_progress'] = False
+
+    n_asset    =     len(return_rate.columns)
+
+    asset_mean = np.mean(return_rate).values
+    #print asset_mean
+
+    cov = return_rate.cov().values
+
+    S           =     matrix(cov)
+    #S = l2
+
+    pbar       =     matrix(np.zeros_like(asset_mean))
+
+    #
+    # 设置限制条件, 闲置条件的意思
+    #    GW <= H
+    # 其中:
+    #    G 是掩码矩阵, 其元素只有0,1,
+    #    W 是每个资产的权重,
+    #    H 是一个值
+    # 对于i行的意思是 sum(Gij * Wi | j=0..n_asset-1) <= Hi
+    #
+    # 具体地, 本函数有4类闲置条件:
+    #    1: Wi >= 0, 由G的0..(n_asset-1) 行控制
+    #    2: Wi下限, 由G的n_asset..(2*n_asset-1)行控制
+    #    3: Wi的上限,由G的2*n_asset..(3*n_asset-1)行控制
+    #    4: 某类资产之和的上限, 由G的3*n_asset 行控制
+    #
+
+    G = matrix(0.0, (3 * n_asset + 2,  n_asset))
+    h = matrix(0.0, (3 * n_asset + 2, 1) )
+
+    h[3* n_asset, 0] = sum1
+    h[3* n_asset + 1, 0] = sum2
+    for i in range(0, n_asset):
+        #
+        # Wi >= 0
+        #
+        # h[i, 0] = 0
+        G[i, i] = -1
+        #
+        # Wi的下限
+        #
+        G[n_asset + i, i ]     = -1
+        h[n_asset + i, 0] = -1.0 * bound[i]['lower']
+        #
+        # Wi的上限
+        #
+        G[2 * n_asset + i, i ] = 1
+        h[2 * n_asset + i, 0] = bound[i]['upper']
+        #
+        # 某类资产之和的上限
+        #
+        if bound[i]['sum1'] == True or bound[i]['sum1'] == 1:
+            G[3 * n_asset, i] = 1
+
+        if bound[i]['sum2'] == True or bound[i]['sum2'] == 1:
+            G[3 * n_asset + 1, i] = 1
+
+    A          =  matrix(1.0, (1, n_asset))
+    b          =  matrix(1.0)
+
+    ws = qp(S, -pbar, G, h, A, b)['x']
+
+    return ws
 
 
 def efficient_frontier_spe_bl(return_rate, P, eta, alpha, bound, sum1 = 0.65, sum2 = 0.45):

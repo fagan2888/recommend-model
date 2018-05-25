@@ -13,7 +13,7 @@ from sklearn.linear_model import LinearRegression
 from scipy.stats import rankdata, spearmanr, pearsonr
 from scipy.spatial import distance_matrix
 from sklearn.cluster import AgglomerativeClustering, KMeans
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, silhouette_samples
 import statsmodels.api as sm
 import datetime
 from ipdb import set_trace
@@ -44,7 +44,7 @@ class FundCluster(object):
         self.other_ids = []
         self.market_ids = ['120000041']
         self.trade_dates = DBData.trade_dates(start_date, end_date)
-        self.lookback = 52*10
+        self.lookback = 52
 
         self.asset_navs, self.asset_incs = self.load_asset_nav(factor_ids, start_date, end_date)
         self.base_navs, self.base_incs = self.load_asset_nav(self.base_ids, start_date, end_date)
@@ -110,14 +110,17 @@ class FundCluster(object):
                 if cond1:
                     valid_fund_codes.append(fund)
             tmp_fund_ret = tmp_fund_ret[valid_fund_codes]
-            tmp_fund_ret = tmp_fund_ret.merge(self.market_incs, left_index = True, right_index = True)
-            tmp_fund_alpha = pd.DataFrame(index = tmp_fund_ret.index)
-            y = tmp_fund_ret.iloc[:, -1].values
-            for fund in valid_fund_codes:
-                x = tmp_fund_ret[[fund]].values
-                res = sm.OLS(y, x).fit()
-                tmp_fund_alpha[fund] = res.resid
-            self.train_industry(tmp_fund_alpha, 200)
+            # tmp_fund_ret = tmp_fund_ret.merge(self.market_incs, left_index = True, right_index = True)
+            # tmp_fund_alpha = pd.DataFrame(index = tmp_fund_ret.index)
+            # y = tmp_fund_ret.iloc[:, -1].values
+            # for fund in valid_fund_codes:
+            #     x = tmp_fund_ret[[fund]].values
+            #     res = sm.OLS(y, x).fit()
+            #     tmp_fund_alpha[fund] = res.resid
+            # self.train_industry(tmp_fund_alpha, 200)
+            dist =  np.sqrt(1-0.5*tmp_fund_ret.corr()).values
+            dist = distance_matrix(dist, dist)
+            self.train(tmp_fund_ret, dist, 20)
 
 
     def cluster_industry(self):
@@ -133,41 +136,50 @@ class FundCluster(object):
             # tmp_basic_ret = self.base_incs.loc[start_date:end_date]
             tmp_fund_nav = tmp_fund_nav.dropna(1)
             tmp_fund_ret = tmp_fund_nav.pct_change().dropna()
-            self.train_industry(tmp_fund_ret, 4)
+            self.train_industry(tmp_fund_ret, 20)
 
 
-    def train(self, ret, max_clusters):
-        valid_assets = ret.std()[ret.std() != 0].index
-        ret = ret.loc[:, valid_assets]
+    def train(self, ret, dist, max_clusters):
+        # valid_assets = ret.std()[ret.std() != 0].index
+        # ret = ret.loc[:, valid_assets]
 
         asset_names = ret.columns
-        t1 = datetime.datetime.now()
+        # t1 = datetime.datetime.now()
         # distance_matrix = pearson_affinity(ret.T.values)
-        distance_matrix_ = 1 - ret.corr().values
-        print datetime.datetime.now() - t1
-        for n_clusters in range(100, max_clusters):
+        # distance_matrix_ = 1 - ret.corr().values
+        # distance_matrix_ =  np.sqrt(1-0.5*ret.corr()).values
+        # print datetime.datetime.now() - t1
+        best_score = -2
+        best_cluster = 1
+        for n_clusters in range(2, max_clusters):
             # cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity=pearson_affinity)
-            cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity='precomputed')
-            # cluster = KMeans(n_clusters=n_clusters, precompute_distances = True, random_state = 0)
-            cluster.fit_predict(distance_matrix_)
+            # cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity='precomputed')
+            cluster = KMeans(n_clusters=n_clusters, precompute_distances = True, random_state = 0)
+            cluster.fit_predict(dist)
             asset_cluster = {}
             for i in np.arange(n_clusters):
                 asset_cluster[i] = asset_names[cluster.labels_ == i]
-            for i in np.arange(n_clusters):
-                assets = asset_cluster[i]
-                n_assets = len(assets)
-                if n_assets >= 5:
-                    tmp_ret = ret[assets]
-                    corr = tmp_ret.corr()
-                    corr_mean = np.nanmean(corr[corr != 1.0])
-                    plot_fund_nav(assets, '2016-01-01', '2018-01-01', 'layer_%d'%i, 'inner corr %.3f'%corr_mean)
-                    print i, n_assets, corr_mean
-            set_trace()
+            # for i in np.arange(n_clusters):
+            #     assets = asset_cluster[i]
+            #     n_assets = len(assets)
+            #     if n_assets >= 5:
+            #         tmp_ret = ret[assets]
+            #         corr = tmp_ret.corr()
+            #         corr_mean = np.nanmean(corr[corr != 1.0])
+            #         plot_fund_nav(assets, '2016-01-01', '2018-01-01', 'layer_%d'%i, 'inner corr %.3f'%corr_mean)
+            #         print i, n_assets, corr_mean
 
-            silhouette_samples_value = silhouette_score(distance_matrix_, cluster.labels_, 'precomputed')
+            silh = silhouette_samples(dist, cluster.labels_, 'precomputed')
+            score = silh.mean()/silh.std()
+            if score > best_score:
+                best_cluster, best_score = n_clusters, score
+
+            # print n_clusters, score
+        print best_cluster, best_score
+        # set_trace()
+            # silhouette_samples_value = silhouette_score(dist, cluster.labels_, 'precomputed')
             # self.silhouette_samples_value = silhouette_samples_value
-            print n_clusters, silhouette_samples_value
-        set_trace()
+            # print n_clusters, silhouette_samples_value
 
 
     def train_industry(self, ret, max_clusters):
@@ -183,14 +195,16 @@ class FundCluster(object):
 
         asset_names = ret.columns
         t1 = datetime.datetime.now()
-        distance_matrix_ =  -ret.corr().values
-        # distance_matrix_ = distance_matrix(ret.T, ret.T)
-        print datetime.datetime.now() - t1
-        for n_clusters in range(max_clusters, max_clusters+1):
+        dist =  np.sqrt(1-0.5*ret.corr()).values
+        dist = distance_matrix(dist, dist)
+        # print datetime.datetime.now() - t1
+        best_score = -2
+        best_cluster = 1
+        for n_clusters in range(2, max_clusters+1):
             # cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity=pearson_affinity)
             cluster = AgglomerativeClustering(n_clusters=n_clusters, linkage='average', affinity='precomputed')
             # cluster = KMeans(n_clusters=n_clusters, precompute_distances = True, random_state = 0)
-            cluster.fit_predict(distance_matrix_)
+            cluster.fit_predict(dist)
             asset_cluster = {}
             for i in np.arange(n_clusters):
                 asset_cluster[i] = asset_names[cluster.labels_ == i]
@@ -205,11 +219,17 @@ class FundCluster(object):
                     corr = tmp_ret.corr()
                     corr_mean = np.nanmean(corr[corr != 1.0])
                     corr_mean = round(corr_mean, 2)
-                print i, corr_mean
-                print df_index.loc[layer_assets]
-            # set_trace()
+                # print i, corr_mean
+                # print df_index.loc[layer_assets]
 
-            silhouette_samples_value = silhouette_score(distance_matrix_, cluster.labels_, 'precomputed')
+            silh = silhouette_samples(dist, cluster.labels_, 'precomputed')
+            score = silh.mean()/silh.std()
+            if score > best_score:
+                best_cluster, best_score = n_clusters, score
+
+            print n_clusters, score
+
+            # silhouette_samples_value = silhouette_score(distance_matrix_, cluster.labels_, 'precomputed')
             # self.silhouette_samples_value = silhouette_samples_value
             # print n_clusters, silhouette_samples_value
 
@@ -274,8 +294,8 @@ class FundCluster(object):
 
 
     def handle(self):
-        # self.cluster()
-        self.cluster_industry()
+        self.cluster()
+        # self.cluster_industry()
         # self.generate_black_list()
         # self.load_valid_fund_nav()
 
@@ -331,7 +351,7 @@ if __name__ == '__main__':
 
     factor_ids = ['1200000%d'%i for i in range(52, 80)]
     # factor_ids = ['120000055', '120000056', '120000058', '120000078']
-    start_date = '2005-01-01'
+    start_date = '2012-01-01'
     end_date = '2018-05-01'
     fc = FundCluster(factor_ids, start_date, end_date)
     fc.handle()

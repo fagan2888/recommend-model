@@ -33,6 +33,7 @@ import CommandUtil
 import CommandAnalysis
 import CommandImport
 import CommandStockFactor
+import CommandCompare
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -271,4 +272,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandAnalysis.analysis)
     roboadvisor.add_command(CommandImport.import_command)
     roboadvisor.add_command(CommandStockFactor.sf)
+    roboadvisor.add_command(CommandCompare.compare)
     roboadvisor(obj={})
