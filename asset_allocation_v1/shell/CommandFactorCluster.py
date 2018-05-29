@@ -4,6 +4,7 @@
 
 import pandas as pd
 import numpy as np
+from sqlalchemy import MetaData, Table, select, func, literal_column
 import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
@@ -27,11 +28,98 @@ warnings.filterwarnings('ignore')
 
 import Portfolio as PF
 import Const
-from db import asset_ra_pool_nav, asset_ra_pool_fund, asset_ra_pool, base_ra_fund_nav, base_ra_fund, base_ra_index
+from db import asset_ra_pool_nav, asset_ra_pool_fund, asset_ra_pool, base_ra_fund_nav, base_ra_fund, base_ra_index, asset_ra_composite_asset_nav, database
 import DBData
 # from CommandMarkowitz import load_nav_series
 import CommandMarkowitz
 from trade_date import ATradeDate
+from asset import Asset
+
+@click.group(invoke_without_command=True)
+@click.option('--id', 'optid', help=u'specify markowitz id')
+@click.pass_context
+def fc(ctx, optid):
+    '''
+    factor layereing
+    '''
+    if ctx.invoked_subcommand is None:
+        # ctx.invoke(fc_update, optid)
+        ctx.invoke(fc_rolling, optid = optid)
+        ctx.invoke(fc_update_nav, optid = optid)
+    else:
+        pass
+
+
+@fc.command()
+@click.option('--id', 'optid', help=u'specify cluster id')
+@click.pass_context
+def fc_rolling(ctx, optid):
+
+    lookback_days = 365
+    blacklist = [24, 32, 40]
+    factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
+    trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
+    for date in trade_dates:
+        start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
+        end_date = date.strftime('%Y-%m-%d')
+        print start_date, end_date
+        corr0 = load_ind(factor_ids, start_date, end_date)
+        factor_name = base_ra_index.load()
+        res = clusterKMeansBase(corr0, maxNumClusters=10, n_init=100)
+        asset_cluster = res[1]
+        asset_cluster = dict(zip(sorted(asset_cluster), sorted(asset_cluster.values())))
+
+        for k,v in asset_cluster.iteritems():
+            v = np.array(v).astype('int')
+            print factor_name.loc[v]
+        print
+
+
+@fc.command()
+@click.option('--id', 'optid', help=u'specify cluster id')
+@click.pass_context
+def fc_update_nav(ctx, optid):
+
+    lookback_days = 365
+    blacklist = [24, 32, 40]
+    factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
+    trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
+    date = trade_dates[-1]
+
+    start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
+    end_date = date.strftime('%Y-%m-%d')
+    corr0 = load_ind(factor_ids, start_date, end_date)
+    res = clusterKMeansBase(corr0, maxNumClusters=10, n_init=100)
+    asset_cluster = res[1]
+    asset_cluster = dict(zip(sorted(asset_cluster), sorted(asset_cluster.values())))
+
+    factor_name = base_ra_index.load()
+    for k,v in asset_cluster.iteritems():
+        v = np.array(v).astype('int')
+        print factor_name.loc[v]
+
+    assets = {}
+    for factor_id in factor_ids:
+        assets[factor_id] = Asset.load_nav_series(factor_id)
+    df_assets = pd.DataFrame(assets)
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('ra_composite_asset_nav', metadata, autoload=True)
+
+    for layer in asset_cluster.keys():
+        layer_id = 'FC.000001.%d'%(layer+1)
+        layer_assets = asset_cluster[layer]
+        layer_nav = df_assets.loc[:,layer_assets]
+        layer_ret = layer_nav.pct_change().dropna()
+        layer_ret = layer_ret.mean(1)
+        layer_ret = layer_ret.reset_index()
+        layer_ret.columns = ['ra_date', 'ra_inc']
+        layer_ret['ra_nav'] = (1 + layer_ret['ra_inc']).cumprod()
+        layer_ret['ra_asset_id'] = layer_id
+        df_new = layer_ret.set_index(['ra_asset_id', 'ra_date'])
+        df_old = asset_ra_composite_asset_nav.load_nav(layer_id)
+        database.batch(db, t, df_new, df_old, timestamp=False)
 
 
 def load_fund(start_date, end_date):
@@ -126,7 +214,7 @@ if  __name__ == '__main__':
     lookback_days = 365
     blacklist = [24, 32, 40]
     factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
-    trade_dates = ATradeDate.month_trade_date(begin_date = '2015-01-01')
+    trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
     for date in trade_dates:
         # start_date = '%d-%02d-01'%(year, month)
         # end_date = '%d-%02d-01'%(year+1, month)
