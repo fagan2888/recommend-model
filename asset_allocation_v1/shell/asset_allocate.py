@@ -23,6 +23,7 @@ from multiprocessing import Manager
 from scipy.stats import rankdata
 from scipy.optimize import minimize
 from sklearn.neighbors import KernelDensity
+from pathos.multiprocessing import ProcessingPool as Pool
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -383,16 +384,18 @@ class SptAllocate(Allocate):
         kde = KernelDensity(bandwidth = 0.0001)
         kde.fit(df_inc)
         roots = []
-        for root in range(150):
-            roots.append(kde.sample(60, random_state = root))
+        for root in range(15000):
+            roots.append(kde.sample(20, random_state = root))
 
         w0 = [1.0 / len(df_inc.columns)] * len(df_inc.columns)
         cons = (
             {'type': 'eq', 'fun': lambda x: np.sum(x) - 1},
             {'type': 'ineq', 'fun': long_only}
         )
-        # res = minimize(spt_objective, w0, args = [roots], method = 'SLSQP', constraints=cons, options={'disp':False, 'eps':0.01})
+
         res = minimize(spt_objective, w0, args = [roots], method = 'SLSQP', constraints=cons, options={'disp':False, 'eps':0.01})
+        # res = minimize(sharpe_objective, w0, args = [roots], method = 'SLSQP', constraints=cons, options={'disp':False, 'eps':0.01})
+        # res = minimize(downward_sharpe_objective, w0, args = [roots], method = 'SLSQP', constraints=cons, options={'disp':False, 'eps':0.01})
         ws = res.x
         ws = dict(zip(df_inc.columns.ravel(), ws))
         print ' ', 1 - res.fun
@@ -421,7 +424,7 @@ def spt_objective(x, pars):
         # print 'loss:', loss
         # print 'tret:',tret
 
-        if loss < -0.01 or tret < 0.0:
+        if loss < -0.01 or tret < 0.01:
         # if mdd < -0.01 or tret < 0.01:
             fail += 1
     # print x
@@ -441,6 +444,27 @@ def sharpe_objective(x, pars):
         sharpe = ret.mean()/ret.std()
 
         if sharpe < 0.1:
+
+        # if mdd < -0.01 or tret < 0.01:
+            fail += 1
+    # print x
+
+    return fail/count
+
+
+def downward_sharpe_objective(x, pars):
+
+    roots = pars[0]
+    count = 0.0
+    fail = 0.0
+    for root in roots:
+        count += 1
+        ret = np.dot(root, x)
+        # ret[ret < 0] = 0
+        ret = ret[ret > 0]
+        dstd = np.std(ret)
+
+        if dstd > 0.003:
 
         # if mdd < -0.01 or tret < 0.01:
             fail += 1

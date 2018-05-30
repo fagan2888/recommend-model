@@ -1,5 +1,4 @@
-#!/home/yaojiahui/anaconda2/bin/python
-# coding=utf-8
+#!/home/yaojiahui/anaconda2/bin/python # coding=utf-8
 
 import pandas as pd
 import numpy as np
@@ -123,20 +122,20 @@ class FundDecomp(object):
 
     def train(self, ret, mret, iret):
         # 用四个行业因子['周期','金融','消费','成长']的超额收益来回归基金的超额收益
-        fund_alpha, fund_rsquare = self.cal_alpha(ret, mret)
-        ind_alpha, ind_rsquare = self.cal_alpha(iret, mret)
+        # fund_alpha, fund_rsquare = self.cal_alpha(ret, mret)
+        # ind_alpha, ind_rsquare = self.cal_alpha(iret, mret)
 
         assets = ret.columns
         dates = ret.index
-
-        scaler = StandardScaler()
-        x = scaler.fit_transform(ind_alpha)
+        x = iret
+        # scaler = StandardScaler()
+        # x = scaler.fit_transform(ind_alpha)
         # x = ind_alpha.values
         # x = sm.add_constant(x)
-        df_result = pd.DataFrame(columns = ['rsquare', 'cycle', 'finance', 'consumption', 'growth'])
+        df_result = pd.DataFrame(columns = ['rsquare', 'largecap', 'smallcap', 'cycle', 'finance', 'consumption', 'growth'])
         for asset in assets:
             y = ret[[asset]].values
-            y = scaler.fit_transform(y)
+            # y = scaler.fit_transform(y)
             # res = sm.OLS(y,x).fit()
             # print res.summary(yname = asset, xname = ['constant', 'cycle', 'finance', 'consumption', 'growth'])
             res = Lasso(alpha = 0, fit_intercept = True, positive = True).fit(x, y)
@@ -235,7 +234,7 @@ if __name__ == '__main__':
 
     # factor_ids = ['1200000%d'%i for i in range(52, 80)]
     # ['周期','金融','消费','成长']
-    factor_ids = ['120000055', '120000056', '120000058', '120000078']
+    factor_ids = ['120000001', '120000002', '120000055', '120000056', '120000058', '120000078']
     start_date = '2016-01-01'
     end_date = '2018-05-01'
     fd = FundDecomp(factor_ids, start_date, end_date)

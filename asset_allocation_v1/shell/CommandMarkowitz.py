@@ -1049,7 +1049,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 23:
 
-        lookback = 260
+        lookback = 26*6
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MvpAllocate('ALC.000001', assets, trade_date, lookback)
@@ -1060,7 +1060,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         lookback = 120
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = SptAllocate('ALC.000001', assets, trade_date, lookback, period = 22)
+        allocate = SptAllocate('ALC.000001', assets, trade_date, lookback, period = 20)
         df = allocate.allocate()
 
     else:
@@ -1092,7 +1092,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    norolling_algo = [1, 17, 18, 21, 24]
+    norolling_algo = [1, 17, 18, 21]
     if algo in norolling_algo:
         pass
     else:

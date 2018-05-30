@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
-import click
+import os
 import sys
 sys.path.append('shell/')
 from sklearn.linear_model import LinearRegression
@@ -28,10 +28,12 @@ warnings.filterwarnings('ignore')
 from mk_test import mk_test
 import Portfolio as PF
 import Const
-from db import asset_ra_pool_nav, asset_ra_pool_fund, asset_ra_pool, base_ra_fund_nav, base_ra_fund, base_ra_index
+# from db import asset_ra_pool_nav, asset_ra_pool_fund, asset_ra_pool, base_ra_fund_nav, base_ra_fund, base_ra_index
+from db import *
 import DBData
 # from CommandMarkowitz import load_nav_series
 import CommandMarkowitz
+from trade_date import ATradeDate
 
 
 def load_fund(start_date, end_date):
@@ -58,11 +60,28 @@ def load_ind(factor_ids, start_date, end_date):
     return corr
 
 
+def load_factor():
+
+    if os.path.exists('data/factor/factor_nav.csv'):
+        factor_nav = pd.read_csv('data/factor/factor_nav.csv', index_col = ['date'], parse_dates =  ['date'])
+        return factor_nav
+
+    factor_type = pd.read_csv('data/factor/factor_type.csv', encoding = 'gb2312')
+    factor_type = factor_type[factor_type.state == 1]
+    factor_index = caihui_tq_ix_basicinfo.find_index(factor_type.type)
+    factor_code = factor_index.secode.values
+    factor_code = factor_code
+    factor_nav = caihui_tq_qt_index.load_multi_index_nav(factor_code)
+    factor_nav.to_csv('data/factor/factor_nav.csv', index_label = 'date')
+
+    return factor_nav
+
+
 def clusterKMeansBase(corr0,maxNumClusters=10,n_init=10):
     dist,silh=((1-corr0.fillna(0))/2.)**.5,pd.Series()
     # distance matrix
     for init in range(n_init):
-        for i in xrange(2,maxNumClusters+1):
+        for i in xrange(50, maxNumClusters+1):
     # find optimal num clusters
             kmeans_ = KMeans(n_clusters=i,n_jobs=1,n_init=1)
             kmeans_ = kmeans_.fit(dist)
@@ -117,38 +136,72 @@ def clusterKMeansTop(corr0, maxNumClusters=10, n_init=10):
         newTstatMean=np.mean([np.mean(silhNew[clstrs2[i]])/np.std(silhNew[clstrs2[i]]) for i in clstrs2.keys()])
         if newTstatMean<=meanRedoTstat:
             return corr1,clstrs,silh
+
         else:
             return corrNew,clstrsNew,silhNew
 
 
+def cluster_ind():
+    lookback_days = 365 * 5
+    # blacklist = [24, 40]
+    # factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
+    trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
+    factor_nav = load_factor()
+    factor_ret = factor_nav.pct_change()
+    factor_name = caihui_tq_ix_basicinfo.load_index_name(factor_ret.columns)
+    factor_name = factor_name.set_index('secode')
+    for date in trade_dates:
+        start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
+        end_date = date.strftime('%Y-%m-%d')
+        print start_date, end_date
+        # corr0 = load_ind(factor_ids, start_date, end_date)
+        ret0 = factor_ret.loc[start_date:end_date]
+        ret0 = ret0.dropna(1)
+        corr0 = ret0.corr()
+        res = clusterKMeansBase(corr0, maxNumClusters=60, n_init=100)
+
+        for k,v in res[1].iteritems():
+            print factor_name.loc[v]
+            corr = corr0.loc[v,v].mean().mean()
+            factor_name.loc[v].to_csv('data/factor_cluster/cluster_%d_%.3f.csv'%(k, corr), index_label = 'fund_code')
+        print
+        set_trace()
+
+
+def cluster_fund():
+    lookback_days = 365
+    blacklist = [24, 40]
+    factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
+    trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
+    for date in trade_dates:
+        # start_date = '%d-%02d-01'%(year, month)
+        # end_date = '%d-%02d-01'%(year+1, month)
+        start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
+        end_date = date.strftime('%Y-%m-%d')
+        print start_date, end_date
+        # corr0 = load_fund(start_date, end_date)
+        corr0 = load_ind(factor_ids, start_date, end_date)
+        # corr1, clstrs, silh = clusterKMeansBase(corr0,maxNumClusters=10,n_init=1)
+        factor_name = base_ra_index.load()
+        # df_fund = base_ra_fund.load()
+        # df_fund.index = df_fund.ra_code.astype('int')
+        # df_fund = df_fund.set_index('ra_code')
+        # factor_name = df_fund.ra_name
+        res = None
+        while res is None:
+            try:
+                # res = clusterKMeansTop(corr0, maxNumClusters=10, n_init=1)
+                res = clusterKMeansBase(corr0, maxNumClusters=10, n_init=100)
+            except:
+                pass
+
+        for k,v in res[1].iteritems():
+            v = np.array(v).astype('int')
+            print factor_name.loc[v]
+            factor_name.loc[v].to_csv('data/fund_cluster/cluster_%d.csv'%k, index_label = 'fund_code')
+        print
+
+
 if  __name__ == '__main__':
 
-    factor_ids = ['1200000%d'%i for i in range(52, 80)]
-    for year in range(2016,2018):
-        for month in range(1, 13):
-            start_date = '%d-%02d-01'%(year, month)
-            end_date = '%d-%02d-01'%(year+2, month)
-            print start_date, end_date
-            corr0 = load_fund(start_date, end_date)
-            # corr0 = load_ind(factor_ids, start_date, end_date)
-            # corr1, clstrs, silh = clusterKMeansBase(corr0,maxNumClusters=10,n_init=1)
-            # factor_name = base_ra_index.load()
-            df_fund = base_ra_fund.load()
-            df_fund.index = df_fund.ra_code.astype('int')
-            # df_fund = df_fund.set_index('ra_code')
-            factor_name = df_fund.ra_name
-            res = None
-            while res is None:
-                try:
-                    res = clusterKMeansTop(corr0, maxNumClusters=2, n_init=10)
-                except:
-                    pass
-
-            for k,v in res[1].iteritems():
-                v = np.array(v).astype('int')
-                print factor_name.loc[v]
-                factor_name.loc[v].to_csv('data/fund_cluster/cluster_%d.csv'%k, index_label = 'fund_code')
-            print
-
-
-
+    cluster_ind()

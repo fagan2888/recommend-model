@@ -34,8 +34,10 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
+from sklearn.linear_model import Lasso
 from tabulate import tabulate
 from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund
+from trade_date import ATradeDate
 
 import traceback, code
 from ipdb import set_trace
@@ -72,14 +74,14 @@ def pool(ctx, optid, datadir):
 @click.pass_context
 def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, opteliminateratio, optcalc, optperiod, optpoints):
     '''run constant risk model
-    '''    
+    '''
     if datadir is None:
         datadir = "./tmp"
     Const.datadir = datadir
 
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
     if optid is not None:
         pools = [s.strip() for s in optid.split(',')]
     else:
@@ -110,12 +112,12 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, opteliminat
 @click.option('--datadir', '-d', type=click.Path(exists=True), help=u'dir used to store tmp data')
 @click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
-@click.option('--period', 'optperiod', type=int, default=13, help=u'adjust period by week')
+@click.option('--period', 'optperiod', type=int, default=1, help=u'adjust period by week')
 @click.option('--id', 'optid', help=u'fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--calc/--no-calc', 'optcalc', default=True, help=u're calc label')
 @click.option('--if/--no-if', 'optif', default=False, help=u'cal industry factors')
-@click.option('--limit', 'optlimit', type=int, default=3, help=u'how many fund selected for each category')
+@click.option('--limit', 'optlimit', type=int, default=10, help=u'how many fund selected for each category')
 @click.option('--points', 'optpoints', help=u'Adjust points')
 @click.pass_context
 def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optif, optperiod, optpoints):
@@ -184,7 +186,8 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
             pre_codes = None
             for day in adjust_points:
                 bar.update(1)
-                codes = pool_by_corr_jensen(pool, day, lookback, limit, df_nav_fund)
+                # codes = pool_by_corr_jensen(pool, day, lookback, limit, df_nav_fund)
+                codes = pool_by_lasso_regression(pool, day, lookback, limit, df_nav_fund)
                 if pre_codes is not None:
                     final_codes = []
                     for pre_code in pre_codes:
@@ -292,9 +295,9 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
         df_new.reset_index(inplace=True)
         df_new = df_new.reindex_axis(['ra_pool', 'ra_category',  'ra_date', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_level', 'ra_sharpe', 'ra_jensen', 'ra_sortino', 'ra_ppw'], axis='columns')
         df_new.sort_values(by=['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'], inplace=True)
-        
+
         #df_new.to_csv(datapath('pool_%s.csv' % (pool['id'])), index=False)
-        
+
     else:
         df_new = pd.read_csv(datapath('pool_%s.csv' % (pool['id'])), parse_dates=['ra_date'], dtype={'ra_fund_code': str})
 
@@ -339,9 +342,9 @@ def fund_code_to_globalid(codes):
         s = select(columns, ra_fund.c.ra_code.in_(codes))
     else:
         s = select(columns)
-        
+
     df_result = pd.read_sql(s, db, index_col='ra_code')
-    
+
     return df_result['globalid']
 
 
@@ -369,17 +372,17 @@ def load_pools(pools, pool_type=None):
             s = s.where(ra_pool.c.ra_fund_type.in_(pool_type))
         else:
             s = s.where(ra_pool.c.ra_fund_type == pool_type)
-        
+
     df_pool = pd.read_sql(s, db)
 
     return df_pool
-        
+
 
 def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
     # 加载时间轴数据
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
 
     index = base_trade_dates.load_trade_dates(startdate, end_date=enddate)
     index = index[index.td_type >= 8].index
@@ -521,19 +524,19 @@ def format_nav_and_inc(x):
         ret = x
 
     return ret
-    
-    
+
+
 def load_pool_category(pid):
     db = database.connection('asset')
     t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
-    
+
     # 加载就数据
     columns = [
         t.c.ra_pool,
         t.c.ra_category,
     ]
     stmt_select = select(columns, t.c.ra_pool == pid).distinct()
-    
+
     df = pd.read_sql(stmt_select, db)
 
     return df
@@ -551,12 +554,12 @@ def load_fund_category(pid, category):
         s = s.distinct()
     else:
         s = s.where(t.c.ra_category == category)
-    
+
     df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
 
     return df
-    
-    
+
+
 @pool.command(name='import')
 @click.option('--id', 'optid', type=int, help=u'specify fund pool id')
 @click.option('--name', 'optname', help=u'specify fund pool name')
@@ -750,7 +753,7 @@ def turnover_update_category(pool, category):
     df_prev = df.shift(1).fillna(0).astype(int)
 
     df_prev.iloc[0] = df.iloc[0]
-    
+
     df_and = np.bitwise_and(df, df_prev)
 
     df_new = (1 - df_and.sum(axis=1) / df_prev.sum(axis=1)).to_frame('ra_turnover')
@@ -758,7 +761,7 @@ def turnover_update_category(pool, category):
     df_new['ra_category'] = category
 
     df_new = df_new.reset_index().set_index(['ra_pool', 'ra_category', 'ra_date'])
-    
+
     df_new = df_new.applymap("{:.4f}".format)
 
 
@@ -929,3 +932,51 @@ def pool_by_corr_jensen(pool, day, lookback, limit, df_nav_fund):
         print final_codes
         # print ' ', day, final_codes, np.round(rss, 2)
         return final_codes
+
+
+def pool_by_lasso_regression(pool, day, lookback, limit, df_nav_fund):
+
+    proxy_index = int(pool.ra_index_id)
+    reindex = ATradeDate.week_trade_date(begin_date = day, end_date = day, lookback = lookback)
+
+    df_nav_fund =  df_nav_fund.reindex(reindex)
+    df_nav_fund = df_nav_fund.fillna(method = 'pad')
+    df_nav_fund = df_nav_fund.dropna(axis = 1)
+    df_ret_fund = df_nav_fund.pct_change().dropna()
+
+    # ['大盘','小盘','周期','金融','消费','成长']
+    ra_index_id = ['120000001', '120000002', '120000055', '120000056', '120000058', '120000078']
+    df_nav_index = base_ra_index_nav.load_multi_index(ra_index_id, reindex = reindex)
+    df_ret_index = df_nav_index.pct_change().dropna()
+
+    funds = df_ret_fund.columns
+    x = df_ret_index.values
+    styles = ['largecap', 'smallcap', 'cycle', 'finance', 'consumption', 'growth']
+    df_result = pd.DataFrame(columns = ['rsquare'] + styles)
+    for fund in funds:
+        y = df_ret_fund[[fund]].values
+        res = Lasso(alpha = 0, fit_intercept = True, positive = True).fit(x, y)
+        score = res.score(x,y)
+        contrib = res.coef_/res.coef_.sum()
+        score = np.round(score, 4)
+        contrib = np.round(contrib, 4)
+        df_result.loc[fund] = np.append(score, contrib)
+
+    df_result = df_result[df_result.rsquare > 0.8]
+
+    code_jensen = {}
+    for fund in df_result.index:
+        jensen = fin.jensen(df_nav_fund[fund].pct_change().fillna(0.0), df_nav_index[proxy_index].pct_change().fillna(0.0) ,Const.rf)
+        code_jensen.setdefault(fund, jensen)
+
+    df_jensen = pd.Series(code_jensen).to_frame(name = 'jensen')
+    df_result = pd.merge(df_result, df_jensen, left_index = True, right_index = True, how = 'inner')
+    style = styles[ra_index_id.index(pool.ra_index_id)]
+    df_result = df_result[df_result[style] > 0.8]
+    final_codes = df_result.sort_values('jensen', ascending=False).index.values[:limit]
+
+    return final_codes
+
+
+
+

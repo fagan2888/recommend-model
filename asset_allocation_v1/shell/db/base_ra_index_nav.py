@@ -48,6 +48,34 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     return df['nav']
 
 
+def load_multi_index(id_, reindex=None, begin_date=None, end_date=None):
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_index_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_index_id.label('ra_index_id'),
+        t1.c.ra_nav.label('nav'),
+    ]
+
+    s = select(columns).where(t1.c.ra_index_id.in_(id_))
+
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+
+    df = pd.read_sql(s, db, index_col = ['date', 'ra_index_id'], parse_dates=['date'])
+    df = df.unstack()
+    df.columns = df.columns.droplevel(0)
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+
+    return df
+
+
 def load_ra_amount(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     db = database.connection('base')
     metadata = MetaData(bind=db)
@@ -213,3 +241,10 @@ def build_sql_trade_date_weekly(start_date, end_date, include_end_date=True):
         condition = "(td_type & 0x02)"
 
     return "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND %s" % (start_date, end_date, condition)
+
+
+
+if __name__ == '__main__':
+
+    df = load_multi_index(['120000001', '120000002'])
+    print df

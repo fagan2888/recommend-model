@@ -58,6 +58,26 @@ def load(gid, reindex=None):
 
     return df
 
+
+def get_pool():
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('ra_pool_fund', metadata, autoload=True)
+
+    pool_ids = ['11110100', '11110200', '11120200', '11120500', '11120501', '11310100', '11400100', '11210100', '11210200']
+    columns = [
+        t.c.ra_pool,
+        t.c.ra_fund_code,
+    ]
+    s = select(columns).where(t.c.ra_pool.in_(pool_ids))
+
+    df = pd.read_sql(s, db)
+
+    return df
+
+
+
 def tlsFundType(gid, default=0):
     tls = {
         '11210111' : 11101, # 大盘
