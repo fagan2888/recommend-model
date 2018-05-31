@@ -156,7 +156,6 @@ class Allocate(object):
 
     def allocate(self):
 
-
         adjust_days = self.index[self.lookback - 1::self.period]
         asset_ids = list(self.assets.keys())
         pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
@@ -176,7 +175,6 @@ class Allocate(object):
                 #df_inc[df_inc >= 0] = 0.00
                 #df_inc[df_inc < 0] = -0.01
                 #df_inc = df_inc.mul(range(0, 26), axis = 0)
-                print df_inc
 
                 ws = self.allocate_algo(day, df_inc, bound)
                 #print ws

@@ -162,48 +162,44 @@ class MzBootDownRiskAllocate(Allocate):
 
     def allocate_algo(self, day, df_inc, bound):
         df_inc[df_inc >= 0] = 0.0
-        #df_inc[df_inc < 0] = 0.01
-        #df_inc = df_inc[['120000001','ERI000001','120000081']]
-        #df_inc = df_inc[['120000001','ERI000001']]
-        #df_inc['120000001'] = 0
-        #df_inc.loc['2018-05-04','120000001'] = 0.2
-        #df_inc.loc['2018-04-27','120000001'] = -2
-        #df_inc.loc['2018-05-04','120000002'] = -0.02
-        #df_inc.loc['2018-04-27','120000002'] = -0.01
-        #df_inc.loc['2018-05-04','120000029'] = -0.01
-        #df_inc.loc['2018-04-27','120000029'] = -0.01
-        #df_inc.loc['2018-05-04','120000080'] = -0.01
-        #df_inc.loc['2018-04-27','120000080'] = -0.01
-        #df_inc.loc['2018-05-04','120000081'] = -0.01
-        #df_inc.loc['2018-04-27','120000081'] = -0.01
-        #df_inc.loc['2018-05-04','ERI000001'] = -0.01
-        #df_inc.loc['2018-04-27','ERI000001'] = -0.01
-        #df_inc.loc['2018-05-04','ERI000002'] = -0.01
-        #df_inc.loc['2018-04-27','ERI000002'] = -0.01
-        #bound = bound[0:2]
-        #print df_inc
-        #hl_w = []
-        #T = len(df_inc)
-        #for t in range(1, T + 1):
-        #    hl_w.append(0.5 ** (1 - 1.0 * t / (T / 2)))
-        #df_inc = df_inc.mul(hl_w, axis = 0)
-        #print df_inc.mean()
-        #print df_inc.std()
+        tdate = ATradeDate.trade_date()
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        #var = np.array([self.assets[code].origin_nav_sr.reindex(tdate).pct_change().loc[df_inc.index[-13]:df_inc.index[-1]].var() for code in df_inc.columns])
+        #ws = np.array(ws).ravel()
+        #ws = ws/var
+        #ws = ws/ws.sum()
         ws = dict(zip(df_inc.columns.ravel(), ws))
-        #print ws
-        #print
-        #print df_inc
-        #print df_inc.cov()
-        #print df_inc.corr()
-        #print df_inc.mean()
-        #print len(df_inc)
-        #print ws
         return ws
 
 
+class MzBootDownRiskBlAllocate(MzBlAllocate):
+
+    def __init__(self, globalid, assets, views, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+        super(MzBootDownRiskBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
+        if cpu_count is None:
+            count = multiprocessing.cpu_count() / 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+        self.__bootstrap_count = bootstrap_count
 
 
+    def allocate_algo(self, day, df_inc, bound):
+        df_inc[df_inc >= 0] = 0.0
+        for code in df_inc.columns:
+            for row in df_inc.index:
+                if df_inc.loc[row, code] >= 0:
+                    df_inc.loc[row, code] = np.random.random()/1000
+        tdate = ATradeDate.trade_date()
+        P, eta, alpha = self.load_bl_view(day, list(self.assets.keys()))
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        var = np.array([self.assets[code].origin_nav_sr.reindex(tdate).pct_change().loc[df_inc.index[-13]:df_inc.index[-1]].var() for code in df_inc.columns])
+        ws = np.array(ws).ravel()
+        ws = ws/var
+        ws = ws/ws.sum()
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
 
 
 

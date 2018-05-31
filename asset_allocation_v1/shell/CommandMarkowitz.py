@@ -36,7 +36,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset, RecentStdAsset, DoubleRollingAsset, MacdAsset
 from allocate import Allocate
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, MzBootDownRiskBlAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -991,7 +991,16 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback, cpu_count = 70)
         allocate = MzBootAllocate('ALC.000001', assets, trade_date, lookback, cpu_count = 70)
         df = allocate.allocate()
-
+    elif algo == 10:
+        view_df = View.load_view(argv.get('bl_view_id')).fillna(method = 'pad').fillna(0.0)
+        confidence = float(argv.get('bl_confidence'))
+        views = {}
+        for asset_id in assets.keys():
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
+        assets = dict([(asset_id , WaveletAsset(asset_id, 2)) for asset_id in list(assets.keys())])
+        allocate = MzBootDownRiskBlAllocate('ALC.000001', assets, views, trade_date, lookback, cpu_count = 70)
+        df = allocate.allocate()
 
 
     else:
@@ -1036,7 +1045,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
-    #turnover = 0.4
     if turnover >= 0.01:
         df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
 
