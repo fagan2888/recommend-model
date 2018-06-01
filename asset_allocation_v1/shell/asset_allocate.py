@@ -109,6 +109,25 @@ class MzAllocate(Allocate):
         return ws
 
 
+# class RpAllocate(Allocate):
+
+
+#     def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+#         super(RpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+
+#     def allocate_algo(self, day, df_inc, bound):
+#         # risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+#         # ws = dict(zip(df_inc.columns.ravel(), ws))
+#         V = df_inc.cov().values*1e4
+#         lb = 0.03
+#         hb = (1-lb)/7
+#         risk_budget = [hb,hb,lb,hb,hb,hb,hb,hb]
+#         # weight = PF.riskparity(df_inc)
+#         weight = cal_weight(V, risk_budget)
+#         ws = dict(zip(df_inc.columns.ravel(), weight))
+#         return ws
+
 class RpAllocate(Allocate):
 
 
@@ -120,9 +139,7 @@ class RpAllocate(Allocate):
         # risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
         # ws = dict(zip(df_inc.columns.ravel(), ws))
         V = df_inc.cov().values*1e4
-        lb = 0.03
-        hb = (1-lb)/7
-        risk_budget = [hb,hb,lb,hb,hb,hb,hb,hb]
+        risk_budget = [1.0 / len(df_inc.columns)] * len(df_inc.columns)
         # weight = PF.riskparity(df_inc)
         weight = cal_weight(V, risk_budget)
         ws = dict(zip(df_inc.columns.ravel(), weight))

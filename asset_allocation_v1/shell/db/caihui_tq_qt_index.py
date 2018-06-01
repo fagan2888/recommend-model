@@ -31,6 +31,21 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
     return df
 
 
+def load_index_nav(secode, start_date=None, end_date=None):
+    db = database.connection('caihui')
+    metadata = MetaData(bind=db)
+    t = Table('tq_qt_index', metadata, autoload=True)
+
+    columns = [
+        t.c.TRADEDATE.label('date'),
+        t.c.TCLOSE.label('nav'),
+    ]
+    s = select(columns).where(t.c.SECODE == secode)
+    s = s.where(t.c.ISVALID == 1).order_by(t.c.TRADEDATE.asc())
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+    return df
+
+
 def load_multi_index_nav(secodes, start_date=None, end_date=None):
 
     db = database.connection('caihui')

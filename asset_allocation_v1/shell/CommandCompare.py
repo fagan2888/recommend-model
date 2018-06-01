@@ -87,6 +87,64 @@ def markowitz_wr(ctx, optid, ret = 0.01, loss = -0.01, period = 30):
     print 'target_realized_ratio:', wr
 
 
+@compare.command()
+@click.option('--id1', 'secode1', default=2070000105, help=u'markowitz_id')
+@click.option('--id2', 'secode2', default=2070000060, help=u'markowitz_id')
+@click.option('--start-date', 'optstartdate', default='2005-01-04', help=u'markowitz startdate')
+@click.option('--end-date', 'optenddate', default=None, help=u'markowitz endate')
+@click.pass_context
+def compare_caihui(ctx, secode1, secode2, optstartdate, optenddate):
+    print secode1, secode2
 
+    # nav1 = asset_mz_markowitz_nav.load_series(secode1, None, optstartdate, optenddate)
+    # nav2 = asset_mz_markowitz_nav.load_series(secode2, None, optstartdate, optenddate)
+    nav1 = caihui_tq_qt_index.load_index_nav(secode1)
+    nav2 = caihui_tq_qt_index.load_index_nav(secode2)
+
+    df_nav = pd.concat([nav1, nav2], 1)
+    df_ret = np.log(df_nav).diff().dropna()
+    # df_ret = df_ret.groupby(pd.Grouper(freq = 'M')).sum()
+    # df_ret = df_ret.groupby(pd.Grouper(freq = 'W')).sum()
+    df_ret = np.exp(df_ret)-1
+    df_comp = df_ret.iloc[:,0] - df_ret.iloc[:,1]
+
+    wr = len(df_comp[df_comp > 0]) / float(len(df_comp))
+    print 'month win ratio:', wr
+    for year in range(2006, 2019):
+        print year, len(df_comp[df_comp>0].loc[str(year)])/float(len(df_comp.loc[str(year)]))
+    set_trace()
+
+
+@compare.command()
+@click.option('--id', 'pool_id', default='94101', help=u'fund pool id')
+@click.option('--type', 'pool_type', default='12', help=u'fund pool type')
+@click.pass_context
+def pool_test(ctx, pool_id, pool_type):
+
+    pool_fund = asset_ra_pool_fund.load(11110101)
+    pool_fund.index = pool_fund.index.droplevel(1)
+    dates = pool_fund.index.unique()
+    pre_change_list = None
+    count = 0
+    warning_funds_count = 0
+    for pre_date, date in zip(dates[:-1], dates[1:]):
+
+        pre_funds = pool_fund.loc[pre_date].ra_fund_code.values
+        funds = pool_fund.loc[date].ra_fund_code.values
+        change_list = []
+        all_funds = np.union1d(pre_funds, funds)
+        common_funds = np.intersect1d(pre_funds, funds)
+        for fund in all_funds:
+            if not fund in common_funds:
+                change_list.append(fund)
+
+        warning_list = np.intersect1d(pre_change_list, change_list)
+        print date, len(warning_list)
+        print warning_list
+        count += 1.0
+        warning_funds_count += len(warning_list)
+        pre_change_list = change_list
+
+    print 'warning_frequency:', warning_funds_count / count
 
 
