@@ -13,3 +13,5 @@ config.py
 *.log
 .DS_Store
 logging.json
+._*
+.cs_files
