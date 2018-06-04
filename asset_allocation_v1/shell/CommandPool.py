@@ -194,10 +194,11 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
 
 def fund_lowliest_elimination(df_pre_fund, df_indicator, df_label, ratio, limit):
 
-    categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
+    #categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
 
+    #print df_label.head()
     data = {}
-    for category in categories:
+    for category in df_label.columns:
         index_codes = df_label[df_label[category] == 1].index
         df_tmp = df_indicator.loc[index_codes]
         if df_pre_fund is None:

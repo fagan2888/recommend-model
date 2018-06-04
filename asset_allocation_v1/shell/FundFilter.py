@@ -414,7 +414,7 @@ def stockfundfilter(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=['sharpe', 'jensen', 'sortino', 'ppw', 'stability'])
     indicator_df.index.name = 'code'
-    indicator_df.to_csv(datapath('stock_indicator_' + end_date + '.csv'))
+    #indicator_df.to_csv(datapath('stock_indicator_' + end_date + '.csv'))
 
 
     allocationdata.stock_fund_measure[end_date] = indicator_df
@@ -642,11 +642,11 @@ def bondfundfilter(allocationdata, funddf, indexdf):
     columns=['sharpe', 'jensen', 'sortino', 'ppw', 'stability']
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=columns)
     indicator_df.index.name = 'code'
-    indicator_df.to_csv(datapath('bond_indicator_' + end_date + '.csv'))
+    #indicator_df.to_csv(datapath('bond_indicator_' + end_date + '.csv'))
 
 
     indicator_selected_df = indicator_df.loc[codes]
-    indicator_selected_df.to_csv(datapath('bond_indicator_selected_' + end_date + '.csv'))
+    #indicator_selected_df.to_csv(datapath('bond_indicator_selected_' + end_date + '.csv'))
     
     allocationdata.bond_fund_measure[end_date] = indicator_df
 
@@ -673,18 +673,18 @@ def bond_fund_filter_new(day, df_nav_fund, df_nav_index):
 
     #按照索提诺比率过滤
     sortino_measure = sortinomeasure(df_nav_fund, rf)
-    sortino_data    = ratio_filter(sortino_measure, 0.5)
+    sortino_data    = ratio_filter(sortino_measure, 1.0)
     #sortino_data   = sf.sortinofilter(funddf, rf, 1.0)
 
     #按照ppw测度过滤
     ppw_measure    = ppwmeasure(df_nav_fund, df_nav_index, rf)
-    ppw_data       = ratio_filter(ppw_measure, 0.5)
+    ppw_data       = ratio_filter(ppw_measure, 1.0)
 
     #ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 1.0)
     #print ppw_data
 
     stability_measure = stabilitymeasure(df_nav_fund)
-    stability_data    = ratio_filter(stability_measure, 2.0 / 3)
+    stability_data    = ratio_filter(stability_measure, 3.0 / 3)
 
     #stability_data = sf.stabilityfilter(funddf, 1.0)
 
@@ -703,7 +703,7 @@ def bond_fund_filter_new(day, df_nav_fund, df_nav_index):
     });
 
     df_indicator.index.name = 'code'
-    df_indicator.to_csv(datapath('bond_indicator_' + daystr + '.csv'), columns=columns)
+    #df_indicator.to_csv(datapath('bond_indicator_' + daystr + '.csv'), columns=columns)
 
     df_result = pd.DataFrame({
         'sharpe':{k:v for (k, v) in  sharpe_data},
@@ -714,7 +714,7 @@ def bond_fund_filter_new(day, df_nav_fund, df_nav_index):
     });
 
     df_result.index.name = 'code'
-    df_result.to_csv(datapath('bond_bindicator_selected_' + daystr + '.csv'), columns=columns);
+    #df_result.to_csv(datapath('bond_bindicator_selected_' + daystr + '.csv'), columns=columns);
     #
     # 检查是否结果集为空, 如果不为空, 则取交集, 否则, 直接取jensen结果
     #
@@ -722,7 +722,7 @@ def bond_fund_filter_new(day, df_nav_fund, df_nav_index):
         df_result.dropna(inplace=True)
     else:
         df_result = df_indicator.loc[df_result['jensen'].notnull()]
-    df_result.to_csv(datapath('bond_indicator_selected_' + daystr + '.csv'), columns=columns)
+    #df_result.to_csv(datapath('bond_indicator_selected_' + daystr + '.csv'), columns=columns)
 
     return df_result
 
@@ -740,7 +740,7 @@ def money_fund_filter_new(day, df_nav_fund):
     });
 
     df_indicator.index.name = 'code'
-    df_indicator.to_csv(datapath('money_indicator_' + daystr + '.csv'), columns=columns)
+    #df_indicator.to_csv(datapath('money_indicator_' + daystr + '.csv'), columns=columns)
 
     return df_indicator
 
@@ -755,7 +755,7 @@ def other_fund_filter_new(day, df_nav_fund):
     });
 
     df_indicator.index.name = 'code'
-    df_indicator.to_csv(datapath('other_indicator_' + daystr + '.csv'), columns=columns)
+    #df_indicator.to_csv(datapath('other_indicator_' + daystr + '.csv'), columns=columns)
 
     return df_indicator
 
