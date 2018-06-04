@@ -29,7 +29,7 @@ from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_stock
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
 from util import xdict
 from util.xdebug import dd
@@ -148,8 +148,13 @@ class Asset(object):
                 sr = base_ra_index_nav.load_series(
                     asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
             elif prefix == 'ER':
-
                 sr = base_exchange_rate_index_nav.load_series(
+                    asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+            elif prefix == 'SK':
+                #
+                # 股票资产
+                #
+                sr = asset_stock.load_stock_nav_series(
                     asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
             else:
                 sr = pd.Series()
@@ -197,6 +202,20 @@ class WaveletAsset(Asset):
         return wavelet_nav_sr
 
 
+class StockAsset(Asset):
+
+
+    def __init__(self, globalid, name = None, nav_sr = None):
+
+        super(StockAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
+        self.__code = globalid[3:]
+
+
+    @property
+    def code(self):
+        return self.__code
+
+
 
 if __name__ == '__main__':
 
@@ -208,6 +227,5 @@ if __name__ == '__main__':
     #print asset.nav('2010-01-01', datetime.now()).tail()
     #print asset.origin_nav_sr.tail()
 
-    asset = ViewAsset('120000013')
-    #print asset.view('2000-01-01')
-    #print asset.origin_nav_sr.tail()
+    asset = StockAsset('SK.601318')
+    print asset.origin_nav_sr
