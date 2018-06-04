@@ -1,4 +1,3 @@
-#!/home/yaojiahui/anaconda2/bin/python
 # coding=utf-8
 
 
@@ -19,10 +18,6 @@ from sklearn.metrics import silhouette_score, silhouette_samples
 import statsmodels.api as sm
 import datetime
 from ipdb import set_trace
-import matplotlib
-myfont = matplotlib.font_manager.FontProperties(fname='/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', size=30)
-import matplotlib.pyplot as plt
-plt.style.use('seaborn')
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -119,17 +114,18 @@ def fc_update_nav(ctx, optid):
         layer_ret['ra_asset_id'] = layer_id
         df_new = layer_ret.set_index(['ra_asset_id', 'ra_date'])
         df_old = asset_ra_composite_asset_nav.load_nav(layer_id)
+        df_new = df_new.reindex(columns = ['ra_nav', 'ra_inc'])
         database.batch(db, t, df_new, df_old, timestamp=False)
 
 
-def load_fund(start_date, end_date):
-    df_nav_fund = pd.read_csv('data/df_nav_fund.csv', index_col = ['td_date'], parse_dates = ['td_date'])
-    df_nav_inc = df_nav_fund.pct_change()
-    df_nav_inc = df_nav_inc.loc[start_date:end_date]
-    df_nav_inc = df_nav_inc.dropna(1)
-    # df_nav_inc = df_nav_inc.iloc[:, :28]
-    corr = df_nav_inc.corr()
-    return corr
+#def load_fund(start_date, end_date):
+#    df_nav_fund = pd.read_csv('data/df_nav_fund.csv', index_col = ['td_date'], parse_dates = ['td_date'])
+#    df_nav_inc = df_nav_fund.pct_change()
+#    df_nav_inc = df_nav_inc.loc[start_date:end_date]
+#    df_nav_inc = df_nav_inc.dropna(1)
+#    # df_nav_inc = df_nav_inc.iloc[:, :28]
+#    corr = df_nav_inc.corr()
+#    return corr
 
 
 def load_ind(factor_ids, start_date, end_date):
