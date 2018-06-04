@@ -57,6 +57,9 @@ class Asset(object):
     def globalid(self):
         return self.__globalid
 
+    @property
+    def name(self):
+        return self.__name
 
     @property
     def origin_nav_sr(self):
@@ -207,14 +210,26 @@ class StockAsset(Asset):
 
     def __init__(self, globalid, name = None, nav_sr = None):
 
-        super(StockAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
+        super(StockAsset, self).__init__(globalid, name = asset_stock.globalid_2_name(globalid), nav_sr = nav_sr)
         self.__code = globalid[3:]
-
+        self.__open = None
+        self.__high = None
+        self.__low = None
+        self.__close = None
+        self.__amount = None
+        self.__volume = None
+        self.__negotiablemv = None
+        self.__totmktcap = None
+        self.__turnrate = None
 
     @property
     def code(self):
         return self.__code
 
+
+    def load_ohlcavntt(self):
+        df = asset_stock.load_ohlcavntt(self.globalid)
+        return df
 
 
 if __name__ == '__main__':
@@ -228,4 +243,6 @@ if __name__ == '__main__':
     #print asset.origin_nav_sr.tail()
 
     asset = StockAsset('SK.601318')
-    print asset.origin_nav_sr
+    print asset.nav()
+    print asset.name
+    print asset.load_ohlcavntt()

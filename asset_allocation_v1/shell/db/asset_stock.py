@@ -6,6 +6,7 @@ from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime
 import pandas as pd
 import logging
 import database
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from dateutil.parser import parse
 
@@ -77,6 +78,7 @@ class tq_qt_skdailyprice(Base):
     amount = Column(Float)
     totmktcap = Column(Float)
     turnrate = Column(Float)
+    negotiablemv = Column(Float)
 
 
 class tq_sk_yieldindic(Base):
@@ -100,3 +102,73 @@ class tq_sk_yieldindic(Base):
     turnrate6m  = Column(Float)
     turnratey  = Column(Float)
 
+
+
+
+def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    record = session.query(ra_stock.sk_secode).filter(ra_stock.globalid == asset_id).first()
+    session.commit()
+    session.close()
+    secode = record[0]
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_sk_dquoteindic.tradedate ,tq_sk_dquoteindic.tcloseaf).filter(tq_sk_dquoteindic.secode == secode)
+    if begin_date is not None:
+        sql = sql.filter(tq_sk_dquoteindic.tradedate >= begin_date.strftime('%Y%m%d'))
+    if end_date is not None:
+        sql = sql.filter(tq_sk_dquoteindic.tradedate <= end_date.strftime('%Y%m%d'))
+    df = pd.read_sql(sql.statement, session.bind, index_col=['tradedate'], parse_dates=['tradedate'])
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+    ser = df.tcloseaf
+    ser.index.name = 'date'
+    session.commit()
+    session.close()
+
+    return ser
+
+
+def globalid_2_name(globalid):
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    record = session.query(ra_stock.sk_name).filter(ra_stock.globalid == globalid).first()
+    session.commit()
+    session.close()
+    name = record[0]
+    return name
+
+
+def load_ohlcavntt(globalid):
+
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    record = session.query(ra_stock.sk_secode).filter(ra_stock.globalid == globalid).first()
+    session.commit()
+    session.close()
+    secode = record[0]
+
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_qt_skdailyprice.tradedate, tq_qt_skdailyprice.topen, tq_qt_skdailyprice.thigh, tq_qt_skdailyprice.tlow, tq_qt_skdailyprice.tclose, tq_qt_skdailyprice.vol, tq_qt_skdailyprice.amount, tq_qt_skdailyprice.negotiablemv, tq_qt_skdailyprice.totmktcap, tq_qt_skdailyprice.turnrate).filter(tq_qt_skdailyprice.secode == secode).statement
+
+
+    df = pd.read_sql(sql, session.bind, index_col = ['tradedate'], parse_dates = ['tradedate'])
+    session.commit()
+    session.close()
+
+    df.turnrate = df.turnrate / 100
+
+    return df
