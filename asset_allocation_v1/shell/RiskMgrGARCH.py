@@ -18,25 +18,6 @@ import time
 import pickle
 
 
-def calc_drawdown(sr_nav):
-    max_nav = sr_nav[0]
-    drawdown = []
-    for day in sr_nav:
-        if max_nav < day:
-            max_nav = day
-        drawdown.append((day - max_nav)/max_nav)
-    return pd.Series(drawdown)
-
-def calc_max_drawdown(sr_nav):
-    drawdown = calc_drawdown(sr_nav)
-    max_dd = [drawdown[:i].min() for i in range(1, len(drawdown))]
-    max_dd.append(drawdown.min())
-    return pd.Series(max_dd, index=sr_nav.index)
-
-def calc_nav(inc, pos, name):
-    new_inc = inc * df.pos_new.shift(1).fillna(1)
-    new_nav = np.exp(new_inc.cumsum())
-
 class RiskMgrGARCHPrototype(object):
     def __init__(self, codes, target, tdates, df_nav, timing, vars_):
         self.maxdd = -0.15
