@@ -46,6 +46,32 @@ def load_index_nav(secode, start_date=None, end_date=None):
     return df
 
 
+def load_series(secode, reindex = None, start_date=None, end_date=None):
+
+    db = database.connection('caihui')
+    metadata = MetaData(bind=db)
+    t = Table('tq_qt_index', metadata, autoload=True)
+
+    columns = [
+        t.c.TRADEDATE.label('date'),
+        t.c.TCLOSE.label('nav'),
+    ]
+    s = select(columns).where(t.c.SECODE == secode)
+    s = s.where(t.c.ISVALID == 1).order_by(t.c.TRADEDATE.asc())
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex).dropna()
+
+    if start_date is not None:
+        df = df[df.index >= start_date]
+
+    if end_date is not None:
+        df = df[df.index <= end_date]
+
+    return df['nav']
+
+
 def load_multi_index_nav(secodes, start_date=None, end_date=None):
 
     db = database.connection('caihui')

@@ -81,7 +81,7 @@ def clusterKMeansBase(corr0,maxNumClusters=10,n_init=10):
     dist,silh=((1-corr0.fillna(0))/2.)**.5,pd.Series()
     # distance matrix
     for init in range(n_init):
-        for i in xrange(50, maxNumClusters+1):
+        for i in xrange(2, maxNumClusters+1):
     # find optimal num clusters
             kmeans_ = KMeans(n_clusters=i,n_jobs=1,n_init=1)
             kmeans_ = kmeans_.fit(dist)

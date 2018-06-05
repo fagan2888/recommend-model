@@ -38,6 +38,8 @@ from sklearn.linear_model import Lasso
 from tabulate import tabulate
 from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund
 from trade_date import ATradeDate
+from asset import Asset
+from valid_factor import ValidFactor
 
 import traceback, code
 from ipdb import set_trace
@@ -175,31 +177,40 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
         db = database.connection('asset')
         # ra_pool_sample_t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
         ra_pool_fund_t= Table('ra_pool_fund', MetaData(bind=db), autoload=True)
-        today = datetime.now().strftime('%Y-%m-%d')
-        dates = base_trade_dates.trade_date_lookback_index(today, 500)
-        pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
-        start_date = dates.min().strftime("%Y-%m-%d")
-        df_nav_fund  = base_ra_fund_nav.load_daily(start_date, today, codes = pool_codes)
+
+        ## Load df_nav_fund
+        # today = datetime.now().strftime('%Y-%m-%d')
+        # dates = base_trade_dates.trade_date_lookback_index(today, 500)
+        # pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+        # start_date = dates.min().strftime("%Y-%m-%d")
+        # df_nav_fund  = base_ra_fund_nav.load_daily(start_date, today, codes = pool_codes)
 
         data = []
         with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
             pre_codes = None
+            vf = ValidFactor()
             for day in adjust_points:
                 bar.update(1)
+
                 # codes = pool_by_corr_jensen(pool, day, lookback, limit, df_nav_fund)
-                codes = pool_by_lasso_regression(pool, day, lookback, limit, df_nav_fund)
-                if pre_codes is not None:
-                    final_codes = []
-                    for pre_code in pre_codes:
-                        if pre_code in codes:
-                            final_codes.append(pre_code)
-                    for code in codes:
-                        if (code not in final_codes) and (len(final_codes) < limit):
-                            final_codes.append(code)
-                    codes = pre_codes = final_codes
-                else:
-                    codes = codes[:3]
-                    pre_codes = codes
+                # codes = pool_by_lasso_regression(pool, day, lookback, limit, df_nav_fund)
+                # if pre_codes is not None:
+                #     final_codes = []
+                #     for pre_code in pre_codes:
+                #         if pre_code in codes:
+                #             final_codes.append(pre_code)
+                #     for code in codes:
+                #         if (code not in final_codes) and (len(final_codes) < limit):
+                #             final_codes.append(code)
+                #     codes = pre_codes = final_codes
+                # else:
+                #     codes = codes[:3]
+                #     pre_codes = codes
+
+                # vf.handle(day, 'large')
+                # codes = vf.large_fund_codes
+                vf.handle(day, 'small')
+                codes = vf.small_fund_codes
 
                 print day, codes
                 # print day, codes
@@ -874,8 +885,10 @@ def pool_by_corr_jensen(pool, day, lookback, limit, df_nav_fund):
 
     ra_index_id = pool['ra_index_id']
     pool_id     = pool['id']
-    df_nav_index = base_ra_index_nav.index_value(start_date, end_date, ra_index_id)
-    #df_nav_index.index.name = str(df_nav_index.index.name)
+    # df_nav_index = base_ra_index_nav.index_value(start_date, end_date, ra_index_id)
+    df_nav_index = Asset.load_nav_series(ra_index_id, begin_date=start_date, end_date=end_date)
+    df_nav_index = df_nav_index.to_frame(name = ra_index_id)
+    # df_nav_index.index.name = str(df_nav_index.index.name)
     df_nav_index.columns = df_nav_index.columns.astype(str)
     if len(df_nav_index.index) == 0:
         return []
@@ -976,7 +989,6 @@ def pool_by_lasso_regression(pool, day, lookback, limit, df_nav_fund):
     final_codes = df_result.sort_values('jensen', ascending=False).index.values[:limit]
 
     return final_codes
-
 
 
 
