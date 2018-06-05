@@ -5,6 +5,7 @@ import asset_is_investor
 import asset_is_investor_nav
 import asset_is_investor_pos
 import asset_is_investor_criteria
+import asset_ra_composite_asset_nav
 import asset_mz_highlow
 import asset_mz_highlow_alloc
 import asset_mz_highlow_argv
@@ -39,6 +40,8 @@ import asset_ra_portfolio_pos
 import asset_rm_riskmgr
 import asset_rm_riskmgr_signal
 import asset_rm_riskmgr_nav
+import asset_rm_riskmgr_vars
+import asset_rm_riskmgr_mgarch_signal
 import asset_rm_risk_mgr
 import asset_rs_reshape
 import asset_rs_reshape_nav

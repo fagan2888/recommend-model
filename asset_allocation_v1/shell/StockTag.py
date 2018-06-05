@@ -1171,7 +1171,7 @@ def tagstockfund(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=tag_columns)
     indicator_df.index.name = 'code'
-    indicator_df.to_csv(datapath('stock_label_' + end_date + '.csv'))
+    #indicator_df.to_csv(datapath('stock_label_' + end_date + '.csv'))
 
     allocationdata.stock_fund_label[end_date] = indicator_df
 
@@ -1377,7 +1377,7 @@ def tagbondfund(allocationdata, funddf, indexdf):
 
     indicator_df = pd.DataFrame(indicator_datas, index = indicator_codes, columns=tag_columns)
     indicator_df.index.name = 'code'
-    indicator_df.to_csv(datapath('bond_label_' + end_date + '.csv'))
+    #indicator_df.to_csv(datapath('bond_label_' + end_date + '.csv'))
 
     allocationdata.bond_fund_label[end_date] = indicator_df
 
@@ -1406,10 +1406,10 @@ def tag_bond_fund_new(day, df_nav_fund, df_nav_index):
     
     df_label = pd.DataFrame(data, columns=columns)
     df_label.index.name = 'code'
-    df_label.to_csv(datapath('bond_blabel_' + daystr + '.csv'))
+    #df_label.to_csv(datapath('bond_blabel_' + daystr + '.csv'))
     df_label.fillna(0, inplace=True)
     df_label = df_label.applymap(lambda x: int(round(x)))
-    df_label.to_csv(datapath('bond_label_' + daystr + '.csv'))
+    #df_label.to_csv(datapath('bond_label_' + daystr + '.csv'))
 
     return df_label
 
