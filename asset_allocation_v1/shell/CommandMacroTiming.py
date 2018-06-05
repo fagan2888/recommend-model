@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from ipdb import set_trace
 
 import config
-from db import database, asset_trade_dates, base_ra_index_nav, asset_mc_view
+from db import database, asset_trade_dates, base_ra_index_nav
 from db.asset_fundamental import *
 from calendar import monthrange
 from datetime import datetime, timedelta
