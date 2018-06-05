@@ -503,7 +503,7 @@ def load_eps_mean(idx):
    # if redates[-1] > today:
    #     redate[-1] = today
     eps_mean.index = redates
-    eps_mean.to_csv('data/eps_mean.csv', index_label = 'date')
+    #eps_mean.to_csv('data/eps_mean.csv', index_label = 'date')
 
     return eps_mean
 
@@ -539,7 +539,7 @@ def load_ngdp_yoy():
     for day in dates:
         redates.append(dates + timedelta(15))
     ngdp.index = redates
-    ngdp.to_csv('data/ngdp.csv', index_label = 'date')
+    #ngdp.to_csv('data/ngdp.csv', index_label = 'date')
 
     return ngdp
 

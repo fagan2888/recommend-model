@@ -971,6 +971,29 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
         allocate = MzBlAllocate('ALC.000001', assets, views, trade_date, lookback)
         df = allocate.allocate()
+    elif algo == 7:
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+
+        views = {}
+        for asset_id in assets.keys():
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
+
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzBootBlAllocate('ALC.000001', assets, views, trade_date, lookback)
+        bootbl_df = allocate.allocate()
+
+        assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        allocate = MzBlAllocate('ALC.000001', assets, views, trade_date, lookback)
+        waveletbl_df = allocate.allocate()
+
+        bootbl_df = bootbl_df[waveletbl_df.columns]
+
+        df = (bootbl_df + waveletbl_df) / 2
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -1322,6 +1345,5 @@ def copy(ctx, optsrc, optdst, optlist):
     df_markowitz_asset = df_markowitz_asset.set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
 
     asset_mz_markowitz_asset.save(df_xtab['globalid'], df_markowitz_asset)
-
 
 

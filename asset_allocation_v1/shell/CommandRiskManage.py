@@ -531,8 +531,8 @@ def signal_update(riskmgr):
     elif riskmgr['rm_algo'] == 3:
         risk_mgr = RiskMgrLow.RiskMgrLow()
     else:
-        click.echo(click.style("\nunsupported riskmgr algo (%d, %d)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
-        return false
+        click.echo(click.style("\nunsupported riskmgr algo (%s, %s)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
+        return False
 
     df_result = risk_mgr.perform(riskmgr_id, df)
     # df_result.drop(['nav', 'timing'], axis=1, inplace=True)
