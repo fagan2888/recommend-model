@@ -28,9 +28,9 @@ def mt(ctx):
     '''
     if ctx.invoked_subcommand is None:
         ctx.invoke(macro_view_update)
-        ctx.invoke(bond_view_update)
+        #ctx.invoke(bond_view_update)
         ctx.invoke(sp_view_update)
-        ctx.invoke(gold_view_update)
+        #ctx.invoke(gold_view_update)
     else:
         pass
 
@@ -93,7 +93,7 @@ def macro_view_update(ctx, startdate, enddate, viewid, idx):
         s = select(columns).where(t.c.globalid == viewid).where(t.c.bl_index_id == index_id)
         df_old = pd.read_sql(s, db, index_col = ['globalid', 'bl_date', 'bl_index_id'], parse_dates = ['bl_date'])
         database.batch(db, t, df_new, df_old, timestamp = False)
-
+        print df_new.tail()
 
 
 @mt.command()
@@ -185,7 +185,7 @@ def sp_view_update(ctx, startdate, enddate, viewid):
         s = select(columns).where(t.c.globalid == viewid).where(t.c.bl_index_id == index_id)
         df_old = pd.read_sql(s, db, index_col = ['globalid', 'bl_date', 'bl_index_id'], parse_dates = ['bl_date'])
         database.batch(db, t, df_new, df_old, timestamp = False)
-
+        print df_new.tail()
 
 
 @mt.command()
