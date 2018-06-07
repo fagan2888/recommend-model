@@ -370,11 +370,13 @@ def calc_vars(ctx, optid, optlist):
     #     for _, riskmgr in df_riskmgr.iterrows():
     #         bar.update(1)
     #         signal_update(riskmgr)
-    for _, riskmgr in df_riskmgr.iterrows():
-        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5:
-            vars_update(riskmgr)
-        else:
-            pass
+    with click.progressbar(length=len(df_riskmgr), label='calc vars') as bar:
+        for _, riskmgr in df_riskmgr.iterrows():
+            bar.update(1)
+            if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5:
+                vars_update(riskmgr)
+            else:
+                pass
 
 
 def vars_update(riskmgr):
@@ -487,11 +489,13 @@ def signal(ctx, optid, optlist, optonline):
     #     for _, riskmgr in df_riskmgr.iterrows():
     #         bar.update(1)
     #         signal_update(riskmgr)
-    for _, riskmgr in df_riskmgr.iterrows():
-        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5:
-            signal_update_garch(riskmgr)
-        else:
-            signal_update(riskmgr)
+    with click.progressbar(length=len(df_riskmgr), label='update riskmgr signal') as bar:
+        for _, riskmgr in df_riskmgr.iterrows():
+            bar.update(1)
+            if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5:
+                signal_update_garch(riskmgr)
+            else:
+                signal_update(riskmgr)
 
 def signal_update(riskmgr):
     riskmgr_id = riskmgr['globalid']
