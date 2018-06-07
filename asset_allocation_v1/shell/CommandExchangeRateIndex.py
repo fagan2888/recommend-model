@@ -124,7 +124,6 @@ def cny(ctx, optfull, optid):
                 s = s.where(ra_index_nav_t.c.ra_index_id == record[5])
                 ra_index_nav_df = pd.read_sql(s, db, index_col = ['ra_date'])
 
-
                 caihui_exchange_rate_df = caihui_exchange_rate_df.reindex(ra_index_nav_df.index)
                 caihui_exchange_rate_df = caihui_exchange_rate_df.fillna(method = 'pad')
 
@@ -173,6 +172,10 @@ def cny(ctx, optfull, optid):
                     ra_index_nav_df['ra_index_id'] = 120000042
                 elif exchange_rate_index_nav_df['eri_index_id'].iloc[0] == 'ERI000002':
                     ra_index_nav_df['ra_index_id'] = 120000043
+                elif exchange_rate_index_nav_df['eri_index_id'].iloc[0] == 'ERI000003':
+                    ra_index_nav_df['ra_index_id'] = 120000080
+                elif exchange_rate_index_nav_df['eri_index_id'].iloc[0] == 'ERI000004':
+                    ra_index_nav_df['ra_index_id'] = 120000081
 
                 ra_index_nav_df = ra_index_nav_df.set_index(['ra_index_id', 'ra_date'])
 
