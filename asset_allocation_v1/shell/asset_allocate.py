@@ -147,6 +147,30 @@ class MzBootBlAllocate(MzBlAllocate):
         return ws
 
 
+class MzBootDownRiskAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+        super(MzBootDownRiskAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        if cpu_count is None:
+            count = multiprocessing.cpu_count() / 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+        self.__bootstrap_count = bootstrap_count
+
+
+    def allocate_algo(self, day, df_inc, bound):
+        df_inc[df_inc >= 0] = 0.0
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        tdate = ATradeDate.trade_date()
+        var = np.array([self.assets[code].origin_nav_sr.reindex(tdate).pct_change().loc[df_inc.index[-13]:df_inc.index[-1]].var() for code in df_inc.columns])
+        ws = np.array(ws).ravel()
+        ws = ws/var
+        ws = ws/ws.sum()
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
+
 
 
 if __name__ == '__main__':
