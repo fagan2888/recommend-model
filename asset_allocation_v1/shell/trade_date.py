@@ -87,10 +87,7 @@ class ATradeDate(object):
         if ATradeDate.__a_trade_date is None:
             ATradeDate.__a_trade_date = base_trade_dates.load_trade_dates().sort_index()
         td_date = ATradeDate.__a_trade_date.copy()
-        yesterday = td_date.iloc[[-2], :]
         td_date = td_date[(td_date.td_type & 0x08) > 0]
-        if not yesterday.index in td_date.index:
-            td_date = pd.concat([td_date, yesterday])
         if begin_date is not None:
             if lookback is not None:
                 tmp_td_date = td_date[td_date.index <= begin_date]
