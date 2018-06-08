@@ -36,7 +36,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -993,6 +993,14 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         bootbl_df = bootbl_df[waveletbl_df.columns]
 
         df = (bootbl_df + waveletbl_df) / 2
+
+    elif algo == 8:
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+        assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
