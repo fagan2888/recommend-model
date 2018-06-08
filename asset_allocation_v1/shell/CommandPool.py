@@ -230,7 +230,7 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
         # 计算每个调仓点的最新配置
         #
         data_fund = {}
-        with click.progressbar(length=len(adjust_points), label=('calc pool %s' % (pool.id)).ljust(30)) as bar:
+        with click.progressbar(length=len(adjust_points), label=('calc pool %s' % (pool.id)).ljust(10)) as bar:
             for day in adjust_points:
                 #print day
                 bar.update(1)

@@ -52,6 +52,9 @@ class Asset(object):
         self.__nav_sr = nav_sr
         self.__name = name
 
+    @property
+    def name(self):
+        return self.__name
 
     @property
     def globalid(self):

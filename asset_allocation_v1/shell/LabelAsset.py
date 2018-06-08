@@ -171,6 +171,12 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
     df_nav_bond = DBData.bond_fund_value(start_date, end_date)
     df_nav_index = DBData.index_value(start_date, end_date)
 
+    df_selected = pd.read_csv('bond_fund_pool_res.csv', index_col=0)
+    df_selected = df_selected.rename(index = lambda t: "%06d" % t)
+    df_selected.index.name = "code"
+    intersection = df_nav_bond.columns.intersection(df_selected.index)
+    if not intersection.empty:
+        df_nav_bond = df_nav_bond.loc[:, intersection]
     #df_nav_bond.to_csv(datapath('bond_' + day.strftime('%Y-%m-%d') + '.csv'))
     
     #

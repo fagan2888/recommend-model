@@ -679,13 +679,11 @@ def bond_fund_filter_new(day, df_nav_fund, df_nav_index):
     #按照ppw测度过滤
     ppw_measure    = ppwmeasure(df_nav_fund, df_nav_index, rf)
     ppw_data       = ratio_filter(ppw_measure, 1.0)
-
     #ppw_data       = sf.ppwfilter(funddf, indexdf, rf, 1.0)
     #print ppw_data
 
     stability_measure = stabilitymeasure(df_nav_fund)
     stability_data    = ratio_filter(stability_measure, 3.0 / 3)
-
     #stability_data = sf.stabilityfilter(funddf, 1.0)
 
     sharpe_data    = fi.fund_sharp_annual(df_nav_fund)
@@ -718,10 +716,11 @@ def bond_fund_filter_new(day, df_nav_fund, df_nav_index):
     #
     # 检查是否结果集为空, 如果不为空, 则取交集, 否则, 直接取jensen结果
     #
-    if not df_result.loc[(df_result.notnull()).all(axis=1)].empty:
-        df_result.dropna(inplace=True)
-    else:
-        df_result = df_indicator.loc[df_result['jensen'].notnull()]
+    #  if not df_result.loc[(df_result.notnull()).all(axis=1)].empty:
+        #  df_result.dropna(inplace=True)
+    #  else:
+        #  df_result = df_indicator.loc[df_result['jensen'].notnull()]
+    df_result = df_indicator.loc[df_result['jensen'].notnull()]
     #df_result.to_csv(datapath('bond_indicator_selected_' + daystr + '.csv'), columns=columns)
 
     return df_result
