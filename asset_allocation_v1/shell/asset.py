@@ -20,6 +20,7 @@ import Portfolio as PF
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
+from ipdb import set_trace
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -31,6 +32,7 @@ from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_stock
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
+from db.asset_stock import *
 from util import xdict
 from util.xdebug import dd
 from wavelet import Wavelet
@@ -207,10 +209,14 @@ class WaveletAsset(Asset):
 
 class StockAsset(Asset):
 
+    __secode_dict = None
 
     def __init__(self, globalid, name = None, nav_sr = None):
 
         super(StockAsset, self).__init__(globalid, name = asset_stock.globalid_2_name(globalid), nav_sr = nav_sr)
+        self.__secode = None
+        self.__quote = None
+        self.__fdmt = None
         self.__code = globalid[3:]
         self.__open = None
         self.__high = None
@@ -226,11 +232,48 @@ class StockAsset(Asset):
     def code(self):
         return self.__code
 
+    @staticmethod
+    def get_secode_dict():
+        if StockAsset.__secode_dict is None:
 
-    def load_ohlcavntt(self):
-        df = asset_stock.load_ohlcavntt(self.globalid)
+            engine = database.connection('base')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            sql = session.query(ra_stock.sk_secode, ra_stock.globalid).statement
+            df = pd.read_sql(sql, session.bind, index_col = ['globalid'])
+            session.commit()
+            session.close()
+
+            secode_dict_ = df.to_dict()['sk_secode']
+            StockAsset.__secode_dict = secode_dict_
+
+            return secode_dict_
+
+        else:
+            return StockAsset.__secode_dict
+
+
+    def load_quote(self):
+        secode_dict_ = StockAsset.get_secode_dict()
+        df = asset_stock.load_ohlcavntt(secode_dict_[self.globalid])
         return df
 
+    def load_fdmt(self):
+        secode_dict_ = StockAsset.get_secode_dict()
+        df = asset_stock.load_fdmt(secode_dict_[self.globalid])
+        return df
+
+    @property
+    def quote(self):
+        if self.__quote is None:
+            self.__quote = self.load_quote()
+        return self.__quote
+
+    @property
+    def fdmt(self):
+        if self.__fdmt is None:
+            self.__fdmt = self.load_fdmt()
+        return self.__fdmt
 
     #所有股票代码
     @staticmethod
@@ -271,11 +314,11 @@ class StockAsset(Asset):
 
 if __name__ == '__main__':
 
-    asset = Asset('120000001')
+    # asset = Asset('120000001')
     #print asset.nav(begin_date = '2010-01-01').head()
     #print asset.origin_nav_sr.head()
 
-    asset = WaveletAsset('120000013', 2)
+    # asset = WaveletAsset('120000013', 2)
     #print asset.nav('2010-01-01', datetime.now()).tail()
     #print asset.origin_nav_sr.tail()
 
@@ -285,4 +328,7 @@ if __name__ == '__main__':
     #print asset.load_ohlcavntt()
 
     #print StockAsset.all_stock_info()
-    print StockAsset.stock_st()
+    # print StockAsset.stock_st()
+    # set_trace()
+    print asset.load_quote().head()
+    print asset.load_fdmt().head()
