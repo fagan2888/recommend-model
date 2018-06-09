@@ -24,6 +24,8 @@ class ra_stock(Base):
     sk_name = Column(String)
     sk_secode = Column(String)
     sk_listdate = Column(Date)
+    sk_compcode = Column(String)
+    sk_swlevel1code = Column(String)
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
