@@ -44,6 +44,20 @@ class StockFactor(Factor):
         super(StockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
 
 
+    def cal_factor_exposure(self):
+        all_stocks = StockAsset.all_stock_info()
+        stock_exposure = {}
+        for stock_id in all_stocks.index:
+            stock_exposure[stock_id] = factor_exposure_algo(stock_id)
+        stock_exposure_df = pd.DataFrame(stock_exposure)
+        stock_exposure_df = StockFactor.normalized(stock_exposure_df)
+        return stock_exposure_df
+
+
+    def factor_exposure_algo(self, stock_id):
+        return pd.Series()
+
+
     #插入股票合法性表
     @staticmethod
     def valid_stock_table():
@@ -172,12 +186,50 @@ class StockFactor(Factor):
 	return factor_df
 
 
+    #去极值标准化
+    @staticmethod
+    def normalized(factor_df):
+
+	#去极值
+	factor_median = factor_df.median(axis = 1)
+
+	factor_df_sub_median = abs(factor_df.sub(factor_median, axis = 0))
+	factor_df_sub_median_median = factor_df_sub_median.median(axis = 1)
+
+	max_factor_df = factor_median + 10.000 * factor_df_sub_median_median
+	min_factor_df = factor_median - 10.000 * factor_df_sub_median_median
+
+	for date in max_factor_df.index:
+	    max_factor = max_factor_df.loc[date]
+	    min_factor = min_factor_df.loc[date]
+
+	    record = factor_df.loc[date]
+	    factor_df.loc[date, record > max_factor] = max_factor
+	    factor_df.loc[date, record < min_factor] = min_factor
+
+	#归一化
+	factor_std  = factor_df.std(axis = 1)
+	factor_mean  = factor_df.mean(axis = 1)
+
+	factor_df = factor_df.sub(factor_mean, axis = 0)
+	factor_df = factor_df.div(factor_std, axis = 0)
+
+	return factor_df
 
 
 
+class SizeStockFactor(StockFactor):
 
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(SizeStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
+
+    def factor_exposure_algo(self, stock_id):
+        sa = StockAsset(stock_id)
+        return pd.Series()
 
 
 if __name__ == '__main__':
 
-    StockFactor.valid_stock_table()
+    #StockFactor.valid_stock_table()
+    ssf = SizeStockFactor()
+    ssf.cal_factor_exposure()
