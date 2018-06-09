@@ -278,6 +278,7 @@ class StockAsset(Asset):
     #所有股票代码
     @staticmethod
     def all_stock_info():
+
         engine = database.connection('base')
         Session = sessionmaker(bind=engine)
         session = Session()
