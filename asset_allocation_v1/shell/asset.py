@@ -232,6 +232,43 @@ class StockAsset(Asset):
         return df
 
 
+    #所有股票代码
+    @staticmethod
+    def all_stock_info():
+        engine = database.connection('base')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        all_stocks = pd.read_sql(session.query(asset_stock.ra_stock.globalid, asset_stock.ra_stock.sk_secode, asset_stock.ra_stock.sk_compcode, asset_stock.ra_stock.sk_name, asset_stock.ra_stock.sk_listdate, asset_stock.ra_stock.sk_swlevel1code).statement, session.bind, index_col = ['globalid'])
+        session.commit()
+        session.close()
+        return all_stocks
+
+
+
+    #st股票表
+    @staticmethod
+    def stock_st():
+
+        all_stocks = StockAsset.all_stock_info()
+        all_stocks = all_stocks.reset_index()
+        all_stocks = all_stocks.set_index(['sk_secode'])
+
+        engine = database.connection('caihui')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        sql = session.query(asset_stock.tq_sk_specialtrade.secode, asset_stock.tq_sk_specialtrade.selecteddate,
+                asset_stock.tq_sk_specialtrade.outdate).filter(asset_stock.tq_sk_specialtrade.selectedtype <= 3).filter(asset_stock.tq_sk_specialtrade.secode.in_(set(all_stocks.index))).statement
+        st_stocks = pd.read_sql(sql, session.bind, index_col = ['secode'], parse_dates = ['selecteddate', 'outdate'])
+        session.commit()
+        session.close()
+
+        st_stocks = pd.merge(st_stocks, all_stocks, left_index=True, right_index=True)
+
+        return st_stocks
+
+
+
+
 if __name__ == '__main__':
 
     asset = Asset('120000001')
@@ -243,6 +280,9 @@ if __name__ == '__main__':
     #print asset.origin_nav_sr.tail()
 
     asset = StockAsset('SK.601318')
-    print asset.nav()
-    print asset.name
-    print asset.load_ohlcavntt()
+    #print asset.nav()
+    #print asset.name
+    #print asset.load_ohlcavntt()
+
+    #print StockAsset.all_stock_info()
+    print StockAsset.stock_st()

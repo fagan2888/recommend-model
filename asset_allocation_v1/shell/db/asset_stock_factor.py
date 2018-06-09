@@ -39,9 +39,9 @@ class stock_factor_value(Base):
     created_at = Column(DateTime)
 
 
-class stock_factor_stock_valid(Base):
+class valid_stock_factor(Base):
 
-    __tablename__ = 'stock_factor_stock_valid'
+    __tablename__ = 'valid_stock_factor'
 
     stock_id = Column(String, primary_key = True)
     secode   = Column(String)
