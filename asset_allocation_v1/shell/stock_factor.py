@@ -82,7 +82,7 @@ class StockFactor(Factor):
 	year_amount = amount.rolling(252, min_periods = 100).mean()
 
 	def percentile20nan(x):
-	    x[x <= np.percentile(x,20)] = np.nan
+            x[x <= np.percentile(x,20)] = np.nan
 	    return x
 
 	year_amount = year_amount.apply(percentile20nan, axis = 1)
@@ -94,17 +94,17 @@ class StockFactor(Factor):
 
 	#过滤st股票
 	for i in range(0, len(st_stocks)):
-	    secode = st_stocks.index[i]
-	    record = st_stocks.iloc[i]
-	    selecteddate = record.selecteddate
-	    outdate = record.outdate
-	    if secode in set(quotation.columns):
-		#print secode, selecteddate, outdate
+            secode = st_stocks.index[i]
+            record = st_stocks.iloc[i]
+            selecteddate = record.selecteddate
+            outdate = record.outdate
+            if secode in set(quotation.columns):
+                    #print secode, selecteddate, outdate
 		quotation.loc[selecteddate:outdate, secode] = np.nan
 
 	#过滤上市未满一年股票
 	for secode in all_stocks.index:
-	    if secode in set(quotation.columns):
+            if secode in set(quotation.columns):
 		quotation.loc[:all_stocks.loc[secode, 'sk_listdate'], secode] = np.nan
 
 
@@ -121,12 +121,12 @@ class StockFactor(Factor):
 	quotation = quotation[quotation.index >= last_date.strftime('%Y-%m-%d')]
 
 	for date in quotation.index:
-	    #records = []
-	    for secode in quotation.columns:
+            #records = []
+            for secode in quotation.columns:
 		globalid = all_stocks.loc[secode, 'globalid']
 		value = quotation.loc[date, secode]
 		if np.isnan(value):
-		    continue
+                    continue
 		valid_stock = asset_stock_factor.valid_stock_factor()
 		valid_stock.stock_id = globalid
 		valid_stock.secode = secode
@@ -136,10 +136,10 @@ class StockFactor(Factor):
 		session.merge(valid_stock)
 
 
-	    #session.add_all(records)
-	    session.commit()
+            #session.add_all(records)
+            session.commit()
 
-	    logger.info('stock validation date %s done' % date.strftime('%Y-%m-%d'))
+            logger.info('stock validation date %s done' % date.strftime('%Y-%m-%d'))
 
 	session.commit()
 	session.close()
@@ -156,12 +156,12 @@ class StockFactor(Factor):
 	session = Session()
 
 	for stock_id in factor_df.columns:
-	    sql = session.query(stock_factor_stock_valid.trade_date, stock_factor_stock_valid.valid).filter(stock_factor_stock_valid.stock_id == stock_id).statement
-	    valid_df = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
-	    valid_df = valid_df[valid_df.valid == 1]
-	    if len(factor_df) == 0:
+            sql = session.query(stock_factor_stock_valid.trade_date, stock_factor_stock_valid.valid).filter(stock_factor_stock_valid.stock_id == stock_id).statement
+            valid_df = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
+            valid_df = valid_df[valid_df.valid == 1]
+            if len(factor_df) == 0:
 		facto_df.stock_id = np.nan
-	    else:
+            else:
 		factor_df[stock_id][~factor_df.index.isin(valid_df.index)] = np.nan
 
 	session.commit()
@@ -179,4 +179,5 @@ class StockFactor(Factor):
 
 
 if __name__ == '__main__':
-    valid_stock_table()
+
+    StockFactor.valid_stock_table()
