@@ -4,12 +4,15 @@
 from sqlalchemy import MetaData, Table, select, func, and_
 from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime, Float
 import pandas as pd
+import MySQLdb
+import config
 import logging
 import database
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from dateutil.parser import parse
 from ipdb import set_trace
+import time
 
 
 logger = logging.getLogger(__name__)
@@ -225,14 +228,22 @@ def load_ohlcavntt(secode):
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    sql = session.query(tq_qt_skdailyprice.tradedate, tq_qt_skdailyprice.topen, tq_qt_skdailyprice.thigh, tq_qt_skdailyprice.tlow, tq_qt_skdailyprice.tclose, tq_qt_skdailyprice.vol, tq_qt_skdailyprice.amount, tq_qt_skdailyprice.negotiablemv, tq_qt_skdailyprice.totmktcap, tq_qt_skdailyprice.turnrate).filter(tq_qt_skdailyprice.secode == secode).statement
-
+    sql = session.query(tq_qt_skdailyprice.tradedate, tq_qt_skdailyprice.topen, tq_qt_skdailyprice.thigh, tq_qt_skdailyprice.tlow, tq_qt_skdailyprice.tclose, tq_qt_skdailyprice.vol, tq_qt_skdailyprice.amount, tq_qt_skdailyprice.negotiablemv, tq_qt_skdailyprice.totmktcap, tq_qt_skdailyprice.turnrate).filter(tq_qt_skdailyprice.secode == str(secode)).statement
 
     df = pd.read_sql(sql, session.bind, index_col = ['tradedate'], parse_dates = ['tradedate'])
     session.commit()
     session.close()
 
     df.turnrate = df.turnrate / 100
+
+    #conn  = MySQLdb.connect(**config.db_caihui)
+    #cur = conn.cursor()
+    #print time.time()
+    #cur.execute('SELECT * FROM `tq_qt_skdailyprice`WHERE SECODE = "2010000563" and TRADEDATE = "19901224"')
+    #cur.fetchall()
+    #cur._last_executed
+    #print time.time()
+    #print
 
     return df
 
