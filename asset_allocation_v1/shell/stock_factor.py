@@ -48,8 +48,9 @@ class StockFactor(Factor):
         all_stocks = StockAsset.all_stock_info()
         stock_exposure = {}
         for stock_id in all_stocks.index:
-            stock_exposure[stock_id] = factor_exposure_algo(stock_id)
+            stock_exposure[stock_id] = self.factor_exposure_algo(stock_id)
         stock_exposure_df = pd.DataFrame(stock_exposure)
+        stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure)
         stock_exposure_df = StockFactor.normalized(stock_exposure_df)
         return stock_exposure_df
 
@@ -225,11 +226,11 @@ class SizeStockFactor(StockFactor):
 
     def factor_exposure_algo(self, stock_id):
         sa = StockAsset(stock_id)
-        return pd.Series()
+        return sa.quote.totmktcap
 
 
 if __name__ == '__main__':
 
     #StockFactor.valid_stock_table()
     ssf = SizeStockFactor()
-    ssf.cal_factor_exposure()
+    print ssf.cal_factor_exposure()
