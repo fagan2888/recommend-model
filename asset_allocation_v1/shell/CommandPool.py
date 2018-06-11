@@ -201,7 +201,7 @@ def fund_lowliest_elimination(df_pre_fund, df_indicator, df_label, ratio, limit)
     for category in df_label.columns:
         index_codes = df_label[df_label[category] == 1].index
         df_tmp = df_indicator.loc[index_codes]
-        if df_pre_fund is None:
+        if df_pre_fund is None or df_pre_fund.loc[category].index.intersection(df_indicator.index).empty:
             data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:limit]
         else:
             pre_fund = df_indicator.loc[df_pre_fund.loc[category].index]
