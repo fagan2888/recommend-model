@@ -261,6 +261,8 @@ class StockAsset(Asset):
     def load_fdmt(self):
         secode_dict_ = StockAsset.get_secode_dict()
         df = asset_stock.load_fdmt(secode_dict_[self.globalid])
+        df = df.loc[~df.index.duplicated(keep = 'last')]
+        df = df.fillna(np.nan)
         return df
 
     @property

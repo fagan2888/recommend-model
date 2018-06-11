@@ -57,5 +57,12 @@ class Factor(object):
 
     @property
     def exposure(self):
-        return self.__exposure
+        if self.__exposure is None:
+            self.__exposure = self.cal_factor_exposure()
+            return self.__exposure
+        else:
+            self.__exposure
 
+    def cal_factor_exposure(self):
+
+        return None
