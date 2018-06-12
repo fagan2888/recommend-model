@@ -98,7 +98,6 @@ class StockFactor(Factor):
 
         return df
 
-
     @staticmethod
     def get_quote():
         if StockFactor.__quote is None:

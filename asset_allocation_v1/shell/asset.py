@@ -325,13 +325,17 @@ if __name__ == '__main__':
     #print asset.nav('2010-01-01', datetime.now()).tail()
     #print asset.origin_nav_sr.tail()
 
-    asset = StockAsset('SK.601318')
-    #print asset.nav()
-    #print asset.name
-    #print asset.load_ohlcavntt()
+    # asset = StockAsset('SK.601318')
+    # print asset.nav()
+    # print asset.name
+    # print asset.load_ohlcavntt()
 
     #print StockAsset.all_stock_info()
     # print StockAsset.stock_st()
     # set_trace()
     # print asset.load_quote().head()
     print asset.load_fdmt().head()
+
+    # print asset.load_quote().head()
+    # print asset.load_fdmt().head()
+    Asset.load_nav_series()
