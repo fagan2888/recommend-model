@@ -75,7 +75,7 @@ class StockFactor(Factor):
         ret = close.pct_change()
 
         dates = ret.index.intersection(self.exposure.index)
-        df = pd.DataFrame(columns = ['ret'])
+        df = pd.DataFrame(columns = ['ret', 'sret'])
         for date in dates[-100:]:
 
             tmp_exposure = self.exposure.loc[date]
@@ -88,12 +88,12 @@ class StockFactor(Factor):
             tmp_ret = ret.loc[date, stocks]
 
             x = tmp_exposure.values.reshape(-1, 1)
-            x = sm.add_constant(x)
+            x = sm.add_constant(x, prepend = False)
             y = tmp_ret.values
             mod = sm.OLS(y, x).fit()
-            factor_ret = mod.params[1]
+            # factor_ret = mod.params[1]
 
-            df.loc[date] = factor_ret
+            df.loc[date] = mod.params
 
         return df
 
