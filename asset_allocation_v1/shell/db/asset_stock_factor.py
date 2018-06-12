@@ -50,6 +50,7 @@ class stock_factor_return(Base):
     sf_id = Column(String, primary_key = True)
     trade_date = Column(Date, primary_key = True)
     ret = Column(Float)
+    sret = Column(Float)
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
@@ -116,6 +117,7 @@ def load_stock_factor_return(sf_id = None, trade_date = None):
         stock_factor_return.sf_id,
         stock_factor_return.trade_date,
         stock_factor_return.ret,
+        stock_factor_return.sret,
         )
 
     if sf_id:
