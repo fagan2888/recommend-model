@@ -1135,7 +1135,7 @@ def nav_update(markowitz, alloc):
 
     data = {}
     for asset_id in df_pos.columns:
-        data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
+        data[asset_id] = Asset.load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
