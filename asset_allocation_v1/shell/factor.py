@@ -40,11 +40,12 @@ logger = logging.getLogger(__name__)
 
 class Factor(object):
 
-    def __init__(self, factor_id, asset_ids, exposure = None, factor_name = None):
+    def __init__(self, factor_id, asset_ids, exposure = None, ret = None, factor_name = None):
 
         self.__factor_id = factor_id
         self.__asset_ids = asset_ids
         self.__exposure = exposure
+        self.__ret = ret
         self.__factor_name = factor_name
 
     @property
@@ -59,10 +60,30 @@ class Factor(object):
     def exposure(self):
         if self.__exposure is None:
             self.__exposure = self.cal_factor_exposure()
-            return self.__exposure
-        else:
-            self.__exposure
+
+        return self.__exposure
+
+    @property
+    def ret(self):
+        if self.__ret is None:
+            self.__ret = self.cal_factor_return()
+
+        return self.__ret
 
     def cal_factor_exposure(self):
 
         return None
+
+    def cal_factor_return(self):
+
+        return None
+
+
+
+
+
+
+
+
+
+
