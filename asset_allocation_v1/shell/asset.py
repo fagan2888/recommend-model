@@ -333,5 +333,5 @@ if __name__ == '__main__':
     #print StockAsset.all_stock_info()
     # print StockAsset.stock_st()
     # set_trace()
-    print asset.load_quote().head()
+    # print asset.load_quote().head()
     print asset.load_fdmt().head()

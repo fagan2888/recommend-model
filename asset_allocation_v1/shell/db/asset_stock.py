@@ -255,8 +255,8 @@ def load_fdmt(secode):
     df_roe_roa = load_roe_roa(secode)
     df_ccdfg = load_ccdfg(secode)
 
-    df = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True,how='left'), [df_epbp, df_holder_avgpct, df_roe_roa, df_ccdfg])
-    df = df.fillna(method = 'pad')
+    df = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True,how='outer'), [df_epbp, df_holder_avgpct, df_roe_roa, df_ccdfg])
+    df = df.fillna(method = 'pad', limit = 126)
     # df = df.drop_duplicates(keep = 'last')
     # print secode, len(df) - len(df.drop_duplicates())
 
