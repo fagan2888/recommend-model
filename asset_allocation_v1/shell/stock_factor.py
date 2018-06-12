@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 import time
 from functools import partial
+import statsmodels.api as sm
 
 
 from datetime import datetime, timedelta
@@ -60,10 +61,42 @@ class StockFactor(Factor):
         stock_exposure_df = pd.DataFrame(stock_exposure)
         stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
         stock_exposure_df = StockFactor.normalized(stock_exposure_df)
+        stock_exposure_df = stock_exposure_df.fillna(method = 'pad')
         return stock_exposure_df
 
     def factor_exposure_algo(self, stock_id):
         return pd.Series()
+
+    def cal_factor_return(self):
+        stock_tclose = {}
+        for stock in self.get_stock_info().index:
+            stock_tclose[stock] = self.get_quote()[stock].tclose.replace(0.0, method = 'pad')
+        close = pd.DataFrame(stock_tclose)
+        ret = close.pct_change()
+
+        dates = ret.index.intersection(self.exposure.index)
+        df = pd.DataFrame(columns = ['ret'])
+        for date in dates[-100:]:
+
+            tmp_exposure = self.exposure.loc[date]
+            tmp_ret = ret.loc[date]
+            stocks = tmp_exposure.dropna().index.intersection(tmp_ret.dropna().index)
+            if len(stocks) == 0:
+                continue
+
+            tmp_exposure = self.exposure.loc[date, stocks]
+            tmp_ret = ret.loc[date, stocks]
+
+            x = tmp_exposure.values.reshape(-1, 1)
+            x = sm.add_constant(x)
+            y = tmp_ret.values
+            mod = sm.OLS(y, x).fit()
+            factor_ret = mod.params[1]
+
+            df.loc[date] = factor_ret
+
+        return df
+
 
     @staticmethod
     def get_quote():
@@ -138,7 +171,7 @@ class StockFactor(Factor):
 
 	def percentile20nan(x):
             x[x <= np.percentile(x,20)] = np.nan
-	    return x
+            return x
 
 	year_amount = year_amount.apply(percentile20nan, axis = 1)
 
@@ -294,6 +327,7 @@ class SizeNlStockFactor(StockFactor):
         stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
         stock_exposure_df = StockFactor.normalized(stock_exposure_df)
         stock_exposure_df = pow(stock_exposure_df, 3)
+        stock_exposure_df = stock_exposure_df.fillna(method = 'pad')
         return stock_exposure_df
 
     def factor_exposure_algo(self, stock_id):
@@ -332,6 +366,7 @@ class VolStockFactor(StockFactor):
             factor_exposure.append(stock_exposure_df)
 
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
+        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         return factor_exposure_df
 
     def cal_dastd(self, stock_id, period = 23):
@@ -384,6 +419,7 @@ class MomStockFactor(StockFactor):
             factor_exposure.append(stock_exposure_df)
 
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
+        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         return factor_exposure_df
 
 
@@ -427,6 +463,7 @@ class TurnoverStockFactor(StockFactor):
             factor_exposure.append(stock_exposure_df)
 
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
+        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         return factor_exposure_df
 
 
@@ -460,6 +497,7 @@ class EarningStockFactor(StockFactor):
             factor_exposure.append(stock_exposure_df)
 
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
+        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         return factor_exposure_df
 
 
@@ -496,6 +534,7 @@ class ValueStockFactor(StockFactor):
             factor_exposure.append(stock_exposure_df)
 
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
+        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         return factor_exposure_df
 
 
@@ -537,6 +576,7 @@ class FqStockFactor(StockFactor):
             factor_exposure.append(stock_exposure_df)
 
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
+        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         return factor_exposure_df
 
 
@@ -586,6 +626,7 @@ class LeverageStockFactor(StockFactor):
             factor_exposure.append(stock_exposure_df)
 
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
+        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         return factor_exposure_df
 
 
@@ -624,10 +665,23 @@ if __name__ == '__main__':
     # print ssf.exposure
     # print snsf.exposure
 
-    # sf = MomStockFactor(StockFactor)
-    # sf = VolStockFactor(StockFactor)
-    # sf = TurnoverStockFactor(StockFactor)
-    # sf = ValueStockFactor(StockFactor)
-    # sf = FqStockFactor(StockFactor)
-    sf = LeverageStockFactor(StockFactor)
-    print sf.exposure
+    # sf = MomStockFactor()
+    # sf = VolStockFactor()
+    # sf = TurnoverStockFactor()
+    # sf = ValueStockFactor()
+    # sf = FqStockFactor()
+    # sf = LeverageStockFactor()
+    # print sf.exposure
+
+
+
+    # sf = SizeStockFactor()
+    sf = ValueStockFactor()
+    set_trace()
+
+
+
+
+
+
+
