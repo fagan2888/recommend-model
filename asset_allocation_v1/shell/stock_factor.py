@@ -61,7 +61,6 @@ class StockFactor(Factor):
         stock_exposure_df = pd.DataFrame(stock_exposure)
         stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
         stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-        stock_exposure_df = stock_exposure_df.fillna(method = 'pad')
         return stock_exposure_df
 
     def factor_exposure_algo(self, stock_id):
@@ -70,7 +69,9 @@ class StockFactor(Factor):
     def cal_factor_return(self):
         stock_tclose = {}
         for stock in self.get_stock_info().index:
-            stock_tclose[stock] = self.get_quote()[stock].tclose.replace(0.0, method = 'pad')
+            asset = StockAsset(stock)
+            #stock_tclose[stock] = self.get_quote()[stock].tclose.replace(0.0, method = 'pad')
+            stock_tclose[stock] = asset.nav().replace(0.0, method = 'pad')
         close = pd.DataFrame(stock_tclose)
         ret = close.pct_change()
 
