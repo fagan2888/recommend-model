@@ -49,7 +49,7 @@ class StockFactor(Factor):
     __all_stocks = None
 
 
-    def __init__(self, factor_id, asset_ids, exposure = None, factor_name = None):
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(StockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
 
 
@@ -67,6 +67,8 @@ class StockFactor(Factor):
         return pd.Series()
 
     def cal_factor_return(self):
+
+        factor_ids = ["SF.00000%d"%i for i in range(1, 9)]
         stock_tclose = {}
         for stock in self.get_stock_info().index:
             asset = StockAsset(stock)
@@ -75,28 +77,40 @@ class StockFactor(Factor):
         close = pd.DataFrame(stock_tclose)
         ret = close.pct_change()
 
-        dates = ret.index.intersection(self.exposure.index)
-        df = pd.DataFrame(columns = ['ret', 'sret'])
-        for date in dates[-100:]:
+        sfs = [
+        SizeStockFactor(factor_id = "SF.000001"),
+        VolStockFactor(factor_id = "SF.000002"),
+        MomStockFactor(factor_id = "SF.000003"),
+        TurnoverStockFactor(factor_id = "SF.000004"),
+        EarningStockFactor(factor_id = "SF.000005"),
+        ValueStockFactor(factor_id = "SF.000006"),
+        FqStockFactor(factor_id = "SF.000007"),
+        LeverageStockFactor(factor_id = "SF.000008"),
+        # SizeNlStockFactor(factor_id = "SF.000009"),
+        ]
 
-            tmp_exposure = self.exposure.loc[date]
+        dates = ret.index
+        dates = dates[dates > '2000']
+        df_ret = pd.DataFrame(columns = factor_ids)
+        df_sret = pd.DataFrame(columns = self.get_stock_info().index)
+        for date in dates:
+            print 'cal_factor_return:', date
+
+            tmp_exposure = []
             tmp_ret = ret.loc[date]
-            stocks = tmp_exposure.dropna().index.intersection(tmp_ret.dropna().index)
-            if len(stocks) == 0:
-                continue
+            for sf in sfs:
+                tmp_exposure.append(sf.exposure.fillna(method='pad').loc[date].values.tolist())
+                tmp_ret = ret.loc[date].values
 
-            tmp_exposure = self.exposure.loc[date, stocks]
-            tmp_ret = ret.loc[date, stocks]
+            tmp_exposure = np.array(tmp_exposure).T
+            tmp_exposure = np.nan_to_num(tmp_exposure, 0.0)
+            # x = sm.add_constant(tmp_exposure, prepend = False)
+            mod = sm.OLS(tmp_ret, tmp_exposure, missing = 'drop').fit()
 
-            x = tmp_exposure.values.reshape(-1, 1)
-            x = sm.add_constant(x, prepend = False)
-            y = tmp_ret.values
-            mod = sm.OLS(y, x).fit()
-            # factor_ret = mod.params[1]
+            df_ret.loc[date] = mod.params
+            df_sret.loc[date] = tmp_ret - np.dot(tmp_exposure, mod.params)
 
-            df.loc[date] = mod.params
-
-        return df
+        return df_ret, df_sret
 
     @staticmethod
     def get_quote():
@@ -104,6 +118,7 @@ class StockFactor(Factor):
             all_stocks = StockFactor.get_stock_info()
             stock_quote = {}
             for stock in all_stocks.index:
+                print 'quote', stock
                 stock_quote[stock] = StockAsset(stock).quote
 
             StockFactor.__quote = stock_quote
@@ -116,6 +131,7 @@ class StockFactor(Factor):
             all_stocks = StockFactor.get_stock_info()
             stock_fdmt = {}
             for stock in all_stocks.index:
+                print 'fdmt', stock
                 stock_fdmt[stock] = StockAsset(stock).fdmt
 
             StockFactor.__fdmt = stock_fdmt
@@ -125,8 +141,11 @@ class StockFactor(Factor):
     @staticmethod
     def get_stock_info():
         if StockFactor.__all_stocks is None:
+            sz50 = pd.read_csv('data/index/tq_ix_mweight.csv')
+            skcode = sz50.CONSTITUENTCODE.values
+            globalids = ['SK.%d'%i for i in skcode]
 
-            all_stocks = StockAsset.all_stock_info().head(10)
+            all_stocks = StockAsset.all_stock_info(globalids)
             StockFactor.__all_stocks = all_stocks
 
         return StockFactor.__all_stocks
@@ -248,7 +267,7 @@ class StockFactor(Factor):
             valid_df = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
             valid_df = valid_df[valid_df.valid == 1]
             if len(factor_df) == 0:
-		facto_df.stock_id = np.nan
+		factor_df.stock_id = np.nan
             else:
 		factor_df[stock_id][~factor_df.index.isin(valid_df.index)] = np.nan
 
@@ -676,7 +695,9 @@ if __name__ == '__main__':
 
 
     # sf = SizeStockFactor()
-    sf = ValueStockFactor()
+    # sf = ValueStockFactor()
+    sf = StockFactor()
+    sf.cal_factor_return()
     set_trace()
 
 

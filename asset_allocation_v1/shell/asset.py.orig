@@ -279,15 +279,12 @@ class StockAsset(Asset):
 
     #所有股票代码
     @staticmethod
-    def all_stock_info(globalids = None):
+    def all_stock_info():
 
         engine = database.connection('base')
         Session = sessionmaker(bind=engine)
         session = Session()
-        sql = session.query(asset_stock.ra_stock.globalid, asset_stock.ra_stock.sk_secode, asset_stock.ra_stock.sk_compcode, asset_stock.ra_stock.sk_name, asset_stock.ra_stock.sk_listdate, asset_stock.ra_stock.sk_swlevel1code)
-        if globalids:
-            sql = sql.filter(asset_stock.ra_stock.globalid.in_(globalids))
-        all_stocks = pd.read_sql(sql.statement, session.bind, index_col = ['globalid'])
+        all_stocks = pd.read_sql(session.query(asset_stock.ra_stock.globalid, asset_stock.ra_stock.sk_secode, asset_stock.ra_stock.sk_compcode, asset_stock.ra_stock.sk_name, asset_stock.ra_stock.sk_listdate, asset_stock.ra_stock.sk_swlevel1code).statement, session.bind, index_col = ['globalid'])
         session.commit()
         session.close()
         return all_stocks
@@ -336,9 +333,12 @@ if __name__ == '__main__':
     #print StockAsset.all_stock_info()
     # print StockAsset.stock_st()
     # set_trace()
+<<<<<<< b802f8e7c23f4b9a3eb75e39f7f3cd84a0d140d2
     # print asset.load_quote().head()
     print asset.load_fdmt().head()
+=======
 
     # print asset.load_quote().head()
     # print asset.load_fdmt().head()
     Asset.load_nav_series()
+>>>>>>> adjust CommandMarkowitz load_nav_series

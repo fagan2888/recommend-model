@@ -50,6 +50,17 @@ class stock_factor_return(Base):
     sf_id = Column(String, primary_key = True)
     trade_date = Column(Date, primary_key = True)
     ret = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+class stock_factor_specific_return(Base):
+
+    __tablename__ = 'stock_factor_specific_return'
+
+    stock_id = Column(String, primary_key = True)
+    trade_date = Column(Date, primary_key = True)
     sret = Column(Float)
 
     updated_at = Column(DateTime)
@@ -82,7 +93,7 @@ class valid_stock_factor(Base):
     created_at = Column(DateTime)
 
 
-def load_stock_factor_exposure(stock_id = None, sf_id = None, trade_date = None):
+def load_stock_factor_exposure(stock_id = None, stock_ids = None, sf_id = None, begin_date = None, end_date = None):
 
     db = database.connection('asset')
     Session = sessionmaker(bind = db)
@@ -96,10 +107,14 @@ def load_stock_factor_exposure(stock_id = None, sf_id = None, trade_date = None)
 
     if stock_id:
         record = record.filter(stock_factor_exposure.stock_id == stock_id)
+    if stock_ids is not None:
+        record = record.filter(stock_factor_exposure.stock_id.in_(stock_ids))
     if sf_id:
         record = record.filter(stock_factor_exposure.sf_id == sf_id)
-    if trade_date:
-        record = record.filter(stock_factor_exposure.trade_date == trade_date)
+    if begin_date:
+        record = record.filter(stock_factor_exposure.trade_date >= begin_date)
+    if end_date:
+        record = record.filter(stock_factor_exposure.trade_date <= end_date)
 
     df = pd.read_sql(record.statement, session.bind, index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
     session.commit()
@@ -108,7 +123,7 @@ def load_stock_factor_exposure(stock_id = None, sf_id = None, trade_date = None)
     return df
 
 
-def load_stock_factor_return(sf_id = None, trade_date = None):
+def load_stock_factor_return(sf_id = None, trade_date = None, begin_date = None, end_date = None, reindex = None):
 
     db = database.connection('asset')
     Session = sessionmaker(bind = db)
@@ -117,13 +132,16 @@ def load_stock_factor_return(sf_id = None, trade_date = None):
         stock_factor_return.sf_id,
         stock_factor_return.trade_date,
         stock_factor_return.ret,
-        stock_factor_return.sret,
         )
 
     if sf_id:
         record = record.filter(stock_factor_return.sf_id == sf_id)
     if trade_date:
         record = record.filter(stock_factor_return.trade_date == trade_date)
+    if begin_date:
+        record = record.filter(stock_factor_return.trade_date >= begin_date)
+    if end_date:
+        record = record.filter(stock_factor_return.trade_date <= end_date)
 
     df = pd.read_sql(record.statement, session.bind, index_col = ['sf_id', 'trade_date'], parse_dates = ['trade_date'])
     session.commit()
@@ -132,11 +150,39 @@ def load_stock_factor_return(sf_id = None, trade_date = None):
     return df
 
 
+def load_stock_factor_specific_return(stock_id = None, stock_ids = None, trade_date = None, begin_date = None, end_date = None):
+
+    db = database.connection('asset')
+    Session = sessionmaker(bind = db)
+    session = Session()
+    record = session.query(
+        stock_factor_specific_return.stock_id,
+        stock_factor_specific_return.trade_date,
+        stock_factor_specific_return.sret,
+        )
+
+    if stock_id:
+        record = record.filter(stock_factor_specific_return.stock_id == stock_id)
+    if stock_ids is not None:
+        record = record.filter(stock_factor_specific_return.stock_id.in_(stock_ids))
+    if trade_date:
+        record = record.filter(stock_factor_specific_return.trade_date == trade_date)
+    if begin_date:
+        record = record.filter(stock_factor_specific_return.trade_date >= begin_date)
+    if end_date:
+        record = record.filter(stock_factor_specific_return.trade_date <= end_date)
+
+    df = pd.read_sql(record.statement, session.bind, index_col = ['stock_id', 'trade_date'], parse_dates = ['trade_date'])
+    session.commit()
+    session.close()
+
+    return df
 
 
 if __name__ == '__main__':
 
-    df = load_stock_factor_return('SF.000001')
+    df1 = load_stock_factor_return()
+    df2 = load_stock_factor_specific_return()
     set_trace()
 
 
