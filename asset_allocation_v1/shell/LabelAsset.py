@@ -21,6 +21,7 @@ import time
 import AllocationData
 import DBData
 import DFUtil
+import BondFundPoolNew as BF
 
 from Const import datapath
 from dateutil.parser import parse
@@ -178,8 +179,6 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
     #  if not intersection.empty:
         #  df_nav_bond = df_nav_bond.loc[:, intersection]
     #df_nav_bond.to_csv(datapath('bond_' + day.strftime('%Y-%m-%d') + '.csv'))
-    import ipdb
-    ipdb.set_trace()
 
     #
     # 根据时间轴进行重采样
@@ -200,10 +199,21 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
         day, df_nav_bond, df_nav_index[Const.csibondindex_code])
 
     #
+    #  fund_pool = BF.factor_regression([BF.benchmark.globalid], start_date, end_date)
+    fund_pool = BF.factor_regression([BF.benchmark.globalid, BF.enterprise_hr.globalid], start_date, end_date)
+    fund_pool.index.name='code'
+    df_indicator['coef_bm'] = fund_pool[BF.benchmark.globalid]
+    df_indicator['coef_etp'] = fund_pool[BF.enterprise_hr.globalid]
+    df_indicator["score"] = fund_pool.score
+    df_indicator["jensen"] = fund_pool.jensen
+    #  from ipdb import set_trace
+    #  set_trace()
     # 打标签确定所有备选基金
     #
     df_nav_indicator = df_nav_bond[df_indicator.index]
-    df_label = ST.tag_bond_fund_new(day, df_nav_indicator, df_nav_index)
+    #  df_label = ST.tag_bond_fund_new(day, df_nav_indicator, df_nav_index)
+    df_label = pd.DataFrame().reindex(df_indicator.index)
+    df_label["benchmark"] = 1
 
     return df_indicator, df_label
     #
