@@ -20,6 +20,7 @@ import Portfolio as PF
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
+from ipdb import set_trace
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -31,6 +32,7 @@ from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
+from db.asset_stock_factor import *
 from util import xdict
 from util.xdebug import dd
 from asset import Asset, WaveletAsset
@@ -171,6 +173,47 @@ class MzBootDownRiskAllocate(Allocate):
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws
 
+
+class FactorRpAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(FactorRpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        dates = df_inc.index
+        begin_date = dates[0]
+        end_date = dates[-1]
+        stock_ids = df_inc.columns.values
+        sfe = load_stock_factor_exposure(stock_ids = stock_ids, begin_date = begin_date, end_date = end_date)
+        sfr = load_stock_factor_return(begin_date = begin_date, end_date = end_date)
+        sfsr = load_stock_factor_specific_return(stock_ids = stock_ids, begin_date = begin_date, end_date = end_date)
+
+        sfe = sfe.reset_index()
+        sfe = sfe.groupby(['stock_id', 'sf_id']).mean()
+        sfe = sfe.unstack()
+        sfe.columns = sfe.columns.droplevel(0)
+        sfe = sfe.fillna(0.0)
+
+        sfr = sfr.reset_index()
+        sfr = sfr.set_index(['trade_date', 'sf_id'])
+        sfr = sfr.unstack()
+        sfr.columns = sfr.columns.droplevel(0)
+
+        sfsr = sfsr.reset_index()
+        sfsr = sfsr.set_index(['trade_date', 'stock_id'])
+        sfsr = sfsr.unstack()
+        sfsr.columns = sfsr.columns.droplevel(0)
+        set_trace()
+
+        V = df_inc.cov().values*1e4
+        risk_budget = [1.0 / len(df_inc.columns)] * len(df_inc.columns)
+        weight = cal_weight(V, risk_budget)
+        ws = dict(zip(df_inc.columns.ravel(), weight))
+
+        return ws
 
 
 if __name__ == '__main__':

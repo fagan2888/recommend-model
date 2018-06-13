@@ -35,8 +35,8 @@ from util import xdict
 from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
-from allocate import Allocate
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate
+from allocate import Allocate, AssetBound
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorRpAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1002,6 +1002,15 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
 
+    elif algo == 20:
+
+        lookback = 126
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorRpAllocate('ALC.000001', assets, trade_date, lookback, bound = bound)
+        df = allocate.allocate()
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -1102,7 +1111,7 @@ def nav(ctx, optid, opttype, optrisk, optlist):
         df_markowitz = asset_mz_markowitz.load(markowitzs)
     else:
         df_markowitz = asset_mz_markowitz.load(markowitzs, xtypes)
-        
+
     if optlist:
         df_markowitz['mz_name'] = df_markowitz['mz_name'].map(lambda e: e.decode('utf-8'))
         print tabulate(df_markowitz, headers='keys', tablefmt='psql')
@@ -1118,7 +1127,7 @@ def nav(ctx, optid, opttype, optrisk, optlist):
 def nav_update_alloc(markowitz, optrisk):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
-    
+
     for _, alloc in df_alloc.iterrows():
         nav_update(markowitz, alloc)
 
@@ -1192,7 +1201,7 @@ def turnover(ctx, optid, opttype, optrisk, optlist):
     print(tabulate(data, headers=headers, tablefmt="psql"))
     # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
     # print(tabulate(data, headers=headers, tablefmt="grid"))
-    
+
 def turnover_update_alloc(markowitz, optrisk):
     risks =  [("%.2f" % (float(x)/ 10.0)) for x in optrisk.split(',')];
     df_alloc = asset_mz_markowitz_alloc.where_markowitz_id(markowitz['globalid'], risks)
@@ -1323,7 +1332,7 @@ def copy(ctx, optsrc, optdst, optlist):
     df_xtab = df_markowitz_alloc[['globalid', 'old']].copy()
 
     df_markowitz_alloc.drop(['old'], axis=1, inplace=True)
-    
+
     df_markowitz_alloc.set_index(['globalid'], inplace=True)
     asset_mz_markowitz_alloc.save(optdst, df_markowitz_alloc)
 
