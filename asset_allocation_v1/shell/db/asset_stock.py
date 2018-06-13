@@ -1,19 +1,19 @@
 #coding=utf8
 
 
+import sys
+sys.path.append('shell')
 from sqlalchemy import MetaData, Table, select, func, and_
 from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime, Float
 import pandas as pd
 import MySQLdb
-import config
 import logging
 import database
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from dateutil.parser import parse
-from ipdb import set_trace
 import time
-
+import asset
 
 logger = logging.getLogger(__name__)
 
@@ -210,19 +210,9 @@ def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None
     return ser
 
 
-def globalid_2_name(globalid):
+def load_ohlcavntt(globalid):
 
-    engine = database.connection('base')
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    record = session.query(ra_stock.sk_name).filter(ra_stock.globalid == globalid).first()
-    session.commit()
-    session.close()
-    name = record[0]
-    return name
-
-
-def load_ohlcavntt(secode):
+    secode = asset.StockAsset.secode_dict()[globalid]
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
@@ -236,34 +226,25 @@ def load_ohlcavntt(secode):
 
     df.turnrate = df.turnrate / 100
 
-    #conn  = MySQLdb.connect(**config.db_caihui)
-    #cur = conn.cursor()
-    #print time.time()
-    #cur.execute('SELECT * FROM `tq_qt_skdailyprice`WHERE SECODE = "2010000563" and TRADEDATE = "19901224"')
-    #cur.fetchall()
-    #cur._last_executed
-    #print time.time()
-    #print
-
     return df
 
 
-def load_fdmt(secode):
+def load_fdmt(globalid):
 
-    df_epbp = load_epbp(secode)
-    df_holder_avgpct = load_holder_avgpct(secode)
-    df_roe_roa = load_roe_roa(secode)
-    df_ccdfg = load_ccdfg(secode)
+    df_epbp = load_epbp(globalid)
+    df_holder_avgpct = load_holder_avgpct(globalid)
+    df_roe_roa = load_roe_roa(globalid)
+    df_ccdfg = load_ccdfg(globalid)
 
     df = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True,how='outer'), [df_epbp, df_holder_avgpct, df_roe_roa, df_ccdfg])
     df = df.fillna(method = 'pad', limit = 126)
-    # df = df.drop_duplicates(keep = 'last')
-    # print secode, len(df) - len(df.drop_duplicates())
 
     return df
 
 
-def load_epbp(secode):
+def load_epbp(globalid):
+
+    secode = asset.StockAsset.secode_dict()[globalid]
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
@@ -280,15 +261,9 @@ def load_epbp(secode):
     return df
 
 
-def load_holder_avgpct(secode):
+def load_holder_avgpct(globalid):
 
-    engine = database.connection('base')
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    record = session.query(ra_stock.sk_compcode).filter(ra_stock.sk_secode == secode).first()
-    session.commit()
-    session.close()
-    compcode = record[0]
+    compcode = asset.StockAsset.compcode_dict()[globalid]
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
@@ -306,15 +281,9 @@ def load_holder_avgpct(secode):
     return df
 
 
-def load_roe_roa(secode):
+def load_roe_roa(globalid):
 
-    engine = database.connection('base')
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    record = session.query(ra_stock.sk_compcode).filter(ra_stock.sk_secode == secode).first()
-    session.commit()
-    session.close()
-    compcode = record[0]
+    compcode = asset.StockAsset.compcode_dict()[globalid]
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
@@ -332,15 +301,9 @@ def load_roe_roa(secode):
     return df
 
 
-def load_ccdfg(secode):
+def load_ccdfg(globalid):
 
-    engine = database.connection('base')
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    record = session.query(ra_stock.sk_compcode).filter(ra_stock.sk_secode == secode).first()
-    session.commit()
-    session.close()
-    compcode = record[0]
+    compcode = asset.StockAsset.compcode_dict()[globalid]
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
@@ -366,8 +329,7 @@ if __name__ == '__main__':
     # df = load_holder_avgpct(2010000857)
     # df = load_roe_roa(2010000857)
     # df = load_ccdfg(2010001036)
-    df = load_fdmt(2010000938)
-    print df.head()
-
-
-
+    # df = load_fdmt(2010000938)
+    # print df.head()
+    print asset.StockAsset.all_stock_info()
+    pass

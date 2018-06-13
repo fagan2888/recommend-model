@@ -31,12 +31,12 @@ from factor import Factor
 from asset import StockAsset
 from db import asset_trade_dates
 from db.asset_stock_factor import *
-from multiprocessing import Pool
 import math
 import scipy.stats as stats
 import json
 import stock_util
 from ipdb import set_trace
+from pathos.multiprocessing import ProcessingPool as Pool
 
 
 logger = logging.getLogger(__name__)
@@ -47,6 +47,9 @@ class StockFactor(Factor):
     __quote = None
     __fdmt = None
     __all_stocks = None
+
+    __all_stock_info = None
+    __all_stock_quote = None
 
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
@@ -125,6 +128,7 @@ class StockFactor(Factor):
 
         return StockFactor.__quote
 
+
     @staticmethod
     def get_fdmt():
         if StockFactor.__fdmt is None:
@@ -137,6 +141,16 @@ class StockFactor(Factor):
             StockFactor.__fdmt = stock_fdmt
 
         return StockFactor.__fdmt
+
+
+    @staticmethod
+    def all_stock_quote():
+
+        pool = Pool(30)
+        pool.map(quote_2_mongo, StockAsset.all_stock_info().index.ravel())
+        pool.close()
+        pool.join()
+
 
     @staticmethod
     def get_stock_info():
@@ -697,11 +711,8 @@ if __name__ == '__main__':
     # sf = SizeStockFactor()
     # sf = ValueStockFactor()
     sf = StockFactor()
-    sf.cal_factor_return()
-    set_trace()
-
-
-
+    #sf.cal_factor_return()
+    # set_trace()
 
 
 
