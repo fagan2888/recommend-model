@@ -30,13 +30,13 @@ from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_stock
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
-from db.asset_stock import *
 from util import xdict
 from util.xdebug import dd
 from wavelet import Wavelet
-
+from pathos.multiprocessing import ProcessingPool as Pool
+import db.asset_stock
 
 import traceback, code
 
@@ -159,7 +159,7 @@ class Asset(object):
                 #
                 # 股票资产
                 #
-                sr = asset_stock.load_stock_nav_series(
+                sr = db.asset_stock.load_stock_nav_series(
                     asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
             else:
                 sr = pd.Series()
@@ -209,112 +209,117 @@ class WaveletAsset(Asset):
 
 class StockAsset(Asset):
 
-    __secode_dict = None
+    __all_stock_info = None
+    __all_st_stocks = None
+    __all_stock_quote = {}
+    __all_stock_fdmt = {}
+
 
     def __init__(self, globalid, name = None, nav_sr = None):
 
-        super(StockAsset, self).__init__(globalid, name = asset_stock.globalid_2_name(globalid), nav_sr = nav_sr)
+        super(StockAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
         self.__secode = None
         self.__quote = None
         self.__fdmt = None
         self.__code = globalid[3:]
-        self.__open = None
-        self.__high = None
-        self.__low = None
-        self.__close = None
-        self.__amount = None
-        self.__volume = None
-        self.__negotiablemv = None
-        self.__totmktcap = None
-        self.__turnrate = None
+
 
     @property
     def code(self):
         return self.__code
 
     @staticmethod
-    def get_secode_dict():
-        if StockAsset.__secode_dict is None:
+    def secode_dict():
+        all_stock_info = StockAsset.all_stock_info()
+        return dict(zip(all_stock_info.index, all_stock_info.sk_secode))
 
-            engine = database.connection('base')
-            Session = sessionmaker(bind=engine)
-            session = Session()
-            sql = session.query(ra_stock.sk_secode, ra_stock.globalid).statement
-            df = pd.read_sql(sql, session.bind, index_col = ['globalid'])
-            session.commit()
-            session.close()
+    @staticmethod
+    def compcode_dict():
+        all_stock_info = StockAsset.all_stock_info()
+        return dict(zip(all_stock_info.index, all_stock_info.sk_compcode))
 
-            secode_dict_ = df.to_dict()['sk_secode']
-            StockAsset.__secode_dict = secode_dict_
+    #所有股票行情
+    @staticmethod
+    def all_stock_quote():
+        stock_ids = list(set(StockAsset.all_stock_info().index.ravel()).difference(StockAsset.__all_stock_quote.keys()))
+        if len(stock_ids) > 0:
+            count = multiprocessing.cpu_count()
+            pool = Pool(count / 2)
+            results = pool.map(db.asset_stock.load_ohlcavntt, StockAsset.all_stock_info().index.ravel())
+            pool.close()
+            pool.join()
+            StockAsset.__all_stock_quote.update(dict(zip(StockAsset.all_stock_info().index.ravel(), results)))
+        return StockAsset.__all_stock_quote
 
-            return secode_dict_
 
-        else:
-            return StockAsset.__secode_dict
+    #所有股票基本面
+    @staticmethod
+    def all_stock_fdmt():
+        stock_ids = list(set(StockAsset.all_stock_info().index.ravel()).difference(StockAsset.__all_stock_fdmt.keys()))
+        if len(stock_ids) > 0:
+            count = multiprocessing.cpu_count()
+            pool = Pool(count / 2)
+            results = pool.map(db.asset_stock.load_fdmt, StockAsset.all_stock_info().index.ravel())
+            pool.close()
+            pool.join()
+            StockAsset.__all_stock_fdmt.update(dict(zip(StockAsset.all_stock_info().index.ravel(), results)))
+        return StockAsset.__all_stock_fdmt
 
-
-    def load_quote(self):
-        secode_dict_ = StockAsset.get_secode_dict()
-        df = asset_stock.load_ohlcavntt(secode_dict_[self.globalid])
-        return df
-
-    def load_fdmt(self):
-        secode_dict_ = StockAsset.get_secode_dict()
-        df = asset_stock.load_fdmt(secode_dict_[self.globalid])
-        df = df.loc[~df.index.duplicated(keep = 'last')]
-        df = df.fillna(np.nan)
-        return df
 
     @property
     def quote(self):
-        if self.__quote is None:
-            self.__quote = self.load_quote()
-        return self.__quote
+        if not StockAsset.__all_stock_quote.has_key(self.globalid):
+            quote_df = db.asset_stock.load_ohlcavntt(self.globalid)
+            StockAsset.__all_stock_quote[self.globalid] = quote_df
+        return StockAsset.__all_stock_quote[self.globalid]
+
 
     @property
     def fdmt(self):
-        if self.__fdmt is None:
-            self.__fdmt = self.load_fdmt()
-        return self.__fdmt
+        if not StockAsset.__all_stock_fdmt.has_key(self.globalid):
+            fdmt_df = db.asset_stock.load_fdmt(self.globalid)
+            StockAsset.__all_stock_fdmt[self.globalid] = fdmt_df
+        return StockAsset.__all_stock_fdmt[self.globalid]
+
+
 
     #所有股票代码
     @staticmethod
     def all_stock_info(globalids = None):
-
-        engine = database.connection('base')
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        sql = session.query(asset_stock.ra_stock.globalid, asset_stock.ra_stock.sk_secode, asset_stock.ra_stock.sk_compcode, asset_stock.ra_stock.sk_name, asset_stock.ra_stock.sk_listdate, asset_stock.ra_stock.sk_swlevel1code)
-        if globalids:
-            sql = sql.filter(asset_stock.ra_stock.globalid.in_(globalids))
-        all_stocks = pd.read_sql(sql.statement, session.bind, index_col = ['globalid'])
-        session.commit()
-        session.close()
-        return all_stocks
-
+        if StockAsset.__all_stock_info is None:
+            engine = database.connection('base')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            all_stocks = pd.read_sql(session.query(db.asset_stock.ra_stock.globalid, db.asset_stock.ra_stock.sk_secode, db.asset_stock.ra_stock.sk_compcode, db.asset_stock.ra_stock.sk_name, db.asset_stock.ra_stock.sk_listdate, db.asset_stock.ra_stock.sk_swlevel1code).statement, session.bind, index_col = ['globalid'])
+            session.commit()
+            session.close()
+            StockAsset.__all_stock_info = all_stocks;
+        if globalids is None:
+            return StockAsset.__all_stock_info
+        else:
+            return StockAsset.__all_stock_info.loc[globalids]
 
 
     #st股票表
     @staticmethod
     def stock_st():
+        if StockAsset.__all_st_stocks is None:
+            all_stocks = StockAsset.all_stock_info()
+            all_stocks = all_stocks.reset_index()
+            all_stocks = all_stocks.set_index(['sk_secode'])
 
-        all_stocks = StockAsset.all_stock_info()
-        all_stocks = all_stocks.reset_index()
-        all_stocks = all_stocks.set_index(['sk_secode'])
+            engine = database.connection('caihui')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            sql = session.query(db.asset_stock.tq_sk_specialtrade.secode, db.asset_stock.tq_sk_specialtrade.selecteddate,
+                    db.asset_stock.tq_sk_specialtrade.outdate).filter(db.asset_stock.tq_sk_specialtrade.selectedtype <= 3).filter(db.asset_stock.tq_sk_specialtrade.secode.in_(set(all_stocks.index))).statement
+            st_stocks = pd.read_sql(sql, session.bind, index_col = ['secode'], parse_dates = ['selecteddate', 'outdate'])
+            session.commit()
+            session.close()
 
-        engine = database.connection('caihui')
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        sql = session.query(asset_stock.tq_sk_specialtrade.secode, asset_stock.tq_sk_specialtrade.selecteddate,
-                asset_stock.tq_sk_specialtrade.outdate).filter(asset_stock.tq_sk_specialtrade.selectedtype <= 3).filter(asset_stock.tq_sk_specialtrade.secode.in_(set(all_stocks.index))).statement
-        st_stocks = pd.read_sql(sql, session.bind, index_col = ['secode'], parse_dates = ['selecteddate', 'outdate'])
-        session.commit()
-        session.close()
+            StockAsset.__all_st_stocks = pd.merge(st_stocks, all_stocks, left_index=True, right_index=True)
 
-        st_stocks = pd.merge(st_stocks, all_stocks, left_index=True, right_index=True)
-
-        return st_stocks
-
+        return StockAsset.__all_st_stocks
 
 
 
@@ -331,14 +336,23 @@ if __name__ == '__main__':
     # asset = StockAsset('SK.601318')
     # print asset.nav()
     # print asset.name
-    # print asset.load_ohlcavntt()
+    StockAsset.all_stock_fdmt()
+    for globalid in StockAsset.all_stock_info().index:
+        asset = StockAsset('SK.601318')
+        print time.time()
+        asset.fdmt
+        print time.time()
+        print
+    #print asset.nav()
+    #print asset.name
+    #print asset.load_ohlcavntt()
 
     #print StockAsset.all_stock_info()
     # print StockAsset.stock_st()
     # set_trace()
     # print asset.load_quote().head()
-    print asset.load_fdmt().head()
+    #print asset.load_fdmt().head()
 
     # print asset.load_quote().head()
     # print asset.load_fdmt().head()
-    Asset.load_nav_series()
+    # print asset.load_fdmt().head()
