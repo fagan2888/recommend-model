@@ -35,14 +35,14 @@ from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav,
 from util import xdict
 from util.xdebug import dd
 from wavelet import Wavelet
-from pathos.multiprocessing import ProcessingPool as Pool
+#from pathos.multiprocessing import ProcessingPool as Pool
+from multiprocessing import Pool
 import db.asset_stock
 
 import traceback, code
 
 
 logger = logging.getLogger(__name__)
-
 
 
 class Asset(object):
@@ -202,6 +202,7 @@ class WaveletAsset(Asset):
             wavelet_nav_sr = wavelet_nav_sr[wavelet_nav_sr.index >= begin_date]
         if reindex is not None:
             wavelet_nav_sr = wavelet_nav_sr.reindex(reindex).fillna(method = 'pad')
+
             wavelet_nav_sr = wavelet_nav_sr.loc[reindex]
 
         return wavelet_nav_sr
@@ -213,7 +214,7 @@ class StockAsset(Asset):
     __all_st_stocks = None
     __all_stock_quote = {}
     __all_stock_fdmt = {}
-
+    __all_stocks = {}
 
     def __init__(self, globalid, name = None, nav_sr = None):
 
@@ -227,6 +228,40 @@ class StockAsset(Asset):
     @property
     def code(self):
         return self.__code
+
+
+    @staticmethod
+    def get_stock(globalid):
+        if not StockAsset.__all_stocks.has_key(globalid):
+            StockAsset.__all_stocks[globalid] = StockAsset(globalid)
+        return StockAsset.__all_stocks[globalid]
+
+
+    @staticmethod
+    def all_stocks():
+        stock_ids = list(set(StockAsset.all_stock_info().index.ravel()).difference(StockAsset.__all_stocks.keys()))
+        if len(stock_ids) > 0:
+            count = multiprocessing.cpu_count()
+            pool = Pool(count / 2)
+            results = pool.map(db.asset_stock.load_stock_nav_series, stock_ids)
+            pool.close()
+            pool.join()
+            for i in range(0, len(stock_ids)):
+                asset = StockAsset(stock_ids[i], nav_sr = results[i])
+                StockAsset.__all_stocks[stock_ids[i]] = asset
+        return StockAsset.__all_stocks
+
+
+    @staticmethod
+    def all_stock_nav():
+        StockAsset.all_stocks()
+        stock_nav = {}
+        for stock_id in StockAsset.all_stock_info().index:
+            asset = StockAsset.get_stock(stock_id)
+            stock_nav[stock_id] = asset.nav().replace(0.0, method = 'pad')
+        stock_nav_df = pd.DataFrame(stock_nav)
+        return stock_nav_df
+
 
     @staticmethod
     def secode_dict():
@@ -245,10 +280,10 @@ class StockAsset(Asset):
         if len(stock_ids) > 0:
             count = multiprocessing.cpu_count()
             pool = Pool(count / 2)
-            results = pool.map(db.asset_stock.load_ohlcavntt, StockAsset.all_stock_info().index.ravel())
+            results = pool.map(db.asset_stock.load_ohlcavntt, stock_ids)
             pool.close()
             pool.join()
-            StockAsset.__all_stock_quote.update(dict(zip(StockAsset.all_stock_info().index.ravel(), results)))
+            StockAsset.__all_stock_quote.update(dict(zip(stock_ids, results)))
         return StockAsset.__all_stock_quote
 
 
@@ -259,10 +294,10 @@ class StockAsset(Asset):
         if len(stock_ids) > 0:
             count = multiprocessing.cpu_count()
             pool = Pool(count / 2)
-            results = pool.map(db.asset_stock.load_fdmt, StockAsset.all_stock_info().index.ravel())
+            results = pool.map(db.asset_stock.load_fdmt, stock_ids)
             pool.close()
             pool.join()
-            StockAsset.__all_stock_fdmt.update(dict(zip(StockAsset.all_stock_info().index.ravel(), results)))
+            StockAsset.__all_stock_fdmt.update(dict(zip(stock_ids, results)))
         return StockAsset.__all_stock_fdmt
 
 
@@ -295,7 +330,7 @@ class StockAsset(Asset):
             session.close()
             StockAsset.__all_stock_info = all_stocks;
         if globalids is None:
-            return StockAsset.__all_stock_info
+            return StockAsset.__all_stock_info.head(10)
         else:
             return StockAsset.__all_stock_info.loc[globalids]
 
@@ -336,13 +371,13 @@ if __name__ == '__main__':
     # asset = StockAsset('SK.601318')
     # print asset.nav()
     # print asset.name
-    StockAsset.all_stock_fdmt()
-    for globalid in StockAsset.all_stock_info().index:
-        asset = StockAsset('SK.601318')
-        print time.time()
-        asset.fdmt
-        print time.time()
-        print
+    #StockAsset.all_stock_fdmt()
+    #for globalid in StockAsset.all_stock_info().index:
+    #    asset = StockAsset('SK.601318')
+    #    print time.time()
+    #    asset.fdmt
+    #    print time.time()
+    #    print
     #print asset.nav()
     #print asset.name
     #print asset.load_ohlcavntt()
@@ -356,3 +391,6 @@ if __name__ == '__main__':
     # print asset.load_quote().head()
     # print asset.load_fdmt().head()
     # print asset.load_fdmt().head()
+
+    print StockAsset.all_stock_quote().keys()
+    print len(StockAsset.all_stock_quote().keys())

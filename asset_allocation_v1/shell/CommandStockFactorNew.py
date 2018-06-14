@@ -25,7 +25,8 @@ from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_samp
 from db.asset_stock_factor import *
 from db.asset_stock import *
 from stock_factor import *
-from pathos.multiprocessing import ProcessingPool as Pool
+#from pathos.multiprocessing import ProcessingPool as Pool
+from multiprocessing import Pool
 
 
 logger = logging.getLogger(__name__)
@@ -43,37 +44,38 @@ def sf(ctx):
 def factor_exposure_update(ctx):
     '''insert factor info
     '''
+    StockAsset.all_stock_nav()
+    StockAsset.all_stock_quote()
+    StockAsset.all_stock_fdmt()
+
     sfs = [
         SizeStockFactor(factor_id = "SF.000001"),
-        VolStockFactor(factor_id = "SF.000002"),
-        MomStockFactor(factor_id = "SF.000003"),
-        TurnoverStockFactor(factor_id = "SF.000004"),
+        #VolStockFactor(factor_id = "SF.000002"),
+        #MomStockFactor(factor_id = "SF.000003"),
+        #TurnoverStockFactor(factor_id = "SF.000004"),
         EarningStockFactor(factor_id = "SF.000005"),
-        ValueStockFactor(factor_id = "SF.000006"),
-        FqStockFactor(factor_id = "SF.000007"),
-        LeverageStockFactor(factor_id = "SF.000008"),
-        SizeNlStockFactor(factor_id = "SF.000009"),
+        #ValueStockFactor(factor_id = "SF.000006"),
+        #FqStockFactor(factor_id = "SF.000007"),
+        #LeverageStockFactor(factor_id = "SF.000008"),
+        #SizeNlStockFactor(factor_id = "SF.000009"),
     ]
 
-    def save_exposure(sf):
+    exposures = []
+    sf_ids = []
+    for sf in sfs:
+        print sf.factor_id
+        sf.cal_factor_exposure()
+        sf_ids.append(sf.factor_id)
+        exposures.append(sf.exposure)
 
-        sfe = sf.exposure
-        sfe = sfe.fillna(method = 'pad')
-        df_new = sfe.stack()
-        df_new = df_new.reset_index()
-        df_new['sf_id'] = sf.factor_id
-        df_new.columns = ['trade_date', 'stock_id', 'exposure', 'sf_id']
-        df_new = df_new.set_index(['stock_id', 'sf_id', 'trade_date'])
-
-        df_old = load_stock_factor_exposure(sf_id = sf.factor_id)
-        db = database.connection('asset')
-        t = Table('stock_factor_exposure', MetaData(bind=db), autoload = True)
-        database.batch(db, t, df_new, df_old)
+    def update_exposure((exposure, sf_id)):
+        asset_stock_factor.update_exposure(exposure, sf_id)
 
     pool = Pool(len(sfs))
-    pool.amap(save_exposure, sfs)
+    pool.map(update_exposure, zip(exposures, sf_ids))
     pool.close()
     pool.join()
+
 
 
 @sf.command()

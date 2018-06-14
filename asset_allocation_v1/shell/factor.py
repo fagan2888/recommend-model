@@ -63,6 +63,11 @@ class Factor(object):
 
         return self.__exposure
 
+    @exposure.setter
+    def exposure(self, exposure):
+        self.__exposure = exposure
+
+
     @property
     def ret(self):
         if self.__ret is None:
