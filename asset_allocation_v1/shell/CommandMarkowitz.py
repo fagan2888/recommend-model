@@ -1008,7 +1008,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = FactorRpAllocate('ALC.000001', assets, trade_date, lookback, bound = bound)
+        allocate = FactorRpAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = 5)
         df = allocate.allocate()
 
     else:
@@ -1041,7 +1041,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    if algo == 1:
+    no_rolling_algos = [1, 20]
+    if algo in no_rolling_algos:
         pass
     else:
         df = df.rolling(window = 4, min_periods = 1).mean()
