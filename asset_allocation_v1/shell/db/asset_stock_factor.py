@@ -170,22 +170,33 @@ def load_stock_factor_specific_return(stock_id = None, stock_ids = None, trade_d
     return df
 
 
-def update_exposure(exposure, sf_id, last_date = None):
+def update_exposure(sf, last_date = None):
+
+    sf_id = sf.factor_id
+    exposure = sf.exposure
 
     if last_date is None:
 
         db = database.connection('asset')
         Session = sessionmaker(bind = db)
         session = Session()
-        record = session.query(func.max(stock_factor_exposure.trade_date)).first()
-        last_date = record[0]
+        record = session.query(func.max(stock_factor_exposure.trade_date)).filter(stock_factor_exposure.sf_id == sf_id).first()
+        if record[0] is None:
+            last_date = '1900-01-01'
+        else:
+            last_date = record[0]
+            last_date = last_date.strftime('%Y-%m-%d')
         session.commit()
         session.close()
 
-    last_date = last_date.strftime('%Y-%m-%d')
     exposure = exposure[exposure.index >= last_date]
 
+    db = database.connection('asset')
+    Session = sessionmaker(bind = db)
+    session = Session()
     session.query(stock_factor_exposure).filter(stock_factor_exposure.trade_date >= last_date).filter(stock_factor_exposure.sf_id == sf_id).delete()
+    session.commit()
+    session.close()
 
     df_new = exposure.stack()
     df_new = df_new.reset_index()

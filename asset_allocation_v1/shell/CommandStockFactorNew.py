@@ -39,6 +39,7 @@ def sf(ctx):
     pass
 
 
+
 @sf.command()
 @click.pass_context
 def factor_exposure_update(ctx):
@@ -50,31 +51,25 @@ def factor_exposure_update(ctx):
 
     sfs = [
         SizeStockFactor(factor_id = "SF.000001"),
-        #VolStockFactor(factor_id = "SF.000002"),
-        #MomStockFactor(factor_id = "SF.000003"),
-        #TurnoverStockFactor(factor_id = "SF.000004"),
+        VolStockFactor(factor_id = "SF.000002"),
+        MomStockFactor(factor_id = "SF.000003"),
+        TurnoverStockFactor(factor_id = "SF.000004"),
         EarningStockFactor(factor_id = "SF.000005"),
-        #ValueStockFactor(factor_id = "SF.000006"),
-        #FqStockFactor(factor_id = "SF.000007"),
-        #LeverageStockFactor(factor_id = "SF.000008"),
-        #SizeNlStockFactor(factor_id = "SF.000009"),
+        ValueStockFactor(factor_id = "SF.000006"),
+        FqStockFactor(factor_id = "SF.000007"),
+        LeverageStockFactor(factor_id = "SF.000008"),
+        SizeNlStockFactor(factor_id = "SF.000009"),
     ]
 
-    exposures = []
-    sf_ids = []
-    for sf in sfs:
-        print sf.factor_id
-        sf.cal_factor_exposure()
-        sf_ids.append(sf.factor_id)
-        exposures.append(sf.exposure)
+    for _sf in sfs:
+        _sf.cal_factor_exposure()
+        asset_stock_factor.update_exposure(_sf)
+        print _sf.factor_id, 'update done'
 
-    def update_exposure((exposure, sf_id)):
-        asset_stock_factor.update_exposure(exposure, sf_id)
-
-    pool = Pool(len(sfs))
-    pool.map(update_exposure, zip(exposures, sf_ids))
-    pool.close()
-    pool.join()
+    #pool = Pool(len(sfs))
+    #pool.map(update_exposure, zip(exposures, sf_ids))
+    #pool.close()
+    #pool.join()
 
 
 

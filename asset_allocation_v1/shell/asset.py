@@ -330,7 +330,7 @@ class StockAsset(Asset):
             session.close()
             StockAsset.__all_stock_info = all_stocks;
         if globalids is None:
-            return StockAsset.__all_stock_info.head(10)
+            return StockAsset.__all_stock_info
         else:
             return StockAsset.__all_stock_info.loc[globalids]
 
