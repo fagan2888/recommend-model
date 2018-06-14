@@ -104,7 +104,7 @@ class StockFactor(Factor):
         ret = ret[StockAsset.all_stock_info().index]
 
         dates = ret.index
-        dates = dates[dates > '2017-01-01']
+        dates = dates[dates > '2000-01-01']
 
         df_ret = pd.DataFrame(columns = sf_ids)
         df_sret = pd.DataFrame(columns = StockAsset.all_stock_info().index)
