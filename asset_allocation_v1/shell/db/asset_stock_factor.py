@@ -1,5 +1,7 @@
 #coding=utf8
 
+import sys
+sys.path.append('shell')
 import pandas as pd
 from ipdb import set_trace
 from sqlalchemy import Column, String, Integer, Text, Date, DateTime, Float
@@ -8,6 +10,7 @@ from sqlalchemy.orm  import sessionmaker
 import logging
 from sqlalchemy.ext.declarative import declarative_base
 import database
+from sqlalchemy.sql.expression import func
 
 logger = logging.getLogger(__name__)
 
@@ -66,18 +69,6 @@ class stock_factor_specific_return(Base):
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
 
-
-class stock_factor_value(Base):
-
-    __tablename__ = 'stock_factor_value'
-
-    stock_id = Column(String, primary_key = True)
-    sf_id = Column(String, primary_key = True)
-    trade_date = Column(String, primary_key = True)
-    factor_value = Column(Float)
-
-    updated_at = Column(DateTime)
-    created_at = Column(DateTime)
 
 
 class valid_stock_factor(Base):
@@ -179,11 +170,42 @@ def load_stock_factor_specific_return(stock_id = None, stock_ids = None, trade_d
     return df
 
 
+def update_exposure(exposure, sf_id, last_date = None):
+
+    if last_date is None:
+
+        db = database.connection('asset')
+        Session = sessionmaker(bind = db)
+        session = Session()
+        record = session.query(func.max(stock_factor_exposure.trade_date)).first()
+        last_date = record[0]
+        session.commit()
+        session.close()
+
+    last_date = last_date.strftime('%Y-%m-%d')
+    exposure = exposure[exposure.index >= last_date]
+
+    session.query(stock_factor_exposure).filter(stock_factor_exposure.trade_date >= last_date).filter(stock_factor_exposure.sf_id == sf_id).delete()
+
+    df_new = exposure.stack()
+    df_new = df_new.reset_index()
+    df_new['sf_id'] = sf.factor_id
+    df_new.columns = ['trade_date', 'stock_id', 'exposure', 'sf_id']
+    df_new = df_new.set_index(['stock_id', 'sf_id', 'trade_date'])
+
+    db = database.connection('asset')
+    t = Table('stock_factor_exposure', MetaData(bind=db), autoload = True)
+    database.batch(db, t, df_new, pd.DataFrame(index = df_new.index, columns = df_new.columns))
+
+
+
 if __name__ == '__main__':
 
-    df1 = load_stock_factor_return()
-    df2 = load_stock_factor_specific_return()
-    set_trace()
+    #df1 = load_stock_factor_return()
+    #df2 = load_stock_factor_specific_return()
+    #set_trace()
+    pass
+    #update_exposure(StockFactor.SizeStockFactor(factor_id = 'SF.000001'))
 
 
 

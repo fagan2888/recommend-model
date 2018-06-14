@@ -14,6 +14,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from dateutil.parser import parse
 import time
 import asset
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -256,8 +257,9 @@ def load_epbp(globalid):
     session.commit()
     session.close()
 
+    df = df.loc[~df.index.duplicated(keep = 'last')]
     df = df[df.index > '1990']
-
+    df = df.fillna(np.nan)
     return df
 
 
@@ -275,9 +277,10 @@ def load_holder_avgpct(globalid):
     session.commit()
     session.close()
 
-    df = df.drop_duplicates(keep = 'last')
-    df = df[df.index > '1990']
 
+    df = df.loc[~df.index.duplicated(keep = 'last')]
+    df = df[df.index > '1990']
+    df = df.fillna(np.nan)
     return df
 
 
@@ -295,9 +298,9 @@ def load_roe_roa(globalid):
     session.commit()
     session.close()
 
-    df = df.drop_duplicates(keep = 'last')
+    df = df.loc[~df.index.duplicated(keep = 'last')]
     df = df[df.index > '1990']
-
+    df = df.fillna(np.nan)
     return df
 
 
@@ -315,8 +318,9 @@ def load_ccdfg(globalid):
     session.commit()
     session.close()
 
-    df = df.drop_duplicates(keep = 'last')
+    df = df.loc[~df.index.duplicated(keep = 'last')]
     df = df[df.index > '1990']
+    df = df.fillna(np.nan)
 
     return df
 

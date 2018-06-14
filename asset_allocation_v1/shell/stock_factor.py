@@ -36,7 +36,7 @@ import scipy.stats as stats
 import json
 import stock_util
 from ipdb import set_trace
-from pathos.multiprocessing import ProcessingPool as Pool
+#from pathos.multiprocessing import ProcessingPool as Pool
 
 
 logger = logging.getLogger(__name__)
@@ -44,70 +44,79 @@ logger = logging.getLogger(__name__)
 
 class StockFactor(Factor):
 
-    __quote = None
-    __fdmt = None
-    __all_stocks = None
+    stock_factors = {
+            'SF.000001':'SizeStockFactor',
+            'SF.000002':'VolStockFactor',
+            'SF.000003':'MomStockFactor',
+            'SF.000004':'TurnoverStockFactor',
+            'SF.000005':'EarningStockFactor',
+            'SF.000006':'ValueStockFactor',
+            'SF.000007':'FqStockFactor',
+            'SF.000008':'LeverageStockFactor',
+            'SF.000009':'SizeNlStockFactor',
+            }
 
-    __all_stock_info = None
-    __all_stock_quote = None
+    __valid_stock_filter = None
 
+    @staticmethod
+    def subclass(sub_class_name):
+        for subclass in StockFactor.__subclasses__():
+            if sub_class_name == subclass.__name__:
+                return subclass()
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(StockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
-
+        self.desc_methods = [self.cal_size]
 
     def cal_factor_exposure(self):
-        all_stocks = StockFactor.get_stock_info()
-        stock_exposure = {}
-        for stock_id in all_stocks.index:
-            stock_exposure[stock_id] = self.factor_exposure_algo(stock_id)
-        stock_exposure_df = pd.DataFrame(stock_exposure)
-        stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-        stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-        return stock_exposure_df
+        all_stocks = StockAsset.all_stock_info()
+        factor_exposure = []
+        for desc_method in self.desc_methods:
+            stock_exposure = {}
+            for stock_id in all_stocks.index:
+                stock_exposure[stock_id] = desc_method(stock_id)
+            stock_exposure_df = pd.DataFrame(stock_exposure)
+            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
+            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
+            factor_exposure.append(stock_exposure_df)
 
-    def factor_exposure_algo(self, stock_id):
-        return pd.Series()
+        factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
+        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
+        factor_exposure_df = factor_exposure_df[all_stocks.index]
 
-    def cal_factor_return(self):
+        self.exposure = factor_exposure_df
 
-        factor_ids = ["SF.00000%d"%i for i in range(1, 9)]
-        stock_tclose = {}
-        for stock in self.get_stock_info().index:
-            asset = StockAsset(stock)
-            #stock_tclose[stock] = self.get_quote()[stock].tclose.replace(0.0, method = 'pad')
-            stock_tclose[stock] = asset.nav().replace(0.0, method = 'pad')
-        close = pd.DataFrame(stock_tclose)
+        return factor_exposure_df
+
+    def cal_size(self, stock_id):
+        stock_quote = StockAsset.get_stock(stock_id).quote
+        totmktcap = stock_quote.totmktcap
+        return totmktcap
+
+    def cal_factor_return(self, sf_ids):
+
+        sfs = []
+        for sf_id in sf_ids:
+            sfs.append(StockFactor.subclass(StockFactor.stock_factors[sf_id]))
+
+        close = StockAsset.all_stock_nav()
         ret = close.pct_change()
-
-        sfs = [
-        SizeStockFactor(factor_id = "SF.000001"),
-        VolStockFactor(factor_id = "SF.000002"),
-        MomStockFactor(factor_id = "SF.000003"),
-        TurnoverStockFactor(factor_id = "SF.000004"),
-        EarningStockFactor(factor_id = "SF.000005"),
-        ValueStockFactor(factor_id = "SF.000006"),
-        FqStockFactor(factor_id = "SF.000007"),
-        LeverageStockFactor(factor_id = "SF.000008"),
-        # SizeNlStockFactor(factor_id = "SF.000009"),
-        ]
+        ret = ret[StockAsset.all_stock_info().index]
 
         dates = ret.index
-        dates = dates[dates > '2000']
-        df_ret = pd.DataFrame(columns = factor_ids)
-        df_sret = pd.DataFrame(columns = self.get_stock_info().index)
+        dates = dates[dates > '2017-01-01']
+
+        df_ret = pd.DataFrame(columns = sf_ids)
+        df_sret = pd.DataFrame(columns = StockAsset.all_stock_info().index)
         for date in dates:
+
             print 'cal_factor_return:', date
 
             tmp_exposure = []
-            tmp_ret = ret.loc[date]
+            tmp_ret = ret.loc[date].values
             for sf in sfs:
                 tmp_exposure.append(sf.exposure.fillna(method='pad').loc[date].values.tolist())
-                tmp_ret = ret.loc[date].values
-
-            tmp_exposure = np.array(tmp_exposure).T
-            tmp_exposure = np.nan_to_num(tmp_exposure, 0.0)
-            # x = sm.add_constant(tmp_exposure, prepend = False)
+            tmp_exposure = np.nan_to_num(np.array(tmp_exposure).T, 0.0)
             mod = sm.OLS(tmp_ret, tmp_exposure, missing = 'drop').fit()
 
             df_ret.loc[date] = mod.params
@@ -115,60 +124,10 @@ class StockFactor(Factor):
 
         return df_ret, df_sret
 
-    @staticmethod
-    def get_quote():
-        if StockFactor.__quote is None:
-            all_stocks = StockFactor.get_stock_info()
-            stock_quote = {}
-            for stock in all_stocks.index:
-                print 'quote', stock
-                stock_quote[stock] = StockAsset(stock).quote
-
-            StockFactor.__quote = stock_quote
-
-        return StockFactor.__quote
-
-
-    @staticmethod
-    def get_fdmt():
-        if StockFactor.__fdmt is None:
-            all_stocks = StockFactor.get_stock_info()
-            stock_fdmt = {}
-            for stock in all_stocks.index:
-                print 'fdmt', stock
-                stock_fdmt[stock] = StockAsset(stock).fdmt
-
-            StockFactor.__fdmt = stock_fdmt
-
-        return StockFactor.__fdmt
-
-
-    @staticmethod
-    def all_stock_quote():
-
-        pool = Pool(30)
-        pool.map(quote_2_mongo, StockAsset.all_stock_info().index.ravel())
-        pool.close()
-        pool.join()
-
-
-    @staticmethod
-    def get_stock_info():
-        if StockFactor.__all_stocks is None:
-            sz50 = pd.read_csv('data/index/tq_ix_mweight.csv')
-            skcode = sz50.CONSTITUENTCODE.values
-            globalids = ['SK.%d'%i for i in skcode]
-
-            all_stocks = StockAsset.all_stock_info(globalids)
-            StockFactor.__all_stocks = all_stocks
-
-        return StockFactor.__all_stocks
-
 
     #插入股票合法性表
     @staticmethod
     def valid_stock_table():
-
 
 	all_stocks = StockFactor.get_stock_info()
 	all_stocks = all_stocks.reset_index()
@@ -220,7 +179,7 @@ class StockFactor(Factor):
             selecteddate = record.selecteddate
             outdate = record.outdate
             if secode in set(quotation.columns):
-                    #print secode, selecteddate, outdate
+                #print secode, selecteddate, outdate
 		quotation.loc[selecteddate:outdate, secode] = np.nan
 
 	#过滤上市未满一年股票
@@ -272,21 +231,27 @@ class StockFactor(Factor):
     @staticmethod
     def stock_factor_filter(factor_df):
 
-	engine = database.connection('asset')
-	Session = sessionmaker(bind=engine)
-	session = Session()
+        if StockFactor.__valid_stock_filter is None:
 
-	for stock_id in factor_df.columns:
-            sql = session.query(valid_stock_factor.trade_date, valid_stock_factor.valid).filter(valid_stock_factor.stock_id == stock_id).statement
-            valid_df = pd.read_sql(sql, session.bind, index_col = ['trade_date'], parse_dates = ['trade_date'])
-            valid_df = valid_df[valid_df.valid == 1]
-            if len(factor_df) == 0:
-		factor_df.stock_id = np.nan
-            else:
-		factor_df[stock_id][~factor_df.index.isin(valid_df.index)] = np.nan
+            engine = database.connection('asset')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            sql = session.query(valid_stock_factor.trade_date,valid_stock_factor.stock_id,  valid_stock_factor.valid).statement
+            valid_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'stock_id'], parse_dates = ['trade_date'])
+            valid_df = valid_df.unstack()
+            valid_df.columns = valid_df.columns.droplevel(0)
+            StockFactor.__valid_stock_filter = valid_df
+            session.commit()
+            session.close()
 
-	session.commit()
-	session.close()
+        if len(factor_df) == 0:
+            return factor_df
+        else:
+            valid_df = StockFactor.__valid_stock_filter.copy()
+            valid_df = valid_df.reindex(factor_df.index)
+            valid_df = valid_df.reindex_axis(factor_df.columns, axis = 1)
+            factor_df[~(valid_df == 1)] = np.nan
+
 
 	logger.info('vailid filter done')
 
@@ -314,15 +279,6 @@ class StockFactor(Factor):
         max_factor_df.columns = stock_ids
         min_factor_df.columns = stock_ids
 
-        '''
-	for date in max_factor_df.index:
-	    max_factor = max_factor_df.loc[date]
-	    min_factor = min_factor_df.loc[date]
-
-	    record = factor_df.loc[date]
-	    factor_df.loc[date, record > max_factor] = max_factor
-	    factor_df.loc[date, record < min_factor] = min_factor
-        '''
         factor_df = factor_df.mask(factor_df < min_factor_df, min_factor_df)
         factor_df = factor_df.mask(factor_df > max_factor_df, max_factor_df)
 
@@ -340,44 +296,51 @@ class SizeStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(SizeStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
+        self.desc_methods = [self.cal_size]
 
-    def factor_exposure_algo(self, stock_id):
-        stock_quote = StockFactor.get_quote()[stock_id]
-        return stock_quote.totmktcap
+    def cal_size(self, stock_id):
+        stock_quote = StockAsset.get_stock(stock_id).quote
+        totmktcap = stock_quote.totmktcap
+        return totmktcap
 
 
 class SizeNlStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(SizeNlStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
+        self.desc_methods = [self.cal_size]
 
     def cal_factor_exposure(self):
-        all_stocks = StockFactor.get_stock_info()
-        stock_exposure = {}
-        for stock_id in all_stocks.index:
-            stock_exposure[stock_id] = self.factor_exposure_algo(stock_id)
-        stock_exposure_df = pd.DataFrame(stock_exposure)
-        stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-        stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-        stock_exposure_df = pow(stock_exposure_df, 3)
-        stock_exposure_df = stock_exposure_df.fillna(method = 'pad')
-        return stock_exposure_df
+        all_stocks = StockAsset.all_stock_info()
+        factor_exposure = []
+        for desc_method in self.__desc_methods:
+            stock_exposure = {}
+            for stock_id in all_stocks.index:
+                stock_exposure[stock_id] = desc_method(stock_id)
+            stock_exposure_df = pd.DataFrame(stock_exposure)
+            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
+            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
+            stock_exposure_df = pow(stock_exposure_df, 3)
+            factor_exposure.append(stock_exposure_df)
 
-    def factor_exposure_algo(self, stock_id):
-        stock_quote = StockFactor.get_quote()[stock_id]
-        return stock_quote.totmktcap
+        factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
+        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
+        factor_exposure_df = factor_exposure_df[all_stocks.index]
+        return factor_exposure_df
+
+
+    def cal_size(self, stock_id):
+        stock_quote = StockAsset.get_stock(stock_id).quote
+        totmktcap = stock_quote.totmktcap
+        return totmktcap
 
 
 class VolStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(VolStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
-
-    def cal_factor_exposure(self):
         days = 23
-        all_stocks = StockFactor.get_stock_info()
-        factor_exposure = []
-        desc_methods = [
+        self.desc_methods = [
             partial(self.cal_dastd, period = days),
             partial(self.cal_dastd, period = days*2),
             partial(self.cal_dastd, period = days*3),
@@ -389,21 +352,9 @@ class VolStockFactor(StockFactor):
             partial(self.cal_hilo, period = days*6),
             partial(self.cal_hilo, period = days*12),
         ]
-        for desc_method in desc_methods:
-            stock_exposure = {}
-            for stock_id in all_stocks.index:
-                stock_exposure[stock_id] = desc_method(stock_id)
-            stock_exposure_df = pd.DataFrame(stock_exposure)
-            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-            factor_exposure.append(stock_exposure_df)
-
-        factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
-        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
-        return factor_exposure_df
 
     def cal_dastd(self, stock_id, period = 23):
-        stock_quote = StockFactor.get_quote()[stock_id]
+        stock_quote = StockAsset.get_stock(stock_id).quote
         close = stock_quote.tclose
         close = close.replace(0.0, method = 'pad')
         ret = close.pct_change()
@@ -412,7 +363,7 @@ class VolStockFactor(StockFactor):
         return ret
 
     def cal_hilo(self, stock_id, period = 23):
-        stock_quote = StockFactor.get_quote()[stock_id]
+        stock_quote = StockAsset.get_stock(stock_id).quote
         high = stock_quote.thigh
         high = high.replace(0.0, method = 'pad')
         hi = high.rolling(period).max()
@@ -430,34 +381,17 @@ class MomStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(MomStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
-
-    def cal_factor_exposure(self):
         days = 23
-        all_stocks = StockFactor.get_stock_info()
-        factor_exposure = []
-        desc_methods = [
+        self.desc_methods = [
             partial(self.cal_mom, period = days),
             partial(self.cal_mom, period = days*2),
             partial(self.cal_mom, period = days*3),
             partial(self.cal_mom, period = days*6),
             partial(self.cal_mom, period = days*12),
         ]
-        for desc_method in desc_methods:
-            stock_exposure = {}
-            for stock_id in all_stocks.index:
-                stock_exposure[stock_id] = desc_method(stock_id)
-            stock_exposure_df = pd.DataFrame(stock_exposure)
-            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-            factor_exposure.append(stock_exposure_df)
-
-        factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
-        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
-        return factor_exposure_df
-
 
     def cal_mom(self, stock_id, period = 23):
-        stock_quote = StockFactor.get_quote()[stock_id]
+        stock_quote = StockAsset.get_stock(stock_id).quote
         close = stock_quote.tclose
         close = close.replace(0.0, method = 'pad')
         ret = close.pct_change()
@@ -474,34 +408,17 @@ class TurnoverStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(TurnoverStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
-
-    def cal_factor_exposure(self):
         days = 23
-        all_stocks = StockFactor.get_stock_info()
-        factor_exposure = []
-        desc_methods = [
+        self.desc_methods = [
             partial(self.cal_turnover, period = days),
             partial(self.cal_turnover, period = days*2),
             partial(self.cal_turnover, period = days*3),
             partial(self.cal_turnover, period = days*6),
             partial(self.cal_turnover, period = days*12),
         ]
-        for desc_method in desc_methods:
-            stock_exposure = {}
-            for stock_id in all_stocks.index:
-                stock_exposure[stock_id] = desc_method(stock_id)
-            stock_exposure_df = pd.DataFrame(stock_exposure)
-            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-            factor_exposure.append(stock_exposure_df)
-
-        factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
-        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
-        return factor_exposure_df
-
 
     def cal_turnover(self, stock_id, period = 23):
-        stock_quote = StockFactor.get_quote()[stock_id]
+        stock_quote = StockAsset.get_stock(stock_id).quote
         tr = stock_quote.turnrate
         tr = tr.rolling(period).mean()
 
@@ -512,31 +429,13 @@ class EarningStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(EarningStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
-
-    def cal_factor_exposure(self):
-        all_stocks = StockFactor.get_stock_info()
-        factor_exposure = []
-        desc_methods = [
+        self.desc_methods = [
             self.cal_earning
         ]
-        for desc_method in desc_methods:
-            stock_exposure = {}
-            for stock_id in all_stocks.index:
-                stock_exposure[stock_id] = desc_method(stock_id)
-
-            stock_exposure_df = pd.DataFrame(stock_exposure)
-            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-            factor_exposure.append(stock_exposure_df)
-
-        factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
-        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
-        return factor_exposure_df
-
 
     def cal_earning(self, stock_id):
-        stock_quote = StockFactor.get_quote()[stock_id]
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
+        stock_quote = StockAsset.get_stock(stock_id).quote
         p = stock_quote.tclose
         pe = stock_fdmt.pettm
         eps = p / pe
@@ -548,38 +447,21 @@ class ValueStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(ValueStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
-
-    def cal_factor_exposure(self):
-        all_stocks = StockFactor.get_stock_info()
-        factor_exposure = []
-        desc_methods = [
+        self.desc_methods = [
             self.cal_ep,
             self.cal_bp,
         ]
-        for desc_method in desc_methods:
-            stock_exposure = {}
-            for stock_id in all_stocks.index:
-                stock_exposure[stock_id] = desc_method(stock_id)
-
-            stock_exposure_df = pd.DataFrame(stock_exposure)
-            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-            factor_exposure.append(stock_exposure_df)
-
-        factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
-        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
-        return factor_exposure_df
 
 
     def cal_ep(self, stock_id):
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
         ep = 1 / stock_fdmt.pettm
 
         return ep
 
 
     def cal_bp(self, stock_id):
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
         bp = 1 / stock_fdmt.pb
 
         return bp
@@ -589,46 +471,29 @@ class FqStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(FqStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
-
-    def cal_factor_exposure(self):
-        all_stocks = StockFactor.get_stock_info()
-        factor_exposure = []
-        desc_methods = [
+        self.desc_methods = [
             self.cal_roa,
             self.cal_roe,
             self.cal_sgpmargin,
         ]
-        for desc_method in desc_methods:
-            stock_exposure = {}
-            for stock_id in all_stocks.index:
-                stock_exposure[stock_id] = desc_method(stock_id)
-
-            stock_exposure_df = pd.DataFrame(stock_exposure)
-            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-            factor_exposure.append(stock_exposure_df)
-
-        factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
-        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
-        return factor_exposure_df
 
 
     def cal_roa(self, stock_id):
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
         roa = stock_fdmt.roa
 
         return roa
 
 
     def cal_roe(self, stock_id):
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
         roe = stock_fdmt.roedilutedcut
 
         return roe
 
 
     def cal_sgpmargin(self, stock_id):
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
         sgpmargin = stock_fdmt.sgpmargin
 
         return sgpmargin
@@ -638,53 +503,35 @@ class LeverageStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(LeverageStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
-
-    def cal_factor_exposure(self):
-        all_stocks = StockFactor.get_stock_info()
-        factor_exposure = []
-        desc_methods = [
+        self.desc_methods = [
             self.cal_currentrt,
             self.cal_cashrt,
             self.cal_ltmliabtota,
             self.cal_equtotliab,
         ]
-        for desc_method in desc_methods:
-            stock_exposure = {}
-            for stock_id in all_stocks.index:
-                stock_exposure[stock_id] = desc_method(stock_id)
-
-            stock_exposure_df = pd.DataFrame(stock_exposure)
-            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
-            factor_exposure.append(stock_exposure_df)
-
-        factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
-        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
-        return factor_exposure_df
-
 
     def cal_currentrt(self, stock_id):
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
         currentrt = stock_fdmt.currentrt
 
         return currentrt
 
 
     def cal_cashrt(self, stock_id):
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
         cashrt = stock_fdmt.cashrt
 
         return cashrt
 
 
     def cal_ltmliabtota(self, stock_id):
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
         ltmliabtota = stock_fdmt.ltmliabtota
 
         return ltmliabtota
 
     def cal_equtotliab(self, stock_id):
-        stock_fdmt = StockFactor.get_fdmt()[stock_id]
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
         equtotliab = stock_fdmt.equtotliab
 
         return equtotliab
@@ -710,10 +557,26 @@ if __name__ == '__main__':
 
     # sf = SizeStockFactor()
     # sf = ValueStockFactor()
-    sf = StockFactor()
-    #sf.cal_factor_return()
+    #StockAsset.all_stock_nav()
+    #StockAsset.all_stock_quote()
+    #for stock_id in StockAsset.all_stock_info().index:
+    #    print StockAsset.get_stock(stock_id).quote.tail()
+    #StockAsset.all_stock_fdmt()
+    #sf = StockFactor()
+    #print sf.cal_factor_return(['SF.000001', 'SF.000002', 'SF.000003', 'SF.000004','SF.000005', 'SF.000006','SF.000007', 'SF.000008'])
+    #sf = SizeStockFactor()
+    #print sf.exposure.tail()
+    #sf = VolStockFactor()
+    #print sf.exposure.tail()
     # set_trace()
+    #print StockFactor.subclass('SizeStockFactor')
+    #print sys.modules[__name__]
+    #a = getattr(sys.modules[__name__], 'StockFactor')()
+    #print a.exposure
 
+    #print StockFactor.__subclasses__()
 
-
-
+    #StockFactor.stock_factor_filter(pd.DataFrame())
+    #StockFactor.stock_factor_filter(pd.DataFrame())
+    #StockFactor.stock_factor_filter(pd.DataFrame())
+    asset_stock_factor.update_exposure(SizeStockFactor(factor_id = 'SF.000001'))
