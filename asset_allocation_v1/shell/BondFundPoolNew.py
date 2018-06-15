@@ -4,10 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 import click
-from asset import *
-from sqlalchemy import *
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
 from db import *
 from trade_date import *
 from sklearn.linear_model import Lasso
@@ -16,102 +12,9 @@ import DBData
 import matplotlib
 myfont = matplotlib.font_manager.FontProperties(fname='/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', size=10)
 
+from BondIndex import *
 from ipdb import set_trace
 warnings.filterwarnings("ignore")
-
-class BondIndex(Asset):
-    cache = {}
-
-    @classmethod
-    def __getCache(cls, secode):
-        if secode in cls.cache:
-            return cls.cache[secode]
-        return None
-
-    def __new__(cls, secode, *args, **kwargs):
-        secode = str(secode)
-        existing = cls.__getCache(secode)
-        if existing:
-            return existing
-        return super(BondIndex, cls).__new__(cls)
-
-    def __init__(self, secode):
-        secode = str(secode)
-        if secode in self.cache:
-            return
-        name = load_bond_index_info(secode).loc[secode, "INDEXNAME"]
-        nav_sr = load_cbdindex_nav(secode)
-        if not isinstance(nav_sr, pd.Series):
-            nav_sr = pd.Series()
-        if nav_sr.empty:
-            nav_sr = load_index_nav(secode)
-        super(BondIndex, self).__init__(secode, name=name, nav_sr=nav_sr)
-        self.cache[secode]=self
-
-    def nav(self, begin_date = None, end_date = None, reindex = None, lookback=0):
-        if begin_date is None:
-            begin_date = '2010-01-01'
-        if end_date is None:
-            end_date = '2018-05-01'
-        if reindex is None:
-            reindex = ATradeDate.week_trade_date()
-        nav = super(BondIndex, self).nav(reindex=reindex).dropna()
-        nav = nav[(begin_date <= nav.index) & (nav.index <= end_date)]
-        nav.name = self.name
-        #  nav = nav.loc[begin_date:end_date]
-        if lookback != 0:
-            nav = nav.iloc[-lookback:]
-        if nav.empty:
-            return pd.Series()
-        return nav/nav[0]
-
-    def inc(self, begin_date = None, end_date = None, reindex = None, lookback=0):
-        return self.nav(begin_date, end_date, reindex, lookback).pct_change().fillna(0)
-
-
-#读取数据库
-def load_bond_index_info(secode = None):
-    db = database.connection('caihui')
-    t1 = Table('tq_ix_basicinfo', MetaData(bind=db), autoload=True)
-    columns = [t1.c.SECODE, t1.c.INDEXNAME]
-    if secode == None:
-        s = select(columns).where((t1.c.INDEXTYPE == 4) and t1.c.ISVALID)
-    else:
-        s = select(columns).where(t1.c.SECODE == secode)
-    df = pd.read_sql(s, db, index_col="SECODE")
-    return df
-
-def load_cbdindex_nav(secode):
-    db = database.connection('caihui')
-    t1 = Table('tq_qt_cbdindex', MetaData(bind=db), autoload=True)
-    columns = [t1.c.TRADEDATE, t1.c.DIRTYCLOSE]
-    s = select(columns).where(t1.c.SECODE == secode)
-    df = pd.read_sql(s, db, index_col='TRADEDATE', parse_dates=['TRADEDATE'])
-    return df.squeeze()
-
-def load_index_nav(secode):
-    db = database.connection('caihui')
-    t1 = Table('tq_qt_index', MetaData(bind=db), autoload=True)
-    columns = [t1.c.TRADEDATE, t1.c.TCLOSE]
-    s = select(columns).where(t1.c.SECODE == secode)
-    df = pd.read_sql(s, db, index_col='TRADEDATE', parse_dates=['TRADEDATE'])
-    return df.squeeze()
-
-def get_fund_nav(gid, begin_date = '2010-01-01', end_date='2018-05-01'):
-    if os.path.exists("tmpfund/%s.csv" % gid):
-        nav = pd.read_csv("tmpfund/%s.csv" % gid, index_col=0, parse_dates=True, header=None).squeeze()
-        nav.index.name = "date"
-        nav.name = "nav"
-    else:
-        nav = base_ra_fund_nav.load_series(gid)
-        if not nav.empty:
-            nav.to_csv("tmpfund/%s.csv" % gid)
-        else:
-            print gid
-    return nav.reindex(tdate).loc[begin_date:end_date]
-
-def get_fund_inc(gid, begin_date = '2010-01-01', end_date='2018-05-01'):
-    return get_fund_nav(gid, begin_date, end_date).pct_change().fillna(0)
 
 #Helper Function
 def lookupday(day, lookback=0, lookforward=0):
@@ -132,9 +35,9 @@ lasso = Lasso(alpha=0, fit_intercept=False, positive=True)
 tdate = ATradeDate.week_trade_date()
 benchmark = BondIndex("2070006886")
 enterprise_hr = BondIndex("2070007644")
-#  benchmark_cbd = BondIndex("2070000256")
-#  etpbond = BondIndex("2070006893")
-#  ept2bond = BondIndex("2070007644")
+treasury = BondIndex("2070006891")
+benchmark_cbd = BondIndex("2070000256")
+#  enterprise = BondIndex("2070006893")
 
 
 #因子相关指数
@@ -234,6 +137,8 @@ def fund_selector(factors, begin_date='2011-01-01', end_date='2018-05-01'):
             bar.update(1)
     return pd.concat(result).set_index("date", "fund_id")
 
+
+
 def check(df, factors):
     df_selected = df[df.score>0.5]
     with click.progressbar(length=len(df.index.unique()), label="check fund") as bar:
@@ -263,8 +168,6 @@ def check(df, factors):
 
 
 
-
-
 #测试用
 
 def mean_of_all_fund(codes, begin_date, end_date):
@@ -290,6 +193,6 @@ if __name__ == "__main__":
     #  set_trace()
     #  df = fund_selector([benchmark.globalid], '2010-01-01', '2018-05-01')
     #  funds = factor_regression([benchmark.globalid], '2009-12-25', '2010-03-31')
-    df = fund_selector([benchmark.globalid, enterprise_hr.globalid])
-    res = check(df, [benchmark.globalid, enterprise_hr.globalid])
+    #  df = fund_selector([benchmark.globalid, enterprise_hr.globalid])
+    #  res = check(df, [benchmark.globalid, enterprise_hr.globalid])
     set_trace()

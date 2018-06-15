@@ -200,10 +200,10 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
 
     #
     #  fund_pool = BF.factor_regression([BF.benchmark.globalid], start_date, end_date)
-    fund_pool = BF.factor_regression([BF.benchmark.globalid, BF.enterprise_hr.globalid], start_date, end_date)
+    fund_pool = BF.factor_regression([BF.treasury.globalid, BF.enterprise_hr.globalid], start_date, end_date)
     fund_pool.index.name='code'
-    df_indicator['coef_bm'] = fund_pool[BF.benchmark.globalid]
-    df_indicator['coef_etp'] = fund_pool[BF.enterprise_hr.globalid]
+    df_indicator['coef_treasury'] = fund_pool[BF.treasury.globalid]
+    df_indicator['coef_enterprise'] = fund_pool[BF.enterprise_hr.globalid]
     df_indicator["score"] = fund_pool.score
     df_indicator["jensen"] = fund_pool.jensen
     #  from ipdb import set_trace
