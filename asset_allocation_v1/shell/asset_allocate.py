@@ -175,64 +175,6 @@ class MzBootDownRiskAllocate(Allocate):
         return ws
 
 
-class FactorRpAllocate(Allocate):
-
-
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
-
-        super(FactorRpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-
-        self.sfe = load_stock_factor_exposure(stock_ids = assets.keys(), begin_date = '2012-01-01')
-        self.sfr = load_stock_factor_return(begin_date = '2012-01-01')
-        self.sfsr = load_stock_factor_specific_return(stock_ids = assets.keys(), begin_date = '2012-01-01')
-
-
-    def allocate_algo(self, day, df_inc, bound):
-
-        dates = df_inc.index
-        begin_date = dates[0]
-        end_date = dates[-1]
-        # stock_ids = df_inc.columns.values
-
-        # sfe = load_stock_factor_exposure(stock_ids = stock_ids, begin_date = begin_date, end_date = end_date)
-        # sfr = load_stock_factor_return(begin_date = begin_date, end_date = end_date)
-        # sfsr = load_stock_factor_specific_return(stock_ids = stock_ids, begin_date = begin_date, end_date = end_date)
-        sfe = self.sfe.reset_index()
-        sfr = self.sfr.reset_index()
-        sfsr = self.sfsr.reset_index()
-
-        sfe = sfe[sfe.trade_date >= begin_date][sfe.trade_date <= end_date]
-        sfr = sfr[sfr.trade_date >= begin_date][sfr.trade_date <= end_date]
-        sfsr = sfsr[sfsr.trade_date >= begin_date][sfsr.trade_date <= end_date]
-
-        sfe = sfe.groupby(['stock_id', 'sf_id']).mean()
-        sfe = sfe.unstack()
-        sfe.columns = sfe.columns.droplevel(0)
-        sfe = sfe.fillna(0.0)
-
-        sfr = sfr.set_index(['trade_date', 'sf_id'])
-        sfr = sfr.unstack()
-        sfr.columns = sfr.columns.droplevel(0)
-
-        sfsr = sfsr.set_index(['trade_date', 'stock_id'])
-        sfsr = sfsr.unstack()
-        sfsr.columns = sfsr.columns.droplevel(0)
-
-        # V = df_inc.cov().values*1e4
-        # factor_cov = sfr.cov().values*1e4
-        V1 = np.dot(np.dot(sfe, sfr.corr()), sfe.T)
-        V2 = np.multiply(np.eye(50), sfsr.cov().values)
-        V = V1 + V2
-        risk_budget = [1.0 / len(df_inc.columns)] * len(df_inc.columns)
-        weight = cal_weight(V, risk_budget)
-        print
-        # print day, weight
-        print np.round(np.dot(weight, sfe), 3)
-        ws = dict(zip(df_inc.columns.ravel(), weight))
-
-        return ws
-
-
 if __name__ == '__main__':
 
     asset = Asset('120000001')
