@@ -240,7 +240,7 @@ def re_view(bt_int):
     repy = repy.dropna()
     m1 = m1.dropna()
 
-    rev = pd.merge(repy, m1, left_index = True, right_index = True)
+    rev = pd.merge(repy, m1, left_index = True, right_index = True, how = 'outer')
 
     re_views = []
     rev = rev.reindex(bt_int).fillna(method = 'pad')
