@@ -300,7 +300,7 @@ def update_stock_factor_specific_return(df_sret, last_date = None):
 
     db = database.connection('asset')
     t = Table('stock_factor_specific_return', MetaData(bind=db), autoload = True)
-    database.batch(db, t, df_ret, pd.DataFrame())
+    database.batch(db, t, df_sret, pd.DataFrame())
 
 
 if __name__ == '__main__':
