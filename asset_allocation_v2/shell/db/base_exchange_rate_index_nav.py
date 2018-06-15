@@ -27,7 +27,7 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     ]
 
     s = select(columns).where(t1.c.eri_index_id == id_)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.eri_date >= begin_date)
     if end_date is not None:
@@ -37,7 +37,7 @@ def load_series(id_, reindex=None, begin_date=None, end_date=None, mask=None):
             s = s.where(t1.c.eri_mask.in_(mask))
         else:
             s = s.where(t1.c.eri_mask == mask)
-        
+
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
@@ -59,7 +59,7 @@ def load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
     ]
 
     s = select(columns).where(t1.c.eri_index_id == id_)
-    
+
     if begin_date is not None:
         s = s.where(t1.c.eri_date >= begin_date)
     if end_date is not None:
@@ -69,7 +69,7 @@ def load_ohlc(id_, reindex=None, begin_date=None, end_date=None, mask=None):
             s = s.where(t1.c.eri_mask.in_(mask))
         else:
             s = s.where(t1.c.eri_mask == mask)
-        
+
     df = pd.read_sql(s, db, index_col = ['eri_date'], parse_dates=['eri_date'])
 
     if reindex is not None:

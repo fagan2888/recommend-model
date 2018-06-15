@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 #         s = s.where(t1.c.globalid.in_(gids))
 #     if xtypes is not None:
 #         s = s.where(t1.c.mz_type.in_(xtypes))
-    
+
 #     df = pd.read_sql(s, db)
 
 #     return df
@@ -63,6 +63,7 @@ def save(gid, criteria_id, df):
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
     s = select(columns, (t2.c.mz_markowitz_id == gid) & (t2.c.mz_criteria_id == criteria_id))
     df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_criteria_id', 'mz_date'], parse_dates=['mz_date'])
+    df_old = df_old.rename(lambda x: x.decode() if isinstance(x, bytes) else x, axis = 'index')
     if not df_old.empty:
         df_old = database.number_format(df_old, fmt_columns, fmt_precision)
 

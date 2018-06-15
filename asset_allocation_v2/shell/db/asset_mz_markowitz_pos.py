@@ -8,6 +8,7 @@ import pandas as pd
 # import sys
 import logging
 from . import database
+from ipdb import set_trace
 
 from dateutil.parser import parse
 
@@ -29,7 +30,7 @@ def load(gid, use_markowitz_ratio=False, included_markowitz_id=False):
     else:
         columns.append(t1.c.mz_ratio)
 
-    
+
     if included_markowitz_id:
         columns.insert(0, t1.c.mz_markowitz_id)
         index_col.insert(0, 'mz_markowitz_id')
@@ -42,11 +43,12 @@ def load(gid, use_markowitz_ratio=False, included_markowitz_id=False):
         return None
     # if xtypes is not None:
     #     s = s.where(t1.c.mz_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['mz_date'])
 
     df = df.unstack().fillna(0.0)
     df.columns = df.columns.droplevel(0)
+    df = df.rename(lambda x: x.decode() if isinstance(x, bytes) else x, axis = 'columns')
 
     return df
 
@@ -96,6 +98,7 @@ def save(gid, df):
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
     s = select(columns, (t2.c.mz_markowitz_id == gid))
     df_old = pd.read_sql(s, db, index_col=['mz_markowitz_id', 'mz_date', 'mz_markowitz_asset'], parse_dates=['mz_date'])
+    df_old = df_old.rename(index = lambda x: x.decode() if isinstance(x, bytes) else x)
     if not df_old.empty:
         df_old = database.number_format(df_old, fmt_columns, fmt_precision)
 

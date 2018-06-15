@@ -92,14 +92,14 @@ class Asset(object):
 
         prefix = asset_id[0:2]
         if prefix.isdigit():
-            xtype = int(asset_id) / 10000000
+            xtype = int(asset_id) // 10000000
             if xtype == 1:
                 #
                 # 基金池资产
                 #
                 asset_id = int(asset_id) % 10000000
-                (pool_id, category) = (asset_id / 100, asset_id % 100)
-                ttype = pool_id / 10000
+                (pool_id, category) = (asset_id // 100, asset_id % 100)
+                ttype = pool_id // 10000
                 sr = asset_ra_pool_nav.load_series(
                     pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
             elif xtype == 3:
