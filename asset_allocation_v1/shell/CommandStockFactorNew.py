@@ -63,14 +63,14 @@ def factor_exposure_update(ctx):
     print 'load all fdmt done'
 
     sfs = [
-        #SizeStockFactor(factor_id = "SF.000001"),
-        #VolStockFactor(factor_id = "SF.000002"),
-        #MomStockFactor(factor_id = "SF.000003"),
-        #TurnoverStockFactor(factor_id = "SF.000004"),
-        #EarningStockFactor(factor_id = "SF.000005"),
-        #ValueStockFactor(factor_id = "SF.000006"),
-        #FqStockFactor(factor_id = "SF.000007"),
-        #LeverageStockFactor(factor_id = "SF.000008"),
+        SizeStockFactor(factor_id = "SF.000001"),
+        VolStockFactor(factor_id = "SF.000002"),
+        MomStockFactor(factor_id = "SF.000003"),
+        TurnoverStockFactor(factor_id = "SF.000004"),
+        EarningStockFactor(factor_id = "SF.000005"),
+        ValueStockFactor(factor_id = "SF.000006"),
+        FqStockFactor(factor_id = "SF.000007"),
+        LeverageStockFactor(factor_id = "SF.000008"),
         SizeNlStockFactor(factor_id = "SF.000009"),
     ]
 
