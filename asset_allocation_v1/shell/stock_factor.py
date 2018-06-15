@@ -34,7 +34,6 @@ from db.asset_stock_factor import *
 import math
 import scipy.stats as stats
 import json
-import stock_util
 from ipdb import set_trace
 #from pathos.multiprocessing import ProcessingPool as Pool
 
