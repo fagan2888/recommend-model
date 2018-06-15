@@ -59,10 +59,10 @@ class StockFactor(Factor):
     __valid_stock_filter = None
 
     @staticmethod
-    def subclass(sub_class_name):
+    def subclass(sf_id, sub_class_name):
         for subclass in StockFactor.__subclasses__():
             if sub_class_name == subclass.__name__:
-                return subclass()
+                return subclass(factor_id = sf_id)
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(StockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
@@ -97,7 +97,7 @@ class StockFactor(Factor):
 
         sfs = []
         for sf_id in sf_ids:
-            sfs.append(StockFactor.subclass(StockFactor.stock_factors[sf_id]))
+            sfs.append(StockFactor.subclass(sf_id, StockFactor.stock_factors[sf_id]))
 
         close = StockAsset.all_stock_nav()
         ret = close.pct_change()
@@ -112,15 +112,17 @@ class StockFactor(Factor):
 
             print 'cal_factor_return:', date
 
-            tmp_exposure = []
+            tmp_exposure = {}
             tmp_ret = ret.loc[date].values
             for sf in sfs:
-                tmp_exposure.append(sf.exposure.fillna(method='pad').loc[date].values.tolist())
-            tmp_exposure = np.nan_to_num(np.array(tmp_exposure).T, 0.0)
-            mod = sm.OLS(tmp_ret, tmp_exposure, missing = 'drop').fit()
+                tmp_exposure[sf.factor_id] = sf.exposure.loc[date]
+            tmp_exposure_df = pd.DataFrame(tmp_exposure)
+            tmp_exposure_df = tmp_exposure_df[sf_ids].fillna(0.0)
+            tmp_exposure_df = tmp_exposure_df.loc[StockAsset.all_stock_info().index]
+            mod = sm.OLS(tmp_ret, tmp_exposure_df.values, missing = 'drop').fit()
 
             df_ret.loc[date] = mod.params
-            df_sret.loc[date] = tmp_ret - np.dot(tmp_exposure, mod.params)
+            df_sret.loc[date] = tmp_ret - np.dot(tmp_exposure_df.values, mod.params)
 
         return df_ret, df_sret
 
@@ -129,11 +131,11 @@ class StockFactor(Factor):
     @staticmethod
     def valid_stock_table():
 
-	all_stocks = StockFactor.get_stock_info()
+	all_stocks = StockAsset.all_stock_info()
 	all_stocks = all_stocks.reset_index()
 	all_stocks = all_stocks.set_index(['sk_secode'])
 
-	st_stocks = stock_util.stock_st()
+	st_stocks = StockAsset.stock_st()
 
 	all_stocks.sk_listdate = all_stocks.sk_listdate + timedelta(365)
 
@@ -187,44 +189,8 @@ class StockFactor(Factor):
             if secode in set(quotation.columns):
 		quotation.loc[:all_stocks.loc[secode, 'sk_listdate'], secode] = np.nan
 
-
-	engine = database.connection('asset')
-	Session = sessionmaker(bind=engine)
-	session = Session()
-
-	records = session.query(distinct(asset_stock_factor.valid_stock_factor.trade_date)).all()
-	dates = [record[0] for record in records]
-
-	dates.sort()
-	last_date = dates[-20]
-
-	quotation = quotation[quotation.index >= last_date.strftime('%Y-%m-%d')]
-
-	for date in quotation.index:
-            #records = []
-            for secode in quotation.columns:
-		globalid = all_stocks.loc[secode, 'globalid']
-		value = quotation.loc[date, secode]
-		if np.isnan(value):
-                    continue
-		valid_stock = asset_stock_factor.valid_stock_factor()
-		valid_stock.stock_id = globalid
-		valid_stock.secode = secode
-		valid_stock.trade_date = date
-		valid_stock.valid = 1.0
-		#records.append(valid_stock)
-		session.merge(valid_stock)
-
-
-            #session.add_all(records)
-            session.commit()
-
-            logger.info('stock validation date %s done' % date.strftime('%Y-%m-%d'))
-
-	session.commit()
-	session.close()
-
-	pass
+        quotation = quotation.rename(columns = dict(zip(all_stocks.index, all_stocks.globalid)))
+        asset_stock_factor.update_valid_stock_table(quotation)
 
 
     #过滤掉不合法股票
@@ -251,7 +217,6 @@ class StockFactor(Factor):
             valid_df = valid_df.reindex(factor_df.index)
             valid_df = valid_df.reindex_axis(factor_df.columns, axis = 1)
             factor_df[~(valid_df == 1)] = np.nan
-
 
 	logger.info('vailid filter done')
 
@@ -313,7 +278,7 @@ class SizeNlStockFactor(StockFactor):
     def cal_factor_exposure(self):
         all_stocks = StockAsset.all_stock_info()
         factor_exposure = []
-        for desc_method in self.__desc_methods:
+        for desc_method in self.desc_methods:
             stock_exposure = {}
             for stock_id in all_stocks.index:
                 stock_exposure[stock_id] = desc_method(stock_id)
@@ -326,6 +291,9 @@ class SizeNlStockFactor(StockFactor):
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
         factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         factor_exposure_df = factor_exposure_df[all_stocks.index]
+
+        self.exposure = factor_exposure_df
+
         return factor_exposure_df
 
 
