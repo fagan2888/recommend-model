@@ -11,6 +11,8 @@ import logging
 from sqlalchemy.ext.declarative import declarative_base
 import database
 from sqlalchemy.sql.expression import func
+import numpy as np
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +78,6 @@ class valid_stock_factor(Base):
     __tablename__ = 'valid_stock_factor'
 
     stock_id = Column(String, primary_key = True)
-    secode   = Column(String)
     trade_date = Column(String, primary_key = True)
     valid = Column(Integer)
 
@@ -181,11 +182,7 @@ def update_exposure(sf, last_date = None):
         Session = sessionmaker(bind = db)
         session = Session()
         record = session.query(func.max(stock_factor_exposure.trade_date)).filter(stock_factor_exposure.sf_id == sf_id).first()
-        if record[0] is None:
-            last_date = '1900-01-01'
-        else:
-            last_date = record[0]
-            last_date = last_date.strftime('%Y-%m-%d')
+        last_date = record[0].strftime('%Y-%m-%d') if record[0] is not None else '1900-01-01'
         session.commit()
         session.close()
 
@@ -206,8 +203,104 @@ def update_exposure(sf, last_date = None):
 
     db = database.connection('asset')
     t = Table('stock_factor_exposure', MetaData(bind=db), autoload = True)
-    database.batch(db, t, df_new, pd.DataFrame(index = df_new.index, columns = df_new.columns))
+    database.batch(db, t, df_new, pd.DataFrame())
 
+
+
+def update_valid_stock_table(quotation):
+
+	engine = database.connection('asset')
+	Session = sessionmaker(bind=engine)
+	session = Session()
+	record = session.query(func.max(valid_stock_factor.trade_date)).first()
+        last_date = record[0].strftime('%Y-%m-%d') if record[0] is not None else '1900-01-01'
+
+	quotation = quotation[quotation.index >= last_date]
+
+        session.query(valid_stock_factor).filter(valid_stock_factor.trade_date >= last_date).delete()
+
+
+        for globalid in quotation.columns:
+            records = []
+	    for date in quotation.index:
+		value = quotation.loc[date, globalid]
+		if np.isnan(value):
+                    continue
+                valid_stock = valid_stock_factor()
+                valid_stock.stock_id = globalid
+                valid_stock.trade_date = date
+                valid_stock.valid = 1.0
+                records.append(valid_stock)
+
+            session.add_all(records)
+            session.commit()
+
+        logger.info('stock validation date %s done' % date.strftime('%Y-%m-%d'))
+
+	session.commit()
+	session.close()
+
+
+def update_stock_factor_return(df_ret, last_date = None):
+
+    if last_date is None:
+
+        db = database.connection('asset')
+        Session = sessionmaker(bind = db)
+        session = Session()
+        record = session.query(func.max(stock_factor_return.trade_date)).first()
+        last_date = record[0].strftime('%Y-%m-%d') if record[0] is not None else '1900-01-01'
+        session.commit()
+        session.close()
+
+    df_ret = df_ret[df_ret.index >= last_date]
+
+    db = database.connection('asset')
+    Session = sessionmaker(bind = db)
+    session = Session()
+    session.query(stock_factor_return).filter(stock_factor_return.trade_date >= last_date).delete()
+    session.commit()
+    session.close()
+
+    df_ret = df_ret.stack()
+    df_ret = df_ret.reset_index()
+    df_ret.columns = ['trade_date', 'sf_id', 'ret']
+    df_ret = df_ret.set_index(['sf_id', 'trade_date'])
+
+    db = database.connection('asset')
+    t = Table('stock_factor_return', MetaData(bind=db), autoload = True)
+    database.batch(db, t, df_ret, pd.DataFrame())
+
+
+def update_stock_factor_specific_return(df_sret, last_date = None):
+
+    if last_date is None:
+
+        db = database.connection('asset')
+        Session = sessionmaker(bind = db)
+        session = Session()
+        record = session.query(func.max(stock_factor_specific_return.trade_date)).first()
+        last_date = record[0].strftime('%Y-%m-%d') if record[0] is not None else '1900-01-01'
+        session.commit()
+        session.close()
+
+    df_sret = df_sret[df_sret.index >= last_date]
+
+    db = database.connection('asset')
+    Session = sessionmaker(bind = db)
+    session = Session()
+    session.query(stock_factor_specific_return).filter(stock_factor_specific_return.trade_date >= last_date).delete()
+    session.commit()
+    session.close()
+
+    df_sret = df_sret.stack()
+    df_sret = df_sret.reset_index()
+    df_sret.columns = ['trade_date', 'stock_id', 'sret']
+    df_sret = df_sret.set_index(['stock_id', 'trade_date'])
+
+    db = database.connection('asset')
+    t = Table('stock_factor_specific_return', MetaData(bind=db), autoload = True)
+    database.batch(db, t, df_ret, pd.DataFrame())
 
 
 if __name__ == '__main__':
@@ -217,11 +310,3 @@ if __name__ == '__main__':
     #set_trace()
     pass
     #update_exposure(StockFactor.SizeStockFactor(factor_id = 'SF.000001'))
-
-
-
-
-
-
-
-

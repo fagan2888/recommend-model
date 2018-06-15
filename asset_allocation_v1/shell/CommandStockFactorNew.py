@@ -39,30 +39,44 @@ def sf(ctx):
     pass
 
 
+@sf.command()
+@click.pass_context
+def factor_valid_update(ctx):
+    '''valid stock factor update
+    '''
+
+    StockFactor.valid_stock_table()
+
+
 
 @sf.command()
 @click.pass_context
 def factor_exposure_update(ctx):
     '''insert factor info
     '''
+
     StockAsset.all_stock_nav()
+    print 'load all stock done'
     StockAsset.all_stock_quote()
+    print 'load all quote done'
     StockAsset.all_stock_fdmt()
+    print 'load all fdmt done'
 
     sfs = [
-        SizeStockFactor(factor_id = "SF.000001"),
-        VolStockFactor(factor_id = "SF.000002"),
-        MomStockFactor(factor_id = "SF.000003"),
-        TurnoverStockFactor(factor_id = "SF.000004"),
-        EarningStockFactor(factor_id = "SF.000005"),
-        ValueStockFactor(factor_id = "SF.000006"),
-        FqStockFactor(factor_id = "SF.000007"),
-        LeverageStockFactor(factor_id = "SF.000008"),
+        #SizeStockFactor(factor_id = "SF.000001"),
+        #VolStockFactor(factor_id = "SF.000002"),
+        #MomStockFactor(factor_id = "SF.000003"),
+        #TurnoverStockFactor(factor_id = "SF.000004"),
+        #EarningStockFactor(factor_id = "SF.000005"),
+        #ValueStockFactor(factor_id = "SF.000006"),
+        #FqStockFactor(factor_id = "SF.000007"),
+        #LeverageStockFactor(factor_id = "SF.000008"),
         SizeNlStockFactor(factor_id = "SF.000009"),
     ]
 
     for _sf in sfs:
         _sf.cal_factor_exposure()
+        print _sf.factor_id, 'cal factor exposure done'
         asset_stock_factor.update_exposure(_sf)
         print _sf.factor_id, 'update done'
 
@@ -91,8 +105,6 @@ def factor_return_update(ctx):
     #     SizeNlStockFactor(factor_id = "SF.000009"),
     # ]
 
-    # def save_return(sf):
-
     #     sfr = sf.ret
     #     sfr.index.name = 'trade_date'
     #     df_new = sfr.reset_index()
@@ -110,45 +122,7 @@ def factor_return_update(ctx):
     # pool.join()
 
     sf = StockFactor()
-    df_ret, df_sret = sf.cal_factor_return()
+    df_ret, df_sret = sf.cal_factor_return(['SF.000001', 'SF.000002', 'SF.000003', 'SF.000004','SF.000005', 'SF.000006','SF.000007', 'SF.000008'])
 
-    ## save stock factor return
-    df_ret = df_ret.stack()
-    df_ret = df_ret.reset_index()
-    df_ret.columns = ['trade_date', 'sf_id', 'ret']
-    df_ret = df_ret.set_index(['sf_id', 'trade_date'])
-
-    df_old = load_stock_factor_return()
-    db = database.connection('asset')
-    t = Table('stock_factor_return', MetaData(bind=db), autoload = True)
-    database.batch(db, t, df_ret, df_old)
-
-    ## save stock factor specific return
-    df_sret = df_sret.fillna(-1.0)
-    df_sret = df_sret.stack()
-    df_sret = df_sret.reset_index()
-    df_sret.columns = ['trade_date', 'stock_id', 'sret']
-    df_sret = df_sret.set_index(['stock_id', 'trade_date'])
-
-    df_old = load_stock_factor_specific_return()
-    db = database.connection('asset')
-    t = Table('stock_factor_specific_return', MetaData(bind=db), autoload = True)
-    database.batch(db, t, df_sret, df_old)
-
-
-
-    set_trace()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    asset_stock_factor.update_stock_factor_return(df_ret)
+    asset_stock_factor.update_stock_factor_specific_return(df_sret)
