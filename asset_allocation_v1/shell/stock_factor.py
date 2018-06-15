@@ -108,12 +108,12 @@ class StockFactor(Factor):
 
         df_ret = pd.DataFrame(columns = sf_ids)
         df_sret = pd.DataFrame(columns = StockAsset.all_stock_info().index)
-        for date in dates:
+        for date,next_date in zip(dates[:-1], dates[1:]):
 
             print 'cal_factor_return:', date
 
             tmp_exposure = {}
-            tmp_ret = ret.loc[date].values
+            tmp_ret = ret.loc[next_date].values
             for sf in sfs:
                 tmp_exposure[sf.factor_id] = sf.exposure.loc[date]
             tmp_exposure_df = pd.DataFrame(tmp_exposure)
@@ -121,8 +121,8 @@ class StockFactor(Factor):
             tmp_exposure_df = tmp_exposure_df.loc[StockAsset.all_stock_info().index]
             mod = sm.OLS(tmp_ret, tmp_exposure_df.values, missing = 'drop').fit()
 
-            df_ret.loc[date] = mod.params
-            df_sret.loc[date] = tmp_ret - np.dot(tmp_exposure_df.values, mod.params)
+            df_ret.loc[next_date] = mod.params
+            df_sret.loc[next_date] = tmp_ret - np.dot(tmp_exposure_df.values, mod.params)
 
         return df_ret, df_sret
 
