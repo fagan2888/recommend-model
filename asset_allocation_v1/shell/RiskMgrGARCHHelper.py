@@ -17,6 +17,7 @@ from Queue import Queue
 import multiprocessing
 from ipdb import set_trace
 import warnings
+warnings.filterwarnings('ignore')
 
 #Import rpy2
 import rpy2

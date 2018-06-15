@@ -15,6 +15,7 @@ from dateutil.parser import parse
 import time
 import asset
 import numpy as np
+from ipdb import set_trace
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +191,10 @@ def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None
     record = session.query(ra_stock.sk_secode).filter(ra_stock.globalid == asset_id).first()
     session.commit()
     session.close()
-    secode = record[0]
+    try:
+        secode = record[0]
+    except:
+        set_trace()
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)

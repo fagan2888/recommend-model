@@ -240,7 +240,9 @@ class FactorMzAllocate(Allocate):
 
         super(FactorMzAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
 
+        t = datetime.now()
         self.sfe = load_stock_factor_exposure(stock_ids = assets.keys(), begin_date = '2012-01-01')
+        print datetime.now() - t
         self.sfr = load_stock_factor_return(begin_date = '2012-01-01')
         self.sfsr = load_stock_factor_specific_return(stock_ids = assets.keys(), begin_date = '2012-01-01')
 

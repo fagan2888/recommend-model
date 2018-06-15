@@ -1020,7 +1020,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 21:
 
-        lookback = 63
+        lookback = 126
         period = 5
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
