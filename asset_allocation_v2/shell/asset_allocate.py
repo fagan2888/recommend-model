@@ -37,6 +37,7 @@ from asset import Asset, WaveletAsset
 from allocate import Allocate
 from trade_date import ATradeDate
 from view import View
+from ipdb import set_trace
 
 
 import traceback, code

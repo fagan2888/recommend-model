@@ -1119,17 +1119,16 @@ def nav_update(markowitz, alloc):
     gid = alloc['globalid']
     # 加载仓位信息
     df_pos = asset_mz_markowitz_pos.load(gid)
-    set_trace()
 
     # 加载资产收益率
-    min_date = df_pos.index.min()
+    min_date = df_pos.index.min().to_datetime()
     #max_date = df_pos.index.max()
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
 
     data = {}
     for asset_id in df_pos.columns:
-        data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
+        data[asset_id] = Asset.load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 

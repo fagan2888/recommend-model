@@ -21,6 +21,7 @@ from sqlalchemy.engine import Engine as engine
 from sqlalchemy.pool import Pool
 from util.xlist import chunks
 from util.xdebug import dd
+from ipdb import set_trace
 
 from dateutil.parser import parse
 
@@ -140,6 +141,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
     if len(df_update) > 50:
         keys = [table.c.get(c) for c in df_old.index.names]
         for segment in chunks(df_old.index.tolist(), 500):
+            segment = [tuple(map(str,eachTuple)) for eachTuple in segment]
             table.delete(tuple_(*keys).in_(segment)).execute()
 
         if timestamp:
@@ -153,6 +155,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
         if len(index_delete):
             keys = [table.c.get(c) for c in df_new.index.names]
             for segment in chunks(index_delete.tolist(), 500):
+                segment = [tuple(map(str,eachTuple)) for eachTuple in segment]
                 if len(df_new.index.names) == 1:
                     s = table.delete(keys[0].in_(segment))
                 else:
@@ -186,6 +189,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
                 else:
                     pkeys = list(zip(df_update.index.names, key))
 
+                pkeys = [tuple(map(str,eachTuple)) for eachTuple in pkeys]
                 dirty = {k:{'old':origin[k], 'new':v} for k,v in columns.items()}
 
                 if timestamp:
