@@ -899,6 +899,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
 
     if algo == 1:
+        #均配
         optappend = False
         df = average_days(sdate, edate, assets)
         if 'return' in df.columns:
@@ -919,6 +920,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = df.groupby(df.index).sum()
         df = df.T
     elif algo == 2:
+        #马科维兹
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
@@ -927,6 +929,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 3:
+        #马科维兹boot
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
@@ -936,6 +939,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzBootAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 4:
+        #滤波
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
@@ -945,6 +949,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 5:
+        #blacklitterman
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman = True, wavelet = False, wavelet_filter_num = wavelet_filter_num, markowitz_id = markowitz_id)
@@ -958,6 +963,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzBootBlAllocate('ALC.000001', assets, views, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 6:
+        #blacklitterman 滤波
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, blacklitterman = True, wavelet = True, wavelet_filter_num = wavelet_filter_num,  markowitz_id = markowitz_id)
@@ -973,6 +979,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.allocate()
     elif algo == 7:
 
+        #blacklitterman和滤波blacklitterman均配
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
         view_df = View.load_view(argv.get('bl_view_id'))
@@ -995,20 +1002,11 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = (bootbl_df + waveletbl_df) / 2
 
     elif algo == 8:
-
+        #滤波下方差
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
         assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback)
-        df = allocate.allocate()
-
-    elif algo == 20:
-
-        lookback = 126
-        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
-        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
-        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = FactorRpAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = 5)
         df = allocate.allocate()
 
     else:
