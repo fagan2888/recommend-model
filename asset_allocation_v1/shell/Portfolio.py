@@ -31,7 +31,7 @@ def markowitz_r_spe(funddfr, bounds):
 
     final_risk = 0
     final_return = 0
-    final_ws = []
+    final_ws = list(1.0 * np.ones(len(funddfr.columns)) / len(funddfr.columns))
     final_sharp = -10000000000000000000000000.0
     final_codes = []
 
@@ -45,6 +45,8 @@ def markowitz_r_spe(funddfr, bounds):
     risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds)
 
     for j in range(0, len(risks)):
+        if risks[j] == 0:
+            continue
         sharp = (returns[j] - rf) / risks[j]
         if sharp > final_sharp:
             final_risk = risks[j]
@@ -61,7 +63,7 @@ def markowitz_r_spe_bl(funddfr, P, eta, alpha, bounds):
 
     final_risk = 0
     final_return = 0
-    final_ws = []
+    final_ws = list(1.0 * np.ones(len(funddfr.columns)) / len(funddfr.columns))
     final_sharp = -10000000000000000000000000.0
     final_codes = []
 
@@ -76,6 +78,8 @@ def markowitz_r_spe_bl(funddfr, P, eta, alpha, bounds):
         risks, returns, ws = fin.efficient_frontier_spe_bl(return_rate, P, eta, alpha, bounds)
 
     for j in range(0, len(risks)):
+        if risks[j] == 0:
+            continue
         sharp = (returns[j] - rf) / risks[j]
         if sharp > final_sharp:
             final_risk = risks[j]
