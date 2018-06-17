@@ -13,6 +13,7 @@ import database
 from sqlalchemy.sql.expression import func
 import numpy as np
 import time
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -209,36 +210,38 @@ def update_exposure(sf, last_date = None):
 
 def update_valid_stock_table(quotation):
 
-	engine = database.connection('asset')
-	Session = sessionmaker(bind=engine)
-	session = Session()
-	record = session.query(func.max(valid_stock_factor.trade_date)).first()
-        last_date = record[0].strftime('%Y-%m-%d') if record[0] is not None else '1900-01-01'
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    record = session.query(func.max(valid_stock_factor.trade_date)).first()
+    last_date = record[0].strftime('%Y-%m-%d') if record[0] is not None else '1900-01-01'
 
-	quotation = quotation[quotation.index >= last_date]
+    quotation = quotation[quotation.index >= last_date]
 
-        session.query(valid_stock_factor).filter(valid_stock_factor.trade_date >= last_date).delete()
+    session.query(valid_stock_factor).filter(valid_stock_factor.trade_date >= last_date).delete()
 
 
-        for globalid in quotation.columns:
-            records = []
-	    for date in quotation.index:
-		value = quotation.loc[date, globalid]
-		if np.isnan(value):
-                    continue
-                valid_stock = valid_stock_factor()
-                valid_stock.stock_id = globalid
-                valid_stock.trade_date = date
-                valid_stock.valid = 1.0
-                records.append(valid_stock)
+    for globalid in quotation.columns:
+        records = []
+        for date in quotation.index:
+            value = quotation.loc[date, globalid]
+            if np.isnan(value):
+                continue
+            valid_stock = valid_stock_factor()
+            valid_stock.stock_id = globalid
+            valid_stock.trade_date = date
+            valid_stock.valid = 1.0
+            valid_stock.created_at = datetime.datetime.now()
+            valid_stock.updated_at = datetime.datetime.now()
+            records.append(valid_stock)
 
-            session.add_all(records)
-            session.commit()
+        session.add_all(records)
+        session.commit()
 
-        logger.info('stock validation date %s done' % date.strftime('%Y-%m-%d'))
+    logger.info('stock validation date %s done' % date.strftime('%Y-%m-%d'))
 
-	session.commit()
-	session.close()
+    session.commit()
+    session.close()
 
 
 def update_stock_factor_return(df_ret, last_date = None):
