@@ -25,6 +25,7 @@ import BondFundPoolNew as BF
 
 from Const import datapath
 from dateutil.parser import parse
+from BondFactor import *
 
 def label_asset_tag(label_index, lookback=52):
     '''perform fund tagging along label_index.
@@ -199,15 +200,13 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
         day, df_nav_bond, df_nav_index[Const.csibondindex_code])
 
     #
-    #  fund_pool = BF.factor_regression([BF.benchmark.globalid], start_date, end_date)
-    fund_pool = BF.factor_regression([BF.treasury.globalid, BF.enterprise_hr.globalid], start_date, end_date)
+    factors = BondFactor.__subclasses__()
+    fund_pool = BF.factor_regression(factors, start_date, end_date)
     fund_pool.index.name='code'
-    df_indicator['coef_treasury'] = fund_pool[BF.treasury.globalid]
-    df_indicator['coef_enterprise'] = fund_pool[BF.enterprise_hr.globalid]
+    for f in factors:
+        df_indicator[f.name] = fund_pool[f.name]
     df_indicator["score"] = fund_pool.score
     df_indicator["jensen"] = fund_pool.jensen
-    #  from ipdb import set_trace
-    #  set_trace()
     # 打标签确定所有备选基金
     #
     df_nav_indicator = df_nav_bond[df_indicator.index]

@@ -33,10 +33,10 @@ bond_fund_ids = bond_fund.globalid.ravel()
 
 lasso = Lasso(alpha=0, fit_intercept=False, positive=True)
 tdate = ATradeDate.week_trade_date()
-benchmark = BondIndex("2070006886")
-enterprise_hr = BondIndex("2070007644")
-treasury = BondIndex("2070006891")
-benchmark_cbd = BondIndex("2070000256")
+#  benchmark = BondIndex("2070006886")
+#  enterprise_hr = BondIndex("2070007644")
+#  treasury = BondIndex("2070006891")
+#  benchmark_cbd = BondIndex("2070000256")
 #  enterprise = BondIndex("2070006893")
 
 
@@ -98,7 +98,7 @@ def run_ttest_rel_by_adjpt(begin_date='2011-01-01', end_date="2018-05-01"):
 
 
 def matrix_constructor(x, begin_date=None, end_date=None):
-    return np.vstack(map(lambda t: BondIndex(t).inc(begin_date, end_date), x)).T
+    return np.vstack(map(lambda t: t.inc(begin_date, end_date), x)).T
 
 def factor_regression(factors, begin_date, end_date):
     all_fund_nav = DBData.bond_fund_value(begin_date, end_date)
@@ -112,9 +112,9 @@ def factor_regression(factors, begin_date, end_date):
         fund_id = fund_inc.name
         res = lasso.fit(factor_matrix, fund_inc)
         score = res.score(factor_matrix, fund_inc)
-        jensen = (1+factor_matrix.dot(res.coef_)).prod()-1
+        jensen = (1+fund_inc).prod() - (1+factor_matrix.dot(res.coef_)).prod()
         param_dict = {"fund_id":fund_id, "score":score, "jensen":jensen}
-        param_dict.update(dict(zip(factors, tuple((res.coef_/res.coef_.sum())))))
+        param_dict.update(dict(zip([i.name for i in factors], tuple((res.coef_/res.coef_.sum())))))
         result.append(pd.DataFrame([param_dict]))
     if len(result)==0:
         return pd.DataFrame()
@@ -186,10 +186,13 @@ def show_selected_factor(factors, day):
 
 if __name__ == "__main__":
     #  df_selected_factors = run_ttest_rel_by_adjpt()
-    #  end_date = '2018-04-27'
-    #  begin_date = ATradeDate.week_trade_date(end_date=end_date)[-52]
+    from BondFactor import *
+    end_date = '2018-04-27'
+    begin_date = ATradeDate.week_trade_date(end_date=end_date)[-52]
+    factors = BondFactor.__subclasses__()
     #  factors_0427 = df_selected_factors.loc[end_date]
     #  reg = factor_regression(factors_0427.secode, begin_date, end_date)
+    reg = factor_regression(factors, begin_date, end_date)
     #  set_trace()
     #  df = fund_selector([benchmark.globalid], '2010-01-01', '2018-05-01')
     #  funds = factor_regression([benchmark.globalid], '2009-12-25', '2010-03-31')

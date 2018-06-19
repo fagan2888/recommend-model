@@ -233,7 +233,7 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
     lookback = pool.ra_lookback
     limit = optlimit
     #  target = 'coef_treasury'
-    target = 'coef_enterprise'
+    target = 'default'
 
     if optcalc:
         #
@@ -249,20 +249,20 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
                 else:
                     df_indicator, df_label = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
 
-                #  tmp_df = df_indicator[(df_indicator.score > 0.5) & (df_indicator[target] > 0.5)].dropna()
-                #  tmp_df = tmp_df.sort_values("jensen", ascending=False)[:limit]
-                #  tmp_df["category"] = "benchmark"
-                #  tmp_df = tmp_df.reset_index().set_index(["category", "code"])
-                #  data_fund[day] = tmp_df
+                tmp_df = df_indicator[(df_indicator.score > 0.5) & (df_indicator["default"]+df_indicator["credit"] > 2.0/8)].dropna()
+                tmp_df = tmp_df.sort_values("jensen", ascending=False)[:limit]
+                tmp_df["category"] = "benchmark"
+                tmp_df = tmp_df.reset_index().set_index(["category", "code"])
+                data_fund[day] = tmp_df
 
-                fund_dates = np.array(data_fund.keys())
-                fund_date = fund_dates[fund_dates < day]
-                fund_date = list(fund_date)
-                fund_date.sort()
-                if len(fund_date) == 0:
-                    data_fund[day] = fund_lowliest_elimination(None, df_indicator, df_label, opteliminateratio, optlimit)
-                else:
-                    data_fund[day] = fund_lowliest_elimination(data_fund[fund_date[-1]], df_indicator, df_label, opteliminateratio, optlimit)
+                #  fund_dates = np.array(data_fund.keys())
+                #  fund_date = fund_dates[fund_dates < day]
+                #  fund_date = list(fund_date)
+                #  fund_date.sort()
+                #  if len(fund_date) == 0:
+                    #  data_fund[day] = fund_lowliest_elimination(None, df_indicator, df_label, opteliminateratio, optlimit)
+                #  else:
+                    #  data_fund[day] = fund_lowliest_elimination(data_fund[fund_date[-1]], df_indicator, df_label, opteliminateratio, optlimit)
                 #  from ipdb import set_trace
                #  set_trace()
 

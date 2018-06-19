@@ -17,16 +17,23 @@ class BondIndex(Asset):
             return cls.__cache[secode]
         return super(BondIndex, cls).__new__(cls)
 
-    def __init__(self, secode):
+    def __init__(self, secode, nav_sr=None, dur=None, cvx=None):
         secode = str(secode)
         if secode in self.__cache:
             return
         name = load_bond_index_info(secode).loc[secode, "INDEXNAME"]
-        nav_sr = load_cbdindex_nav(secode)
-        #若未取到, 尝试从tq_qt_index中读
-        if nav_sr.empty:
-            nav_sr = load_index_nav(secode)
+        if nav_sr is None:
+            nav_sr = load_cbdindex_nav(secode)
+            #若未取到, 尝试从tq_qt_index中读
+            if nav_sr.empty:
+                nav_sr = load_index_nav(secode)
         super(BondIndex, self).__init__(secode, name=name, nav_sr=nav_sr)
+        self.__duration = dur
+        self.__convexity = cvx
+        if self.__duration is not None:
+            self.__duration.name = self.name
+        if self.__convexity is not None:
+            self.__convexity.name = self.name
         self.__cache[secode] = self
 
     def nav(self, begin_date = None, end_date = None, reindex = None):
@@ -46,6 +53,37 @@ class BondIndex(Asset):
 
     def inc(self, begin_date = None, end_date = None, reindex = None):
         return self.nav(begin_date, end_date, reindex).pct_change().fillna(0)
+
+    def duration(self, begin_date = None, end_date = None, reindex = None):
+        if begin_date is None:
+            begin_date = '2010-01-01'
+        if end_date is None:
+            end_date = '2018-05-01'
+        if reindex is None:
+            reindex = ATradeDate.week_trade_date()
+        if self.__duration is None:
+            self.__duration, self.__convexity = load_cbdindex_dur_cvx(self.globalid)
+            self.__duration.name = self.__convexity.name = self.name
+        dur = self.__duration
+        dur = dur[(begin_date <= dur.index) & (dur.index <= end_date)]
+        return dur.reindex(reindex).dropna()
+
+
+    def convexity(self, begin_date = None, end_date = None, reindex = None):
+        if begin_date is None:
+            begin_date = '2010-01-01'
+        if end_date is None:
+            end_date = '2018-05-01'
+        if reindex is None:
+            reindex = ATradeDate.week_trade_date()
+        if self.__convexity is None:
+            self.__duration, self.__convexity = load_cbdindex_dur_cvx(self.globalid)
+            self.__duration.name = self.__convexity.name = self.name
+        cvx = self.__convexity
+        cvx = cvx[(begin_date <= cvx.index) & (cvx.index <= end_date)]
+        return cvx.reindex(reindex).dropna()
+
+
 
 
 #读取数据库
@@ -75,12 +113,14 @@ def load_cbdindex_nav(secode):
 def load_cbdindex_dur_cvx(secode, reindex=None):
     db = database.connection('caihui')
     t1 = Table('tq_qt_cbdindex', MetaData(bind=db), autoload=True)
-    columns = [t1.c.TRADEDATE, t1.c.AVGMVDURATION, t1.c.AVGMKCONVEXITY]
+    #  columns = [t1.c.TRADEDATE, t1.c.AVGMVDURATION, t1.c.AVGMKCONVEXITY]
+    columns = [t1.c.TRADEDATE, t1.c.AVGCFDURATION, t1.c.AVGCFCONVEXITY]
     s = select(columns).where(t1.c.SECODE == secode)
     df = pd.read_sql(s, db, index_col='TRADEDATE', parse_dates=['TRADEDATE'])
     if reindex is not None:
         df = df.reindex(reindex)
-    return df.AVGMVDURATION, df.AVGMKCONVEXITY
+    #  return df.AVGMVDURATION, df.AVGMKCONVEXITY
+    return df.AVGCFDURATION, df.AVGCFCONVEXITY
 
 
 #  def load_cbdindex_inc(secode):
