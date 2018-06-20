@@ -80,7 +80,6 @@ class StockFactor(Factor):
             factor_exposure.append(stock_exposure_df)
 
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
-        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         factor_exposure_df = factor_exposure_df[all_stocks.index]
 
         self.exposure = factor_exposure_df
