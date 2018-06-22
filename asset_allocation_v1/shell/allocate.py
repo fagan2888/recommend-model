@@ -35,7 +35,7 @@ from util import xdict
 from util.xdebug import dd
 from asset import Asset, WaveletAsset
 from trade_date import ATradeDate
-
+from ipdb import set_trace
 
 import traceback, code
 
@@ -193,6 +193,29 @@ class Allocate(object):
             data[asset_id] = self.assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
         df_inc  = df_nav.pct_change().fillna(0.0)
+
+        bound = []
+        for asset_id in df_inc.columns:
+            bound.append(bound_limit.loc[asset_id].to_dict())
+
+        return df_inc, bound
+
+
+    def load_all_data(self, days, asset_ids):
+
+        bound_limit = self.bound.get_day_bound(days[-1]).loc[asset_ids]
+        bound_limit = bound_limit[bound_limit.upper > 0.0]
+        asset_ids_tmp = bound_limit.index
+        # reindex = self.index[self.index <= days[-1]][self.index >= days[0]]
+
+        # data = {}
+        # for asset_id in asset_ids_tmp:
+        #     data[asset_id] = self.assets[asset_id].nav(reindex = reindex)
+        # df_nav = pd.DataFrame(data).fillna(method='pad')
+        # df_inc  = df_nav.pct_change().fillna(0.0)
+        dates = self.assets["SK.601318"].nav().index
+        df_inc = pd.DataFrame(columns = asset_ids_tmp, index = dates)
+
 
         bound = []
         for asset_id in df_inc.columns:

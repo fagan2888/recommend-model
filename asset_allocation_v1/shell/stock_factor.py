@@ -53,7 +53,35 @@ class StockFactor(Factor):
             'SF.000006':'ValueStockFactor',
             'SF.000007':'FqStockFactor',
             'SF.000008':'LeverageStockFactor',
-            'SF.000009':'SizeNlStockFactor',
+            'SF.000009':'FarmingStockFactor',
+            'SF.000010':'MiningStockFactor',
+            'SF.000011':'ChemicalStockFactor',
+            'SF.000012':'FerrousStockFactor',
+            'SF.000013':'NonFerrousStockFactor',
+            'SF.000014':'ElectronicStockFactor',
+            'SF.000015':'CTEquipStockFactor',
+            'SF.000016':'HouseholdElecStockFactor',
+            'SF.000017':'FoodBeverageStockFactor',
+            'SF.000018':'TextileStockFactor',
+            'SF.000019':'LightIndustryStockFactor',
+            'SF.000020':'MedicalStockFactor',
+            'SF.000021':'PublicStockFactor',
+            'SF.000022':'ComTransStockFactor',
+            'SF.000023':'RealEstateStockFactor',
+            'SF.000024':'TradingStockFactor',
+            'SF.000025':'TourismStockFactor',
+            'SF.000026':'BankStockFactor',
+            'SF.000027':'FinancialStockFactor',
+            'SF.000028':'CompositeStockFactor',
+            'SF.000029':'ConstructionStockFactor',
+            'SF.000030':'ArchitecturalStockFactor',
+            'SF.000031':'ElecEquipStockFactor',
+            'SF.000032':'MachineryStockFactor',
+            'SF.000033':'MilitaryStockFactor',
+            'SF.000034':'ComputerStockFactor',
+            'SF.000035':'MedicalStockFactor',
+            'SF.000036':'CommunicationStockFactor',
+            'SF.000037':'SizeNlStockFactor',
             }
 
     __valid_stock_filter = None
@@ -76,12 +104,13 @@ class StockFactor(Factor):
             for stock_id in all_stocks.index:
                 stock_exposure[stock_id] = desc_method(stock_id)
             stock_exposure_df = pd.DataFrame(stock_exposure)
-            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
-            stock_exposure_df = StockFactor.normalized(stock_exposure_df)
+            if int(self.factor_id[-2:]) <= 8:
+                stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
+                stock_exposure_df = StockFactor.normalized(stock_exposure_df)
             factor_exposure.append(stock_exposure_df)
 
         factor_exposure_df = reduce(lambda x, y: x+y, factor_exposure)/len(factor_exposure)
-        factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
+        # factor_exposure_df = factor_exposure_df.fillna(method = 'pad')
         factor_exposure_df = factor_exposure_df[all_stocks.index]
 
         self.exposure = factor_exposure_df
@@ -505,6 +534,188 @@ class LeverageStockFactor(StockFactor):
         return equtotliab
 
 
+class IndustryStockFactor(StockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None, sf_ind = None):
+        super(IndustryStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
+        self.sf_ind = sf_ind
+        self.desc_methods = [
+            self.cal_indexposure,
+        ]
+
+    def cal_indexposure(self, stock_id):
+
+        stock_quote = StockAsset.get_stock(stock_id).quote
+        stock_info = StockAsset.all_stock_info()
+        sf = pd.DataFrame(index = stock_quote.index)
+        sf_ind = stock_info.loc[stock_id].sk_swlevel1code
+
+        if sf_ind == self.sf_ind:
+            sf_exposure = 1
+        else:
+            sf_exposure = 0
+        sf['exposure'] = sf_exposure
+
+        return sf.exposure
+
+
+class FarmingStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(FarmingStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '110000')
+
+
+class MiningStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(MiningStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '210000')
+
+
+class ChemicalStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(ChemicalStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '220000')
+
+
+class FerrousStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(FerrousStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '230000')
+
+
+class NonFerrousStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(NonFerrousStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '240000')
+
+
+class ElectronicStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(ElectronicStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '270000')
+
+class CTEquipStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(CTEquipStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '280000')
+
+class HouseholdElecStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(HouseholdElecStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '330000')
+
+class FoodBeverageStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(FoodBeverageStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '340000')
+
+class TextileStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(TextileStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '350000')
+
+class LightIndustryStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(LightIndustryStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '360000')
+
+class MedicalStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(MedicalStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '370000')
+
+class PublicStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(PublicStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '410000')
+
+class ComTransStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(ComTransStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '420000')
+
+class RealEstateStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(RealEstateStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '430000')
+
+class TradingStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(TradingStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '450000')
+
+class TourismStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(TourismStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '460000')
+
+class BankStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(BankStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '480000')
+
+class FinancialStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(FinancialStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '490000')
+
+class CompositeStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(CompositeStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '510000')
+
+class ConstructionStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(ConstructionStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '610000')
+
+class ArchitecturalStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(ArchitecturalStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '620000')
+
+class ElecEquipStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(ElecEquipStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '630000')
+
+class MachineryStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(MachineryStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '640000')
+
+class MilitaryStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(MilitaryStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '650000')
+
+class ComputerStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(ComputerStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '710000')
+
+class MediaStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(MediaStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '720000')
+
+class CommunicationStockFactor(IndustryStockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(CommunicationStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '730000')
+
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
 
     #StockFactor.valid_stock_table()
@@ -547,4 +758,13 @@ if __name__ == '__main__':
     #StockFactor.stock_factor_filter(pd.DataFrame())
     #StockFactor.stock_factor_filter(pd.DataFrame())
     #StockFactor.stock_factor_filter(pd.DataFrame())
-    asset_stock_factor.update_exposure(SizeStockFactor(factor_id = 'SF.000001'))
+    # asset_stock_factor.update_exposure(SizeStockFactor(factor_id = 'SF.000001'))
+
+    sf = FarmingStockFactor('SF.000009')
+    print sf.cal_factor_exposure()
+
+
+
+
+
+

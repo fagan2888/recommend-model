@@ -48,7 +48,6 @@ def factor_valid_update(ctx):
     StockFactor.valid_stock_table()
 
 
-
 @sf.command()
 @click.pass_context
 def factor_exposure_update(ctx):
@@ -71,14 +70,44 @@ def factor_exposure_update(ctx):
         ValueStockFactor(factor_id = "SF.000006"),
         FqStockFactor(factor_id = "SF.000007"),
         LeverageStockFactor(factor_id = "SF.000008"),
-        SizeNlStockFactor(factor_id = "SF.000009"),
+        FarmingStockFactor(factor_id = 'SF.000009'),
+        MiningStockFactor(factor_id = 'SF.000010'),
+        ChemicalStockFactor(factor_id = 'SF.000011'),
+        FerrousStockFactor(factor_id = 'SF.000012'),
+        NonFerrousStockFactor(factor_id = 'SF.000013'),
+        ElectronicStockFactor(factor_id = 'SF.000014'),
+        CTEquipStockFactor(factor_id = 'SF.000015'),
+        HouseholdElecStockFactor(factor_id = 'SF.000016'),
+        FoodBeverageStockFactor(factor_id = 'SF.000017'),
+        TextileStockFactor(factor_id = 'SF.000018'),
+        LightIndustryStockFactor(factor_id = 'SF.000019'),
+        MedicalStockFactor(factor_id = 'SF.000020'),
+        PublicStockFactor(factor_id = 'SF.000021'),
+        ComTransStockFactor(factor_id = 'SF.000022'),
+        RealEstateStockFactor(factor_id = 'SF.000023'),
+        TradingStockFactor(factor_id = 'SF.000024'),
+        TourismStockFactor(factor_id = 'SF.000025'),
+        BankStockFactor(factor_id = 'SF.000026'),
+        FinancialStockFactor(factor_id = 'SF.000027'),
+        CompositeStockFactor(factor_id = 'SF.000028'),
+        ConstructionStockFactor(factor_id = 'SF.000029'),
+        ArchitecturalStockFactor(factor_id = 'SF.000030'),
+        ElecEquipStockFactor(factor_id = 'SF.000031'),
+        MachineryStockFactor(factor_id = 'SF.000032'),
+        MilitaryStockFactor(factor_id = 'SF.000033'),
+        ComputerStockFactor(factor_id = 'SF.000034'),
+        MedicalStockFactor(factor_id = 'SF.000035'),
+        CommunicationStockFactor(factor_id = 'SF.000036'),
     ]
 
     for _sf in sfs:
+        t = datetime.now()
         _sf.cal_factor_exposure()
         print _sf.factor_id, 'cal factor exposure done'
-        asset_stock_factor.update_exposure(_sf)
+        # asset_stock_factor.update_exposure(_sf)
+        asset_stock_factor.update_exposure_mongo(_sf)
         print _sf.factor_id, 'update done'
+        print datetime.now() - t
 
     #pool = Pool(len(sfs))
     #pool.map(update_exposure, zip(exposures, sf_ids))
@@ -121,8 +150,22 @@ def factor_return_update(ctx):
     # pool.close()
     # pool.join()
 
+    sfs = ['SF.0000%02d'%i for i in range(1, 37)]
     sf = StockFactor()
-    df_ret, df_sret = sf.cal_factor_return(['SF.000001', 'SF.000002', 'SF.000003', 'SF.000004','SF.000005', 'SF.000006','SF.000007', 'SF.000008'])
+    df_ret, df_sret = sf.cal_factor_return(sfs)
 
     asset_stock_factor.update_stock_factor_return(df_ret)
     asset_stock_factor.update_stock_factor_specific_return(df_sret)
+
+
+
+
+
+
+
+
+
+
+
+
+

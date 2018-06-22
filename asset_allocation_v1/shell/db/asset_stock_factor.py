@@ -13,6 +13,10 @@ import database
 from sqlalchemy.sql.expression import func
 import numpy as np
 import time
+from ipdb import set_trace
+
+from mongo import MyMongoDB
+import config_mongo
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +89,7 @@ class valid_stock_factor(Base):
     created_at = Column(DateTime)
 
 
-def load_stock_factor_exposure(stock_id = None, stock_ids = None, sf_id = None, begin_date = None, end_date = None):
+def load_stock_factor_exposure(stock_id = None, stock_ids = None, sf_id = None, sf_ids = None, begin_date = None, end_date = None):
 
     db = database.connection('asset')
     Session = sessionmaker(bind = db)
@@ -103,6 +107,8 @@ def load_stock_factor_exposure(stock_id = None, stock_ids = None, sf_id = None, 
         record = record.filter(stock_factor_exposure.stock_id.in_(stock_ids))
     if sf_id:
         record = record.filter(stock_factor_exposure.sf_id == sf_id)
+    if sf_ids is not None:
+        record = record.filter(stock_factor_exposure.sf_id.in_(sf_ids))
     if begin_date:
         record = record.filter(stock_factor_exposure.trade_date >= begin_date)
     if end_date:
@@ -115,7 +121,7 @@ def load_stock_factor_exposure(stock_id = None, stock_ids = None, sf_id = None, 
     return df
 
 
-def load_stock_factor_return(sf_id = None, trade_date = None, begin_date = None, end_date = None, reindex = None):
+def load_stock_factor_return(sf_id = None, sf_ids = None, trade_date = None, begin_date = None, end_date = None, reindex = None):
 
     db = database.connection('asset')
     Session = sessionmaker(bind = db)
@@ -128,6 +134,8 @@ def load_stock_factor_return(sf_id = None, trade_date = None, begin_date = None,
 
     if sf_id:
         record = record.filter(stock_factor_return.sf_id == sf_id)
+    if sf_ids is not None:
+        record = record.filter(stock_factor_return.sf_id.in_(sf_ids))
     if trade_date:
         record = record.filter(stock_factor_return.trade_date == trade_date)
     if begin_date:
@@ -222,7 +230,7 @@ def update_valid_stock_table(quotation):
 
         for globalid in quotation.columns:
             records = []
-	    for date in quotation.index:
+            for date in quotation.index:
 		value = quotation.loc[date, globalid]
 		if np.isnan(value):
                     continue
@@ -303,10 +311,39 @@ def update_stock_factor_specific_return(df_sret, last_date = None):
     database.batch(db, t, df_sret, pd.DataFrame())
 
 
+def update_exposure_mongo(sf):
+
+    exposure = sf.exposure
+    df_new = exposure.stack()
+    df_new = df_new.reset_index()
+    df_new['sf_id'] = sf.factor_id
+    df_new.columns = ['trade_date', 'stock_id', 'exposure', 'sf_id']
+    dic = df_new.to_dict(orient = 'index')
+    dicv = dic.values()
+
+    mg = MyMongoDB(config_mongo.exposure)
+    mg.insert_many(dicv)
+
+
+def load_exposure_mongo(stock_id):
+
+    mg = MyMongoDB(config_mongo.exposure)
+    data = mg.find({"stock_id": stock_id})
+    df = pd.DataFrame(list(data))
+
+    return df
+
+
 if __name__ == '__main__':
 
     #df1 = load_stock_factor_return()
     #df2 = load_stock_factor_specific_return()
     #set_trace()
-    pass
     #update_exposure(StockFactor.SizeStockFactor(factor_id = 'SF.000001'))
+    load_exposure_mongo("SK.000005")
+
+
+
+
+
+

@@ -47,9 +47,9 @@ def macro_view_update(ctx, startdate, enddate, viewid, idx):
     rev = re_view(backtest_interval)
     irv = ir_view(backtest_interval)
     epsv = eps_view(backtest_interval, idx)
-    #print rev.tail()
-    #print irv.tail()
-    #print epsv.tail()
+    print rev.tail()
+    print irv.tail()
+    print epsv.tail()
 
     mv = pd.concat([rev, irv, epsv], 1)
     mv['mv'] = mv['rev'] + mv['irv'] + mv['epsv']
@@ -240,7 +240,7 @@ def re_view(bt_int):
     repy = repy.dropna()
     m1 = m1.dropna()
 
-    rev = pd.merge(repy, m1, left_index = True, right_index = True)
+    rev = pd.merge(repy, m1, left_index = True, right_index = True, how = 'outer')
 
     re_views = []
     rev = rev.reindex(bt_int).fillna(method = 'pad')
