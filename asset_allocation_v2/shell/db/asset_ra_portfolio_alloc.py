@@ -35,7 +35,7 @@ def load(gids, xtypes=None):
         s = s.where(t1.c.globalid.in_(gids))
     if xtypes is not None:
         s = s.where(t1.c.ra_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db)
 
     return df
@@ -62,6 +62,7 @@ def where_portfolio_id(portfolio_id, xtypes=None):
     if xtypes is not None:
         s = s.where(t1.c.ra_type.in_(xtypes))
     df = pd.read_sql(s, db)
+    df = df.applymap(lambda x: x.decode() if isinstance(x, bytes) else x)
 
     return df
 

@@ -589,7 +589,7 @@ def asset_risk_asset_allocation_nav_load_series(
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
     if asset_id.isdigit():
-        xtype = int(asset_id) / 10000000
+        xtype = int(asset_id) // 10000000
     else:
         xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
@@ -599,8 +599,8 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         #
         if asset_id.isdigit():
             asset_id = int(asset_id) % 10000000
-            (pool_id, category) = (asset_id / 100, asset_id % 100)
-            ttype = pool_id / 10000
+            (pool_id, category) = (asset_id // 100, asset_id % 100)
+            ttype = pool_id // 10000
         else:
             pool_id, category, ttype = asset_id, 0, 9
         sr = asset_ra_pool_nav.load_series(
@@ -638,7 +638,7 @@ def load_asset_name_and_type(asset_id):
 
     if asset_id.isdigit():
         asset_id = int(asset_id)
-        xtype = asset_id / 10000000
+        xtype = asset_id // 10000000
     else:
         xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
@@ -647,8 +647,8 @@ def load_asset_name_and_type(asset_id):
         # 基金池资产
         #
         asset_id %= 10000000
-        (pool_id, category) = (asset_id / 100, asset_id % 100)
-        ttype = pool_id / 10000
+        (pool_id, category) = (asset_id // 100, asset_id % 100)
+        ttype = pool_id // 10000
         name = asset_ra_pool.load_asset_name(pool_id, category, ttype)
     elif xtype == 3:
         #
@@ -715,7 +715,7 @@ def load_pool_via_asset(asset_id):
 '''
 def load_asset_and_pool(gid):
     gid = int(gid)
-    xtype = gid / 10000000
+    xtype = gid // 10000000
 
     if xtype == 5:
         #
@@ -764,7 +764,7 @@ def load_asset_and_pool(gid):
 
 def load_alloc_and_risk(gid):
     gid = int(gid)
-    xtype = gid / 10000000
+    xtype = gid // 10000000
 
     result = []
     if xtype == 5:
@@ -789,7 +789,7 @@ def load_pos_frame(gid):
     prefix = gid[0:2]
     if prefix.isdigit():
         gid = int(gid)
-        xtype = gid / 10000000
+        xtype = gid // 10000000
 
         if xtype == 5:
             #

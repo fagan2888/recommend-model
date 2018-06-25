@@ -8,6 +8,7 @@ import pandas as pd
 # import sys
 import logging
 from . import database
+from ipdb import set_trace
 
 from dateutil.parser import parse
 
@@ -24,7 +25,7 @@ def load(gid, included_highlow_id=False):
         t1.c.mz_ratio,
     ]
     index_col = ['mz_date', 'mz_asset_id']
-    
+
     if included_highlow_id:
         columns.insert(0, t1.c.mz_highlow_id)
         index_col.insert(0, 'mz_highlow_id')
@@ -37,11 +38,12 @@ def load(gid, included_highlow_id=False):
         return None
     # if xtypes is not None:
     #     s = s.where(t1.c.mz_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['mz_date'])
 
     df = df.unstack().fillna(0.0)
     df.columns = df.columns.droplevel(0)
+    df = df.rename(lambda x: x.decode() if isinstance(x, bytes) else x, axis = 'columns')
 
     return df
 
@@ -58,6 +60,7 @@ def save(gid, df):
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
     s = select(columns, (t2.c.mz_highlow_id == gid))
     df_old = pd.read_sql(s, db, index_col=['mz_highlow_id', 'mz_date', 'mz_asset_id'], parse_dates=['mz_date'])
+    df_old = df_old.rename(index = lambda x: x.decode() if isinstance(x, bytes) else x)
     if not df_old.empty:
         df_old = database.number_format(df_old, fmt_columns, fmt_precision)
 

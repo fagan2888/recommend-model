@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import database
+from . import Nav
 from . import asset_is_investor
 from . import asset_is_investor_nav
 from . import asset_is_investor_pos

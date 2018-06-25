@@ -1,6 +1,6 @@
 #coding=utf8
 
-from sqlalchemy import MetaData, Table, select, func, literal_column
+from sqlalchemy import MetaData, Table, select, func, literal_column, Column, Integer, String
 # import string
 # from datetime import datetime, timedelta
 import pandas as pd
@@ -12,6 +12,7 @@ from . import database
 from dateutil.parser import parse
 
 logger = logging.getLogger(__name__)
+from ipdb import set_trace
 
 #
 # mz_portfolio
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 def load(gids, xtypes=None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
-    t1 = Table('ra_portfolio_asset', metadata, autoload=True)
+    t1 = Table('ra_portfolio_asset', metadata, autoload = True)
 
     columns = [
         t1.c.ra_portfolio_id,
@@ -35,7 +36,7 @@ def load(gids, xtypes=None):
         s = s.where(t1.c.ra_portfolio_id.in_(gids))
     if xtypes is not None:
         s = s.where(t1.c.ra_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db)
 
     return df
