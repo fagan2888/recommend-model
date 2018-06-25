@@ -40,12 +40,13 @@ from sqlalchemy import *
 from tabulate import tabulate
 from db import *
 from util.xdebug import dd
+from ipdb import set_trace
 
 import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group(invoke_without_command=True)  
+@click.group(invoke_without_command=True)
 @click.option('--full/--no-full', 'optfull', default=False, help='include all instance')
 @click.option('--new/--no-new', 'optnew', default=False, help='use new framework')
 @click.option('--id', 'optid', help='specify portfolio id')
@@ -98,7 +99,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
         if 'highlow' not in ctx.obj:
             click.echo(click.style("--ratio is required, aborted!", fg="red"))
             return 0
-        
+
         optratio = ctx.obj['highlow']
     #
     # 处理id参数
@@ -148,7 +149,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     # 加载用到的资产
     #
     df_asset = database.load_asset_and_pool(optratio)
-    
+
     df_asset = df_asset.rename(columns={
         'asset_id': 'ra_asset_id',
         'asset_name':'ra_asset_name',
@@ -159,7 +160,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     if '11310100' not in df_asset['ra_asset_id'].values:
         sr = ('11310100', '货币资产', 31, '11310100')
         df_asset.ix[len(df_asset.index)] = sr
-        
+
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     ra_portfolio        = Table('ra_portfolio', metadata, autoload=True)
@@ -260,7 +261,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
             # 可能有两个资产配置了同一个基金池
             #
             df_raw = df_raw.groupby(level=(0,1,2)).agg({'ra_fund_code':'first', 'ra_fund_type':'first', 'ra_fund_ratio':'sum'})
-            
+
             #
             # 导入数据: portfolio_alloc
             #
@@ -316,7 +317,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, optratio, optpool, optris
     # 在context中保存optid
     #
     ctx.obj['portfolio'] = optid
-    
+
     click.echo(click.style("portfolio allocation complement! instance id [%s]" % (optid), fg='green'))
 
 def choose_fund_avg(day, pool_id, ratio, df_fund):
@@ -331,7 +332,7 @@ def choose_fund_avg(day, pool_id, ratio, df_fund):
 
     # if day.strftime("%Y-%m-%d") == '2013-11-08' and pool_id == '11310100':
     #     dd([(day, pool_id, fund_id, x['ra_fund_code'], x['ra_fund_type'], fund_ratio) for fund_id, x in df_fund.iterrows()])
-        
+
     return [(day, pool_id, fund_id, x['ra_fund_code'], x['ra_fund_type'], fund_ratio) for fund_id, x in df_fund.iterrows()]
 
 @portfolio.command()
@@ -357,7 +358,7 @@ def pos(ctx, optid, opttype, optlist, optrisk):
         df_portfolio = asset_ra_portfolio.load(portfolios)
     else:
         df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
-        
+
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_portfolio, headers='keys', tablefmt='psql'))
@@ -365,12 +366,12 @@ def pos(ctx, optid, opttype, optlist, optrisk):
 
     for _, portfolio in df_portfolio.iterrows():
         pos_update_alloc(portfolio, optrisk)
-        
+
 def pos_update_alloc(portfolio, optrisk):
     risks = [int(s.strip()) for s in optrisk.split(',')]
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
     df_alloc = df_alloc.loc[(df_alloc['ra_risk'] * 10).astype(int).isin(risks)]
-   
+
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
             label=('update pos %-9s' % (portfolio['globalid'])).ljust(30),
@@ -379,7 +380,7 @@ def pos_update_alloc(portfolio, optrisk):
             pos_update(portfolio, alloc)
 
     click.echo(click.style("portfolio allocation complement! instance id [%s]" % (portfolio['globalid']), fg='green'))
-        
+
 def pos_update(portfolio, alloc):
     gid = alloc['globalid']
 
@@ -426,7 +427,7 @@ def pos_update(portfolio, alloc):
         return
 
     df_raw.sort_index(inplace=True)
-    
+
     df_tmp = df_raw[['ra_fund_ratio']]
 
     #print gid, df_tmp
@@ -474,7 +475,7 @@ def kun(portfolio, alloc):
     if df_ratio.empty:
         click.echo(click.style("empty highlow_pos [%s] dected, will abort!" % gid, fg="yellow"))
         return None
-       
+
 
     # print df_ratio.sum(axis=1)
     if '11310100' not in df_ratio.columns:
@@ -578,7 +579,7 @@ def nav(ctx, optid, opttype, optlist, optrisk, optfee, optdebug, optenddate):
         df_portfolio = asset_ra_portfolio.load(portfolios)
     else:
         df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
-        
+
     if optlist:
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_portfolio, headers='keys', tablefmt='psql'))
@@ -609,7 +610,7 @@ def nav_update_alloc(portfolio, risks, fee, debug, enddate):
 
         processes = []
         for _, alloc in bar:
-            #nav_update(alloc, fee, debug, enddate)
+            # nav_update(alloc, fee, debug, enddate)
             p = multiprocessing.Process(target = nav_update, args = (alloc, fee, debug, enddate,))
             processes.append(p)
             p.start()
@@ -679,27 +680,27 @@ def turnover(ctx, optid, opttype, optlist):
             portfolios = [str(ctx.obj['portfolio'])]
         else:
             portfolios = None
-            
+
     xtypes = [s.strip() for s in opttype.split(',')]
 
     if portfolios is not None:
         df_portfolio = asset_ra_portfolio.load(portfolios)
     else:
         df_portfolio = asset_ra_portfolio.load(portfolios, xtypes)
-        
+
     if optlist:
 
         df_portfolio['ra_name'] = df_portfolio['ra_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_portfolio, headers='keys', tablefmt='psql'))
         return 0
-    
+
     data = []
     for _, portfolio in df_portfolio.iterrows():
         turnover_update_alloc(portfolio)
 
 def turnover_update_alloc(portfolio):
     df_alloc = asset_ra_portfolio_alloc.where_portfolio_id(portfolio['globalid'])
-    
+
     with click.progressbar(
             df_alloc.iterrows(), length=len(df_alloc.index),
             label=('turnover %-11s' % (portfolio['globalid'])).ljust(30),
@@ -707,7 +708,7 @@ def turnover_update_alloc(portfolio):
         for _, alloc in bar:
             turnover_update(alloc)
 
-            
+
 def turnover_update(portfolio):
     portfolio_id = portfolio['globalid']
     # 加载仓位信息
@@ -731,7 +732,7 @@ def turnover_update(portfolio):
 
 @portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help='dir used to store tmp data')
-# @click.option('-m', '--msg')  
+# @click.option('-m', '--msg')
 # @click.option('--dry-run', is_flag=True, help=u'pretend to run')
 # @click.option('--name', prompt='Your name', help='The person to greet.')
 @click.pass_context
@@ -746,7 +747,7 @@ def ncat(ctx, datadir):
 
 @portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help='dir used to store tmp data')
-# @click.option('-m', '--msg')  
+# @click.option('-m', '--msg')
 # @click.option('--dry-run', is_flag=True, help=u'pretend to run')
 # @click.option('--name', prompt='Your name', help='The person to greet.')
 @click.pass_context
@@ -771,12 +772,12 @@ def detail(ctx, datadir):
     #
     GeneralizationPosition.portfolio_detail()
 
-@portfolio.command()  
+@portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help='dir used to store tmp data')
 @click.option('--output', '-o', default=None, help='file used to store final result')
 @click.pass_context
 def trade(ctx, datadir, output):
-    '''generate final portfolio with optimized strategy (cost consider in).  
+    '''generate final portfolio with optimized strategy (cost consider in).
     '''
     Const.datadir = datadir
     if output is None:
@@ -786,8 +787,8 @@ def trade(ctx, datadir, output):
 
 @portfolio.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), default='./tmp', help='dir used to store tmp data')
-@click.option('--input', '-i', 'optinput', type=click.Path(exists=True), help='portfolio position file as input') 
-@click.option('--output', '-o', 'optoutput', type=click.Path(), help='file position file to output') 
+@click.option('--input', '-i', 'optinput', type=click.Path(exists=True), help='portfolio position file as input')
+@click.option('--output', '-o', 'optoutput', type=click.Path(), help='file position file to output')
 @click.pass_context
 def stockavg(ctx, datadir, optinput, optoutput):
     '''generate final portfolio using simple average strategy (no cost)
@@ -807,14 +808,14 @@ def stockavg(ctx, datadir, optinput, optoutput):
         else:
             click.echo(click.style("error: mising position file!", fg="yellow"))
             return -1
-        
+
     if optoutput is None:
         if output is None:
             optoutput = datapath('position-v.csv')
         else:
             optoutput = output
-                
-        
+
+
     print("convert portfilio position  %s to final position %s" % (optinput, optoutput))
     GeneralizationPosition.portfolio_avg_simple(optinput, optoutput)
 
@@ -827,11 +828,11 @@ def stockavg(ctx, datadir, optinput, optoutput):
 @click.pass_context
 def turnover_o(ctx, optInst, optAlloc, startdate, enddate, optlist):
     '''run constant risk model
-    '''    
+    '''
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
-    
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
+
     db_asset = create_engine(config.db_asset_uri)
     # db_asset.echo = True
     # db_base = create_engine(config.db_base_uri)
@@ -849,14 +850,14 @@ def turnover_o(ctx, optInst, optAlloc, startdate, enddate, optlist):
     print(tabulate(df_result, headers='keys', tablefmt='psql', stralign='right'))
 
     print("total turnover: %.2f%%" % (total_turnover * 100))
-    
+
     # if optlist:
     #     #print df_pool
     #     #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
     #     df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
     #     print tabulate(df_pool, headers='keys', tablefmt='psql')
     #     return 0
-    
+
     # for _, pool in df_pool.iterrows():
     #     stock_update(db, pool, optlimit, optcalc)
 
@@ -889,7 +890,7 @@ def load_portfolio_by_id(db, inst, alloc):
         t.c.ai_fund_ratio,
     ]
     s = select(columns, and_(t.c.ai_inst_id == inst, t.c.ai_alloc_id == alloc)) \
-        .order_by(t.c.ai_transfer_date, t.c.ai_category)    
+        .order_by(t.c.ai_transfer_date, t.c.ai_category)
     df = pd.read_sql(s, db, parse_dates=['ai_transfer_date'])
 
     return df
@@ -906,7 +907,7 @@ def load_portfolio_category_by_id(db, inst, alloc):
     ]
     s = select(columns, and_(t.c.ai_inst_id == inst, t.c.ai_alloc_id == alloc)) \
         .group_by(t.c.ai_transfer_date, t.c.ai_category) \
-        .order_by(t.c.ai_transfer_date, t.c.ai_category)    
+        .order_by(t.c.ai_transfer_date, t.c.ai_category)
     df = pd.read_sql(s, db, parse_dates=['ai_transfer_date'])
 
     return df
@@ -919,7 +920,7 @@ def load_portfolio_category_by_id(db, inst, alloc):
 @click.pass_context
 def convert1(ctx, optfrom, optto, optlist):
     '''convert bond and money to bank
-    '''    
+    '''
 
     db = database.connection('asset')
     metadata = MetaData(bind=db)
@@ -937,7 +938,7 @@ def convert1(ctx, optfrom, optto, optlist):
     ]
 
     s = select(columns).where(t1.c.ai_inst_id == optfrom)
-        
+
     df = pd.read_sql(s, db, index_col = ['ai_alloc_id', 'ai_transfer_date'], parse_dates=['ai_transfer_date'])
 
     mask = (df['ai_category'] >= 20) & (df['ai_category'] < 30)
@@ -959,14 +960,14 @@ def convert1(ctx, optfrom, optto, optlist):
     df_result['updated_at'] = df_result['created_at'] = datetime.now()
 
     df_result = df_result.reset_index().set_index(['ai_inst_id', 'ai_alloc_id', 'ai_transfer_date', 'ai_category', 'ai_fund_id'])
-    
+
     df_result.to_sql(t1.name, db, index=True, if_exists='append', flavor='mysql', chunksize=500)
 
 
     df_result = df_result.reset_index().set_index(['ai_inst_id', 'ai_alloc_id', 'ai_transfer_date', 'ai_fund_id'])
     df_result['ai_fund_type'] = df_result['ai_category'].floordiv(10)
     df_result =  df_result.drop('ai_category', axis = 1)
-    
+
     df_result = df_result.groupby(level=(0, 1, 2, 3)).agg({
         'ai_inst_type':'first', 'ai_fund_code':'first', 'ai_fund_type':'first', 'ai_fund_ratio':'sum', 'updated_at':'first', 'created_at':'first'
     })
@@ -974,7 +975,7 @@ def convert1(ctx, optfrom, optto, optlist):
 
     t2.delete(t2.c.ai_inst_id == optto).execute()
     df_result.to_sql(t2.name, db, index=True, if_exists='append', flavor='mysql', chunksize=500)
-    
+
 
 @portfolio.command()
 @click.option('--src', 'optsrc', help='src id of portfolio to copy from')
@@ -1022,7 +1023,7 @@ def copy(ctx, optsrc, optdst, optlist):
     df_xtab = df_portfolio_alloc[['globalid', 'old']].copy()
 
     df_portfolio_alloc.drop(['old'], axis=1, inplace=True)
-    
+
     df_portfolio_alloc.set_index(['globalid'], inplace=True)
     asset_ra_portfolio_alloc.save(optdst, df_portfolio_alloc)
 
@@ -1053,4 +1054,4 @@ def copy(ctx, optsrc, optdst, optlist):
 
     asset_ra_portfolio_asset.save(df_xtab['globalid'], df_portfolio_asset)
 
-    
+

@@ -67,9 +67,9 @@ def dump_event(x, e, die=False):
 
     if die:
         dd('----end events----')
-        
+
 class TradeNav(object):
-    
+
     def __init__(self, debug=False, optfee=True, optt0=False):
 
         # 调试模式 会记录整个计算的上下文，默认为关闭
@@ -79,11 +79,11 @@ class TradeNav(object):
 
         #
         # 状态变量：用户当前持仓: DataFrame
-        # 
+        #
         #      columns        share, yield, share_buying, buy_date, ack_date,  nav, nav_date, share_bonusing amount_bonusing div_mode
         #      index
         # (fund_id, share_id)
-        #      
+        #
         #  其中，
         #
         #    share_id: 持仓ID，直接采用购买操作的订单号order_id，因
@@ -142,16 +142,16 @@ class TradeNav(object):
         self.dsn = 0 # day sequenece no
         self.day = 0 # 当天日期
         self.ts = pd.to_datetime('1990-01-01')  # 当前模拟时钟
-        
+
         #
         # 输出变量：历史持仓
         #
         self.dt_holding = {}
 
-        # 
+        #
         # 输出变量：订单列表，用于保存整个过程中产生的订单, 每个订单是一个字典，包含如下项目
         #     （order_id, fund_id, fund_code, op, place_date, place_time, amount, share, fee, nav, nav_date, ack_date, ack_amount, ack_share, div_mode, share_id）
-        # 
+        #
         self.orders = []
 
         #
@@ -187,7 +187,7 @@ class TradeNav(object):
         # 输入变量：
         # redeem 赎回到账期限 记录了每个基金的到账日到底是T+n；
         # buy    购买确认日期 记录了每个基金的到购买从份额确认到可以赎回需要T+n；
-        # 
+        #
         # 延迟加载，因为跟具体持仓基金有关
         #
         self.df_ack = None
@@ -205,7 +205,7 @@ class TradeNav(object):
         # 延迟加载，具体跟调仓序列有关
         #
         self.df_bonus = None
-        
+
         #
         # 输入变量：拆分信息
         #
@@ -219,15 +219,17 @@ class TradeNav(object):
         # 延迟加载，因为跟具体配置有关
         #
         self.df_nav = None
-        
+
 
     def calc(self, df_pos, principal):
 
         self.cash = principal
-        
+
         sdate = df_pos.index.get_level_values(0).min()
         edate = pd.to_datetime(datetime.now().date()) - timedelta(days=1)
-        # dd(sdate, edate)
+
+        sdate = sdate.date()
+        edate = edate.date()
         #
 
         # 初始化用到的计算数据
@@ -266,7 +268,7 @@ class TradeNav(object):
         # 任何自然日所属交易日及其对应的净值序列
         self.dt_nav = Nav.Nav().load_tdate_and_nav(fund_ids, sdate, edate)
         # dd(self.dt_nav)
-        
+
         #
         # 加载分红信息
         #
@@ -278,23 +280,23 @@ class TradeNav(object):
         if not self.df_bonus.loc[self.df_bonus['ra_payment_date'].isnull(), 'ra_payment_date'].empty:
             self.df_bonus.loc[self.df_bonus['ra_payment_date'].isnull(), 'ra_payment_date'] = self.df_bonus['ra_dividend_date']
         # dd(self.df_bonus, self.df_bonus.loc[('2016-01-20', [523, 524]), :])
-        
-        # 
+
+        #
         # 加载分拆信息
-        # 
+        #
         #
         self.df_split = base_fund_split.load(fund_ids, sdate, edate)
         self.df_split.sort_index(inplace=True)
         # dd(self.df_split)
 
-        # 
+        #
         # 加载基金净值
         #
         self.df_nav = Nav.Nav().load_nav_and_date(fund_ids, sdate, edate)
         self.df_nav = self.df_nav.swaplevel(0, 1, axis=0)
         self.df_nav.sort_index(inplace=True)
         # dd(self.df_nav.head(20))
-        
+
         #
         # 事件类型:0:净值更新;1:申购;2:赎回;3:分红;8:调仓;11:申购确认;12:赎回到账;15:分红登记;16:分红除息;17:分红派息;18:基金分拆;
         #         100:例行事件生成;101:记录当前持仓;
@@ -348,10 +350,10 @@ class TradeNav(object):
         #
         #          分红本身的权益登记、除息、派息需要按顺序进行，因为
         #          三个日子可能是一天。
-        # 
+        #
         #
         self.events = [];
-        
+
         #
         # 加载调仓信息
         #
@@ -359,7 +361,7 @@ class TradeNav(object):
             argv = {'pos': v0.loc[day]}
             ev = (day + timedelta(hours=17), 8, 0, 0, argv)
             heapq.heappush(self.events, ev)
-        
+
         #
         # 生成每日例行事件的事件
         #
@@ -383,7 +385,7 @@ class TradeNav(object):
             evs = self.process(ev)
 
             for ev in evs:
-                if ev[0] >= max_ts:
+                if ev[0].date() >= max_ts:
                     continue
                 if self.debug:
                     dump_event('+', ev)
@@ -395,7 +397,7 @@ class TradeNav(object):
         #
         # 本模块不负责保存具体的计算结果
         #
-        # df_result_nav = pd.Series(self.nav).to_frame('nav') 
+        # df_result_nav = pd.Series(self.nav).to_frame('nav')
         # dd(df_result_nav, "completed")
 
     def process(self, ev):
@@ -447,7 +449,7 @@ class TradeNav(object):
                 hours = 19
             else:
                 hours = 2
-                
+
             ev2 = (argv['ack_date'] + timedelta(hours=hours), 11, order_id, fund_id, argv)
             result.append(ev2)
 
@@ -479,7 +481,7 @@ class TradeNav(object):
                 hours = 19
             else:
                 hours = 2
-                
+
             ev2 = (argv['ack_date'] + timedelta(hours=hours), 12, order_id, fund_id, argv)
             result.append(ev2)
 
@@ -494,7 +496,7 @@ class TradeNav(object):
         elif op == 8:
             #
             # 调仓处理
-            # 
+            #
             # df_share: 是当前状态；argv['pos']: 是目标状态
             #
             # 调仓逻辑里面，首先取消掉所有未提交的订单，然后在根据当前状态
@@ -512,7 +514,7 @@ class TradeNav(object):
                 else:
                     ev2 = (order['nav_date'] + timedelta(hours=18, minutes=30), 2, order['order_id'], order['fund_id'], argv)
                 result.append(ev2)
-                
+
             self.orders.extend(orders)
 
         elif op == 15:
@@ -526,13 +528,13 @@ class TradeNav(object):
             # 日的净值，但该部分份额不可赎回，直到派息日方可赎回。
             #
             # 对于现金分红方式，除息日扣除相应的净值，派息日打款
-            #  
+            #
             #
             df = self.df_share.loc[[fund_id]]
             df['share_bonusing'] = df['share'] + df['share_buying']
             # if dt.strftime("%Y-%m-%d") == '2013-05-16':
             #     pdb.set_trace()
-        
+
             #
             # 生成分红订单，记录分红操作
             #
@@ -554,7 +556,7 @@ class TradeNav(object):
 
             self.df_share.loc[[fund_id]] = df
             # dd(orders, argv, self.df_share.loc[[fund_id]], dt, share_dividend, share_cash, df)
-            
+
             #
             # 调度除息事件
             #
@@ -583,7 +585,7 @@ class TradeNav(object):
             result.append(ev2)
             # 记录分红业绩
             self.dt_today_bonus[fund_id] = self.dt_today_bonus.setdefault(fund_id, 0) + df['amount_bonusing'].sum()
-            
+
             #
             # 处理红利再投的份额转换
             #
@@ -596,7 +598,7 @@ class TradeNav(object):
             df.loc[mask, 'amount_bonusing'] = 0
 
             self.df_share.loc[[fund_id]] = df
-            
+
             #
             # 生成再投份额
             #
@@ -617,8 +619,8 @@ class TradeNav(object):
             #     'div_mode': 1,
             # }
             # self.df_share.loc[(fund_id, argv['order_dividend']), :] = tmp
-            
-            
+
+
 
         elif op == 17:
             # pdb.set_trace()
@@ -652,7 +654,7 @@ class TradeNav(object):
             #
             # 基金分拆
             #
-            
+
             df = self.df_share.loc[[fund_id]]
             df['share'] *= argv['ra_split_proportion']
             df['share_buying'] *= argv['ra_split_proportion']
@@ -663,21 +665,21 @@ class TradeNav(object):
             #
             df['nav'] /= argv['ra_split_proportion']
             self.df_share.loc[[fund_id]] = df
-            
+
 
         elif op == 100:
             #
             # 当日持仓相关的例行事件
             #
             result.extend(self.share_routine(dt, argv))
-            
+
         elif op == 101:
             # if dt.strftime("%Y-%m-%d") in ['2014-02-10']:
             #     pdb.set_trace()
             day = pd.to_datetime(dt.date())
             # if dt.strftime("%Y-%m-%d") == '2016-10-10':
             #     pdb.set_trace()
-        
+
             #
             # 记录持仓
             #
@@ -700,7 +702,7 @@ class TradeNav(object):
 
             sr_contrib = pd.concat({0:sr_yield, 1:sr_fee_buy, 2:sr_fee_redeem, 3:sr_bonus})
             sr_contrib.index.names=['ra_return_type', 'ra_fund_id']
-            
+
             self.contrib[day] = sr_contrib
 
             #print "%s: %.6f / %.6f" % (day.strftime("%Y-%m-%d"), self.cash + 0.000000001, amount)
@@ -726,7 +728,7 @@ class TradeNav(object):
             ack_share = amount / nav
         else:
             nav, nav_date, ack_share, ack_amount = 0, '0000-00-00', 0, amount
-                
+
         return {
             'order_id': self.new_order_id(),
             'fund_id': fund_id,
@@ -854,11 +856,11 @@ class TradeNav(object):
                 dt_flying[today] += self.cash
             else:
                 dt_flying[today] = self.cash
-                
+
         df_new_redeem = pd.DataFrame({'new_redeem': dt_flying})
         df_new_redeem.index.name = 'date'
         df_old_redeem  = (self.df_redeem['share'] * self.df_redeem['nav'] - self.df_redeem['fee']).groupby(by=self.df_redeem['ack_date']).sum().to_frame('old_redeem')
-        
+
         df_flying = df_new_redeem.merge(df_old_redeem, how='outer', left_index=True, right_index=True).fillna(0)
         df_flying['amount'] = df_flying['old_redeem'] + df_flying['new_redeem']
 
@@ -870,7 +872,7 @@ class TradeNav(object):
         buy_total =  sr_ratio.sum()
         if buy_total > 0:
             sr_ratio = sr_ratio / buy_total
-            
+
             # 在途资金生成购买订单
             for day, v in df_flying.iterrows():
                 if v['amount'] < 0.000000999:
@@ -891,14 +893,14 @@ class TradeNav(object):
         #     dump_orders(result, "adjust date: %s" % dt.strftime("%Y-%m-%d"), False)
 
         return result
-                
-            
+
+
     def make_redeem_order(self, dt, fund_id, share, share_id, buy_date):
         (nav, nav_date) = self.get_tdate_and_nav(fund_id, dt)
         amount = share * nav
         fee = self.get_redeem_fee(dt, fund_id, buy_date, amount)
         # dd(nav, nav_date, share, amount, fee)
-        
+
         return {
             'order_id': self.new_order_id(),
             'fund_id': fund_id,
@@ -911,7 +913,7 @@ class TradeNav(object):
             'fee': fee,
             'nav': nav,
             'nav_date': nav_date,
-            'ack_date': self.get_redeem_ack_date(fund_id, nav_date), 
+            'ack_date': self.get_redeem_ack_date(fund_id, nav_date),
             'ack_amount': amount - fee,
             'ack_share': share,
             'div_mode': 0,
@@ -942,7 +944,7 @@ class TradeNav(object):
         df_nav = self.dt_nav[fund_id]
 
         date = pd.to_datetime(day.date())
-        max_date = df_nav.index.max() 
+        max_date = df_nav.index.max()
         if date > max_date:
             date = max_date
         return df_nav.loc[date, ['ra_nav', 'ra_nav_date']]
@@ -961,10 +963,10 @@ class TradeNav(object):
         '''
         if self.optfee == False:
             return 0
-        
+
         if fund_id not in self.df_redeem_fee.index:
             return 0
-        
+
         df = self.df_redeem_fee.loc[[fund_id], :]
 
         # 持有日期
@@ -1015,7 +1017,7 @@ class TradeNav(object):
         fee = self.get_buy_fee(dt, fund_id, amount)
         ack_amount = amount - fee
         share = ack_amount / nav
-        
+
         return {
             'order_id': self.new_order_id(),
             'fund_id': fund_id,
@@ -1028,7 +1030,7 @@ class TradeNav(object):
             'fee': fee,
             'nav': nav,
             'nav_date': nav_date,
-            'ack_date': self.get_buy_ack_date(fund_id, nav_date), 
+            'ack_date': self.get_buy_ack_date(fund_id, nav_date),
             'ack_amount': amount - fee,
             'ack_share': share,
             'div_mode': 1,
@@ -1040,17 +1042,17 @@ class TradeNav(object):
         获取申购费用和净申购金额
 
         计算公式如下（来自中国证监会官网）：
-        
+
             净申购金额=申购金额/（1+申购费率）
             申购费用=申购金额-净申购金额
 
         '''
         if self.optfee == False:
             return 0
-        
+
         if fund_id not in self.df_buy_fee.index:
             return 0
-        
+
         df = self.df_buy_fee.loc[[fund_id], :]
         sr = df.loc[df['ff_max_value'] > amount].iloc[0]
         if sr['ff_fee_type'] == 2: # 固定费用模式，一般是申购额足够大，费用封顶
@@ -1084,7 +1086,7 @@ class TradeNav(object):
                 n = 2
 
         date = pd.to_datetime(buy_date.date())
-        max_date = self.df_t_plus_n.index.max() 
+        max_date = self.df_t_plus_n.index.max()
         if date > max_date:
             date = max_date
 
@@ -1113,12 +1115,12 @@ class TradeNav(object):
 
         # if dt.strftime("%Y-%m-%d") == '2013-05-16':
         #     pdb.set_trace()
-        
+
 
         evs = []
         fund_ids = self.df_share.index.get_level_values(0).unique().tolist()
 
-        
+
         day = pd.to_datetime(dt.date())
         if len(fund_ids) != 0:
             #
@@ -1139,9 +1141,9 @@ class TradeNav(object):
                     # dd(record_date + timedelta(hours=16), ev)
                     evs.append(ev)
 
-            # 
+            #
             # 加载分拆信息
-            # 
+            #
             #
             if day in self.df_split.index.levels[0]:
                 # dd(self.df_split, day)
@@ -1152,7 +1154,7 @@ class TradeNav(object):
                     ev = (split_date + timedelta(hours=1), 18, 0, fund_id, argv)
                     evs.append(ev)
 
-            # 
+            #
             # 加载基金净值
             #
             if day in self.df_nav.index.levels[0]:
@@ -1203,7 +1205,7 @@ class TradeNav(object):
         df_tmp = pd.DataFrame([row], columns=['fund_id', 'share_id', 'share', 'yield', 'nav', 'nav_date', 'share_buying', 'buy_date', 'ack_date', 'share_bonusing', 'amount_bonusing', 'div_mode'])
         df_tmp = df_tmp.set_index(['fund_id', 'share_id'])
         return df_tmp
-        
+
 
     def idebug(self, dt):
         while True:

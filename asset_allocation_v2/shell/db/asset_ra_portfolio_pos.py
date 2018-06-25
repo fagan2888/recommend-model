@@ -11,6 +11,7 @@ from . import database
 
 from dateutil.parser import parse
 from util.xdebug import dd
+from ipdb import set_trace
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ def load(gid, included_portfolio_id=False):
         t1.c.ra_ratio,
     ]
     index_col = ['ra_date', 'ra_asset_id']
-    
+
     if included_portfolio_id:
         columns.insert(0, t1.c.ra_portfolio_id)
         index_col.insert(0, 'ra_portfolio_id')
@@ -38,11 +39,12 @@ def load(gid, included_portfolio_id=False):
         return None
     # if xtypes is not None:
     #     s = s.where(t1.c.ra_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['ra_date'])
 
     df = df.unstack().fillna(0.0)
     df.columns = df.columns.droplevel(0)
+    set_trace()
 
     return df
 
@@ -58,7 +60,7 @@ def load_fund_pos(gid):
         t1.c.ra_fund_ratio,
     ]
     index_col = ['ra_date', 'ra_pool_id', 'ra_fund_id']
-    
+
     # if included_portfolio_id:
     #     columns.insert(0, t1.c.ra_portfolio_id)
     #     index_col.insert(0, 'ra_portfolio_id')
@@ -71,7 +73,7 @@ def load_fund_pos(gid):
         return None
     # if xtypes is not None:
     #     s = s.where(t1.c.ra_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['ra_date'])
 
     #

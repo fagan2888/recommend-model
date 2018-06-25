@@ -30,6 +30,8 @@ from util.xdebug import dd
 from RiskParity import cal_weight
 
 import traceback, code
+from ipdb import set_trace
+from asset import Asset
 
 
 logger = logging.getLogger(__name__)
@@ -305,7 +307,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, opthigh, optlow, optriskm
         df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
         # df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
         # if turnover >= 0.01:
-        #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
+        #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
 
         df.index.name = 'mz_date'
         df.columns.name='mz_asset_id'
@@ -616,7 +618,7 @@ def pos_update(highlow, alloc):
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
     # df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     # if turnover >= 0.01:
-    #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律 
+    #     df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
 
     #if alloc['mz_risk'] == 0.9:
     #    dd(df)
@@ -964,19 +966,19 @@ def nav(ctx, optid, opttype, optlist, optenddate):
         enddate = pd.to_datetime(optenddate)
     else:
         enddate = None
-        
+
     xtypes = [s.strip() for s in opttype.split(',')]
 
     if highlows is not None:
         df_highlow = asset_mz_highlow.load(highlows)
     else:
         df_highlow = asset_mz_highlow.load(highlows, xtypes)
-        
+
     if optlist:
         df_highlow['mz_name'] = df_highlow['mz_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_highlow, headers='keys', tablefmt='psql'))
         return 0
-    
+
     for _, highlow in df_highlow.iterrows():
         nav_update_alloc(highlow, enddate)
 
@@ -994,10 +996,10 @@ def nav_update(alloc, enddate):
     df_pos = asset_mz_highlow_pos.load(alloc_id)
 
     # 加载资产收益率
-    min_date = df_pos.index.min()
+    min_date = df_pos.index.min().date()
     #max_date = df_pos.index.max()
     if enddate is not None:
-        max_date = enddate
+        max_date = enddate.date()
     else:
         max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
@@ -1011,7 +1013,7 @@ def nav_update(alloc, enddate):
 
     data = {}
     for asset_id in df_pos.columns:
-        data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
+        data[asset_id] = Asset.load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 
@@ -1064,13 +1066,13 @@ def turnover(ctx, optid, opttype, optlist):
 
 def turnover_update_alloc(highlow):
     df_alloc = asset_mz_highlow_alloc.where_highlow_id(highlow['globalid'])
-    
+
     with click.progressbar(length=len(df_alloc), label=('update turnover %s' % (highlow['globalid'])).ljust(30)) as bar:
         for _, alloc in df_alloc.iterrows():
             bar.update(1)
             turnover_update(alloc)
 
-            
+
 def turnover_update(highlow):
     highlow_id = highlow['globalid']
     # 加载仓位信息
@@ -1117,13 +1119,13 @@ def delete(ctx, optid, optlist, optexec):
     if optid is None or not optexec:
          click.echo(click.style("\nboth --id and --exec is required to perform delete\n", fg='red'))
          return 0
-    
+
     data = []
     with click.progressbar(length=len(df_highlow), label='highlow delete'.ljust(30)) as bar:
         for _, highlow in df_highlow.iterrows():
             bar.update(1)
             perform_delete(highlow)
-            
+
 def perform_delete(highlow):
     highlow_id = highlow['globalid']
 
