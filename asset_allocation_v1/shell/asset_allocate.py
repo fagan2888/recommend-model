@@ -68,6 +68,8 @@ class MzAllocate(Allocate):
 
 
     def allocate_algo(self, day, df_inc, bound):
+        #  from ipdb import set_trace
+        #  set_trace()
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws

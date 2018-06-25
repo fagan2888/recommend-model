@@ -22,6 +22,8 @@ import AllocationData
 import DBData
 import DFUtil
 import BondFundPoolNew as BF
+import itertools
+from scipy.stats import ttest_rel
 
 from Const import datapath
 from dateutil.parser import parse
@@ -201,6 +203,7 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
 
     #
     factors = BondFactor.__subclasses__()
+    factors_map = {f.name:f for f in factors}
     fund_pool = BF.factor_regression(factors, start_date, end_date)
     fund_pool.index.name='code'
     for f in factors:
@@ -210,9 +213,26 @@ def label_asset_bond_per_day(day, lookback, limit = 5):
     # 打标签确定所有备选基金
     #
     df_nav_indicator = df_nav_bond[df_indicator.index]
+
+    #  categories = ['slope', 'curvature', 'credit', 'default', 'currency', 'convertible']
+    categories = ['slope', 'curvature', 'credit', 'default', 'convertible']
+
     #  df_label = ST.tag_bond_fund_new(day, df_nav_indicator, df_nav_index)
     df_label = pd.DataFrame().reindex(df_indicator.index)
-    df_label["benchmark"] = 1
+    for cat in categories:
+        df_label[cat]=0
+    fund_pool = fund_pool.dropna()
+    for code in df_label.index:
+        if code in fund_pool.index:
+            df_label.loc[code, fund_pool.loc[code, categories].argmax()] = 1
+
+    set_trace()
+
+
+    #  calc_sharpe = lambda f: (factors_map[f].inc(start_date, end_date).mean() - 0.03/lookback)/(factors_map[f].inc(start_date, end_date).std()) * np.sqrt(52)
+    #  categories.sort(key=calc_sharpe, reverse=True)
+    #  #Drop the last things
+    #  df_label.loc[:, categories[3:]] = 0
 
     return df_indicator, df_label
     #

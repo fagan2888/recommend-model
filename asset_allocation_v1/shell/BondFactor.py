@@ -97,7 +97,7 @@ class RSlope(BondFactor):
         See the following code.
     '''
     def inc(cls, begin_date=None, end_date=None, reindex=None):
-        inc = -cls.duration_immute(cls.index_long_period, cls.index_short_period, begin_date, end_date, reindex)
+        inc = cls.duration_immute(cls.index_long_period, cls.index_short_period, begin_date, end_date, reindex)
         inc.name = 'RSlope'
         return inc
 
@@ -143,7 +143,7 @@ class RCurvature(BondFactor):
             inc[0] = 0
             inc.name = 'RCurvature'
             #  cls.__nav = (1+inc).cumprod()
-            cls.__nav = (1-inc).cumprod()
+            cls.__nav = (1+inc).cumprod()
         if begin_date is None:
             begin_date = '2010-01-01'
         if end_date is None:
@@ -163,7 +163,7 @@ class RCurvature(BondFactor):
 class RCredit(BondFactor):
 
     index_enterpriseAAA = BondIndex("2070005063")
-    index_CDB = BondIndex("2070000276")
+    index_CDB = BondIndex("2070000275")
     name = 'credit'
 
     def inc(cls, begin_date=None, end_date=None, reindex=None):
@@ -243,6 +243,7 @@ def showheatmap():
     mat = abs(mat)
     seaborn.heatmap(mat, annot=True)
     plt.show()
+
 
 
 if __name__ == '__main__':

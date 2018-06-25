@@ -781,7 +781,12 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
         else:
             sr = pd.Series()
     else:
-        if prefix == 'AP':
+        categories = ['slope', 'curvature', 'credit', 'default', 'currency', 'convertible']
+        if asset_id in categories:
+            import BondFactor as BF
+            factor_map = {f.name : f for f in BF.BondFactor.__subclasses__()}
+            sr = factor_map[asset_id].nav(begin_date=begin_date, end_date=end_date, reindex=reindex)
+        elif prefix == 'AP':
             #
             # 基金池资产
             #
@@ -994,6 +999,18 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         df = (bootbl_df + waveletbl_df) / 2
 
+    elif algo == 9:
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        import BondFactor as BF
+        factors = BF.BondFactor.__subclasses__()
+        #  categories = ['slope', 'curvature', 'credit', 'default', 'currency', 'convertible']
+        categories = ['slope', 'curvature', 'credit', 'default', 'currency']
+        assets = {f.name: f for f in factors if f.name in categories}
+        #  assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzBootAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+        #  from ipdb import set_trace
+        #  set_trace()
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -1128,6 +1145,8 @@ def nav_update(markowitz, alloc):
     data = {}
     for asset_id in df_pos.columns:
         data[asset_id] = load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
+    #  from ipdb import set_trace
+    #  set_trace()
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
 

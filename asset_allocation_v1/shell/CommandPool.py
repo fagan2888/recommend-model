@@ -198,13 +198,13 @@ def fund_lowliest_elimination(df_pre_fund, df_indicator, df_label, ratio, limit)
 
     #print df_label.head()
     #  target = 'coef_treasury'
-    target = 'coef_enterprise'
+    #  target = 'coef_enterprise'
     data = {}
     for category in df_label.columns:
         index_codes = df_label[df_label[category] == 1].index
         df_tmp = df_indicator.loc[index_codes]
         if df_pre_fund is None or df_pre_fund.loc[category].index.intersection(df_indicator.index).empty:
-            df_tmp = df_tmp[(df_tmp.score > 0.5) & (df_tmp[target] > 0.5)].dropna()
+            df_tmp = df_tmp[(df_tmp.score > 0.5) & (df_tmp[category] > 1.0/8)].dropna()
             data[category] = df_tmp.sort_values(by='jensen', ascending=False)[0:limit]
         else:
             pre_fund = df_indicator.loc[df_pre_fund.loc[category].index]
@@ -215,7 +215,7 @@ def fund_lowliest_elimination(df_pre_fund, df_indicator, df_label, ratio, limit)
             #  extra_num -= len(pre_fund)
             pre_fund = pre_fund.sort_values(by='jensen', ascending=False)[0:len(pre_fund) - eliminate_num]
             df_tmp = df_tmp.loc[df_tmp.index.difference(pre_fund.index)]
-            df_tmp = df_tmp[(df_tmp.score > 0.5) & (df_tmp[target] > 0.5)].dropna()
+            df_tmp = df_tmp[(df_tmp.score > 0.5) & (df_tmp[category] > 1.0/8)].dropna()
             df_tmp = df_tmp.sort_values(by='jensen', ascending=False)
             df_tmp = pd.concat([pre_fund, df_tmp], axis = 0)
             #print pre_fund
@@ -233,7 +233,7 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
     lookback = pool.ra_lookback
     limit = optlimit
     #  target = 'coef_treasury'
-    target = 'default'
+    #  target = 'default'
 
     if optcalc:
         #
@@ -249,11 +249,24 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
                 else:
                     df_indicator, df_label = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
 
-                tmp_df = df_indicator[(df_indicator.score > 0.5) & (df_indicator["default"]+df_indicator["credit"] > 2.0/8)].dropna()
-                tmp_df = tmp_df.sort_values("jensen", ascending=False)[:limit]
-                tmp_df["category"] = "benchmark"
-                tmp_df = tmp_df.reset_index().set_index(["category", "code"])
+                #  tmp_df = df_indicator[(df_indicator.score > 0.5) & (df_indicator["default"]+df_indicator["credit"] > 2.0/8)].dropna()
+                #  tmp_df = tmp_df.sort_values("jensen", ascending=False)[:limit]
+                #  tmp_df["category"] = "benchmark"
+                #  tmp_df = tmp_df.reset_index().set_index(["category", "code"])
+                #  data_fund[day] = tmp_df
+
+                tmp = []
+                categories = ['slope', 'curvature', 'credit', 'default']
+                #  categories = df_label.columns
+                for cat in categories:
+                    tmp_df = df_indicator[(df_indicator.score > 0.5) & (df_label[cat] ==1)].dropna()
+                    tmp_df = tmp_df.sort_values('jensen', ascending=False)[:limit]
+                    tmp_df['category'] = cat
+                    tmp.append(tmp_df)
+                tmp_df = pd.concat(tmp).reset_index().set_index(['category', 'code'])
                 data_fund[day] = tmp_df
+
+
 
                 #  fund_dates = np.array(data_fund.keys())
                 #  fund_date = fund_dates[fund_dates < day]
@@ -268,6 +281,8 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
 
 
         df_fund = pd.concat(data_fund, names=['ra_date', 'ra_category', 'ra_fund_code'])
+        #  from ipdb import set_trace
+        #  set_trace()
 
         df_new = df_fund.rename(index=DFUtil.categories_types(True), columns={'date':'ra_date', 'category':'ra_category', 'code':'ra_fund_code', 'sharpe':'ra_sharpe',  'jensen':'ra_jensen', 'sortino':'ra_sortino', 'ppw':'ra_ppw'})
         df_new.drop('stability', axis=1, inplace=True)

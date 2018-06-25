@@ -31,9 +31,9 @@ def lookupday(day, lookback=0, lookforward=0):
 bond_fund = base_ra_fund.find_type_fund(2).set_index("ra_code")
 bond_fund_ids = bond_fund.globalid.ravel()
 
-lasso = Lasso(alpha=0, fit_intercept=False, positive=True)
+lasso = Lasso(alpha=0, fit_intercept=True, positive=True)
 tdate = ATradeDate.week_trade_date()
-#  benchmark = BondIndex("2070006886")
+benchmark = BondIndex("2070006886")
 #  enterprise_hr = BondIndex("2070007644")
 #  treasury = BondIndex("2070006891")
 #  benchmark_cbd = BondIndex("2070000256")
@@ -112,7 +112,10 @@ def factor_regression(factors, begin_date, end_date):
         fund_id = fund_inc.name
         res = lasso.fit(factor_matrix, fund_inc)
         score = res.score(factor_matrix, fund_inc)
-        jensen = (1+fund_inc).prod() - (1+factor_matrix.dot(res.coef_)).prod()
+        #  jensen = (1+fund_inc).prod() - (1+factor_matrix.dot(res.coef_)).prod()
+        #  jensen = (fund_inc - factor_matrix.dot(res.coef_))[-1]
+        jensen = res.intercept_
+        #  set_trace()
         param_dict = {"fund_id":fund_id, "score":score, "jensen":jensen}
         param_dict.update(dict(zip([i.name for i in factors], tuple((res.coef_/res.coef_.sum())))))
         result.append(pd.DataFrame([param_dict]))
@@ -184,6 +187,25 @@ def show_selected_factor(factors, day):
     plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., prop=myfont)
     plt.show()
 
+def sharpe_rank():
+    lookback=52
+    res = {}
+    adjust_point = ATradeDate.month_trade_date(begin_date='2010-01-01', end_date='2018-01-01')
+    factors = BondFactor.__subclasses__()
+    factors_map = {f.name:f for f in factors}
+    categories = ['slope', 'curvature', 'credit', 'default', 'currency']
+    compared_factors = [factors_map[i] for i in categories]
+    for day in adjust_point:
+        end_date = day
+        start_date = lookupday(day, lookback=52)
+        calc_sharpe = lambda factor: (factor.inc(start_date, end_date).mean() - benchmark.inc(start_date, end_date).mean()+0.03/lookback)/(factor.inc(start_date, end_date).std()) * np.sqrt(52)
+        res[day] = pd.Series({f.name: calc_sharpe(f) for f in factors})
+    return pd.DataFrame(res).drop('level', axis=1).rank(axis=1, ascending=False)
+        #  print '========================================='
+        #  print day
+        #  print map(lambda x: x.name, sorted(compared_factors, key=calc_sharpe, reverse=True)[:3])
+
+
 if __name__ == "__main__":
     #  df_selected_factors = run_ttest_rel_by_adjpt()
     from BondFactor import *
@@ -192,10 +214,11 @@ if __name__ == "__main__":
     factors = BondFactor.__subclasses__()
     #  factors_0427 = df_selected_factors.loc[end_date]
     #  reg = factor_regression(factors_0427.secode, begin_date, end_date)
-    reg = factor_regression(factors, begin_date, end_date)
+    #  reg = factor_regression(factors, begin_date, end_date)
     #  set_trace()
     #  df = fund_selector([benchmark.globalid], '2010-01-01', '2018-05-01')
     #  funds = factor_regression([benchmark.globalid], '2009-12-25', '2010-03-31')
     #  df = fund_selector([benchmark.globalid, enterprise_hr.globalid])
     #  res = check(df, [benchmark.globalid, enterprise_hr.globalid])
+    sharpe_rank()
     set_trace()
