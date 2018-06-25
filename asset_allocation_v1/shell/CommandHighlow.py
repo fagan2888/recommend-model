@@ -28,6 +28,7 @@ from db import *
 from util import xdict
 from util.xdebug import dd
 from RiskParity import cal_weight
+from ipdb import set_trace
 
 import traceback, code
 
@@ -654,16 +655,37 @@ def range_cons(x):
 def limit_update(highlow, alloc, ratio_hl):
     # ratio_hl = cal_limit(highlow, alloc)
     risk = alloc.mz_risk
+    hl_range1 = 0.5
+    hl_range2 = 0.2
+    arg1 = 1 / (hl_range1 * 2)
+    arg2 = 1 - hl_range1
+    arg3 = 1 / (hl_range2 * 2)
+    arg4 = 1 - hl_range2
 
     # ratio_hl = ratio_hl / 5
     # ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.1)
 
-    ratio_hl = ratio_hl / 2.5
-    ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.2)
+    ratio_hl_high = ratio_hl / arg1
+    ratio_hl_high = ratio_hl_high[ratio_hl_high.ratio_h < ratio_hl_high.ratio_l].copy()
+    ratio_hl_high['ratio_h'] += arg2
+    ratio_hl_high['ratio_h'] = ratio_hl_high['ratio_h'] * (risk - 0.1)/0.9
+    ratio_hl_high['ratio_h'] = ratio_hl_high['ratio_h'].apply(range_cons)
+    ratio_hl_high['ratio_l'] = 1.0 - ratio_hl_high['ratio_h']
 
-    ratio_hl['ratio_h'] = ratio_hl['ratio_h'].apply(range_cons)
-    ratio_hl['ratio_l'] = 1.0 - ratio_hl['ratio_h']
-    ratio_hl.index.name = 'mz_date'
+    ratio_hl_low = ratio_hl / arg3
+    ratio_hl_low = ratio_hl_low[ratio_hl_low.ratio_h > ratio_hl_low.ratio_l].copy()
+    ratio_hl_low['ratio_l'] += arg4
+    ratio_hl_low['ratio_l'] = ratio_hl_low['ratio_l'] * (1.0 - risk)/0.9
+    ratio_hl_low['ratio_l'] = ratio_hl_low['ratio_l'].apply(range_cons)
+    ratio_hl_low['ratio_h'] = 1.0 - ratio_hl_low['ratio_l']
+
+    ratio_hl_new = pd.concat([ratio_hl_high, ratio_hl_low]).sort_index()
+    ratio_hl_new.index.name = 'mz_date'
+
+
+    # ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.2)
+    # ratio_hl['ratio_h'] = ratio_hl['ratio_h'].apply(range_cons)
+    # ratio_hl['ratio_l'] = 1.0 - ratio_hl['ratio_h']
     #ratio_hl = ratio_hl.reset_index()
     #ratio_hl['mz_risk'] = risk
     #ratio_hl['mz_highlow_id'] = alloc.mz_highlow_id
@@ -672,7 +694,7 @@ def limit_update(highlow, alloc, ratio_hl):
 
     #asset_mz_highlow_limit.save(alloc.mz_highlow_id, risk, ratio_hl)
 
-    return ratio_hl
+    return ratio_hl_new
 
 def cal_limit(highlow):
     lookback = 26

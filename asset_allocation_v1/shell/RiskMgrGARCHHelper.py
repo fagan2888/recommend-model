@@ -16,7 +16,9 @@ from scipy import linalg
 from Queue import Queue
 import multiprocessing
 from ipdb import set_trace
+from rpy2.rinterface import RRuntimeWarning
 import warnings
+warnings.filterwarnings("ignore", category=RRuntimeWarning)
 
 #Import rpy2
 import rpy2
@@ -24,7 +26,6 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri, numpy2ri
 
 #Load basic libs from R
-warnings.filterwarnings("ignore")
 r = ro.r
 numpy2ri.activate()
 pandas2ri.activate()
