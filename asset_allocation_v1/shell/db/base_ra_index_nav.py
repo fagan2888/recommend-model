@@ -8,7 +8,7 @@ import pandas as pd
 # import sys
 import logging
 import database
-import MySQLdb
+#  import MySQLdb
 import config
 
 from dateutil.parser import parse
@@ -112,43 +112,68 @@ def load_ohlcav(id_, reindex=None, begin_date=None, end_date=None, mask=None):
 
     return df
 
-
-
 def index_value(start_date, end_date, ra_index_id):
-    #
-    # [XXX] 本来想按照周收盘取净值数据, 但实践中发现周收盘存在美股和A
-    # 股节假日对其的问题. 实践证明, 最好的方式是按照自然日的周五来对齐
-    # 数据.
-    #
-    date_sql = build_sql_trade_date_weekly(start_date, end_date)
+    db = database.connection('base')
+    t1 = Table('ra_index_nav', MetaData(bind=db), autoload=True)
+    t2 = Table('trade_dates', MetaData(bind=db), autoload=True)
 
-    sql = "SELECT ra_date as date, ra_index_id, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date and ra_index_id = %s ORDER BY ra_date" % (date_sql, ra_index_id)
+    columns = [t1.c.ra_date.label('date'), t1.c.ra_index_id, t1.c.ra_nav]
 
-    # sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
+    s2 = select([t2.c.td_date]) \
+            .where(between(t2.c.td_date, start_date, end_date)) \
+            .where(t2.c.td_type.op('&')(0x02) | (t2.c.td_date == end_date)) \
+            .alias('E')
 
+    s = select(columns) \
+            .select_from(s2) \
+            .where(t1.c.ra_date == s2.c.td_date) \
+            .where(t1.c.ra_index_id == ra_index_id) \
+            .order_by(t1.c.ra_date)
+    # s = select(columns).select_from(t1.join(s2, t1.c.ra_date == s2.c.td_date)).where(t1.c.ra_index_id == ra_index_id).order_by(t1.c.ra_date)
+    logger.debug("index_value:" + str(s))
 
-    logger.debug("index_value: " + sql)
-
-    conn  = MySQLdb.connect(**config.db_base)
-    df = pd.read_sql(sql, conn, index_col = ['date', 'ra_index_id'], parse_dates=['date'])
-    conn.close()
-
+    df = pd.read_sql(s, db, index_col = ['date', 'ra_index_id'], parse_dates=['date'])
     df = df.unstack().fillna(method='pad')
     df.columns = df.columns.droplevel(0)
 
     return df
 
 
-def build_sql_trade_date_weekly(start_date, end_date, include_end_date=True):
-    if type(start_date) != str:
-        start_date = start_date.strftime("%Y-%m-%d")
+#  def index_value(start_date, end_date, ra_index_id):
+    #  #
+    #  # [XXX] 本来想按照周收盘取净值数据, 但实践中发现周收盘存在美股和A
+    #  # 股节假日对其的问题. 实践证明, 最好的方式是按照自然日的周五来对齐
+    #  # 数据.
+    #  #
+    #  date_sql = build_sql_trade_date_weekly(start_date, end_date)
 
-    if type(end_date) != str:
-        end_date = end_date.strftime("%Y-%m-%d")
+    #  sql = "SELECT ra_date as date, ra_index_id, ra_nav FROM ra_index_nav, (%s) E WHERE ra_date = E.td_date and ra_index_id = %s ORDER BY ra_date" % (date_sql, ra_index_id)
 
-    if include_end_date:
-        condition = "(td_type & 0x02 OR td_date = '%s')" % (end_date)
-    else:
-        condition = "(td_type & 0x02)"
+    #  # sql = "select iv_index_id,iv_index_code,iv_time,iv_value,DATE_FORMAT(`iv_time`,'%%Y%%u') week from ( select * from index_value where iv_time>='%s' and iv_time<='%s' order by iv_time desc) as k group by iv_index_id,week order by week desc" % (start_date, end_date)
 
-    return "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND %s" % (start_date, end_date, condition)
+
+    #  logger.debug("index_value: " + sql)
+
+    #  conn  = MySQLdb.connect(**config.db_base)
+    #  df = pd.read_sql(sql, conn, index_col = ['date', 'ra_index_id'], parse_dates=['date'])
+    #  conn.close()
+
+    #  df = df.unstack().fillna(method='pad')
+    #  df.columns = df.columns.droplevel(0)
+
+    #  return df
+
+
+#  def build_sql_trade_date_weekly(start_date, end_date, include_end_date=True):
+    #  if type(start_date) != str:
+        #  start_date = start_date.strftime("%Y-%m-%d")
+
+    #  if type(end_date) != str:
+        #  end_date = end_date.strftime("%Y-%m-%d")
+
+    #  if include_end_date:
+        #  condition = "(td_type & 0x02 OR td_date = '%s')" % (end_date)
+    #  else:
+        #  condition = "(td_type & 0x02)"
+
+    #  return "SELECT td_date FROM trade_dates WHERE td_date BETWEEN '%s' AND '%s' AND %s" % (start_date, end_date, condition)
