@@ -7,8 +7,8 @@ import pandas as pd
 # import os
 # import sys
 import logging
-from . import database
-import MySQLdb
+from db import database
+#  import MySQLdb
 import config
 import re
 
@@ -44,7 +44,7 @@ def load_index(begin_date=None, end_date=None):
 def load_origin_index_trade_date(index_id, begin_date=None, end_date=None):
 
     if index_id.isdigit():
-        xtype = int(index_id) / 10000000
+        xtype = int(index_id) // 10000000
     else:
         xtype = re.sub(r'([\d]+)','',index_id).strip()
 
@@ -110,15 +110,37 @@ def load_trade_dates(begin_date=None, end_date=None):
 
 
 def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True):
+    if end_date is None:
+        end_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    t1 = Table('trade_dates', metadata, autoload=True)
+    columns = [
+        t1.c.td_date.label('date'),
+        t1.c.td_type,
+    ]
+
+    s = select(columns).where(t1.c.td_date <= end_date)
     if include_end_date:
-        condition = "(td_type & 0x02 OR td_date = '%s')" % (end_date)
+        condition = s.where((t2.c.td_type.op('&')(0x02)) | (t1.c.td_date == end_date))
     else:
-        condition = "(td_type & 0x02)"
+        condition = s.where((t1.c.td_type.op('&')(0x02)))
 
-    sql = "SELECT td_date as date, td_type FROM trade_dates WHERE td_date <= '%s' AND %s ORDER By td_date DESC LIMIT %d" % (end_date, condition, lookback)
+    s = condition.order_by(t1.c.td_date.desc()).limit(lookback)
 
-    conn  = MySQLdb.connect(**config.db_base)
-    df = pd.read_sql(sql, conn, index_col = 'date', parse_dates=['date'])
-    conn.close()
-
+    df = pd.read_sql(s, db, index_col = 'date', parse_dates=True)
     return df.index.sort_values()
+
+#  def trade_date_lookback_index(end_date=None, lookback=26, include_end_date=True):
+    #  if include_end_date:
+        #  condition = "(td_type & 0x02 OR td_date = '%s')" % (end_date)
+    #  else:
+        #  condition = "(td_type & 0x02)"
+
+    #  sql = "SELECT td_date as date, td_type FROM trade_dates WHERE td_date <= '%s' AND %s ORDER By td_date DESC LIMIT %d" % (end_date, condition, lookback)
+
+    #  conn  = MySQLdb.connect(**config.db_base)
+    #  df = pd.read_sql(sql, conn, index_col = 'date', parse_dates=['date'])
+    #  conn.close()
+
+    #  return df.index.sort_values()

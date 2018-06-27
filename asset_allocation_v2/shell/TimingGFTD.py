@@ -11,6 +11,9 @@ from db import database
 
 logger = logging.getLogger(__name__)
 
+def cmp(x, y):
+    return (x>y) - (x<y)
+
 class TimingGFTD(object):
     
     def __init__(self, n1=4, n2=4, n3=4, n4=None):
