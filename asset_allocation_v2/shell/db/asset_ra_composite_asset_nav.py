@@ -8,7 +8,7 @@ import pandas as pd
 # import sys
 import logging
 from . import database
-import MySQLdb
+#  import MySQLdb
 import config
 
 from dateutil.parser import parse

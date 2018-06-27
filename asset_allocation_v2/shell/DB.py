@@ -4,10 +4,10 @@
 import os
 import sys
 sys.path.append('shell')
-import pymysql
-pymysql.install_as_MySQLdb()
+#  import pymysql
+#  pymysql.install_as_MySQLdb()
 
-# import MySQLdb
+import MySQLdb
 import config
 import string
 import pandas as pd

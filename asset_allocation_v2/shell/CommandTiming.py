@@ -381,7 +381,7 @@ def coverage_update(timing, n1s, n2s, n3s, n4s):
 def load_index_ohlc(asset_id, reindex, begin_date, end_date, mask):
 
     if asset_id.isdigit():
-        xtype = int(asset_id) / 10000000
+        xtype = int(asset_id) // 10000000
     else:
         xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
