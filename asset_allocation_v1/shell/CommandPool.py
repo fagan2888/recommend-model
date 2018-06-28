@@ -36,6 +36,7 @@ from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
 from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund
+from ipdb import set_trace
 
 import traceback, code
 
@@ -197,6 +198,7 @@ def fund_lowliest_elimination(df_pre_fund, df_indicator, df_label, ratio, limit)
     #categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
 
     #print df_label.head()
+    set_trace()
     data = {}
     for category in df_label.columns:
         index_codes = df_label[df_label[category] == 1].index
