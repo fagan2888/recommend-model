@@ -545,19 +545,34 @@ def passive_fund_ratio(ctx):
 @click.pass_context
 def user_risk_level(ctx):
 
-
     db = database.connection('trade')
     sql = 'select ts_uid, ts_risk, ts_trade_type, ts_trade_status, ts_placed_date from ts_order'
     df = pd.read_sql(sql, db, index_col = ['ts_uid', 'ts_placed_date'], parse_dates = ['ts_placed_date'])
     df = df[((df.ts_trade_type == 3) | (df.ts_trade_type == 6) | (df.ts_trade_type == 5)) & (df.ts_trade_status.isin([1,5,6]))]
-    user_risk = {}
+    uids = []
+    data = []
     for k, v in df.groupby(df.index.get_level_values(0)):
         if len(v) > 0:
-            print k, v.ts_risk[-1]
-            user_risk[k] = v.ts_risk[-1]
+            #print k, v.ts_risk[-1]
+            #print v.index.get_level_values(1)[-1]
+            uids.append(k)
+            data.append([v.ts_risk[-1], v.index.get_level_values(1)[-1]])
 
-    user_risk_df = pd.Series(user_risk)
-    print user_risk_df
+    user_risk_df = pd.DataFrame(data, index = uids, columns = ['risk', 'placed_date'])
+    #print user_risk_df
     user_risk_df.to_csv('user_risk.csv')
+    print user_risk_df.tail()
     #df = df.replace(pd.NaT, np.nan)
     #print df.tail()
+
+    sql = 'select ts_uid, ts_amount from ts_share_fund'
+    df = pd.read_sql(sql, db, index_col = ['ts_uid'])
+    amount_df = df.groupby(df.index).sum()
+    print amount_df.tail()
+
+    #risk_df = pd.read_csv('user_risk.csv', index_col = ['uid'])
+    #risk_df = risk_df.groupby(risk_df.index).last()
+    drawdown_df = pd.read_csv('user_drawdown.csv', index_col = ['uid'])
+    df = pd.concat([user_risk_df, drawdown_df, amount_df] ,axis = 1).dropna()
+    #print df.tail()
+    df.to_csv('user_risk_drawdown.csv')
