@@ -9,7 +9,6 @@ import sys
 sys.path.append("windshell")
 import Financial as fin
 import Const
-import Data
 from numpy import isnan
 from datetime import datetime
 import pandas as pd

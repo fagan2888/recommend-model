@@ -13,19 +13,10 @@ import config
 import pandas as pd
 import numpy as np
 import LabelAsset
-import EqualRiskAssetRatio
-import EqualRiskAsset
-import HighLowRiskAsset
 import os
 import DBData
-import AllocationData
 import time
-import RiskHighLowRiskAsset
-import ModelHighLowRisk
-import GeneralizationPosition
 import Const
-import WeekFund2DayNav
-import FixRisk
 import DFUtil
 import LabelAsset
 

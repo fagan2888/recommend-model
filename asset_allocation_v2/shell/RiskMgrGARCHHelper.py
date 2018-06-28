@@ -8,9 +8,8 @@ on the R interactive shell introduced by RPy2.
 import sys
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy import stats
-from pathos.multiprocessing import ProcessingPool as Pool
+from multiprocessing import Pool
 import click
 from scipy import linalg
 from queue import Queue
@@ -74,7 +73,7 @@ def perform_single(df):
     var2d_res = {}
     var3d_res = {}
     var5d_res = {}
-    count = multiprocessing.cpu_count() / 2
+    count = multiprocessing.cpu_count() // 2
     process_adjust_indexs = [[] for i in range(0, count)]
 
     for i in range(600, len(df.index)):
@@ -136,7 +135,7 @@ def perform_joint(df):
     mu_res = {}
     cov_res = {}
 
-    count = multiprocessing.cpu_count() / 2
+    count = multiprocessing.cpu_count() // 2
     process_adjust_indexs = [[] for i in range(0, count)]
 
     for i in range(600, len(df.index)):

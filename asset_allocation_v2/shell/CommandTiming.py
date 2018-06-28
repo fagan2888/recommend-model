@@ -203,6 +203,7 @@ def signal_update_gftd(timing):
         df_old = database.number_format(df_old, columns=formaters, precision=4)
 
     # 更新数据库
+    df_old = df_old[df_new.columns]
     database.batch(db, t2, df_new, df_old, timestamp=False)
     # print "total signal: %d, %.2f/year" % (num_signal, num_signal * 250/len(df_new))
 
