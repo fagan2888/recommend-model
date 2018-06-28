@@ -20,7 +20,6 @@ import Portfolio as PF
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
-from ipdb import set_trace
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -36,8 +35,8 @@ from util import xdict
 from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
-from allocate import Allocate
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate
+from allocate import Allocate, AssetBound
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorRpAllocate, FactorMzAllocate, FactorSizeAllocate, FactorValidAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -47,25 +46,25 @@ import traceback, code
 logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)
-@click.option('--full/--no-full', 'optfull', default=False, help='include all instance')
-@click.option('--new/--no-new', 'optnew', default=False, help='use new framework')
-@click.option('--append/--no-append', 'optappend', default=False, help='append pos or not')
-@click.option('--id', 'optid', help='specify markowitz id')
-@click.option('--name', 'optname', default=None, help='specify markowitz name')
-@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help='online type(1:expriment; 9:online)')
-@click.option('--replace/--no-replace', 'optreplace', default=False, help='replace pool if exists')
-@click.option('--start-date', 'startdate', default='2012-07-27', help='start date to calc')
-@click.option('--end-date', 'enddate', help='end date to calc')
-@click.option('--lookback', type=int, default=26, help='howmany weeks to lookback')
-@click.option('--adjust-period', type=int, default=1, help='adjust every how many weeks')
-@click.option('--turnover', 'optturnover', type=float, default=0, help='fitler by turnover')
-@click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help='use bootstrap or not')
-@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help='use bootstrap or not')
-@click.option('--cpu-count', 'optcpu', type=int, default=0, help='how many cpu to use, (0 for all available)')
-@click.option('--wavelet/--no-wavelet', 'optwavelet', default=False, help='use wavelet filter or not')
-@click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help='use wavelet filter num')
+@click.option('--full/--no-full', 'optfull', default=False, help=u'include all instance')
+@click.option('--new/--no-new', 'optnew', default=False, help=u'use new framework')
+@click.option('--append/--no-append', 'optappend', default=False, help=u'append pos or not')
+@click.option('--id', 'optid', help=u'specify markowitz id')
+@click.option('--name', 'optname', default=None, help=u'specify markowitz name')
+@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
+@click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
+@click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
+@click.option('--end-date', 'enddate', help=u'end date to calc')
+@click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
+@click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
+@click.option('--turnover', 'optturnover', type=float, default=0, help=u'fitler by turnover')
+@click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
+@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
+@click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
+@click.option('--wavelet/--no-wavelet', 'optwavelet', default=False, help=u'use wavelet filter or not')
+@click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help=u'use wavelet filter num')
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
-@click.option('--assets', multiple=True, help='assets')
+@click.option('--assets', multiple=True, help=u'assets')
 @click.pass_context
 def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
 
@@ -74,7 +73,7 @@ def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optrepla
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid, optappend=optappend)
+            ctx.invoke(pos, optid=optid, optappend=optappend, sdate = startdate, edate = enddate)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -91,10 +90,10 @@ def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optrepla
 
 
 @markowitz.command(name='import')
-@click.option('--id', 'optid', type=int, help='specify markowitz id')
-@click.option('--name', 'optname', help='specify markowitz name')
-@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help='online type(1:expriment; 9:online)')
-@click.option('--replace/--no-replace', 'optreplace', default=False, help='replace pool if exists')
+@click.option('--id', 'optid', type=int, help=u'specify markowitz id')
+@click.option('--name', 'optname', help=u'specify markowitz name')
+@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
+@click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
 @click.argument('csv', type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=False), required=True)
 @click.pass_context
 def import_command(ctx, csv, optid, optname, opttype, optreplace):
@@ -176,7 +175,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
     df = pd.read_csv(csv, parse_dates=['date'])
     df['risk'] = (df['risk'] * 10).astype(int)
     renames = dict(
-        list({'date':'mz_date', 'risk':'mz_alloc_id'}.items()) + list(DFUtil.categories_types(as_int=True).items())
+        {'date':'mz_date', 'risk':'mz_alloc_id'}.items() + DFUtil.categories_types(as_int=True).items()
     )
     df = df.rename(columns=renames)
     df['mz_markowitz_id'] = optid
@@ -210,22 +209,22 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
     return 0
 
 @markowitz.command()
-@click.option('--id', 'optid', type=int, help='specify markowitz id')
-@click.option('--name', 'optname', default=None, help='specify markowitz name')
-@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help='online type(1:expriment; 9:online)')
-@click.option('--replace/--no-replace', 'optreplace', default=False, help='replace pool if exists')
-@click.option('--start-date', 'startdate', default='2012-07-27', help='start date to calc')
-@click.option('--end-date', 'enddate', help='end date to calc')
-@click.option('--lookback', type=int, default=26, help='howmany weeks to lookback')
-@click.option('--adjust-period', type=int, default=1, help='adjust every how many weeks')
-@click.option('--turnover', type=float, default=0, help='fitler by turnover')
-@click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help='use bootstrap or not')
-@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help='use bootstrap or not')
-@click.option('--cpu-count', 'optcpu', type=int, default=0, help='how many cpu to use, (0 for all available)')
-@click.option('--wavelet/--no-wavelet', 'optwavelet', default=False, help='use wavelet filter or not')
-@click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help='use wavelet filter num')
+@click.option('--id', 'optid', type=int, help=u'specify markowitz id')
+@click.option('--name', 'optname', default=None, help=u'specify markowitz name')
+@click.option('--type', 'opttype', type=click.Choice(['1', '9']), default='1', help=u'online type(1:expriment; 9:online)')
+@click.option('--replace/--no-replace', 'optreplace', default=False, help=u'replace pool if exists')
+@click.option('--start-date', 'startdate', default='2012-07-27', help=u'start date to calc')
+@click.option('--end-date', 'enddate', help=u'end date to calc')
+@click.option('--lookback', type=int, default=26, help=u'howmany weeks to lookback')
+@click.option('--adjust-period', type=int, default=1, help=u'adjust every how many weeks')
+@click.option('--turnover', type=float, default=0, help=u'fitler by turnover')
+@click.option('--bootstrap/--no-bootstrap', 'optbootstrap', default=True, help=u'use bootstrap or not')
+@click.option('--bootstrap-count', 'optbootcount', type=int, default=0, help=u'use bootstrap or not')
+@click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
+@click.option('--wavelet/--no-wavelet', 'optwavelet', default=False, help=u'use wavelet filter or not')
+@click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help=u'use wavelet filter num')
 @click.option('--short-cut', type=click.Choice(['default', 'high', 'low']))
-@click.option('--algo', 'optalgo', type=click.Choice(['markowitz', 'average']), help='which algorithm to use for allocate')
+@click.option('--algo', 'optalgo', type=click.Choice(['markowitz', 'average']), help=u'which algorithm to use for allocate')
 @click.argument('assets', nargs=-1)
 @click.pass_context
 def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, turnover,  optbootstrap, optbootcount, optcpu, optwavelet, optwaveletfilternum, short_cut, optalgo, assets):
@@ -295,14 +294,14 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
                 # 120000031:  {'sum1': 0.65, 'sum2' : 0.45,'upper': 0.20, 'lower': 0.0}, #房地产指数
             }
             if optname is None:
-                optname = '马克维茨%s(高风险)' % today.strftime("%m%d")
+                optname = u'马克维茨%s(高风险)' % today.strftime("%m%d")
         elif short_cut == 'low':
             assets = {
                 '120000010':  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
                 '120000011':  {'sum1': 0, 'sum2': 0, 'upper': 1.0, 'lower': 0.0},
             }
             if optname is None:
-                optname = '马克维茨%s(低风险)' % today.strftime("%m%d")
+                optname = u'马克维茨%s(低风险)' % today.strftime("%m%d")
             if optalgo is None:
                 optalgo = 'average'
 
@@ -328,7 +327,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
 
     today = datetime.now()
     if optname is None:
-        optname = '马克维茨%s(实验)' % today.strftime("%m%d")
+        optname = u'马克维茨%s(实验)' % today.strftime("%m%d")
 
     bootstrap = optbootcount if optbootstrap else None
 
@@ -383,7 +382,7 @@ def allocate(ctx, optid, optname, opttype, optreplace, startdate, enddate, lookb
     #
     # 导入数据: markowitz_asset
     #
-    assets = {k: merge_asset_name_and_type(k, v) for (k, v) in assets.items()}
+    assets = {k: merge_asset_name_and_type(k, v) for (k, v) in assets.iteritems()}
     df_asset = pd.DataFrame(assets).T
     df_asset.index.name = 'mz_markowitz_asset_id'
     df_asset['mz_markowitz_id'] = optid
@@ -485,7 +484,7 @@ def parse_asset(asset):
 def merge_asset_name_and_type(asset_id, asset_data):
 
     if asset_id.isdigit():
-        xtype = int(asset_id) / 10000000
+        xtype = int(asset_id) // 10000000
     else:
         xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
@@ -518,7 +517,7 @@ def average_days(start_date, end_date, assets):
 
     data = {k: {start_date: 0} for k in ['return', 'risk', 'sharpe']}
 
-    data.update({k: {start_date: ratio} for k in list(assets.keys())})
+    data.update({k: {start_date: ratio} for k in assets.keys()})
 
     df = pd.DataFrame(data)
 
@@ -694,7 +693,7 @@ def load_bl_view(day, df_inc, markowitz_id):
 def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=None, wavelet=None, wavelet_filter_num=None):
 
     if asset_id.isdigit():
-        xtype = int(asset_id) / 10000000
+        xtype = int(asset_id) // 10000000
     else:
         xtype = re.sub(r'([\d]+)','',asset_id).strip()
 
@@ -704,8 +703,8 @@ def load_wavelet_nav_series(asset_id, reindex=None, begin_date=None, end_date=No
         # 基金池资产
         #
         asset_id %= 10000000
-        (pool_id, category) = (asset_id / 100, asset_id % 100)
-        ttype = pool_id / 10000
+        (pool_id, category) = (asset_id // 100, asset_id % 100)
+        ttype = pool_id // 10000
         sr = asset_ra_pool_nav.load_series(
             pool_id, category, ttype, reindex=None, end_date=end_date)
     elif xtype == 3:
@@ -747,13 +746,13 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
     prefix = asset_id[0:2]
     if prefix.isdigit():
-        xtype = int(asset_id) / 10000000
+        xtype = int(asset_id) // 10000000
         if xtype == 1:
             #
             # 基金池资产
             #
             asset_id = int(asset_id) % 10000000
-            (pool_id, category) = (asset_id / 100, asset_id % 100)
+            (pool_id, category) = (asset_id // 100, asset_id % 100)
             ttype = pool_id / 10000
             sr = asset_ra_pool_nav.load_series(
                 pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
@@ -818,14 +817,14 @@ def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
 
 @markowitz.command()
-@click.option('--id', 'optid', help='ids of markowitz to update')
-@click.option('--type', 'opttype', default='8,9', help='which type to run')
-@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help='which risk to calc, [1-10]')
-@click.option('--append/--no-append', 'optappend', default=False, help='append pos or not')
-@click.option('--list/--no-list', 'optlist', default=False, help='list instance to update')
-@click.option('--start-date', 'sdate', default='2012-07-27', help='start date to calc')
-@click.option('--end-date', 'edate', help='end date to calc')
-@click.option('--cpu-count', 'optcpu', type=int, default=0, help='how many cpu to use, (0 for all available)')
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--append/--no-append', 'optappend', default=False, help=u'append pos or not')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--start-date', 'sdate', default='2012-07-27', help=u'start date to calc')
+@click.option('--end-date', 'edate', help=u'end date to calc')
+@click.option('--cpu-count', 'optcpu', type=int, default=0, help=u'how many cpu to use, (0 for all available)')
 @click.pass_context
 def pos(ctx, optid, optlist, opttype, optrisk, optappend, sdate, edate, optcpu):
     ''' calc pool nav and inc
@@ -900,6 +899,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
 
     if algo == 1:
+        #均配
         optappend = False
         df = average_days(sdate, edate, assets)
         if 'return' in df.columns:
@@ -920,6 +920,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = df.groupby(df.index).sum()
         df = df.T
     elif algo == 2:
+        #马科维兹
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = False)
@@ -928,6 +929,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 3:
+        #马科维兹boot
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
@@ -937,6 +939,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzBootAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 4:
+        #滤波
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, wavelet = True, wavelet_filter_num = wavelet_filter_num)
@@ -946,6 +949,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 5:
+        #blacklitterman
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman = True, wavelet = False, wavelet_filter_num = wavelet_filter_num, markowitz_id = markowitz_id)
@@ -954,11 +958,12 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         confidence = float(argv.get('bl_confidence'))
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         views = {}
-        for asset_id in list(assets.keys()):
+        for asset_id in assets.keys():
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
         allocate = MzBootBlAllocate('ALC.000001', assets, views, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 6:
+        #blacklitterman 滤波
         #df = markowitz_days(
         #    sdate, edate, assets,
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=None, cpu_count=optcpu, blacklitterman = True, wavelet = True, wavelet_filter_num = wavelet_filter_num,  markowitz_id = markowitz_id)
@@ -968,19 +973,20 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         confidence = float(argv.get('bl_confidence'))
         assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         views = {}
-        for asset_id in list(assets.keys()):
+        for asset_id in assets.keys():
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
         allocate = MzBlAllocate('ALC.000001', assets, views, trade_date, lookback)
         df = allocate.allocate()
     elif algo == 7:
 
+        #blacklitterman和滤波blacklitterman均配
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
         view_df = View.load_view(argv.get('bl_view_id'))
         confidence = float(argv.get('bl_confidence'))
 
         views = {}
-        for asset_id in list(assets.keys()):
+        for asset_id in assets.keys():
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
 
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
@@ -994,6 +1000,109 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         bootbl_df = bootbl_df[waveletbl_df.columns]
 
         df = (bootbl_df + waveletbl_df) / 2
+
+    elif algo == 8:
+        #滤波下方差
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+        assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 20:
+
+        lookback = 126
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorRpAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = 5)
+        df = allocate.allocate()
+
+    elif algo == 21:
+
+        lookback = 63
+        period = 5
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorMzAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period)
+        df = allocate.allocate()
+
+    elif algo == 22:
+
+        lookback = 63
+        period = 5
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorValidAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period)
+        df = allocate.allocate()
+
+    elif algo == 31:
+
+        lookback = 126
+        period = 5
+        target = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0])
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorSizeAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        df = allocate.allocate()
+
+    elif algo == 32:
+
+        lookback = 126
+        period = 5
+        target = np.array([-1, 0, 0, 0, 0, 0, 0, 0, 0])
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorSizeAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        df = allocate.allocate()
+
+    elif algo == 33:
+
+        lookback = 126
+        period = 5
+        target = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0])
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorSizeAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        df = allocate.allocate()
+
+    elif algo == 34:
+
+        lookback = 126
+        period = 5
+        target = np.array([0, 0, 0, 0, 0, -1, 0, 0, 0])
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorSizeAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        df = allocate.allocate()
+
+    elif algo == 35:
+
+        lookback = 126
+        period = 5
+        target = np.array([0, 0, 0, 0, 1, 0, 0, 0, 0])
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorSizeAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        df = allocate.allocate()
+
+    elif algo == 36:
+
+        lookback = 126
+        period = 5
+        target = np.array([0, 0, 0, 0, -1, 0, 0, 0, 0])
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorSizeAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        df = allocate.allocate()
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
@@ -1025,7 +1134,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    if algo == 1:
+    no_rolling_algos = [1, 20]
+    if algo in no_rolling_algos:
         pass
     else:
         df = df.rolling(window = 4, min_periods = 1).mean()
@@ -1073,10 +1183,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     return 0
 
 @markowitz.command()
-@click.option('--id', 'optid', help='ids of markowitz to update')
-@click.option('--type', 'opttype', default='8,9', help='which type to run')
-@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help='which risk to calc, [1-10]')
-@click.option('--list/--no-list', 'optlist', default=False, help='list instance to update')
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
 def nav(ctx, optid, opttype, optrisk, optlist):
     ''' calc pool nav and inc
@@ -1121,7 +1231,7 @@ def nav_update(markowitz, alloc):
     df_pos = asset_mz_markowitz_pos.load(gid)
 
     # 加载资产收益率
-    min_date = df_pos.index.min().to_datetime()
+    min_date = df_pos.index.min()
     #max_date = df_pos.index.max()
     max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
@@ -1144,10 +1254,10 @@ def nav_update(markowitz, alloc):
     asset_mz_markowitz_nav.save(gid, df_result)
 
 @markowitz.command()
-@click.option('--id', 'optid', help='ids of markowitz to update')
-@click.option('--type', 'opttype', default='8,9', help='which type to run')
-@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help='which risk to calc, [1-10]')
-@click.option('--list/--no-list', 'optlist', default=False, help='list instance to update')
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--type', 'opttype', default='8,9', help=u'which type to run')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
 def turnover(ctx, optid, opttype, optrisk, optlist):
     ''' calc pool turnover and inc
@@ -1182,7 +1292,7 @@ def turnover(ctx, optid, opttype, optrisk, optlist):
             data.extend(segments)
 
     headers = ['markowitz', 'turnover(%)']
-    print((tabulate(data, headers=headers, tablefmt="psql")))
+    print(tabulate(data, headers=headers, tablefmt="psql"))
     # print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
     # print(tabulate(data, headers=headers, tablefmt="grid"))
 
@@ -1217,9 +1327,9 @@ def turnover_update(markowitz, alloc):
     return total_turnover
 
 @markowitz.command()
-@click.option('--id', 'optid', help='ids of markowitz to update')
-@click.option('--list/--no-list', 'optlist', default=False, help='list instance to update')
-@click.option('--exec/--no-exec', 'optexec', default=False, help='list instance to update')
+@click.option('--id', 'optid', help=u'ids of markowitz to update')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
+@click.option('--exec/--no-exec', 'optexec', default=False, help=u'list instance to update')
 @click.pass_context
 def delete(ctx, optid, optlist, optexec):
     ''' delete markowitz instance
@@ -1271,9 +1381,9 @@ def perform_delete(markowitz):
     mz_markowitz.delete(mz_markowitz.c.globalid == markowitz_id).execute()
 
 @markowitz.command()
-@click.option('--src', 'optsrc', help='src id of markowitz to copy from')
-@click.option('--dst', 'optdst', help='dst id of markowitz to copy to')
-@click.option('--list/--no-list', 'optlist', default=False, help='list instance to update')
+@click.option('--src', 'optsrc', help=u'src id of markowitz to copy from')
+@click.option('--dst', 'optdst', help=u'dst id of markowitz to copy to')
+@click.option('--list/--no-list', 'optlist', default=False, help=u'list instance to update')
 @click.pass_context
 def copy(ctx, optsrc, optdst, optlist):
     ''' create new markowitz by copying  existed one

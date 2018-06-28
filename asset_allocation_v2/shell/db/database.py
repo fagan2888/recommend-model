@@ -40,7 +40,7 @@ from . import base_ra_index
 from . import base_ra_index_nav
 from . import base_exchange_rate_index_nav
 from . import base_exchange_rate_index
-#  import MySQLdb
+import MySQLdb
 from config import uris
 import os
 

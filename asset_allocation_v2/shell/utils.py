@@ -166,6 +166,15 @@ def rolling_window(a, window, axis=-1):
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
   else:
     raise ValueError('rolling_window: axis out of bounds')
+
+def get_today():
+
+    today = datetime.datetime.now()
+    today_idx = pd.tslib.Timestamp(today.year, today.month, today.day)
+
+    return today_idx
+
+
 if __name__ == "__main__":
     data_day = pd.read_csv("../tmp/W00003_data.csv", index_col=['date'], \
                             parse_dates=['date'])
