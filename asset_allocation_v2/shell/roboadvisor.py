@@ -12,10 +12,8 @@ import itertools
 import pandas as pd
 import Const
 from Const import datapath
-import GeneralizationPosition
 
 # import CommandModelRisk
-import CommandNavStock
 import CommandExport
 import CommandFund
 import CommandPool
@@ -254,7 +252,6 @@ def cp(ctx, optfrom, optto, optname):
 
 if __name__=='__main__':
     # model.add_command(CommandModelRisk.risk)
-    nav.add_command(CommandNavStock.stock)
     # pool.add_command(CommandPool.stock)
     # pool.add_command(CommandPool.bond)
     roboadvisor.add_command(CommandPortfolio.portfolio)

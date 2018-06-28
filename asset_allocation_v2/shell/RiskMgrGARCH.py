@@ -12,7 +12,7 @@ import DFUtil
 from scipy import stats
 import random
 from ipdb import set_trace
-from pathos.multiprocessing import ProcessingPool as Pool
+from multiprocessing import Pool
 import RiskMgrGARCHHelper
 import time
 import pickle

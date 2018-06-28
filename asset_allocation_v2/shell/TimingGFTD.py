@@ -12,7 +12,12 @@ from db import database
 logger = logging.getLogger(__name__)
 
 def cmp(x, y):
-    return (x>y) - (x<y)
+    if x > y:
+        return 1
+    elif x < y:
+        return -1
+    else:
+        return 0
 
 class TimingGFTD(object):
     
@@ -156,7 +161,7 @@ class TimingGFTD(object):
                 (action, low_recording) = (2, row['tc_low'])
             elif row['tc_buy_signal'] == 1:
                 # 买入信号
-                low = min(row['tc_low'], low_recording)
+                low = None if low_recording is None else min(row['tc_low'], low_recording)
                 (status, action, low_recording) = (1, 1, None)
                 # if low is None:
                 #     print low, low_recording, key, row['tc_low']
@@ -166,7 +171,7 @@ class TimingGFTD(object):
                 (action, high_recording) = (-2, row['tc_high'])
             elif row['tc_sell_signal'] == 1:
                 # 卖出信号
-                high = max(row['tc_high'], high_recording)
+                high = row['tc_high'] if high_recording is None else max(row['tc_high'], high_recording)
                 (status, action, high_recording) = (-1, -1, None)
                 
             #
@@ -174,17 +179,17 @@ class TimingGFTD(object):
             #
             if status == -1:
                 # 空仓状态
-                if row['tc_close'] >= high:
+                if (high is None) or (row['tc_close'] >= high):
                     # 沽空止损
                     logger.info("empty stop: day:%s, OHLC-H:%f, HSTOP:%f", key, row['tc_high'], high)
-                    low = min(row['tc_low'], low_recording)
+                    low = None if low_recording is None else min(row['tc_low'], low_recording)
                     (status, action) = (1, 3)
             else:
                 # 持仓状态, status == 1
-                if row['tc_close'] <= low:
+                if (low is not None) and (row['tc_close'] <= low):
                     # 买入止损
                     logger.info("buy stop: day:%s, OHLC-L: %f, LSTOP: %f", key, row['tc_low'], low)
-                    high = max(row['tc_high'], high_recording)
+                    high = row['tc_high'] if high_recording is None else max(row['tc_high'], high_recording)
                     (status, action) = (-1, -3)
             #
             # 记录空仓和止损线
