@@ -538,3 +538,26 @@ def passive_fund_ratio(ctx):
 
     df.to_csv('active_passive_fund_ratio.csv')
     return
+
+
+#线上用户风险等级和最后一次购买时的风险等级
+@analysis.command()
+@click.pass_context
+def user_risk_level(ctx):
+
+
+    db = database.connection('trade')
+    sql = 'select ts_uid, ts_risk, ts_trade_type, ts_trade_status, ts_placed_date from ts_order'
+    df = pd.read_sql(sql, db, index_col = ['ts_uid', 'ts_placed_date'], parse_dates = ['ts_placed_date'])
+    df = df[((df.ts_trade_type == 3) | (df.ts_trade_type == 6) | (df.ts_trade_type == 5)) & (df.ts_trade_status.isin([1,5,6]))]
+    user_risk = {}
+    for k, v in df.groupby(df.index.get_level_values(0)):
+        if len(v) > 0:
+            print k, v.ts_risk[-1]
+            user_risk[k] = v.ts_risk[-1]
+
+    user_risk_df = pd.Series(user_risk)
+    print user_risk_df
+    user_risk_df.to_csv('user_risk.csv')
+    #df = df.replace(pd.NaT, np.nan)
+    #print df.tail()
