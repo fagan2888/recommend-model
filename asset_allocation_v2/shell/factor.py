@@ -89,7 +89,7 @@ class Factor(object):
             factor_exposure_df = load_stock_factor_exposure(sf_id = factor_id)
             factor_exposure_df = factor_exposure_df.swaplevel(0, 1).loc[factor_id].swaplevel(0,1).unstack()
             factor_exposure_df.columns = factor_exposure_df.columns.droplevel(0)
-            print(factor_id ,'load exposure done')
+            print(factor_id ,' load exposure done')
             return factor_exposure_df
         else:
             pass

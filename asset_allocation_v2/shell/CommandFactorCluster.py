@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import MetaData, Table, select, func, literal_column
 import matplotlib
-matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 import click
 import sys

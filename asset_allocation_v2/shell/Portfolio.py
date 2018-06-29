@@ -107,7 +107,7 @@ def markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count = 0, bootstr
     os.environ['OMP_NUM_THREADS'] = '1'
 
     if cpu_count == 0:
-        count = multiprocessing.cpu_count()
+        count = int(multiprocessing.cpu_count())
         cpu_count = count if count > 0 else 1
 
     look_back = len(df_inc)
@@ -123,14 +123,14 @@ def markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count = 0, bootstr
 
     #print process_indexs
     #loop_num = 20
-    rep_num = loop_num * (look_back / 2) / look_back
+    rep_num = loop_num * (look_back // 2) // look_back
     day_indexs = list(range(0, look_back)) * rep_num
     random.shuffle(day_indexs)
     #print day_indexs
     day_indexs = np.array(day_indexs)
 
 
-    day_indexs = day_indexs.reshape(len(day_indexs) / (look_back / 2), look_back / 2)
+    day_indexs = day_indexs.reshape(len(day_indexs) // (look_back // 2), look_back // 2)
     for m in range(0, len(day_indexs)):
         indexs = day_indexs[m]
         mod = m % cpu_count
@@ -177,7 +177,7 @@ def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
     os.environ['OMP_NUM_THREADS'] = '1'
 
     if cpu_count == 0:
-        count = multiprocessing.cpu_count()
+        count = int(multiprocessing.cpu_count())
         cpu_count = count if count > 0 else 1
     cpu_count = int(cpu_count)
 

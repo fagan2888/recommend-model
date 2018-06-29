@@ -16,7 +16,7 @@ from db import database, asset_trade_dates, base_ra_index_nav
 from db.asset_fundamental import *
 from calendar import monthrange
 from datetime import datetime, timedelta
-
+from ipdb import set_trace
 logger = logging.getLogger(__name__)
 
 
@@ -28,9 +28,9 @@ def mt(ctx):
     '''
     if ctx.invoked_subcommand is None:
         ctx.invoke(macro_view_update)
-        ctx.invoke(bond_view_update)
+        #ctx.invoke(bond_view_update)
         ctx.invoke(sp_view_update)
-        ctx.invoke(gold_view_update)
+        #ctx.invoke(gold_view_update)
     else:
         pass
 
@@ -94,7 +94,7 @@ def macro_view_update(ctx, startdate, enddate, viewid, idx):
         df_old = pd.read_sql(s, db, index_col = ['globalid', 'bl_date', 'bl_index_id'], parse_dates = ['bl_date'])
         database.batch(db, t, df_new, df_old, timestamp = False)
 
-
+        print(df_new.tail())
 
 @mt.command()
 @click.option('--start-date', 'startdate', default='2012-07-27', help='start date to calc')
@@ -186,6 +186,7 @@ def sp_view_update(ctx, startdate, enddate, viewid):
         df_old = pd.read_sql(s, db, index_col = ['globalid', 'bl_date', 'bl_index_id'], parse_dates = ['bl_date'])
         database.batch(db, t, df_new, df_old, timestamp = False)
 
+        print(df_new.tail())
 
 
 @mt.command()

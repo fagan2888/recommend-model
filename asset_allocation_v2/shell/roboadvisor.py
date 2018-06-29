@@ -20,7 +20,6 @@ import CommandPool
 import CommandPortfolio
 import CommandCompositeAsset
 import CommandMarkowitz
-import CommandReshape
 import CommandRiskManage
 import CommandTiming
 import CommandHighlow
@@ -30,8 +29,7 @@ import CommandExchangeRateIndex
 import CommandUtil
 import CommandAnalysis
 import CommandImport
-# import CommandStockFactor
-import CommandStockFactorNew
+import CommandStockFactor
 import CommandMacroTiming
 import CommandFactorCluster
 
@@ -147,7 +145,7 @@ def run(ctx, optid, optpool, opttiming, optreshape, optriskmgr, optmarkowtiz, op
         ctx.invoke(CommandTiming.timing, optonline=optonline)
 
     if optreshape:
-        ctx.invoke(CommandReshape.reshape, optonline=optonline)
+        pass
 
     if optriskmgr:
         ctx.invoke(CommandRiskManage.riskmgr, optonline=optonline)
@@ -259,7 +257,6 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandFund.fund)
     roboadvisor.add_command(CommandPool.pool)
     roboadvisor.add_command(CommandCompositeAsset.composite)
-    roboadvisor.add_command(CommandReshape.reshape)
     roboadvisor.add_command(CommandMarkowitz.markowitz)
     roboadvisor.add_command(CommandRiskManage.riskmgr)
     roboadvisor.add_command(CommandTiming.timing)
@@ -270,7 +267,7 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandUtil.util)
     roboadvisor.add_command(CommandAnalysis.analysis)
     roboadvisor.add_command(CommandImport.import_command)
-    roboadvisor.add_command(CommandStockFactorNew.sf)
+    roboadvisor.add_command(CommandStockFactor.sf)
     roboadvisor.add_command(CommandMacroTiming.mt)
     roboadvisor.add_command(CommandFactorCluster.fc)
     roboadvisor(obj={})

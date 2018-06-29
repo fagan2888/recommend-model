@@ -48,6 +48,11 @@ from multiprocessing import Pool
 logger = logging.getLogger(__name__)
 
 
+def multiprocess_load_factor_exposure(sf):
+    sf.exposure
+    return sf
+
+
 class StockFactor(Factor):
 
     stock_factors = {
@@ -121,7 +126,6 @@ class StockFactor(Factor):
         factor_exposure_df = factor_exposure_df[all_stocks.index]
 
         self.exposure = factor_exposure_df
-        print(self.factor_id)
 
         return factor_exposure_df
 
@@ -143,34 +147,25 @@ class StockFactor(Factor):
         ret = close.pct_change(period).iloc[period:]
         ret = ret[StockAsset.all_stock_info().index]
 
-        # amount = StockAsset.all_stock_amount()
-        # amount = amount.rolling(period).mean().iloc[period:]
-        # amount = amount.fillna(0.0)
-
         dates = ret.index
         dates = dates[dates >= '2005-01-01']
-        dates = dates[dates <= '2018-06-19']
 
         df_ret = pd.DataFrame(columns = sf_ids)
         df_sret = pd.DataFrame(columns = StockAsset.all_stock_info().index)
 
 
         pool = Pool(len(sfs))
-        fe = pool.map(Factor.load_factor_exposure, sf_ids)
+        sfs = pool.map(multiprocess_load_factor_exposure, sfs)
         pool.close()
         pool.join()
-        fed = dict(zip(sf_ids, fe))
 
         for date, next_date in zip(dates[:-period], dates[period:]):
 
-            print('cal_factor_return:', next_date)
-
             tmp_exposure = {}
             tmp_ret = ret.loc[next_date].values
-            # tmp_amount = ret.loc[date].values
             for sf in sfs:
-                # tmp_exposure[sf.factor_id] = sf.exposure.loc[date]
-                tmp_exposure[sf.factor_id] = fed[sf.factor_id].loc[date]
+                tmp_exposure[sf.factor_id] = sf.exposure.loc[date]
+                #tmp_exposure[sf.factor_id] = fed[sf.factor_id].loc[date]
             tmp_exposure_df = pd.DataFrame(tmp_exposure)
             tmp_exposure_df = tmp_exposure_df[sf_ids].fillna(0.0)
             tmp_exposure_df = tmp_exposure_df.loc[StockAsset.all_stock_info().index]

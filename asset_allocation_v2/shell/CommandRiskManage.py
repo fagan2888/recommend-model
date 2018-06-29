@@ -15,7 +15,6 @@ import util_numpy as npu
 import DBData
 import time
 import Const
-import RiskManagement
 import RiskMgrSimple
 import RiskMgrLow
 import RiskMgrGARCH
