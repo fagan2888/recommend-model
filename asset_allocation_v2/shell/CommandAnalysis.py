@@ -405,22 +405,23 @@ def online_return_reason(ctx, optsdate, optedate):
 
 
     trade_date_df = pd.read_sql('select on_date from on_online_contrib', conn, index_col = ['on_date'], parse_dates = ['on_date'])
-    #trade_date = trade_date_df.index
-    #trade_date = list(set(trade_date))
-    #trade_date.sort()
+    trade_date = trade_date_df.index
+    trade_date = list(set(trade_date))
+    trade_date.sort()
 
     #trade_date_df = trade_date_df[trade_date_df.index < datetime.strptime(optsdate, '%Y-%m-%d').date()]
     trade_date_df = trade_date_df[trade_date_df.index < optsdate]
     #print trade_date_df.index[-1]
 
+    print(trade_date_df.tail())
     gid = 800000
-    sql = "SELECT on_fund_id, sum(on_return_value) FROM on_online_contrib WHERE on_online_id = %d AND on_type = 9 \
+    sql = "SELECT on_fund_id, sum(on_return_value) FROM on_online_contrib WHERE on_online_id = %d AND on_type = 8 \
             AND on_date BETWEEN '%s' AND '%s' GROUP BY on_fund_id" % (gid, optsdate, optedate)
 
     #print sql
     df = pd.read_sql(sql, conn, index_col = ['on_fund_id'])
 
-    online_nav_ser = asset_on_online_nav.load_series(gid, 9)
+    online_nav_ser = asset_on_online_nav.load_series(gid, 8)
 
 
     optsdate = trade_date_df.index[-1].strftime('%Y-%m-%d')
