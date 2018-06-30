@@ -413,7 +413,6 @@ def online_return_reason(ctx, optsdate, optedate):
     trade_date_df = trade_date_df[trade_date_df.index < optsdate]
     #print trade_date_df.index[-1]
 
-    print(trade_date_df.tail())
     gid = 800000
     sql = "SELECT on_fund_id, sum(on_return_value) FROM on_online_contrib WHERE on_online_id = %d AND on_type = 8 \
             AND on_date BETWEEN '%s' AND '%s' GROUP BY on_fund_id" % (gid, optsdate, optedate)
@@ -447,10 +446,78 @@ def online_return_reason(ctx, optsdate, optedate):
     df = pd.concat([fund_df, df], axis = 1, join_axes = [df.index])
     df.columns = ['基金代码','基金名称','收益率贡献']
     df['收益率贡献百分比'] = df['收益率贡献'] / start_nav
+    risk_df = online_risk_reason(optsdate, optedate)
+    risk_df = risk_df.loc[df.index]
+    df['风险贡献'] = risk_df
     print(df)
     df.to_csv('风险10各个基金收益贡献百分比.csv', encoding = 'gbk')
 
 
+#线上风险归因
+def online_risk_reason(optsdate, optedate):
+
+    conn  = MySQLdb.connect(**config.db_asset)
+
+    trade_date_df = pd.read_sql('select on_date from on_online_contrib', conn, index_col = ['on_date'], parse_dates = ['on_date'])
+    trade_date = trade_date_df.index
+    trade_date = list(set(trade_date))
+    trade_date.sort()
+
+    gid = 800000
+    sql = "SELECT on_fund_id, sum(on_return_value) FROM on_online_contrib WHERE on_online_id = %d AND on_type = 8 \
+            AND on_date BETWEEN '%s' AND '%s' GROUP BY on_fund_id" % (gid, optsdate, optedate)
+
+    df = pd.read_sql(sql, conn, index_col = ['on_fund_id'])
+    conn.close()
+
+
+    conn  = MySQLdb.connect(**config.db_base)
+    conn.autocommit(True)
+
+    globalids = ','.join([str(gid) for gid in df.index])
+    sql = 'select globalid ,ra_code, ra_name from ra_fund where globalid in (' + globalids + ')'
+    fund_df = pd.read_sql(sql, conn, index_col = ['globalid'])
+
+    conn.close()
+
+
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+    sql = "select on_date, on_fund_id, on_fund_ratio from on_online_fund where on_online_id = %s" %  gid
+    df = pd.read_sql(sql, conn, index_col = ['on_date', 'on_fund_id'])
+    df = df.unstack().reindex(trade_date).fillna(method = 'pad').fillna(0.0)
+    df.columns = df.columns.droplevel(0)
+
+    df = df[df.index >= optsdate]
+    df = df[df.index <= optedate]
+
+    fund_ratio_df = df
+    conn.close()
+
+
+    conn  = MySQLdb.connect(**config.db_base)
+    conn.autocommit(True)
+    fund_ids = ','.join([str(fid) for fid in fund_ratio_df.columns])
+    sql = "select ra_fund_id, ra_date, ra_nav_adjusted from ra_fund_nav where ra_fund_id in (%s)" % fund_ids
+    df = pd.read_sql(sql, conn, index_col = ['ra_date', 'ra_fund_id'])
+    df = df.unstack()
+    df.columns = df.columns.droplevel(0)
+
+    df = df[df.index >= optsdate]
+    df = df[df.index <= optedate]
+    df = df.fillna(method = 'pad')
+
+    df_cum_max = df.cummax()
+
+    df_drawdown = 1.0 - df / df_cum_max
+
+    df_drawdown = df_drawdown[fund_ratio_df.columns]
+
+    df_risk = df_drawdown * fund_ratio_df
+
+    conn.close()
+
+    return df_risk.max()
 
 #标杆组合有费率和沪深300比较
 @analysis.command()
