@@ -591,19 +591,19 @@ def pos_update(highlow, alloc):
             highlow['mz_low_id'] = df_markowitz_alloc.at[min_ix, 'globalid']
 
         if algo == 1:
-            df = jiao(highlow, alloc)
+            df_high_riskmgr, df_low_riskmgr, df = jiao(highlow, alloc)
 
         elif algo == 3:
             #df_highlow = asset_mz_highlow.load(highlow)
             ratio_hl = cal_limit(highlow)
             ratio_hl = limit_update(highlow, alloc, ratio_hl)
-            df = jiao2(highlow, alloc, ratio_hl)
+            df_high_riskmgr, df_low_riskmgr, df = jiao2(highlow, alloc, ratio_hl)
 
         elif algo == 4:
 
             ratio_hl = cal_limit(highlow)
             ratio_hl = limit_update_ratio(highlow, alloc, ratio_hl)
-            df = jiao2(highlow, alloc, ratio_hl)
+            df_high_riskmgr, df_low_riskmgr, df = jiao2(highlow, alloc, ratio_hl)
 
     elif algo == 2:
         #
@@ -635,11 +635,26 @@ def pos_update(highlow, alloc):
     # index
     df['mz_highlow_id'] = highlow_id
     df = df.reset_index().set_index(['mz_highlow_id', 'mz_date'])
+    #print(df.tail())
 
     # unstack
     df_tosave = df.stack().to_frame('mz_ratio')
-    df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0)]
-
+    df_tosave['mz_riskmgr_pos'] = 1.0
+    for k, v in df_tosave.groupby(df_tosave.index):
+        riskmgr_date = k[1]
+        asset_id = k[2]
+        if asset_id == '11310100' or asset_id == '11310101':
+            riskmgr_signal = 1.0
+        elif asset_id in df_high_riskmgr.columns:
+            riskmgr_signal = df_high_riskmgr.loc[riskmgr_date, asset_id]
+        elif asset_id in df_low_riskmgr.columns:
+            riskmgr_signal = df_low_riskmgr.loc[riskmgr_date, asset_id]
+        else:
+            raise Exception('no riskmgr signal')
+        df_tosave.loc[k, 'mz_riskmgr_pos'] = riskmgr_signal
+        #print(riskmgr_date, asset_id, v)
+    #df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0)]
+    
     #print alloc
     #print df_tosave[df_tosave.index.duplicated()]
     #if alloc['mz_risk'] == 0.9:
@@ -864,7 +879,7 @@ def jiao(highlow, alloc):
     df = df.T
     df = df.groupby(df.index).sum()
     df = df.T
-    return df
+    return df_high_riskmgr, df_low_riskmgr, df
 
 
 def jiao2(highlow, alloc, ratio_hl):
@@ -945,7 +960,9 @@ def jiao2(highlow, alloc, ratio_hl):
     df = df.groupby(df.index).sum()
     df = df.T
 
-    return df
+
+
+    return df_high_riskmgr, df_low_riskmgr, df
 
 
 def yao(highlow, alloc):
