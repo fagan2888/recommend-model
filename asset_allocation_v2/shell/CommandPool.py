@@ -302,6 +302,7 @@ def fund_code_to_globalid(codes):
         ra_fund.c.ra_code,
     ]
     if codes is not None:
+        codes = codes.unique()
         s = select(columns, ra_fund.c.ra_code.in_(codes))
     else:
         s = select(columns)
