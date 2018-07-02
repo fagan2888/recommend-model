@@ -275,7 +275,7 @@ class StockFactor(Factor):
             valid_df = valid_df.reindex_axis(factor_df.columns, axis = 1)
             factor_df[~(valid_df == 1)] = np.nan
 
-        logger.info('vailid filter done')
+        # logger.info('vailid filter done')
 
         return factor_df
 

@@ -9,13 +9,16 @@ from scipy.optimize import minimize
 import sys
 sys.path.append('shell')
 from db import asset_mz_markowitz_nav, base_trade_dates
+from ipdb import set_trace
 import DBData
 
  # risk budgeting optimization
 def calculate_portfolio_var(w,V):
     # function that calculates portfolio risk
-    w = np.matrix(w)
-    return (w*V*w.T)[0,0]
+    # w = np.matrix(w)
+    # return (w*V*w.T)[0,0]
+    pv = np.dot(np.dot(w, V), w.T)
+    return pv
 
 
 def calculate_risk_contribution(w,V):
@@ -23,7 +26,7 @@ def calculate_risk_contribution(w,V):
     w = np.matrix(w)
     sigma = np.sqrt(calculate_portfolio_var(w,V))
     # Marginal Risk Contribution
-    MRC = V*w.T
+    MRC = np.dot(V, w.T)
     # Risk Contribution
     RC = np.multiply(MRC,w.T)/sigma
     return RC
@@ -48,9 +51,12 @@ def long_only_constraint(x):
     return x
 
 
-def cal_weight(V, x_t, cons2 = None, w0 = None):
+def cal_weight(V, x_t = None, cons2 = None, w0 = None):
+    V = V * 10000
+    if x_t is None:
+        x_t = [1 / len(V)]*len(V)
     if w0 is None:
-        w0 = [1/len(x_t)]*len(x_t)
+        w0 = [1 / len(x_t)]*len(x_t)
     cons1 = (
         {'type': 'eq', 'fun': total_weight_constraint},
         {'type': 'ineq', 'fun': long_only_constraint}
@@ -60,6 +66,21 @@ def cal_weight(V, x_t, cons2 = None, w0 = None):
     else:
         cons = cons1
     res = minimize(risk_budget_objective, w0, args=[V,x_t], method='SLSQP', constraints=cons, options={'disp': False})
+    # w_rb = np.asmatrix(res.x)
+
+    return res.x
+
+
+def cal_weight_factor(V, x_t, cons2 = None, w0 = None):
+
+    V = V * 10000
+
+    if w0 is None:
+        w0 = [1 / len(x_t)]*len(x_t)
+
+    b_ = [(-1, 1) for i in range(len(x_t))]
+
+    res = minimize(risk_budget_objective, w0, args=[V,x_t], method='SLSQP', bounds = b_, options={'disp': False})
     # w_rb = np.asmatrix(res.x)
 
     return res.x

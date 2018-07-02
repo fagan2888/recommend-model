@@ -6,7 +6,8 @@ import scipy
 import Const
 
 
-def solve_weights(R, C, rf):
+def mv_weights(R, C, rf):
+
     # method = 'SLSQP'
     method = 'L-BFGS-B'
 
@@ -19,10 +20,8 @@ def solve_weights(R, C, rf):
     W = np.ones([n])/n
     b_ = [(-1.,1.) for i in range(n)]
     # c_ = ({'type':'eq', 'fun': lambda W: sum(W)-1.0})
-    # optimized = scipy.optimize.minimize(fitness, W, (R, C, rf),
-                # method='SLSQP', constraints=c_, bounds=b_)
-    optimized = scipy.optimize.minimize(fitness, W, (R, C, rf),
-                method=method, bounds=b_)
+    # optimized = scipy.optimize.minimize(fitness, W, (R, C, rf), method='SLSQP', constraints=c_, bounds=b_)
+    optimized = scipy.optimize.minimize(fitness, W, (R, C, rf), method=method, bounds=b_)
     if not optimized.success:
         raise BaseException(optimized.message)
     return optimized.x

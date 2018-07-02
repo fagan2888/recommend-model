@@ -24,6 +24,7 @@ from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
 from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
 from util import xdict
+from ipdb import set_trace
 
 import traceback, code
 
@@ -538,3 +539,21 @@ def passive_fund_ratio(ctx):
 
     df.to_csv('active_passive_fund_ratio.csv')
     return
+
+
+@analysis.command()
+@click.pass_context
+def user_dd(ctx):
+
+    df = pd.read_csv('user_data/ts_holding_nav.csv', parse_dates = ['ts_date'])
+    df = df.loc[:, ['ts_uid', 'ts_date', 'ts_nav']]
+    df = df.groupby(['ts_date', 'ts_uid']).last()
+    df = df.unstack()
+    df.columns = df.columns.levels[1]
+    df = df.sort_index()
+    dd = 1 - df.iloc[-1]/df.max()
+    dd.to_csv('user_data/user_dd_2018-06-28.csv')
+
+
+    return
+

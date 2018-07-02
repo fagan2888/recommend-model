@@ -1030,7 +1030,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 22:
 
-        lookback = 63
+        lookback = 21
         period = 5
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
@@ -1040,7 +1040,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 31:
 
-        lookback = 126
+        lookback = 21
         period = 5
         target = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0])
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
@@ -1144,7 +1144,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = df.iloc[3:,:]
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
-    df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+    # df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
+    df = df.apply(npu.np_pad_to_2, raw=True, axis=1) # 补足缺失
     df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     if turnover >= 0.01:
         df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律

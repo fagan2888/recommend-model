@@ -63,14 +63,14 @@ def factor_exposure_update(ctx):
     print('load all fdmt done')
 
     sfs = [
-        # SizeStockFactor(factor_id = "SF.000001"),
-        # VolStockFactor(factor_id = "SF.000002"),
-        # MomStockFactor(factor_id = "SF.000003"),
-        # TurnoverStockFactor(factor_id = "SF.000004"),
-        # EarningStockFactor(factor_id = "SF.000005"),
-        # ValueStockFactor(factor_id = "SF.000006"),
-        # FqStockFactor(factor_id = "SF.000007"),
-        # LeverageStockFactor(factor_id = "SF.000008"),
+        SizeStockFactor(factor_id = "SF.000001"),
+        VolStockFactor(factor_id = "SF.000002"),
+        MomStockFactor(factor_id = "SF.000003"),
+        TurnoverStockFactor(factor_id = "SF.000004"),
+        EarningStockFactor(factor_id = "SF.000005"),
+        ValueStockFactor(factor_id = "SF.000006"),
+        FqStockFactor(factor_id = "SF.000007"),
+        LeverageStockFactor(factor_id = "SF.000008"),
         GrowthStockFactor(factor_id = "SF.000009"),
         # FarmingStockFactor(factor_id = 'SF.100001'),
         # MiningStockFactor(factor_id = 'SF.100002'),
@@ -169,8 +169,8 @@ def factor_return_update(ctx):
     # StockAsset.all_stock_fdmt()
     # print('load all fdmt done')
 
-    sfs = ['SF.0000%02d'%i for i in range(1, 10)] + ['SF.1000%02d'%i for i in range(1, 29)]
-    # sfs = ['SF.0000%02d'%i for i in range(1, 9)]
+    # sfs = ['SF.0000%02d'%i for i in range(1, 10)] + ['SF.1000%02d'%i for i in range(1, 29)]
+    sfs = ['SF.0000%02d'%i for i in range(1, 10)]
     sf = StockFactor()
     df_ret, df_sret = sf.cal_factor_return(sfs)
 
