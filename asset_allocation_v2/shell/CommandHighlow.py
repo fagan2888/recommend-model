@@ -571,7 +571,7 @@ def pos_update(highlow, alloc):
     # algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
     algo = highlow['mz_algo']
 
-    if algo == 1 or algo ==3:
+    if algo == 1 or algo == 3 or algo == 4:
         #
         # 焦氏策略
         #
@@ -597,6 +597,12 @@ def pos_update(highlow, alloc):
             #df_highlow = asset_mz_highlow.load(highlow)
             ratio_hl = cal_limit(highlow)
             ratio_hl = limit_update(highlow, alloc, ratio_hl)
+            df = jiao2(highlow, alloc, ratio_hl)
+
+        elif algo == 4:
+
+            ratio_hl = cal_limit(highlow)
+            ratio_hl = limit_update_ratio(highlow, alloc, ratio_hl)
             df = jiao2(highlow, alloc, ratio_hl)
 
     elif algo == 2:
@@ -675,6 +681,41 @@ def limit_update(highlow, alloc, ratio_hl):
     #asset_mz_highlow_limit.save(alloc.mz_highlow_id, risk, ratio_hl)
 
     return ratio_hl
+
+
+def limit_update_ratio(highlow, alloc, ratio_hl):
+
+    risk = alloc.mz_risk
+    hl_range_high = 0.7
+    hl_range_low = 0.2
+    arg1 = 1 / (hl_range_high * 2)
+    arg2 = 1 - hl_range_high
+    arg3 = 1 / (hl_range_low * 2)
+    arg4 = 1 - hl_range_low
+
+
+    # ratio_hl = ratio_hl / 5
+    # ratio_hl['ratio_h'] += ((risk - 0.1)/0.9 - 0.1)
+
+    ratio_hl_high = ratio_hl / arg1
+    ratio_hl_high = ratio_hl_high[ratio_hl_high.ratio_h < ratio_hl_high.ratio_l].copy()
+    ratio_hl_high['ratio_h'] += arg2
+    ratio_hl_high['ratio_h'] = ratio_hl_high['ratio_h'] * (risk - 0.1)/0.9
+    ratio_hl_high['ratio_h'] = ratio_hl_high['ratio_h'].apply(range_cons)
+    ratio_hl_high['ratio_l'] = 1.0 - ratio_hl_high['ratio_h']
+
+    ratio_hl_low = ratio_hl / arg3
+    ratio_hl_low = ratio_hl_low[ratio_hl_low.ratio_h > ratio_hl_low.ratio_l].copy()
+    ratio_hl_low['ratio_l'] += arg4
+    ratio_hl_low['ratio_l'] = ratio_hl_low['ratio_l'] * (1.0 - risk)/0.9
+    ratio_hl_low['ratio_l'] = ratio_hl_low['ratio_l'].apply(range_cons)
+    ratio_hl_low['ratio_h'] = 1.0 - ratio_hl_low['ratio_l']
+
+    ratio_hl_new = pd.concat([ratio_hl_high, ratio_hl_low]).sort_index()
+    ratio_hl_new.index.name = 'mz_date'
+
+    return ratio_hl_new
+
 
 def cal_limit(highlow):
     lookback = 26
