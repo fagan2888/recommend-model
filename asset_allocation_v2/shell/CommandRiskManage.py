@@ -19,6 +19,7 @@ import RiskMgrSimple
 import RiskMgrLow
 import RiskMgrGARCH
 import RiskMgrVaRs
+import RiskMgrNew
 import DFUtil
 
 from datetime import datetime, timedelta
@@ -499,6 +500,10 @@ def signal_update(riskmgr):
     if riskmgr['rm_argv'] != '':
         argv.update({k: int(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(',')]})
 
+    if "hmm" in argv:
+        hmmsignal = asset_tc_timing_signal.load_series(str(argv['hmm']))
+        df_vars = asset_rm_riskmgr_vars.load_series(riskmgr['rm_asset_id'])
+
     # 加载择时信号
     sr_timing = asset_tc_timing_signal.load_series(riskmgr['rm_timing_id'])
     # print sr_timing.head()
@@ -521,7 +526,7 @@ def signal_update(riskmgr):
     if sr_timing.empty:
         sr_timing = pd.Series(1, index=sr_nav.index)
 
-    df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing})
+    df = pd.DataFrame({'nav': sr_nav, 'timing': sr_timing, 'hmm_signal': hmmsignal})
 
     if riskmgr['rm_algo'] == 1:
         risk_mgr = RiskManagement.RiskManagement()
@@ -529,11 +534,13 @@ def signal_update(riskmgr):
         risk_mgr = RiskMgrSimple.RiskMgrSimple(empty=argv['e'])
     elif riskmgr['rm_algo'] == 3:
         risk_mgr = RiskMgrLow.RiskMgrLow()
+    elif riskmgr['rm_algo'] == 9:
+        risk_mgr = RiskMgrNew.RiskMgrReshape()
     else:
         click.echo(click.style("\nunsupported riskmgr algo (%s, %s)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
         return False
 
-    df_result = risk_mgr.perform(riskmgr_id, df)
+    df_result = risk_mgr.perform(riskmgr_id, df, df_vars)
     # df_result.drop(['nav', 'timing'], axis=1, inplace=True)
     df_result = DFUtil.filter_same_with_last(df_result)
 

@@ -79,57 +79,77 @@ class RiskMgrReshape(object):
                 if np.isnan(row['vol_mean']):
                     pass
                 else:
-                    if row['hmm_signal'] == 1 or row['hmm_signal'] == -1:
-                        if row['inc2d'] < row['var_2d']:
-                            status, empty_days, position, action = 3, 0, 0, 2
-                        elif row['inc3d'] < row['var_3d']:
-                            status, empty_days, position, action = 3, 0, 0, 3
-                        elif row['inc5d'] < row['var_5d']:
-                            status, empty_days, position, action = 3, 0, 0, 5
+                    # Check
+                    if row['inc2d'] < row['var_2d']:
+                        status, empty_days, position, action = 2, 0, 0, 2
+                    elif row['inc3d'] < row['var_3d']:
+                        status, empty_days, position, action = 2, 0, 0, 3
+                    elif row['inc5d'] < row['var_5d']:
+                        status, empty_days, position, action = 2, 0, 0, 5
 
 
-                    elif row['hmm_signal'] == 0:
-                        ret, retmean, retstd = row['return_ma'], row['return_mean'], row['return_std']
-                        risk, riskmean, riskstd = row['vol_ma'], row['vol_mean'], row['vol_std']
-                        #  if status != 2:
-                        #  if risk > riskmean + riskstd:
-                            #  status, position, action = 2, 0, 2
-                        #  if risk <= riskmean + 0.5 * riskstd:
-                        if status != 3:
-                            if risk <= riskmean:
-                                status, position, action = 0, 1, 0
-                            else:
-                                status, position, action = 1, riskmean/risk, 1
-                            #  if status == 2:
-                                #  if empty_days <= 5:
-                                    #  empty_days += 1
-                                #  else:
-                                    #  empty_days = 0
-                                    #  if risk > riskmean:
-                                        #  status, position, action = 1, riskmean/risk, 1
-                                    #  else:
-                                        #  status, position, action = 0, 1, 0
-                    if status == 3:
+                    if status == 0:
+                        status, position, action = 0, 1, 0
+                    if status == 2:
                         if empty_days <= 5:
                             empty_days += 1
                         else:
-                            if row['timing'] == 1.0:
-                                if row['hmm_signal'] == 1:
+                            if row['hmm_signal'] == 1:
+                                if row['timing'] == 1:
                                     status, position, action = 0, 1, 8
-                                if row['hmm_signal'] == -1:
-                                    status, position, action = 4, 0.5, 8
+                            elif row['hmm_signal'] == 0:
+                                risk, riskmean = row['vol_ma'], row['vol_mean']
+                                if risk <= riskmean:
+                                    status, position, action = 0, 1, 8
+                                else:
+                                    status, position, action = 1, riskmean/risk, 8
                             else:
-                                empty_days += 1
-                                status, position, action = 3, 0, 7
-                    elif status == 1:
-                        pass
-                    elif status == 4:
-                        if row['hmm_signal'] == -1:
-                            status, position, action = 4, 0.5, 8
+                                pass
+                    if status == 1:
+                        risk, riskmean = row['vol_ma'], row['vol_mean']
+                        if risk <= riskmean:
+                            status, position, action = 0, 1, 0
                         else:
-                            status, position, action = 0, 1, 8
-                    else:
-                        status, position, action = 0, 1, 0
+                            status, position, action = 1, riskmean/risk, 4
+
+                    #  if row['hmm_signal'] == 1 or row['hmm_signal'] == -1:
+                        #  if row['inc2d'] < row['var_2d']:
+                            #  status, empty_days, position, action = 3, 0, 0, 2
+                        #  elif row['inc3d'] < row['var_3d']:
+                            #  status, empty_days, position, action = 3, 0, 0, 3
+                        #  elif row['inc5d'] < row['var_5d']:
+                            #  status, empty_days, position, action = 3, 0, 0, 5
+
+
+                    #  elif row['hmm_signal'] == 0:
+                        #  ret, retmean, retstd = row['return_ma'], row['return_mean'], row['return_std']
+                        #  risk, riskmean, riskstd = row['vol_ma'], row['vol_mean'], row['vol_std']
+                        #  if status != 3:
+                            #  if risk <= riskmean:
+                                #  status, position, action = 0, 1, 0
+                            #  else:
+                                #  status, position, action = 1, riskmean/risk, 1
+                    #  if status == 3:
+                        #  if empty_days <= 5:
+                            #  empty_days += 1
+                        #  else:
+                            #  if row['timing'] == 1.0:
+                                #  if row['hmm_signal'] == 1:
+                                    #  status, position, action = 0, 1, 8
+                                #  if row['hmm_signal'] == -1:
+                                    #  status, position, action = 4, 0.5, 8
+                            #  else:
+                                #  empty_days += 1
+                                #  status, position, action = 3, 0, 7
+                    #  elif status == 1:
+                        #  pass
+                    #  elif status == 4:
+                        #  if row['hmm_signal'] == -1:
+                            #  status, position, action = 4, 0.5, 8
+                        #  else:
+                            #  status, position, action = 0, 1, 8
+                    #  else:
+                        #  status, position, action = 0, 1, 0
                 pos[day], act[day] = position, action
         #  sr_pos = pd.Series(ps).shift(1).fillna(1)
         #  return sr_pos
