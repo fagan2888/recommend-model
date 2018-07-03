@@ -15,6 +15,7 @@ import re
 import util_numpy as npu
 import MySQLdb
 import config
+from ipdb import set_trace
 
 
 from datetime import datetime, timedelta
@@ -272,8 +273,8 @@ def fund_pool_info(ctx, optpool):
 @click.pass_context
 def fund_online_portfolio(ctx):
 
-    conn  = MySQLdb.connect(**config.db_base)
-    conn.autocommit(True)
+    #conn  = MySQLdb.connect(**config.db_base)
+    #conn.autocommit(True)
 
     '''
     sql = 'select ra_code as code from ra_fund where ra_type = 1'
@@ -307,7 +308,6 @@ def fund_online_portfolio(ctx):
     df.to_csv('./fund_nav_qdii_type4.csv')
     '''
 
-    '''
     conn  = MySQLdb.connect(**config.db_asset)
     conn.autocommit(True)
 
@@ -319,11 +319,12 @@ def fund_online_portfolio(ctx):
         dfs.append(df)
 
     df = pd.concat(dfs, axis = 1)
-    df = df[df.index >= '2017-01-01']
+    df = df[df.index >= '2013-07-03']
     df = df / df.iloc[0]
     df.to_csv('./online_nav.csv')
-    '''
 
+    conn.close()
+    '''
     fund_df = pd.read_csv('fund_nav_ra_type1.csv', index_col = ['date'], parse_dates = ['date'])
     qdii_df = pd.read_csv('fund_nav_qdii_type4.csv', index_col = ['date'], parse_dates = ['date'])
     online_df = pd.read_csv('online_nav.csv', index_col = ['date'], parse_dates = ['date'])
@@ -390,7 +391,59 @@ def fund_online_portfolio(ctx):
 
     #print df.head()
     #print df.tail()
+    '''
 
+#线上10个风险等级配置比例
+@analysis.command()
+@click.pass_context
+def online_portfolio_fund(ctx):
+
+
+    asset_name = {
+            '11110100':'大盘',
+            '11110200':'小盘',
+            '11120200':'美股',
+            '11120201':'美股',
+            '11120500':'恒生',
+            '11120501':'恒生',
+            '11210100':'信用债',
+            '11210200':'利率债',
+            '11310100':'货币',
+            '11310101':'货币',
+            '11400100':'沪金',
+        }
+
+    writer = pd.ExcelWriter('10个风险等级月末仓位.xlsx')
+
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+
+    sql = 'select on_online_id, on_date, on_pool_id, on_fund_ratio from on_online_fund'
+
+    df = pd.read_sql(sql, conn, index_col = ['on_online_id', 'on_date', 'on_pool_id'])
+    df = df.groupby(level = [0,1,2]).sum()
+    df = df.unstack().fillna(0.0)
+    df.columns = df.columns.droplevel(0)
+    for k , v in df.groupby(df.index.get_level_values(0)):
+        v.index = v.index.droplevel(0)
+        #print(k)
+        dates = pd.date_range(v.index[0], v.index[-1])
+        v = v.reindex(dates).fillna(method = 'pad').fillna(0.0)
+        v = v[v.index >= '2013-06-15']
+        v = v.resample('M').last()
+        v = v.rename(columns = asset_name)
+        v = v.T
+        v = v.groupby(level=[0]).sum()
+        v = v.T
+        #print(v['大盘']+ v['小盘'])
+        #print(v.columns)
+        v['股基'] = v['大盘'] + v['小盘'] + v['美股'] + v['恒生']
+        v['债基'] = v['信用债'] + v['利率债']
+        v['海外'] = v['美股'] + v['恒生']
+        v['国内'] = v['大盘'] + v['小盘'] + v['信用债'] + v['利率债'] + v['货币'] + v['沪金']
+
+        v.to_excel(writer, '风险等级' + str(k)[-1])
+    writer.save()
 
 
 #线上收益归因
