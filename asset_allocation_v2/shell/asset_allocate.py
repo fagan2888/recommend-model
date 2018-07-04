@@ -44,8 +44,10 @@ import util_optimize
 import RiskParity
 from stock_factor import StockFactor
 from multiprocessing import Pool
+from scipy.stats import rankdata
 
 import PureFactor
+import IndexFactor
 import traceback, code
 
 
@@ -398,15 +400,16 @@ class FactorValidAllocate(Allocate):
         # self.sfr = load_stock_factor_return(sf_ids = sf_ids, begin_date = '2012-01-01')
         # self.sfr.to_csv('data/factor/stock_factor_return.csv', index_label = ['sf_id', 'trade_date'])
         self.sfr = pd.read_csv('data/factor/stock_factor_return.csv', index_col = ['sf_id', 'trade_date'], parse_dates = ['trade_date'])
+        self.sfr = self.sfr.unstack().T
+        self.sfr.index = self.sfr.index.get_level_values(1)
+        self.sfr = ((self.sfr - self.sfr.mean()) / self.sfr.std()) / 100
+        self.sfr = (1+self.sfr).cumprod()
+        self.sfr = self.sfr.rolling(self.lookback).mean().dropna()
+        # sfr.to_csv('data/sfr.csv')
 
         # self.sfsr = load_stock_factor_specific_return(stock_ids = assets.keys(), begin_date = '2012-01-01')
         # self.sfsr.to_csv('data/factor/stock_factor_specific_return.csv', index_label = ['stock_id', 'trade_date'])
         self.sfsr = pd.read_csv('data/factor/stock_factor_specific_return.csv', index_col = ['stock_id', 'trade_date'], parse_dates = ['trade_date'])
-
-        # sfr = self.sfr.unstack().T
-        # sfr = (1+sfr).cumprod()
-        # sfr.to_csv('data/sfr.csv')
-
 
 
     def allocate(self):
@@ -432,6 +435,9 @@ class FactorValidAllocate(Allocate):
 
         #         for asset_id in ws.keys():
         #             pos_df.loc[day, asset_id] = ws[asset_id]
+        headers = ['date,'] + ['SF.00000%d,'%i for i in range(1, 10)] + ['\n']
+        with open('data/valid_factor.csv', 'w') as f:
+            f.writelines(headers)
 
         pool = Pool(32)
         wss = pool.map(self.allocate_algo, adjust_days)
@@ -439,9 +445,6 @@ class FactorValidAllocate(Allocate):
         pool.join()
         # self.allocate_algo(adjust_days[0])
 
-        headers = ['date,'] + ['SF.00000%d,'%i for i in range(1, 10)] + ['\n']
-        with open('data/valid_factor.csv', 'a+') as f:
-            f.writelines(headers)
 
         for day, ws in zip(adjust_days, wss):
             for asset_id in ws.keys():
@@ -460,7 +463,9 @@ class FactorValidAllocate(Allocate):
         end_date = dates.max()
 
         sfe = self.sfe[(self.sfe.index.get_level_values(2) > begin_date) & (self.sfe.index.get_level_values(2) < end_date)].reset_index()
-        sfr = self.sfr[(self.sfr.index.get_level_values(1) > begin_date) & (self.sfr.index.get_level_values(1) < end_date)].reset_index()
+        # sfr = self.sfr[(self.sfr.index.get_level_values(1) > begin_date) & (self.sfr.index.get_level_values(1) < end_date)].reset_index()
+        sfr = self.sfr[(self.sfr.index > begin_date) & (self.sfr.index < end_date)]
+        sfr2 = self.sfr[(self.sfr.index > end_date - timedelta(365)) & (self.sfr.index < end_date)]
         # sfr2 = self.sfr[(self.sfr.index.get_level_values(1) > end_date - timedelta(365)) & (self.sfr.index.get_level_values(1) < end_date)].reset_index()
         sfsr = self.sfsr[(self.sfsr.index.get_level_values(1) > begin_date) & (self.sfsr.index.get_level_values(1) < end_date)].reset_index()
 
@@ -472,9 +477,9 @@ class FactorValidAllocate(Allocate):
         # sfe = sfe.dropna()
         sfe = sfe[self.sf_ids]
 
-        sfr = sfr.set_index(['trade_date', 'sf_id'])
-        sfr = sfr.unstack()
-        sfr.columns = sfr.columns.droplevel(0)
+        # sfr = sfr.set_index(['trade_date', 'sf_id'])
+        # sfr = sfr.unstack()
+        # sfr.columns = sfr.columns.droplevel(0)
         sfr = sfr[self.sf_ids]
 
         # sfr2 = sfr2.set_index(['trade_date', 'sf_id'])
@@ -490,19 +495,23 @@ class FactorValidAllocate(Allocate):
         sfe = sfe.loc[joint_stocks]
         sfsr = sfsr[joint_stocks]
 
-        rf = 0.0
-        R = sfr.mean()
-        C = sfr.cov()
+        # rf = 0.0
+        # R = sfr.mean()
+        R = sfr.iloc[-1] / sfr.iloc[0] - 1
+        # C = sfr.cov()
         # risk_budget = [1.0 / len(sfr.columns)] * len(sfr.columns)
-        # C = sfr2.cov()
+        C = sfr2.cov()
         # factor_weights = util_optimize.mv_weights(R, C, rf)
 
         # factor_weights = RiskParity.cal_weight_factor(C, risk_budget)
         # factor_weights = np.sign(factor_weights) * 0.5
 
-        factor_weights = np.sign(R.values) * 0.5
+        factor_weights = np.sign(R.values)
+        # factor_weights = (rankdata(np.diag(C)) / 10) * np.sign(R.values)
         # thresh = nlargest(5, abs(R.values))[-1]
         # valid_factors = np.where(abs(R.values) >= thresh, 1, 0)
+        # valid_factors = rankdata(np.diag(C)) / 10
+        print(day, factor_weights)
 
         factor_weights_str = [str(x) for x in factor_weights]
         with open('data/valid_factor.csv', 'a+') as f:
@@ -511,7 +520,7 @@ class FactorValidAllocate(Allocate):
         # factor_weights = R.values / R.values.std()
         print(end_date, np.round(sum(factor_weights), 2), np.round(factor_weights, 2))
         stock_weights = PureFactor.cal_weight(sfe, factor_weights)
-        # stock_weights = PureFactor.cal_weight(sfe, factor_weights, valid_factors)
+        # stock_weights = PureFactor.cal_weight(sfe, factor_weights, x_v = valid_factors)
         # stock_weights = [0.0] * len(joint_stocks)
         print('total weight:', np.sum(stock_weights))
         # portfolio_exposure = np.dot(stock_weights, sfe)
@@ -598,56 +607,104 @@ class FactorSizeAllocate(Allocate):
         sfr = self.sfr.reset_index()
         sfsr = self.sfsr.reset_index()
         t2 = datetime.now()
-        print 't1:', t2 - t1
 
         sfe = sfe[sfe.trade_date >= begin_date][sfe.trade_date <= end_date]
         sfr = sfr[sfr.trade_date >= begin_date][sfr.trade_date <= end_date]
         sfsr = sfsr[sfsr.trade_date >= begin_date][sfsr.trade_date <= end_date]
         t3 = datetime.now()
-        print 't2:', t3 - t2
         '''
-        t2 = datetime.now()
         sfe = self.sfe[(self.sfe.index.get_level_values(2) > begin_date) & (self.sfe.index.get_level_values(2) < end_date)].reset_index()
         sfr = self.sfr[(self.sfr.index.get_level_values(1) > begin_date) & (self.sfr.index.get_level_values(1) < end_date)].reset_index()
         sfsr = self.sfsr[(self.sfsr.index.get_level_values(1) > begin_date) & (self.sfsr.index.get_level_values(1) < end_date)].reset_index()
-        t3 = datetime.now()
-        print('t2:', t3 - t2)
 
         sfe = sfe.groupby(['stock_id', 'sf_id']).mean()
         sfe = sfe.unstack()
         sfe.columns = sfe.columns.droplevel(0)
         sfe = sfe.dropna(how = 'all')
         sfe = sfe.fillna(0.0)
-        t4 = datetime.now()
-        print('t3:', t4 - t3)
 
         sfr = sfr.set_index(['trade_date', 'sf_id'])
         sfr = sfr.unstack()
         sfr.columns = sfr.columns.droplevel(0)
-        t5 = datetime.now()
-        print('t4:', t5 - t4)
 
         sfsr = sfsr.set_index(['trade_date', 'stock_id'])
         sfsr = sfsr.unstack()
         sfsr.columns = sfsr.columns.droplevel(0)
-        t6 = datetime.now()
-        print('t5:', t6 - t5)
 
         joint_stocks = sfe.index.intersection(sfsr.columns)
         sfe = sfe.loc[joint_stocks]
         sfsr = sfsr[joint_stocks]
-        t7 = datetime.now()
-        print('t6:', t7 - t6)
 
         # target = np.array([1, 0, 0, 0, 0, 0, 0, 0])
         weight = PureFactor.cal_weight(sfe, self.target)
         print('max weight:', max(weight))
         print(day, np.dot(weight, sfe))
-        t8 = datetime.now()
-        print('t7:', t8 - t7)
 
         # weight = [np.nan] * len(joint_stocks)
         ws = dict(zip(joint_stocks, weight))
+
+        return ws
+
+
+class FactorIndexAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, target = None):
+
+        super(FactorIndexAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        # sf_ids = ['SF.0000%02d'%i for i in range(1, 10)] + ['SF.1000%02d'%i for i in range(1, 29)]
+        sf_ids = ['SF.0000%02d'%i for i in range(1, 10)]
+        self.sf_ids = sf_ids
+
+        if target is None:
+            self.target = [1] + [0] * 8
+        else:
+            self.target = target
+
+        # self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2010-01-01')
+        # self.sfe.to_csv('data/factor/stock_factor_exposure.csv', index_label = ['stock_id', 'sf_id', 'trade_date'])
+        self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
+
+    def allocate(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        asset_ids = list(self.assets.keys())
+        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
+
+        df_inc_all, bound = self.load_all_data(adjust_days, asset_ids)
+        self.df_inc_all = df_inc_all.sort_index()
+
+        pool = Pool(32)
+        wss = pool.map(self.allocate_algo, adjust_days)
+        pool.close()
+        pool.join()
+
+        for day, ws in zip(adjust_days, wss):
+            for asset_id in ws.keys():
+                pos_df.loc[day, asset_id] = ws[asset_id]
+
+        return pos_df
+
+    def allocate_algo(self, day):
+
+        print(day)
+        df_inc = self.df_inc_all[self.df_inc_all.index <= day][-1 * self.lookback:]
+
+        dates = df_inc.index
+        begin_date = dates.min()
+        end_date = dates.max()
+
+        sfe = self.sfe[(self.sfe.index.get_level_values(2) > begin_date) & (self.sfe.index.get_level_values(2) < end_date)].reset_index()
+
+        sfe = sfe.groupby(['stock_id', 'sf_id']).mean()
+        sfe = sfe.unstack()
+        sfe.columns = sfe.columns.droplevel(0)
+        sfe = sfe.dropna(how = 'all')
+        sfe = sfe.fillna(0.0)
+        sfe = sfe[self.sf_ids]
+
+        stock_weights = IndexFactor.cal_weight(sfe, self.target)
+
+        ws = dict(zip(sfe.index, stock_weights))
 
         return ws
 

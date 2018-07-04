@@ -9,54 +9,27 @@ import sys
 sys.path.append('shell')
 from ipdb import set_trace
 
- # risk budgeting optimization
-def calculate_portfolio_var(w,V):
-    # function that calculates portfolio risk
-    w = np.matrix(w)
-    return (w*V*w.T)[0,0]
-
-
-def calculate_risk_contribution(w,V):
-    # function that calculates asset contribution to total risk
-    w = np.matrix(w)
-    sigma = np.sqrt(calculate_portfolio_var(w,V))
-    # Marginal Risk Contribution
-    MRC = V*w.T
-    # Risk Contribution
-    RC = np.multiply(MRC,w.T)/sigma
-    return RC
-
 
 def risk_budget_objective(x,pars):
     # calculate portfolio risk
     sfe = pars[0]# covariance table
     x_t = pars[1] # risk target in percent of portfolio risk
-    x_v = pars[2]
 
     pfe = np.dot(x, sfe)
-    # pfe = pfe[x_v == 1]
-    # x_t = x_t[x_v == 1]
 
-    # target = np.sum(np.power(pfe - x_t, 2))
-    target = np.dot(x_v, np.power(pfe - x_t, 2))
-    # target = np.sum(np.abs(pfe - x_t))
+    # target = -np.dot(x_t, pfe**2)
+    vf = pfe[abs(x_t) == 1]
+    ivf = pfe[abs(x_t) == 0]
+    target = np.sum(x_t)*(np.sign(vf)*(vf**2)).sum() - (ivf**2).sum()
 
-    return target
+    return -target
 
 
 def total_weight_constraint(x):
     return np.sum(x)-1.0
 
 
-def long_only_constraint(x):
-    return x
-
-
-def upper_constraint(x):
-    return 0.1 -x
-
-
-def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, x_v = None, cons2 = None, w0 = None):
+def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, cons2 = None, w0 = None):
 
     stock_num = sfe.shape[0]
 
@@ -64,13 +37,10 @@ def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, x_v = None, con
         lower_limit = 0.0
 
     if upper_limit is None:
-        upper_limit = 0.1
+        upper_limit = 0.02
 
     if w0 is None:
         w0 = np.array([1.0/stock_num]*stock_num)
-
-    if x_v is None:
-        x_v = np.ones_like(x_t)
 
     cons = (
         {'type': 'eq', 'fun': total_weight_constraint},
@@ -79,7 +49,7 @@ def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, x_v = None, con
     bnds = tuple([(lower_limit, upper_limit) for i in range(stock_num)])
 
     # res = minimize(risk_budget_objective, w0, args=[sfe, x_t], method='L-BFGS-B', constraints=cons, options={'disp': False}, bounds = bnds)
-    res = minimize(risk_budget_objective, w0, args=[sfe, x_t, x_v], method='SLSQP', constraints=cons, options={'disp': False}, bounds = bnds)
+    res = minimize(risk_budget_objective, w0, args=[sfe, x_t], method='SLSQP', constraints=cons, options={'disp': False}, bounds = bnds)
     print('Loss value:', res.fun)
 
     return res.x
@@ -91,9 +61,5 @@ if __name__ == '__main__':
     x_t = np.array([1,0,0,0,0])
     weight = cal_weight(sfe, x_t)
     set_trace()
-
-
-
-
 
 
