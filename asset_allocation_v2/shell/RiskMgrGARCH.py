@@ -45,26 +45,26 @@ class RiskMgrGARCHPrototype(object):
         #  nav = self.df_nav.loc[:, target].reindex(self.tdates[target])
         #  inc = np.log(1+nav.dropna().pct_change().fillna(0))*100
         inc = self.inc(target)*100
+        hmm_signal = self.hmm_signal - 3
         inc2d = inc.rolling(2).sum().fillna(0)
         inc3d = inc.rolling(3).sum().fillna(0)
         inc5d = inc.rolling(5).sum().fillna(0)
         return pd.DataFrame({'inc2d': inc2d,
                              'inc3d': inc3d,
                              'inc5d': inc5d,
-                             'timing': timing})
+                             'timing': timing,
+                             'hmm': hmm_signal})
 
 
 class RiskMgrGARCH(RiskMgrGARCHPrototype):
     def __init__(self, codes, target, tdates, df_nav, timing, vars_, hmm_signal):
         super(RiskMgrGARCH, self).__init__(codes, target, tdates, df_nav, timing, vars_, hmm_signal)
+        self.count_threshold = 2
         # self.ratio = 0
 
     def perform(self, target=None, disp=True):
-        from ipdb import set_trace
-        set_trace()
         if target is None:
             target = self.target
-        hmm_signal = self.hmm_signal
         df = self.generate_df_for_garch(target)
         sr_nav = self.nav(target)
         df_vars = self.vars[target]
@@ -72,6 +72,8 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
         result_status = {}
         result_pos = {} #结果仓位
         result_act = {} #结果动作
+        count_buy = 0
+        count_sold = 0
         for day, row in df.iterrows():
             if not (day in df_vars.index):
                 pass
@@ -84,20 +86,33 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
                 vars_today[vars_today < (median - 3*mad)] = (median - 3*mad)
 
                 # Trigger Risk Ctrl when the hard line of local drawdown is approached
-                tmp_nav = sr_nav.loc[:day]
-                local_max = tmp_nav.iloc[-self.ddlookback:].max()
-                local_drawdown = (sr_nav[day] - local_max)/local_max
+                #  tmp_nav = sr_nav.loc[:day]
+                #  local_max = tmp_nav.iloc[-self.ddlookback:].max()
+                #  local_drawdown = (sr_nav[day] - local_max)/local_max
 
-                if local_drawdown < self.maxdd*0.75:
-                    status, empty_days, position, action = 2, 0, 0, 6
+                #  if local_drawdown < self.maxdd*0.75:
+                    #  status, empty_days, position, action = 2, 0, 0, 6
 
+                condition =  row['inc2d'] < vars_today['var_2d'] or row['inc3d'] < vars_today['var_3d'] or row['inc5d'] < vars_today['var_5d']
                 # Regular Risk Ctrl by VaRs
-                if row['inc2d'] < vars_today['var_2d']:
-                    status, empty_days, position, action = 2, 0, 0, 2
-                elif row['inc3d'] < vars_today['var_3d']:
-                    status, empty_days, position, action = 2, 0, 0, 3
-                elif row['inc5d'] < vars_today['var_5d']:
-                    status, empty_days, position, action = 2, 0, 0, 5
+
+                # if the market tends to fall
+                if condition:
+                    if row['hmm'] != 2:
+                        status, empty_days, position, action = 2, 0, 0, 2
+
+                # if the market tends to rise &
+                # if the market tends to oscillate
+                #  if hmm_signal == 2:
+                    else:
+                        if count_sold == self.count_threshold:
+                            status, empty_days, position, action = 2, 0, 0, 2
+                            count_sold = 0
+                        else:
+                            if status != 2:
+                                status, empty_days, position, action = 1, 0, 1-(1+count_sold)/(1+self.count_threshold), 1
+                                count_sold += 1
+
 
             if status == 0:
                 #不在风控中
@@ -107,12 +122,25 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
                 if empty_days >= self.empty:
                     #择时满仓
                     if row['timing'] == 1.0:
-                        status, position, action = 0, 1, 8
+                        if row['hmm'] != -2:
+                            status, positi;on, action = 0, 1, 8
+                            count_sold = 0
+                        else:
+                            if count_buy == self.count_threshold:
+                                status, position, action = 0, 1, 8
+                                count_buy = 0
+                                count_sold = 0
+                            else:
+                                status, position, action = 1, (1+count_buy)/(1+self.count_threshold), 8
+                                count_buy += 1
+                                empty_days = 2
                     else:
                         #空仓等待择时
                         empty_days += 1
                         if status == 2:
                             status, position, action = 2, 0, 7
+                        if status == 1:
+                            status, position, action = 1, (1+count_buy)/(1+self.count_threshold), 7
                         # else:
                         #     status, position, action = 1, self.ratio, 7
                 else:
