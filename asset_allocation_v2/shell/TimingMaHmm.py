@@ -16,6 +16,7 @@ import scipy.stats
 from sklearn.preprocessing import normalize
 from cal_tech_indic import CalTechIndic as CalTec
 import warnings
+from ipdb import set_trace
 
 
 warnings.filterwarnings('ignore')
@@ -30,7 +31,8 @@ class TimingMaHmm(object):
         self.start_date = start_date
         self.state_num = 5
         self.ass_id = timing['tc_index_id']
-        self.ori_data = (ori_data.rolling(20).mean() / ori_data.rolling(120).mean() - 1).dropna().tc_close
+        ori_data = ori_data.sort_index()
+        self.ori_data = (ori_data.rolling(20).mean() / ori_data.rolling(120).mean() - 1).tc_close.dropna()
 
     def timing(self):
         """
