@@ -28,7 +28,7 @@ class RiskMgrReshape(object):
     def __init__(self):
         self.interval = 5
         self.ma_period = 20
-        self.lookback = 252*2
+        self.lookback = 252
 
 
     def perform(self, asset, df_input, df_vars):
@@ -80,37 +80,37 @@ class RiskMgrReshape(object):
                     pass
                 else:
                     # Check
-                    if row['inc2d'] < row['var_2d']:
-                        status, empty_days, position, action = 2, 0, 0, 2
-                    elif row['inc3d'] < row['var_3d']:
-                        status, empty_days, position, action = 2, 0, 0, 3
-                    elif row['inc5d'] < row['var_5d']:
-                        status, empty_days, position, action = 2, 0, 0, 5
+                    #  if row['inc2d'] < row['var_2d']:
+                        #  status, empty_days, position, action = 2, 0, 0, 2
+                    #  elif row['inc3d'] < row['var_3d']:
+                        #  status, empty_days, position, action = 2, 0, 0, 3
+                    #  elif row['inc5d'] < row['var_5d']:
+                        #  status, empty_days, position, action = 2, 0, 0, 5
 
 
-                    if status == 0:
+                    #  if status == 0:
+                        #  status, position, action = 0, 1, 0
+                    #  if status == 2:
+                        #  if empty_days <= 5:
+                            #  empty_days += 1
+                        #  else:
+                            #  if row['hmm_signal'] == 1:
+                                #  if row['timing'] == 1:
+                                    #  status, position, action = 0, 1, 8
+                            #  elif row['hmm_signal'] == 0:
+                                #  risk, riskmean = row['vol_ma'], row['vol_mean']
+                                #  if risk <= riskmean:
+                                    #  status, position, action = 0, 1, 8
+                                #  else:
+                                    #  status, position, action = 1, riskmean/risk, 8
+                            #  else:
+                                #  pass
+                    #  if status == 1:
+                    risk, riskmean = row['vol_ma'], row['vol_mean']
+                    if risk <= riskmean:
                         status, position, action = 0, 1, 0
-                    if status == 2:
-                        if empty_days <= 5:
-                            empty_days += 1
-                        else:
-                            if row['hmm_signal'] == 1:
-                                if row['timing'] == 1:
-                                    status, position, action = 0, 1, 8
-                            elif row['hmm_signal'] == 0:
-                                risk, riskmean = row['vol_ma'], row['vol_mean']
-                                if risk <= riskmean:
-                                    status, position, action = 0, 1, 8
-                                else:
-                                    status, position, action = 1, riskmean/risk, 8
-                            else:
-                                pass
-                    if status == 1:
-                        risk, riskmean = row['vol_ma'], row['vol_mean']
-                        if risk <= riskmean:
-                            status, position, action = 0, 1, 0
-                        else:
-                            status, position, action = 1, riskmean/risk, 4
+                    else:
+                        status, position, action = 1, riskmean/risk, 4
 
                     #  if row['hmm_signal'] == 1 or row['hmm_signal'] == -1:
                         #  if row['inc2d'] < row['var_2d']:
