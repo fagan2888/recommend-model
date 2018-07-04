@@ -582,9 +582,10 @@ def signal_update_garch(riskmgr):
     df_nav = pd.DataFrame({k: database.load_nav_series(v['id'], reindex=tdates[k]) for k, v in list(codes.items())})
     timing = pd.DataFrame({k: asset_tc_timing_signal.load_series(v['timing']).reindex(tdates[k]) for k,v in list(codes.items())})
     vars_ = {k: asset_rm_riskmgr_vars.load_series(v['id']) for k,v in list(codes.items())}
+    hmm_signal = asset_tc_timing_signal.load_series(argv['hmm_signal']).reindex(tdates[target])
 
     if riskmgr['rm_algo'] == 4:
-        risk_mgr = RiskMgrGARCH.RiskMgrGARCH(codes, target, tdates, df_nav, timing, vars_)
+        risk_mgr = RiskMgrGARCH.RiskMgrGARCH(codes, target, tdates, df_nav, timing, vars_, hmm_signal)
     elif riskmgr['rm_algo'] == 5:
         others = [k for k in codes if k != target]
         joint = asset_rm_riskmgr_mgarch_signal.load_series(riskmgr_id).loc[:, others]

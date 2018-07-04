@@ -19,7 +19,7 @@ import pickle
 
 
 class RiskMgrGARCHPrototype(object):
-    def __init__(self, codes, target, tdates, df_nav, timing, vars_):
+    def __init__(self, codes, target, tdates, df_nav, timing, vars_, hmm_signal):
         self.maxdd = -0.15
         self.ddlookback = 5
         self.empty = 5
@@ -31,6 +31,7 @@ class RiskMgrGARCHPrototype(object):
         self.vars = vars_
         #Cache for the status if the joint distribution got brokedown
         self.joints = {}
+        self.hmm_signal = hmm_signal
 
     def nav(self, target):
         return self.df_nav.loc[:, target].reindex(self.tdates[target])
@@ -54,13 +55,16 @@ class RiskMgrGARCHPrototype(object):
 
 
 class RiskMgrGARCH(RiskMgrGARCHPrototype):
-    def __init__(self, codes, target, tdates, df_nav, timing, vars_):
-        super(RiskMgrGARCH, self).__init__(codes, target, tdates, df_nav, timing, vars_)
+    def __init__(self, codes, target, tdates, df_nav, timing, vars_, hmm_signal):
+        super(RiskMgrGARCH, self).__init__(codes, target, tdates, df_nav, timing, vars_, hmm_signal)
         # self.ratio = 0
 
     def perform(self, target=None, disp=True):
+        from ipdb import set_trace
+        set_trace()
         if target is None:
             target = self.target
+        hmm_signal = self.hmm_signal
         df = self.generate_df_for_garch(target)
         sr_nav = self.nav(target)
         df_vars = self.vars[target]
