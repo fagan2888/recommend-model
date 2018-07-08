@@ -38,6 +38,7 @@ from wavelet import Wavelet
 #from pathos.multiprocessing import ProcessingPool as Pool
 from multiprocessing import Pool
 import db.asset_stock
+from trade_date import ATradeDate
 
 import traceback, code
 
@@ -371,8 +372,10 @@ class StockAsset(Asset):
 
 if __name__ == '__main__':
 
-    # asset = Asset('120000001')
-    #print asset.nav(begin_date = '2010-01-01').head()
+    asset = Asset('120000011')
+    nav = asset.nav(reindex = ATradeDate.week_trade_date())
+    inc = nav.pct_change().dropna()
+    print(inc.std())
     #print asset.origin_nav_sr.head()
 
     # asset = WaveletAsset('120000013', 2)
@@ -403,5 +406,5 @@ if __name__ == '__main__':
     # print asset.load_fdmt().head()
     # print asset.load_fdmt().head()
 
-    print(StockAsset.all_stock_quote().keys())
-    print(len(StockAsset.all_stock_quote().keys()))
+    #print(StockAsset.all_stock_quote().keys())
+    #print(len(StockAsset.all_stock_quote().keys()))

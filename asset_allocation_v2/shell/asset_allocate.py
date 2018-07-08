@@ -175,6 +175,27 @@ class MzBootDownRiskAllocate(Allocate):
         return ws
 
 
+class MzFixRiskBootAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+        super(MzFixRiskBootAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        if cpu_count is None:
+            count = int(multiprocessing.cpu_count()) // 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+        self.__bootstrap_count = bootstrap_count
+        self.risk = risk
+
+
+    def allocate_algo(self, day, df_inc, bound):
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
+
+
+
 
 if __name__ == '__main__':
 
