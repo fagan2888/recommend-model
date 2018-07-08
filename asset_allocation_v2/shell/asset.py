@@ -39,6 +39,7 @@ from wavelet import Wavelet
 from multiprocessing import Pool
 import db.asset_stock
 import pickle
+from trade_date import ATradeDate
 
 import traceback, code
 
@@ -555,8 +556,10 @@ class StockFundAsset(FundAsset):
 
 if __name__ == '__main__':
 
-    # asset = Asset('120000001')
-    #print asset.nav(begin_date = '2010-01-01').head()
+    asset = Asset('120000011')
+    nav = asset.nav(reindex = ATradeDate.week_trade_date())
+    inc = nav.pct_change().dropna()
+    print(inc.std())
     #print asset.origin_nav_sr.head()
 
     # asset = WaveletAsset('120000013', 2)
@@ -593,3 +596,5 @@ if __name__ == '__main__':
     df = StockFundAsset.all_fund_scale()
 
     # df = db.asset_fund.load_all_fund_share()
+    #print(StockAsset.all_stock_quote().keys())
+    #print(len(StockAsset.all_stock_quote().keys()))
