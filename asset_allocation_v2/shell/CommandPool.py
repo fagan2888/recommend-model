@@ -41,8 +41,14 @@ from db import asset_mz_markowitz_pos
 from asset import StockAsset
 from trade_date import ATradeDate
 import stock_util
+import util_numpy
+import stock_factor_util
+import statsmodels.api as sm
+from functools import reduce
+# from sklearn.linear_model import Lasso
+from sklearn.linear_model import LinearRegression
+from pathos.multiprocessing import ProcessingPool as Pool
 
-import traceback, code
 
 logger = logging.getLogger(__name__)
 
@@ -96,11 +102,10 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, opteliminat
         df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_pool, headers='keys', tablefmt='psql'))
         return 0
-
     if optpoints is not None:
         adjust_points=pd.DatetimeIndex(optpoints.split(','))
     else:
-        adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate)
+        adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate, enddate = enddate)
 
     print("adjust point:")
     for date in adjust_points:
@@ -159,8 +164,8 @@ def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit,
 
 @pool.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), help='dir used to store tmp data')
-@click.option('--start-date', 'startdate', default='2012-07-27', help='start date to calc')
-@click.option('--end-date', 'enddate', help='end date to calc')
+@click.option('--start-date', 'startdate', default='2013-07-27', help='start date to calc')
+@click.option('--end-date', 'enddate', default = '2018-05-31', help='end date to calc')
 @click.option('--period', 'optperiod', type=int, default=1, help='adjust period by week')
 @click.option('--id', 'optid', help='fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help='list pool to update')
@@ -194,7 +199,7 @@ def fund_valid_factor(ctx, datadir, startdate, enddate, optid, optlist, optlimit
     if optpoints is not None:
         adjust_points=pd.DatetimeIndex(optpoints.split(','))
     else:
-        adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate)
+        adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate, enddate = enddate)
 
     print("adjust point:")
     for date in adjust_points:
@@ -215,44 +220,49 @@ def fund_update_valid_factor(pool, adjust_points, optlimit, optcalc):
         # 计算每个调仓点的最新配置
         #
 
-        db = database.connection('asset')
-        ra_pool_sample_t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
-        ra_pool_fund_t= Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+        sfr = pd.read_csv('data/factor/stock_factor_return.csv', index_col = ['sf_id', 'trade_date'], parse_dates = ['trade_date'])
+        sfr = sfr.unstack().T
+        sfr.index = sfr.index.get_level_values(1)
+        df_factor_index = stock_factor_util.load_factor_index()
         stock_nav_df = StockAsset.all_stock_nav()
         pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
         df_nav_fund = base_ra_fund_nav.load_daily('2011-01-01', '2018-07-02', codes = pool_codes)
+        df_nav_index = base_ra_index_nav.load_series('120000016')
 
-        data = []
-        mz_pos = asset_mz_markowitz_pos.load('MZ.SF3040')
+        # mz_pos = asset_mz_markowitz_pos.load('MZ.SF3040')
         # mz_pos = asset_mz_markowitz_pos.load('MZ.SF3010')
+        data = []
         lowest_elim = True
+        lowest_elim_ratio = 0.10
         with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
             pre_codes = None
             for day in adjust_points:
                 bar.update(1)
-                codes, code_jensen = pool_by_valid_factor(pool, day, lookback, limit, mz_pos, stock_nav_df, df_nav_fund)
+                codes, code_jensen, valid_funds = pool_by_valid_factor(pool, day, lookback, limit, sfr, stock_nav_df, df_nav_fund, df_factor_index, df_nav_index)
                 if lowest_elim:
                     if pre_codes is None:
                         codes = codes[:limit]
                         pre_codes = codes
                     else:
-                        # joined_codes = np.intersect1d(codes, pre_codes)
-                        # new_codes = np.setdiff1d(codes, pre_codes)
-                        # for fund_code in new_codes:
-                        #     if len(joined_codes) < limit:
-                        #         joined_codes = np.append(joined_codes, fund_code)
-                        # codes = joined_codes
-
+                        pre_codes_retain = pre_codes.copy()
+                        pre_codes_origin = pre_codes.copy()
+                        pre_codes = np.intersect1d(pre_codes, valid_funds)
                         pre_codes = sorted(pre_codes, key=lambda x: code_jensen[x], reverse = True)
-                        final_codes = pre_codes[:int(np.ceil(limit * 0.8))]
+                        final_codes = pre_codes[:int(np.ceil(limit * (1 - lowest_elim_ratio)))]
                         new_codes = np.setdiff1d(codes, final_codes)
                         for fund_code in new_codes:
                             if len(final_codes) < limit:
                                 final_codes = np.append(final_codes, fund_code)
+                        pre_codes_retain = np.setdiff1d(pre_codes_retain, final_codes)
+                        pre_codes_retain  = sorted(pre_codes_retain , key=lambda x: code_jensen[x], reverse = True)
+                        for fund_code in pre_codes_retain:
+                            if len(final_codes) < limit:
+                                final_codes = np.append(final_codes, fund_code)
+
                         codes = final_codes
 
                         print()
-                        print('turnovr rate:', 1 - len(np.intersect1d(final_codes, pre_codes))/limit)
+                        print('turnover rate:', 1 - len(np.intersect1d(final_codes, pre_codes_origin))/float(limit))
                         pre_codes = codes
 
                 print(day, len(codes), codes)
@@ -260,7 +270,7 @@ def fund_update_valid_factor(pool, adjust_points, optlimit, optcalc):
                     continue
                 ra_fund = base_ra_fund.load(codes = codes)
                 ra_fund = ra_fund.set_index(['ra_code'])
-                ra_pool    = pool['id']
+                ra_pool = pool['id']
                 for code in ra_fund.index:
                     ra_fund_id = ra_fund.loc[code, 'globalid']
                     data.append([ra_pool, day, ra_fund_id, code])
@@ -270,6 +280,8 @@ def fund_update_valid_factor(pool, adjust_points, optlimit, optcalc):
         df_new = fund_df
         columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
         s = select(columns)
+        db = database.connection('asset')
+        ra_pool_fund_t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
         s = s.where(ra_pool_fund_t.c.ra_pool.in_(df_new.index.get_level_values(0).tolist()))
         df_old = pd.read_sql(s, db, index_col = df_new.index.names)
         database.batch(db, ra_pool_fund_t, df_new, df_old)
@@ -1029,66 +1041,255 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
 #         final_codes = final_codes[0 : limit]
 #         return final_codes, code_jensen
 
-def pool_by_valid_factor(pool, day, lookback, limit, mz_pos, stock_nav_df, df_nav_fund):
+def pool_by_valid_factor_ver1(pool, day, lookback, limit, sfr, stock_nav_df, df_nav_fund, df_factor_index, df_nav_index):
 
-    # index = base_trade_dates.trade_date_lookback_index(end_date=day, lookback=lookback)
     index = ATradeDate.week_trade_date(begin_date = day, end_date = day, lookback = lookback)
+    sfr = sfr.loc[index].iloc[-12:]
+    valid_factor_ser = np.sign(sfr.mean())
+    # valid_factor_ser = valid_factor_ser.loc[['SF.000001']]
+    # valid_factor_ser = valid_factor_ser.loc[['SF.000001', 'SF.000005']]
+    valid_factor_ser = valid_factor_ser.loc[['SF.00000%d'%i for i in range(1, 10)]]
+    print(valid_factor_ser)
+    valid_factors = []
+    for k, v in valid_factor_ser.iteritems():
+        valid_factors.append('%s.%d'%(k, int(v+1.0)//2))
 
-    start_date = index.min().strftime("%Y-%m-%d")
-    end_date = day.strftime("%Y-%m-%d")
-    stock_pos = mz_pos[mz_pos.index <= day].tail(1)
-    stock_pos = stock_pos.replace(0.0, np.nan).dropna(1)
-    stock_pos = stock_pos.T.iloc[:, 0]
-    df_nav_index = stock_util.cal_stock_portfolio_nav(stock_nav_df, stock_pos, index)
-    df_nav_index = df_nav_index.to_frame(name = 'index_nav')
+    df_factor_index_valid = df_factor_index.loc[index].fillna(1.0)
+    df_factor_index_ret = df_factor_index_valid.pct_change().dropna()
 
-    # pool_id  = pool['id']
-    if len(df_nav_index.index) == 0:
-        return []
-    # pool_codes = asset_ra_pool_sample.load(pool_id)['ra_fund_code'].values
-    # pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
-    # df_nav_fund = base_ra_fund_nav.load_daily(start_date, end_date, codes = pool_codes)
-    df_nav_fund = df_nav_fund.loc[start_date:end_date]
-
-    if len(df_nav_fund) == 0:
-        return []
-
-    df_nav_fund  = df_nav_fund.reindex(pd.date_range(df_nav_index.index[0], df_nav_index.index[-1]))
+    df_nav_fund  = df_nav_fund.loc[index]
     df_nav_fund  = df_nav_fund.fillna(method = 'pad')
     df_nav_fund  = df_nav_fund.dropna(axis = 1)
-    df_nav_fund  = df_nav_fund.loc[df_nav_index.index]
-    fund_index_df = pd.concat([df_nav_index, df_nav_fund], axis = 1, join_axes = [df_nav_index.index])
+    df_ret_fund  = df_nav_fund.pct_change().dropna()
 
+    df_nav_index = df_nav_index.loc[index]
 
-    fund_index_corr_df = fund_index_df.pct_change().fillna(0.0).corr().fillna(0.0)
-
-    corr = fund_index_corr_df['index_nav'][1:]
-    corr = corr.sort_values(ascending = False)
-
-    code_jensen = {}
+    fund_jensen = {}
     for code in df_nav_fund.columns:
-        jensen = fin.jensen(df_nav_fund[code].pct_change().fillna(0.0), df_nav_index['index_nav'].pct_change().fillna(0.0) ,Const.rf)
-        code_jensen.setdefault(code, jensen)
+        jensen = fin.jensen(df_nav_fund[code].pct_change().dropna(), df_nav_index.pct_change().dropna(), Const.rf)
+        fund_jensen.setdefault(code, jensen)
+    fund_jensen_ser = pd.Series(fund_jensen)
 
+    # fund_rs = {}
+    # fund_jensen = {}
+    # for fund_code in df_nav_fund.columns:
+    #     tmp_ret = df_ret_fund[fund_code]
+    #     x = sm.add_constant(df_factor_index_ret, prepend = True)
+    #     mod = sm.OLS(tmp_ret, x).fit()
+    #     fund_rs[fund_code] = mod.rsquared
+    #     fund_jensen[fund_code] = mod.params[0]
 
-    if len(code_jensen) == 0:
-        logger.info('No FUND')
-        return None
+    # fund_rs_ser = pd.Series(fund_rs)
+    # fund_jensen_ser = pd.Series(fund_jensen)
+    # fund_jensen_ser = fund_jensen_ser.loc[fund_rs_ser.index]
+
+    # fund_jensen_ser = fund_jensen_ser[fund_rs_ser > 0.97]
+    # final_codes = fund_jensen_ser.sort_values(ascending = False).index[:limit]
+    # final_codes = fund_rs_ser.sort_values(ascending = False).index[:limit]
+
+    def cal_fund_measure(factor):
+        fund_meansure = {}
+        factor_index = ['%s.0'%factor, '%s.1'%factor]
+        fund_meansure[factor_index[0]] = []
+        fund_meansure[factor_index[1]] = []
+        for fund_code in df_nav_fund.columns:
+            y = df_ret_fund[fund_code]
+            x = df_factor_index_ret.loc[index, factor_index].dropna()
+            # mod = Lasso(alpha = 0.0, positive = True)
+            mod = LinearRegression()
+            res = mod.fit(x ,y)
+            rs = res.score(x, y)
+            # if fund_code == '000408':
+            #     print(factor, res.score(x,y))
+            if rs > 0.8:
+                if res.coef_[0] > res.coef_[1]:
+                    fund_meansure[factor_index[0]].append(fund_code)
+                elif res.coef_[1] > res.coef_[0]:
+                    fund_meansure[factor_index[1]].append(fund_code)
+
+        return fund_meansure
+
+    pool = Pool(len(valid_factor_ser.index))
+    fund_meansures = pool.map(cal_fund_measure, valid_factor_ser.index)
+    # pool.close()
+    # pool.join()
+
+    fund_meansure = {}
+    for fm in fund_meansures:
+        factors = sorted(fm.keys())
+        fund_ret_0 = (df_nav_fund[fm[factors[0]]]/df_nav_fund[fm[factors[0]]].iloc[0]).mean(1).pct_change().dropna()
+        fund_ret_1 = (df_nav_fund[fm[factors[1]]]/df_nav_fund[fm[factors[1]]].iloc[0]).mean(1).pct_change().dropna()
+        factor_corr = util_numpy.nancorr(fund_ret_0, fund_ret_1)
+        print(factors, factor_corr)
+        if factor_corr < 0.85:
+            fund_meansure.update(fm)
+
+    if len(fund_meansure) == 0:
+        fund_meansure = fund_meansures[0]
+
+    # for factor in valid_factor_ser.index:
+    #     factor_index = ['%s.0'%factor, '%s.1'%factor]
+    #     fund_meansure[factor_index[0]] = []
+    #     fund_meansure[factor_index[1]] = []
+    #     for fund_code in df_nav_fund.columns:
+    #         y = df_ret_fund[fund_code]
+    #         x = df_factor_index_ret.loc[index, factor_index].dropna()
+    #         mod = Lasso(alpha = 0.0, positive = True)
+    #         res = mod.fit(x ,y)
+    #         rs = res.score(x, y)
+    #         if rs > 0.5:
+    #             if res.coef_[0] > 2*res.coef_[1]:
+    #                 fund_meansure[factor_index[0]].append(fund_code)
+    #             elif res.coef_[1] > 2*res.coef_[0]:
+    #                 fund_meansure[factor_index[1]].append(fund_code)
+
+    valid_funds = [fund_meansure[factor] for factor in fund_meansure.keys()]
+    if len(valid_funds) == 0:
+        valid_funds = valid_funds[0]
     else:
-        final_codes = []
-        x = code_jensen
-        sorted_x = sorted(iter(x.items()), key=lambda x : x[1], reverse=True)
-        # corr_threshold = np.percentile(corr.values, 90)
-        corr_threshold = np.percentile(corr.values, 80)
-        # corr_threshold = 0.7 if corr_threshold <= 0.7 else corr_threshold
-        # corr_threshold = 0.9 if corr_threshold >= 0.9 else corr_threshold
-        # corr_threshold = 0.8
-        for i in range(0, len(sorted_x)):
-            code, jensen = sorted_x[i]
-            if corr[code] >= corr_threshold:
-                final_codes.append(code)
+        print(len(valid_funds[0]) + len(valid_funds[1]))
+        valid_funds = reduce(np.union1d, valid_funds)
+        print(len(valid_funds))
+    fund_jensen_ser = fund_jensen_ser.loc[valid_funds].sort_values(ascending = False)
+    final_codes = fund_jensen_ser.index[:limit]
 
-        final_codes = final_codes[0 : limit]
-        return final_codes, code_jensen
+    # return final_codes, fund_jensen, valid_funds
+    return final_codes, fund_jensen, fund_jensen_ser.index[:2*limit]
 
+
+def pool_by_valid_factor(pool, day, lookback, limit, sfr, stock_nav_df, df_nav_fund, df_factor_index, df_nav_index):
+
+    index = ATradeDate.week_trade_date(begin_date = day, end_date = day, lookback = lookback)
+    sfr = sfr.loc[index].iloc[-12:]
+    valid_factor_ser = np.sign(sfr.mean())
+    # valid_factor_ser = valid_factor_ser.loc[['SF.000001']]
+    # valid_factor_ser = valid_factor_ser.loc[['SF.000001', 'SF.000005']]
+    valid_factor_ser = valid_factor_ser.loc[['SF.00000%d'%i for i in range(1, 10)]]
+    print(valid_factor_ser)
+    valid_factors = []
+    for k, v in valid_factor_ser.iteritems():
+        valid_factors.append('%s.%d'%(k, int(v+1.0)//2))
+
+    df_factor_index_valid = df_factor_index.loc[index].fillna(1.0)
+    df_factor_index_ret = df_factor_index_valid.pct_change().dropna()
+
+    df_nav_fund  = df_nav_fund.loc[index]
+    df_nav_fund  = df_nav_fund.fillna(method = 'pad')
+    df_nav_fund  = df_nav_fund.dropna(axis = 1)
+    df_ret_fund  = df_nav_fund.pct_change().dropna()
+
+    df_nav_index = df_nav_index.loc[index]
+
+    fund_jensen = {}
+    for code in df_nav_fund.columns:
+        jensen = fin.jensen(df_nav_fund[code].pct_change().dropna(), df_nav_index.pct_change().dropna(), Const.rf)
+        fund_jensen.setdefault(code, jensen)
+    fund_jensen_ser = pd.Series(fund_jensen)
+
+    # fund_rs = {}
+    # fund_jensen = {}
+    # for fund_code in df_nav_fund.columns:
+    #     tmp_ret = df_ret_fund[fund_code]
+    #     x = sm.add_constant(df_factor_index_ret, prepend = True)
+    #     mod = sm.OLS(tmp_ret, x).fit()
+    #     fund_rs[fund_code] = mod.rsquared
+    #     fund_jensen[fund_code] = mod.params[0]
+
+    # fund_rs_ser = pd.Series(fund_rs)
+    # fund_jensen_ser = pd.Series(fund_jensen)
+    # fund_jensen_ser = fund_jensen_ser.loc[fund_rs_ser.index]
+
+    # fund_jensen_ser = fund_jensen_ser[fund_rs_ser > 0.97]
+    # final_codes = fund_jensen_ser.sort_values(ascending = False).index[:limit]
+    # final_codes = fund_rs_ser.sort_values(ascending = False).index[:limit]
+
+    def cal_fund_measure(factor):
+        fund_meansure = {}
+        factor_index = ['%s.0'%factor, '%s.1'%factor]
+        fund_meansure[factor_index[0]] = []
+        fund_meansure[factor_index[1]] = []
+        for fund_code in df_nav_fund.columns:
+            y = df_ret_fund[fund_code]
+            x = df_factor_index_ret.loc[index, factor_index].dropna()
+            # mod = Lasso(alpha = 0.0, positive = True)
+            mod = LinearRegression()
+            res = mod.fit(x ,y)
+            rs = res.score(x, y)
+            # if fund_code == '000408':
+            #     print(factor, res.score(x,y))
+            if rs > 0.8:
+                if res.coef_[0] > res.coef_[1]:
+                    fund_meansure[factor_index[0]].append(fund_code)
+                elif res.coef_[1] > res.coef_[0]:
+                    fund_meansure[factor_index[1]].append(fund_code)
+
+        return fund_meansure
+
+    pool = Pool(len(valid_factor_ser.index))
+    fund_meansures = pool.map(cal_fund_measure, valid_factor_ser.index)
+    # pool.close()
+    # pool.join()
+
+    fund_meansure = {}
+    for fm in fund_meansures:
+        factors = sorted(fm.keys())
+        fund_ret_0 = (df_nav_fund[fm[factors[0]]]/df_nav_fund[fm[factors[0]]].iloc[0]).mean(1).pct_change().dropna()
+        fund_ret_1 = (df_nav_fund[fm[factors[1]]]/df_nav_fund[fm[factors[1]]].iloc[0]).mean(1).pct_change().dropna()
+        factor_corr = util_numpy.nancorr(fund_ret_0, fund_ret_1)
+        print(factors, factor_corr)
+        if factor_corr < 0.85:
+            fund_meansure.update(fm)
+
+    if len(fund_meansure) == 0:
+        fund_meansure = fund_meansures[0]
+
+    # for factor in valid_factor_ser.index:
+    #     factor_index = ['%s.0'%factor, '%s.1'%factor]
+    #     fund_meansure[factor_index[0]] = []
+    #     fund_meansure[factor_index[1]] = []
+    #     for fund_code in df_nav_fund.columns:
+    #         y = df_ret_fund[fund_code]
+    #         x = df_factor_index_ret.loc[index, factor_index].dropna()
+    #         mod = Lasso(alpha = 0.0, positive = True)
+    #         res = mod.fit(x ,y)
+    #         rs = res.score(x, y)
+    #         if rs > 0.5:
+    #             if res.coef_[0] > 2*res.coef_[1]:
+    #                 fund_meansure[factor_index[0]].append(fund_code)
+    #             elif res.coef_[1] > 2*res.coef_[0]:
+    #                 fund_meansure[factor_index[1]].append(fund_code)
+
+    valid_funds = [fund_meansure[factor] for factor in fund_meansure.keys()]
+    if len(valid_funds) == 0:
+        valid_funds = valid_funds[0]
+    else:
+        print(len(valid_funds[0]) + len(valid_funds[1]))
+        valid_funds = reduce(np.union1d, valid_funds)
+        print(len(valid_funds))
+    fund_jensen_ser = fund_jensen_ser.loc[valid_funds].sort_values(ascending = False)
+    final_codes = fund_jensen_ser.index[:limit]
+
+    # return final_codes, fund_jensen, valid_funds
+    return final_codes, fund_jensen, fund_jensen_ser.index[:2*limit]
+
+
+def pool_by_jensen(pool, day, lookback, limit, sfr, stock_nav_df, df_nav_fund, df_factor_index, df_nav_index):
+
+    index = ATradeDate.week_trade_date(begin_date = day, end_date = day, lookback = lookback)
+
+    df_nav_fund  = df_nav_fund.loc[index]
+    df_nav_fund  = df_nav_fund.fillna(method = 'pad')
+    df_nav_fund  = df_nav_fund.dropna(axis = 1)
+
+    df_nav_index = df_nav_index.loc[index]
+
+    fund_jensen = {}
+    for code in df_nav_fund.columns:
+        jensen = fin.jensen(df_nav_fund[code].pct_change().dropna(), df_nav_index.pct_change().dropna(), Const.rf)
+        fund_jensen.setdefault(code, jensen)
+    fund_jensen_ser = pd.Series(fund_jensen)
+    fund_jensen_ser = fund_jensen_ser.sort_values(ascending = False)
+    final_codes = fund_jensen_ser.index[:limit]
+
+    return final_codes, fund_jensen, fund_jensen_ser.index[:2*limit]
 

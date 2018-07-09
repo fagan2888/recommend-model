@@ -15,6 +15,12 @@ def np_pad_to_2(x, to=1):
     y = (to /np.nansum(x))*np.array(x)
     return y
 
+def nancorr(x, y):
+    if x is np.nan or y is np.nan or (len(x) != len(y)):
+        return np.nan
+    else:
+        return np.corrcoef(x,y)[1,0]
+
 if __name__ == '__main__':
 
 

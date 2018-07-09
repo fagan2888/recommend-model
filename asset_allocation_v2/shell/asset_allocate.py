@@ -671,7 +671,7 @@ class FactorIndexAllocate(Allocate):
         pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
 
         df_inc_all, bound = self.load_all_data(adjust_days, asset_ids)
-        self.df_inc_all = df_inc_all.sort_index()
+        df_inc_all, bound = self.load_all_data(adjust_days, asset_ids)
 
         pool = Pool(32)
         wss = pool.map(self.allocate_algo, adjust_days)
