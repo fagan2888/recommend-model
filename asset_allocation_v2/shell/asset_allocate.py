@@ -315,10 +315,9 @@ class MzFixRiskBootAllocate(Allocate):
 
     def allocate_algo(self, day, df_inc, bound):
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        # risk, returns, ws, sharpe = PF.markowitz_fixrisk(df_inc, bound, self.risk)
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws
-
-
 
 
 if __name__ == '__main__':

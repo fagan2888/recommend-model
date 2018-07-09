@@ -26,10 +26,6 @@ logger = logging.getLogger(__name__)
 
 
 
-
-
-
-
 def markowitz_r_spe(funddfr, bounds):
 
     rf = Const.rf
@@ -269,39 +265,75 @@ def riskparity_obj_func(w, cov):
     return risk_sum
 
 
+# def markowitz_fixrisk(df_inc, bound, target_risk):
+
+#     final_risk = 0
+#     final_return = 0
+#     final_ws = list(1.0 * np.ones(len(df_inc.columns)) / len(df_inc.columns))
+#     final_sharp = -np.inf
+#     final_codes = []
+
+#     codes = df_inc.columns
+#     return_rate = []
+#     for code in codes:
+#         return_rate.append(df_inc[code].values)
+
+#     risks, returns, ws = fin.efficient_frontier_spe(return_rate, bound)
+#     risk_diff = np.inf
+#     for j in range(0, len(risks)):
+#         if risks[j] == 0:
+#             continue
+#         if abs(risks[j] - target_risk) < risk_diff:
+#             final_risk = risks[j]
+#             final_return = returns[j]
+#             final_ws = ws[j]
+#             final_sharp = (returns[j] - Const.rf) / risks[j]
+#             risk_diff = abs(risks[j] - target_risk)
+
+#     # print(target_risk, final_risk, min(risks), max(risks))
+#     return final_risk, final_return, final_ws, final_sharp
+
+
 def markowitz_fixrisk(df_inc, bound, target_risk):
 
-    final_risk = 0
-    final_return = 0
-    final_ws = list(1.0 * np.ones(len(df_inc.columns)) / len(df_inc.columns))
-    final_sharp = -np.inf
-    final_codes = []
+    w0 = [1/len(df_inc.columns)]*len(df_inc.columns)
 
+    cons = (
+        {'type': 'eq', 'fun': total_weight_constraint},
+    )
 
-    codes = df_inc.columns
-    return_rate = []
-    for code in codes:
-        return_rate.append(df_inc[code].values)
+    bnds = [(bound[i]['lower'], bound[i]['upper']) for i in range(len(bound))]
+    ret = df_inc.mean().values
+    vol = df_inc.cov().values
 
+    res = scipy.optimize.minimize(risk_budget_objective, w0, args=[ret, vol, target_risk], method='SLSQP', bounds = bnds, constraints=cons, options={'disp': False, 'eps': 1e-3})
 
-    #R = np.array(return_rate)
-    #C = np.cov(R)
-    #rf = Const.rf
-    #returns, risks, ws = fin.solve_frontier(R, C, rf)
-    risks, returns, ws = fin.efficient_frontier_spe(return_rate, bound)
-    risk_diff = np.inf
-    for j in range(0, len(risks)):
-        if risks[j] == 0:
-            continue
-        if abs(risks[j] - target_risk) < risk_diff:
-            final_risk = risks[j]
-            final_return = returns[j]
-            final_ws = ws[j]
-            final_sharp = (returns[j] - Const.rf) / risks[j]
-            risk_diff = abs(risks[j] - target_risk)
+    final_risk = np.sqrt(np.dot(res.x,np.dot(vol,res.x)))
+    final_return = np.dot(res.x, ret)
+    final_ws = res.x
+    final_sharp = (final_return - Const.rf) / final_risk
 
-    print(target_risk, final_risk, min(risks), max(risks))
+    # print()
+    print(final_risk)
+
     return final_risk, final_return, final_ws, final_sharp
+
+
+def risk_budget_objective(x,pars):
+    LN = 1
+    ret = pars[0]
+    vol = pars[1]
+    tr = pars[2]
+
+    ret_p = np.dot(ret, x)
+    vol_p = np.sqrt(np.dot(x, np.dot(vol,x)))
+    target = -ret_p + LN*np.abs(vol_p - tr)
+
+    return target
+
+
+def total_weight_constraint(x):
+    return np.sum(x)-1.0
 
 
 def m_markowitz_fixrisk(queue, random_index, df_inc, bound, target_risk):

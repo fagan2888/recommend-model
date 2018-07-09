@@ -20,6 +20,7 @@ import Portfolio as PF
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
+from ipdb import set_trace
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -192,7 +193,8 @@ class Allocate(object):
         for asset_id in asset_ids_tmp:
             data[asset_id] = self.assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
-        df_inc  = df_nav.pct_change().fillna(0.0)
+        # df_inc  = df_nav.pct_change().fillna(0.0)
+        df_inc  = df_nav.pct_change().dropna()
 
         bound = []
         for asset_id in df_inc.columns:
