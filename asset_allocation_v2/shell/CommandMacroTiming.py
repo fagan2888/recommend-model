@@ -241,7 +241,7 @@ def re_view(bt_int):
     repy = repy.dropna()
     m1 = m1.dropna()
 
-    rev = pd.merge(repy, m1, left_index = True, right_index = True)
+    rev = pd.merge(repy, m1, left_index = True, right_index = True, how='outer')
 
     re_views = []
     rev = rev.reindex(bt_int).fillna(method = 'pad')
@@ -768,6 +768,11 @@ def filter(sequence):
 def cal_sp_view():
     data = lag()
     data['view'] = data.loc[:, ['IP', 'MP', 'BM', 'UN', 'IUI', 'IPD', 'MI', 'DNO', 'MUO', 'CEI']].sum(axis = 1)
+
+    today = datetime.now()
+    today = datetime(today.year, today.month, today.day)
+    set_trace()
+    data.loc[today] = data.iloc[-1].values
 
     return data
 
