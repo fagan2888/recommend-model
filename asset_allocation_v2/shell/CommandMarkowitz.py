@@ -20,6 +20,7 @@ import Portfolio as PF
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
+from ipdb import set_trace
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -1011,9 +1012,23 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 9:
         #定死波动率配置
+        tr = 0.0012
+        risk_dict = {
+            'MZ.JY2500': 10*tr,
+            'MZ.JY2510': 1*tr,
+            'MZ.JY2520': 2*tr,
+            'MZ.JY2530': 3*tr,
+            'MZ.JY2540': 4*tr,
+            'MZ.JY2550': 5*tr,
+            'MZ.JY2560': 6*tr,
+            'MZ.JY2570': 7*tr,
+            'MZ.JY2580': 8*tr,
+            'MZ.JY2590': 9*tr,
+        }
+        risk = risk_dict.get(markowitz_id, 0.012)
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = MzFixRiskBootAllocate('ALC.000001', assets, trade_date, lookback, 0.015)
+        allocate = MzFixRiskBootAllocate('ALC.000001', assets, trade_date, lookback, risk)
         df = allocate.allocate()
 
     else:
