@@ -1013,7 +1013,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #定死波动率配置
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = MzFixRiskBootAllocate('ALC.000001', assets, trade_date, lookback, 0.03)
+        allocate = MzFixRiskBootAllocate('ALC.000001', assets, trade_date, lookback, 0.015)
         df = allocate.allocate()
 
     else:
