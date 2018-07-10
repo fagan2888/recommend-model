@@ -1055,7 +1055,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 9:
         #定死波动率配置
-        tr = 0.0012
+        tr = 0.0018
         risk_dict = {
             'MZ.JY2500': 10*tr,
             'MZ.JY2510': 1*tr,

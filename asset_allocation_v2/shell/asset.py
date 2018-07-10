@@ -556,10 +556,11 @@ class StockFundAsset(FundAsset):
 
 if __name__ == '__main__':
 
-    asset = Asset('120000011')
+    asset = Asset('120000001')
     nav = asset.nav(reindex = ATradeDate.week_trade_date())
     inc = nav.pct_change().dropna()
     print(inc.std())
+    print(np.mean(inc ** 2) ** 0.5)
     #print asset.origin_nav_sr.head()
 
     # asset = WaveletAsset('120000013', 2)

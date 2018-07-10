@@ -304,8 +304,8 @@ def markowitz_fixrisk(df_inc, bound, target_risk):
     vol = df_inc.cov().values
 
     cons = (
-        {'type': 'eq', 'fun': total_weight_constraint},
-        {'type': 'eq', 'fun': lambda x: np.sqrt(np.dot(x,np.dot(vol,x))) - target_risk},
+        {'type': 'eq', 'fun': lambda x : np.sum(x) - 1.0},
+        {'type': 'ineq', 'fun': lambda x: target_risk - np.sqrt(np.dot(x,np.dot(vol,x)))},
     )
 
     res = scipy.optimize.minimize(risk_budget_objective, w0, args=[ret, vol, target_risk], method='SLSQP', bounds = bnds, constraints=cons, options={'disp': False, 'eps': 1e-3})
@@ -316,7 +316,7 @@ def markowitz_fixrisk(df_inc, bound, target_risk):
     final_sharp = (final_return - Const.rf) / final_risk
 
     # print()
-    # print(final_risk)
+    # print(target_risk, final_risk)
 
     return final_risk, final_return, final_ws, final_sharp
 
