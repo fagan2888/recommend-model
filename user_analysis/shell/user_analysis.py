@@ -53,5 +53,7 @@ def user_analysis(ctx):
     #config.load()
 
 
+
 if __name__=='__main__':
-    user_analysis.add(CommandUser.user)
+    user_analysis.add_command(CommandUser.user)
+    user_analysis(obj={})

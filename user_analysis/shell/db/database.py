@@ -25,8 +25,6 @@ from ipdb import set_trace
 
 from dateutil.parser import parse
 
-from . import base_exchange_rate_index_nav
-from . import base_exchange_rate_index
 import MySQLdb
 from config import uris
 import os
