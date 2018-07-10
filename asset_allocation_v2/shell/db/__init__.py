@@ -49,6 +49,7 @@ from . import asset_rs_reshape_nav
 from . import asset_rs_reshape_pos
 from . import asset_tc_timing
 from . import asset_tc_timing_nav
+from . import asset_fund
 from . import asset_tc_timing_signal
 from . import base_ra_fund
 from . import base_ra_fund_bonus

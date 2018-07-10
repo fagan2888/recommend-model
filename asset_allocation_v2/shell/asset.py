@@ -216,6 +216,7 @@ class StockAsset(Asset):
     __all_stock_fdmt = {}
     __all_stocks = {}
 
+
     def __init__(self, globalid, name = None, nav_sr = None):
 
         super(StockAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
@@ -262,7 +263,6 @@ class StockAsset(Asset):
         stock_nav_df = pd.DataFrame(stock_nav)
         return stock_nav_df
 
-
     @staticmethod
     def all_stock_amount():
         StockAsset.all_stocks()
@@ -272,7 +272,6 @@ class StockAsset(Asset):
             stock_amount[stock_id] = asset.quote.amount
         stock_amount_df = pd.DataFrame(stock_amount)
         return stock_amount_df
-
 
     @staticmethod
     def secode_dict():
@@ -328,7 +327,6 @@ class StockAsset(Asset):
         return StockAsset.__all_stock_fdmt[self.globalid]
 
 
-
     #所有股票代码
     @staticmethod
     def all_stock_info(globalids = None):
@@ -368,40 +366,152 @@ class StockAsset(Asset):
         return StockAsset.__all_st_stocks
 
 
+class FundAsset(Asset):
+
+    __all_fund_info = None
+    __all_fund_pos = {}
+    __all_fund_quote = {}
+    __all_funds = {}
+
+    def __init__(self, code, secode = None, name = None, nav_sr = None):
+
+        super(FundAsset, self).__init__(code, name = name, nav_sr = nav_sr)
+        self.__secode = None
+        self.__quote = None
+        self.__pos = None
+
+    @property
+    def code(self):
+        return self.__code
+
+    @staticmethod
+    def get_fund(code):
+        if not code in FundAsset.__all_funds:
+            FundAsset.__all_funds[code] = FundAsset(code)
+        return FundAsset.__all_funds[code]
+
+    @staticmethod
+    def all_funds():
+        fund_ids = list(set(FundAsset.all_fund_info().index.ravel()).difference(FundAsset.__all_funds.keys()))
+        if len(fund_ids) > 0:
+            count = multiprocessing.cpu_count()
+            pool = Pool(count // 2)
+            results = pool.map(db.asset_fund.load_fund_nav_series, fund_ids)
+            pool.close()
+            pool.join()
+            for i in range(0, len(fund_ids)):
+                asset = FundAsset(fund_ids[i], nav_sr = results[i])
+                FundAsset.__all_funds[fund_ids[i]] = asset
+        return FundAsset.__all_funds
+
+    @staticmethod
+    def all_fund_nav():
+        FundAsset.all_funds()
+        fund_nav = {}
+        for fund_id in FundAsset.all_fund_info().index:
+            asset = FundAsset.get_fund(fund_id)
+            fund_nav[fund_id] = asset.nav().replace(0.0, method = 'pad')
+        fund_nav_df = pd.DataFrame(fund_nav)
+        return fund_nav_df
+
+    #所有股票代码
+    @staticmethod
+    def all_fund_info(codes = None):
+        if FundAsset.__all_fund_info is None:
+            engine = database.connection('base')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            all_funds = pd.read_sql(session.query(db.asset_fund.ra_fund).statement, session.bind, index_col = ['ra_code'])
+            session.commit()
+            session.close()
+            FundAsset.__all_fund_info = all_funds;
+        if codes is None:
+            return FundAsset.__all_fund_info
+        else:
+            return FundAsset.__all_fund_info.loc[codes]
+
+
+class StockFundAsset(FundAsset):
+
+    __all_fund_info = None
+    __all_fund_pos = {}
+    __all_fund_quote = {}
+    __all_funds = {}
+
+    def __init__(self, code, secode = None, name = None, nav_sr = None):
+
+        super(StockFundAsset, self).__init__(code, name = name, nav_sr = nav_sr)
+        self.__secode = None
+        self.__quote = None
+        self.__pos = None
+
+    @staticmethod
+    def all_fund_info(codes = None):
+        if StockFundAsset.__all_fund_info is None:
+            engine = database.connection('base')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            all_funds = pd.read_sql(session.query(db.asset_fund.ra_fund).filter(db.asset_fund.ra_fund.ra_type == 1).statement, session.bind, index_col = ['ra_code'])
+            session.commit()
+            session.close()
+            StockFundAsset.__all_fund_info = all_funds;
+        if codes is None:
+            return StockFundAsset.__all_fund_info
+        else:
+            return StockFundAsset.__all_fund_info.loc[codes]
+
+    @staticmethod
+    def all_fund_nav():
+        StockFundAsset.all_funds()
+        fund_nav = {}
+        for fund_id in StockFundAsset.all_fund_info().index:
+            asset = StockFundAsset.get_fund(fund_id)
+            fund_nav[fund_id] = asset.nav().replace(0.0, method = 'pad')
+        fund_nav_df = pd.DataFrame(fund_nav)
+        return fund_nav_df
+
 
 if __name__ == '__main__':
 
     # asset = Asset('120000001')
-    #print asset.nav(begin_date = '2010-01-01').head()
-    #print asset.origin_nav_sr.head()
+    # print asset.nav(begin_date = '2010-01-01').head()
+    # print asset.origin_nav_sr.head()
 
     # asset = WaveletAsset('120000013', 2)
-    #print asset.nav('2010-01-01', datetime.now()).tail()
-    #print asset.origin_nav_sr.tail()
+    # print asset.nav('2010-01-01', datetime.now()).tail()
+    # print asset.origin_nav_sr.tail()
 
     # asset = StockAsset('SK.601318')
     # print asset.nav()
     # print asset.name
-    #StockAsset.all_stock_fdmt()
-    #for globalid in StockAsset.all_stock_info().index:
+    # StockAsset.all_stock_fdmt()
+    # for globalid in StockAsset.all_stock_info().index:
     #    asset = StockAsset('SK.601318')
     #    print time.time()
     #    asset.fdmt
     #    print time.time()
     #    print
-    #print asset.nav()
-    #print asset.name
-    #print asset.load_ohlcavntt()
+    # print asset.nav()
+    # print asset.name
+    # print asset.load_ohlcavntt()
 
-    #print StockAsset.all_stock_info()
+    # print StockAsset.all_stock_info()
     # print StockAsset.stock_st()
     # set_trace()
     # print asset.load_quote().head()
-    #print asset.load_fdmt().head()
+    # print asset.load_fdmt().head()
 
     # print asset.load_quote().head()
     # print asset.load_fdmt().head()
     # print asset.load_fdmt().head()
 
-    print(StockAsset.all_stock_quote().keys())
-    print(len(StockAsset.all_stock_quote().keys()))
+    # print(StockAsset.all_stock_quote().keys())
+    # print(len(StockAsset.all_stock_quote().keys()))
+
+    df = StockFundAsset.all_fund_nav()
+    # print(StockFundAsset.all_fund_info())
+    set_trace()
+
+
+
+
