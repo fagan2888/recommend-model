@@ -40,6 +40,7 @@ from trade_date import ATradeDate
 from view import View
 from RiskParity import cal_weight
 import util_optimize
+from multiprocessing import Pool
 
 import PureFactor
 import traceback, code
@@ -174,6 +175,65 @@ class MzBootDownRiskAllocate(Allocate):
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws
 
+
+class FactorValidAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+
+        super(FactorValidAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        sf_ids = ['SF.0000%02d'%i for i in range(1, 10)]
+        self.sf_ids = sf_ids
+
+        self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2010-01-01')
+        self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
+        self.sfr = load_stock_factor_return(sf_ids = sf_ids, begin_date = '2012-01-01')
+
+    def allocate(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        asset_ids = list(self.assets.keys())
+        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
+
+        pool = Pool(32)
+        wss = pool.map(self.allocate_algo, adjust_days)
+        pool.close()
+        pool.join()
+
+        for day, ws in zip(adjust_days, wss):
+            for asset_id in ws.keys():
+                pos_df.loc[day, asset_id] = ws[asset_id]
+
+        return pos_df
+
+
+    def allocate_algo(self, day):
+
+        begin_date = (day.date() - timedelta(self.lookback - 1)).strftime('%Y-%m-%d')
+        end_date = day.date().strftime('%Y-%m-%d')
+
+        sfe = self.sfe[(self.sfe.index.get_level_values(2) > begin_date) & (self.sfe.index.get_level_values(2) < end_date)].reset_index()
+        sfr = self.sfr[(self.sfr.index.get_level_values(1) > begin_date) & (self.sfr.index.get_level_values(1) < end_date)].reset_index()
+
+        sfe = sfe.groupby(['stock_id', 'sf_id']).mean()
+        sfe = sfe.unstack()
+        sfe.columns = sfe.columns.droplevel(0)
+        sfe = sfe.dropna(how = 'all')
+        sfe = sfe.fillna(0.0)
+        sfe = sfe[self.sf_ids]
+
+        sfr = sfr.set_index(['trade_date', 'sf_id'])
+        sfr = sfr.unstack()
+        sfr.columns = sfr.columns.droplevel(0)
+        sfr = sfr[self.sf_ids]
+
+        R = sfr.mean()
+        factor_weights = np.sign(R.values) * 0.5
+
+        stock_weights = PureFactor.cal_weight(sfe, factor_weights)
+        ws = dict(zip(sfe.index, stock_weights))
+
+        return ws
 
 
 if __name__ == '__main__':
