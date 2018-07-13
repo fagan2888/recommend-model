@@ -8,7 +8,6 @@ sys.path.append('shell')
 import click
 import pandas as pd
 import numpy as np
-import os
 import time
 import logging
 import re
@@ -40,6 +39,7 @@ from allocate import Allocate
 from trade_date import ATradeDate
 from view import View
 from RiskParity import cal_weight
+import util_optimize
 
 import PureFactor
 import traceback, code
@@ -375,21 +375,20 @@ class FactorMzAllocate(Allocate):
         return ws
 
 
-class FactorSizeAllocate(Allocate):
+class FactorValidAllocate(Allocate):
 
 
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, target = None):
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
 
-        super(FactorSizeAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-        self.target = target
+        super(FactorValidAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
         sf_ids = ['SF.00000%d'%i for i in range(1, 9)]
-        t = datetime.now()
+        self.sf_ids = sf_ids
 
-        print t
+        # print t
         # self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2012-01-01')
         # self.sfe.to_csv('data/factor/stock_factor_exposure.csv', index_label = ['stock_id', 'sf_id', 'trade_date'])
         self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
-        print 'load exposure:', datetime.now() - t
+        # print datetime.now() - t
 
         # self.sfr = load_stock_factor_return(sf_ids = sf_ids, begin_date = '2012-01-01')
         # self.sfr.to_csv('data/factor/stock_factor_return.csv', index_label = ['sf_id', 'trade_date'])
@@ -398,6 +397,112 @@ class FactorSizeAllocate(Allocate):
         # self.sfsr = load_stock_factor_specific_return(stock_ids = assets.keys(), begin_date = '2012-01-01')
         # self.sfsr.to_csv('data/factor/stock_factor_specific_return.csv', index_label = ['stock_id', 'trade_date'])
         self.sfsr = pd.read_csv('data/factor/stock_factor_specific_return.csv', index_col = ['stock_id', 'trade_date'], parse_dates = ['trade_date'])
+
+
+    def allocate(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        asset_ids = list(self.assets.keys())
+        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
+
+        df_inc_all, bound = self.load_all_data(adjust_days, asset_ids)
+
+        s = 'perform %-12s' % self.__class__.__name__
+
+
+        with click.progressbar(
+                adjust_days, label=s.ljust(30),
+                item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+
+            for day in bar:
+
+                logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+                df_inc = df_inc_all[df_inc_all.index <= day][-1 * self.lookback:]
+
+                ws = self.allocate_algo(day, df_inc, bound)
+
+                for asset_id in ws.keys():
+                    pos_df.loc[day, asset_id] = ws[asset_id]
+
+        return pos_df
+
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        print
+        dates = df_inc.index
+        begin_date = dates.min()
+        end_date = dates.max()
+
+        sfe = self.sfe.reset_index()
+        sfr = self.sfr.reset_index()
+        sfsr = self.sfsr.reset_index()
+
+        sfe = sfe[sfe.trade_date >= begin_date][sfe.trade_date <= end_date]
+        sfr = sfr[sfr.trade_date >= begin_date][sfr.trade_date <= end_date]
+        sfsr = sfsr[sfsr.trade_date >= begin_date][sfsr.trade_date <= end_date]
+
+        sfe = sfe.groupby(['stock_id', 'sf_id']).mean()
+        sfe = sfe.unstack()
+        sfe.columns = sfe.columns.droplevel(0)
+        sfe = sfe.fillna(0.0)
+        sfe = sfe[self.sf_ids]
+
+        sfr = sfr.set_index(['trade_date', 'sf_id'])
+        sfr = sfr.unstack()
+        sfr.columns = sfr.columns.droplevel(0)
+        sfr = sfr[self.sf_ids]
+
+        sfsr = sfsr.set_index(['trade_date', 'stock_id'])
+        sfsr = sfsr.unstack()
+        sfsr.columns = sfsr.columns.droplevel(0)
+
+        joint_stocks = sfe.index.intersection(sfsr.columns)
+        sfe = sfe.loc[joint_stocks]
+        sfsr = sfsr[joint_stocks]
+
+        rf = 0.0
+        R = sfr.mean()
+        C = sfr.cov()
+        weights = util_optimize.solve_weights(R, C, rf)
+        print weights
+
+        weight = [np.nan] * len(joint_stocks)
+        ws = dict(zip(joint_stocks, weight))
+
+        return ws
+
+
+
+class FactorSizeAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, target = None):
+
+        super(FactorSizeAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        self.target = target
+        sf_ids = ['SF.00000%d'%i for i in range(1, 10)]
+        t = datetime.now()
+
+        print t
+        self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2012-01-01')
+        self.sfe.to_csv('data/factor/stock_factor_exposure.csv', index_label = ['stock_id', 'sf_id', 'trade_date'])
+        # self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
+        print 'load exposure:', datetime.now() - t
+        # os._exit(0)
+
+        self.sfr = load_stock_factor_return(sf_ids = sf_ids, begin_date = '2012-01-01')
+        self.sfr.to_csv('data/factor/stock_factor_return.csv', index_label = ['sf_id', 'trade_date'])
+        # self.sfr = pd.read_csv('data/factor/stock_factor_return.csv', index_col = ['sf_id', 'trade_date'], parse_dates = ['trade_date'])
+
+        self.sfsr = load_stock_factor_specific_return(stock_ids = assets.keys(), begin_date = '2012-01-01')
+        self.sfsr.to_csv('data/factor/stock_factor_specific_return.csv', index_label = ['stock_id', 'trade_date'])
+        # self.sfsr = pd.read_csv('data/factor/stock_factor_specific_return.csv', index_col = ['stock_id', 'trade_date'], parse_dates = ['trade_date'])
+
+        sfr = self.sfr.unstack().T
+        sfr = (1+sfr).cumprod()
+        sfr.to_csv('data/sfr.csv')
+        os._exit(0)
 
 
     def allocate(self):
@@ -497,9 +602,6 @@ class FactorSizeAllocate(Allocate):
         ws = dict(zip(joint_stocks, weight))
 
         return ws
-
-
-
 
 
 if __name__ == '__main__':

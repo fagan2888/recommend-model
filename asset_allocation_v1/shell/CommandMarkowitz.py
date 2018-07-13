@@ -36,7 +36,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorRpAllocate, FactorMzAllocate, FactorSizeAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorRpAllocate, FactorMzAllocate, FactorSizeAllocate, FactorValidAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -73,7 +73,7 @@ def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optrepla
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid, optappend=optappend)
+            ctx.invoke(pos, optid=optid, optappend=optappend, sdate = startdate, edate = enddate)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -1020,7 +1020,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 21:
 
-        lookback = 22
+        lookback = 63
         period = 5
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
@@ -1028,11 +1028,21 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = FactorMzAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period)
         df = allocate.allocate()
 
+    elif algo == 22:
+
+        lookback = 63
+        period = 5
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorValidAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period)
+        df = allocate.allocate()
+
     elif algo == 31:
 
         lookback = 126
         period = 5
-        target = np.array([1, 0, 0, 0, 0, 0, 0, 0])
+        target = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0])
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
@@ -1043,7 +1053,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         lookback = 126
         period = 5
-        target = np.array([-1, 0, 0, 0, 0, 0, 0, 0])
+        target = np.array([-1, 0, 0, 0, 0, 0, 0, 0, 0])
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
@@ -1054,7 +1064,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         lookback = 126
         period = 5
-        target = np.array([0, 0, 0, 0, 0, 1, 0, 0])
+        target = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0])
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
@@ -1065,7 +1075,29 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         lookback = 126
         period = 5
-        target = np.array([0, 0, 0, 0, 0, -1, 0, 0])
+        target = np.array([0, 0, 0, 0, 0, -1, 0, 0, 0])
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorSizeAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        df = allocate.allocate()
+
+    elif algo == 35:
+
+        lookback = 126
+        period = 5
+        target = np.array([0, 0, 0, 0, 1, 0, 0, 0, 0])
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorSizeAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        df = allocate.allocate()
+
+    elif algo == 36:
+
+        lookback = 126
+        period = 5
+        target = np.array([0, 0, 0, 0, -1, 0, 0, 0, 0])
         trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])

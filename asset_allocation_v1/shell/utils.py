@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import os
 
+
 def get_file_name(path_name):
     """
     :usage: get file name without extension name from path name
@@ -172,3 +173,11 @@ if __name__ == "__main__":
     trade_dates = pd.read_csv("../tmp/trade_dates.csv", index_col=['date'], \
                             parse_dates=['date'])
     day_2_week(data_day, trade_dates)
+
+
+def get_today():
+
+    today = datetime.datetime.now()
+    today_idx = pd.tslib.Timestamp(today.year, today.month, today.day)
+
+    return today_idx

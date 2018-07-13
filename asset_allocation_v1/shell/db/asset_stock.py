@@ -231,6 +231,18 @@ def load_ohlcavntt(globalid):
 
     df.turnrate = df.turnrate / 100
 
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_sk_dquoteindic.tradedate ,tq_sk_dquoteindic.tcloseaf).filter(tq_sk_dquoteindic.secode == secode)
+    ser = pd.read_sql(sql.statement, session.bind, index_col=['tradedate'], parse_dates=['tradedate'])
+    ser = ser.tcloseaf
+    ser.index.name = 'date'
+    session.commit()
+    session.close()
+
+    df = df.join(ser)
+
     return df
 
 
@@ -331,7 +343,7 @@ def load_ccdfg(globalid):
 
 if __name__ == '__main__':
 
-    # df = load_ohlcavntt('SK.601318')
+    df = load_ohlcavntt('SK.000001')
     # df = load_epbp(2010000857)
     # df = load_avgpct(2010000857)
     # df = load_holder_avgpct(2010000857)
@@ -339,5 +351,4 @@ if __name__ == '__main__':
     # df = load_ccdfg(2010001036)
     # df = load_fdmt(2010000938)
     # print df.head()
-    print asset.StockAsset.all_stock_info()
-    pass
+    # print asset.StockAsset.all_stock_info()

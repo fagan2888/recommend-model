@@ -264,6 +264,17 @@ class StockAsset(Asset):
 
 
     @staticmethod
+    def all_stock_amount():
+        StockAsset.all_stocks()
+        stock_amount = {}
+        for stock_id in StockAsset.all_stock_info().index:
+            asset = StockAsset.get_stock(stock_id)
+            stock_amount[stock_id] = asset.quote.amount
+        stock_amount_df = pd.DataFrame(stock_amount)
+        return stock_amount_df
+
+
+    @staticmethod
     def secode_dict():
         all_stock_info = StockAsset.all_stock_info()
         return dict(zip(all_stock_info.index, all_stock_info.sk_secode))

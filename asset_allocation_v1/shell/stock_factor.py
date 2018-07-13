@@ -15,11 +15,13 @@ import numpy as np
 import time
 from functools import partial
 import statsmodels.api as sm
+from sklearn.linear_model import LinearRegression
 
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
+from utils import get_today
 from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import distinct
@@ -35,8 +37,11 @@ import math
 import scipy.stats as stats
 import json
 import stock_util
+from asset import Asset
+from trade_date import ATradeDate
 from ipdb import set_trace
 #from pathos.multiprocessing import ProcessingPool as Pool
+
 
 
 logger = logging.getLogger(__name__)
@@ -53,42 +58,43 @@ class StockFactor(Factor):
             'SF.000006':'ValueStockFactor',
             'SF.000007':'FqStockFactor',
             'SF.000008':'LeverageStockFactor',
-            'SF.000009':'FarmingStockFactor',
-            'SF.000010':'MiningStockFactor',
-            'SF.000011':'ChemicalStockFactor',
-            'SF.000012':'FerrousStockFactor',
-            'SF.000013':'NonFerrousStockFactor',
-            'SF.000014':'ElectronicStockFactor',
-            'SF.000015':'CTEquipStockFactor',
-            'SF.000016':'HouseholdElecStockFactor',
-            'SF.000017':'FoodBeverageStockFactor',
-            'SF.000018':'TextileStockFactor',
-            'SF.000019':'LightIndustryStockFactor',
-            'SF.000020':'MedicalStockFactor',
-            'SF.000021':'PublicStockFactor',
-            'SF.000022':'ComTransStockFactor',
-            'SF.000023':'RealEstateStockFactor',
-            'SF.000024':'TradingStockFactor',
-            'SF.000025':'TourismStockFactor',
-            'SF.000026':'BankStockFactor',
-            'SF.000027':'FinancialStockFactor',
-            'SF.000028':'CompositeStockFactor',
-            'SF.000029':'ConstructionStockFactor',
-            'SF.000030':'ArchitecturalStockFactor',
-            'SF.000031':'ElecEquipStockFactor',
-            'SF.000032':'MachineryStockFactor',
-            'SF.000033':'MilitaryStockFactor',
-            'SF.000034':'ComputerStockFactor',
-            'SF.000035':'MedicalStockFactor',
-            'SF.000036':'CommunicationStockFactor',
-            'SF.000037':'SizeNlStockFactor',
+            'SF.000009':'GrowthStockFactor',
+            'SF.100001':'FarmingStockFactor',
+            'SF.100002':'MiningStockFactor',
+            'SF.100003':'ChemicalStockFactor',
+            'SF.100004':'FerrousStockFactor',
+            'SF.100005':'NonFerrousStockFactor',
+            'SF.100006':'ElectronicStockFactor',
+            'SF.100007':'CTEquipStockFactor',
+            'SF.100008':'HouseholdElecStockFactor',
+            'SF.100009':'FoodBeverageStockFactor',
+            'SF.100010':'TextileStockFactor',
+            'SF.100011':'LightIndustryStockFactor',
+            'SF.100012':'MedicalStockFactor',
+            'SF.100013':'PublicStockFactor',
+            'SF.100014':'ComTransStockFactor',
+            'SF.100015':'RealEstateStockFactor',
+            'SF.100016':'TradingStockFactor',
+            'SF.100017':'TourismStockFactor',
+            'SF.100018':'BankStockFactor',
+            'SF.100019':'FinancialStockFactor',
+            'SF.100020':'CompositeStockFactor',
+            'SF.100021':'ConstructionStockFactor',
+            'SF.100022':'ArchitecturalStockFactor',
+            'SF.100023':'ElecEquipStockFactor',
+            'SF.100024':'MachineryStockFactor',
+            'SF.100025':'MilitaryStockFactor',
+            'SF.100026':'ComputerStockFactor',
+            'SF.100027':'MedicalStockFactor',
+            'SF.100028':'CommunicationStockFactor',
             }
 
     __valid_stock_filter = None
 
     @staticmethod
     def subclass(sf_id, sub_class_name):
-        for subclass in StockFactor.__subclasses__():
+        subclasses = StockFactor.__subclasses__() + IndustryStockFactor.__subclasses__()
+        for subclass in subclasses:
             if sub_class_name == subclass.__name__:
                 return subclass(factor_id = sf_id)
 
@@ -104,8 +110,8 @@ class StockFactor(Factor):
             for stock_id in all_stocks.index:
                 stock_exposure[stock_id] = desc_method(stock_id)
             stock_exposure_df = pd.DataFrame(stock_exposure)
-            if int(self.factor_id[-2:]) <= 8:
-                stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
+            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
+            if int(self.factor_id[3:]) <= 9:
                 stock_exposure_df = StockFactor.normalized(stock_exposure_df)
             factor_exposure.append(stock_exposure_df)
 
@@ -117,41 +123,52 @@ class StockFactor(Factor):
 
         return factor_exposure_df
 
+
     def cal_size(self, stock_id):
         stock_quote = StockAsset.get_stock(stock_id).quote
         totmktcap = stock_quote.totmktcap
         return totmktcap
 
+
     def cal_factor_return(self, sf_ids):
 
+        period = 21
         sfs = []
         for sf_id in sf_ids:
             sfs.append(StockFactor.subclass(sf_id, StockFactor.stock_factors[sf_id]))
 
         close = StockAsset.all_stock_nav()
-        ret = close.pct_change()
+        ret = close.pct_change(period).iloc[period:]
         ret = ret[StockAsset.all_stock_info().index]
 
+        # amount = StockAsset.all_stock_amount()
+        # amount = amount.rolling(period).mean().iloc[period:]
+        # amount = amount.fillna(0.0)
+
         dates = ret.index
-        dates = dates[dates > '2000-01-01']
+        dates = dates[dates >= '2005-01-01']
+        dates = dates[dates <= '2018-06-19']
 
         df_ret = pd.DataFrame(columns = sf_ids)
         df_sret = pd.DataFrame(columns = StockAsset.all_stock_info().index)
-        for date in dates:
+        for date, next_date in zip(dates[:-period], dates[period:]):
 
             print 'cal_factor_return:', date
 
             tmp_exposure = {}
-            tmp_ret = ret.loc[date].values
+            tmp_ret = ret.loc[next_date].values
+            # tmp_amount = ret.loc[date].values
             for sf in sfs:
                 tmp_exposure[sf.factor_id] = sf.exposure.loc[date]
             tmp_exposure_df = pd.DataFrame(tmp_exposure)
             tmp_exposure_df = tmp_exposure_df[sf_ids].fillna(0.0)
             tmp_exposure_df = tmp_exposure_df.loc[StockAsset.all_stock_info().index]
             mod = sm.OLS(tmp_ret, tmp_exposure_df.values, missing = 'drop').fit()
+            # mod = sm.WLS(tmp_ret, tmp_exposure_df.values, weights = tmp_amount, missing = 'drop').fit()
+            print mod.summary()
 
-            df_ret.loc[date] = mod.params
-            df_sret.loc[date] = tmp_ret - np.dot(tmp_exposure_df.values, mod.params)
+            df_ret.loc[next_date] = mod.params
+            df_sret.loc[next_date] = tmp_ret - np.dot(tmp_exposure_df.values, mod.params)
 
         return df_ret, df_sret
 
@@ -338,58 +355,120 @@ class VolStockFactor(StockFactor):
         super(VolStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
         days = 23
         self.desc_methods = [
-            partial(self.cal_dastd, period = days),
-            partial(self.cal_dastd, period = days*2),
-            partial(self.cal_dastd, period = days*3),
-            partial(self.cal_dastd, period = days*6),
-            partial(self.cal_dastd, period = days*12),
-            partial(self.cal_hilo, period = days),
-            partial(self.cal_hilo, period = days*2),
-            partial(self.cal_hilo, period = days*3),
-            partial(self.cal_hilo, period = days*6),
-            partial(self.cal_hilo, period = days*12),
+            # partial(self.cal_dastd, period = days),
+            # partial(self.cal_dastd, period = days*2),
+            # partial(self.cal_dastd, period = days*3),
+            # partial(self.cal_dastd, period = days*6),
+            # partial(self.cal_dastd, period = days*12),
+            # partial(self.cal_hilo, period = days),
+            # partial(self.cal_hilo, period = days*2),
+            # partial(self.cal_hilo, period = days*3),
+            # partial(self.cal_hilo, period = days*6),
+            # partial(self.cal_hilo, period = days*12),
+            # self.cal_btsg,
+            self.cal_cmra,
         ]
 
-    def cal_dastd(self, stock_id, period = 23):
+    # def cal_dastd(self, stock_id, period = 23):
+    #     stock_quote = StockAsset.get_stock(stock_id).quote
+    #     close = stock_quote.tclose
+    #     close = close.replace(0.0, method = 'pad')
+    #     ret = close.pct_change()
+    #     ret = ret.rolling(period).apply(lambda x: pow(pow(x,2).mean(), 0.5))
+
+    #     return ret
+
+    # def cal_hilo(self, stock_id, period = 23):
+    #     stock_quote = StockAsset.get_stock(stock_id).quote
+    #     high = stock_quote.thigh
+    #     high = high.replace(0.0, method = 'pad')
+    #     hi = high.rolling(period).max()
+
+    #     low = stock_quote.tlow
+    #     low = low.replace(0.0, method = 'pad')
+    #     low = low.rolling(period).min()
+
+    #     hilo = np.log(hi / low)
+
+    #     return hilo
+
+
+    def cal_btsg(self, stock_id):
+
         stock_quote = StockAsset.get_stock(stock_id).quote
-        close = stock_quote.tclose
+        close = stock_quote.tcloseaf
         close = close.replace(0.0, method = 'pad')
         ret = close.pct_change()
-        ret = ret.rolling(period).apply(lambda x: pow(pow(x,2).mean(), 0.5))
 
-        return ret
+        sz = Asset.load_nav_series('120000016')
+        bret = sz.pct_change()
 
-    def cal_hilo(self, stock_id, period = 23):
+        ret = ret.resample('m').sum().iloc[:-1]
+        bret = bret.resample('m').sum().iloc[:-1]
+        common_index = ret.index.intersection(bret.index)
+        ret = ret.loc[common_index]
+        bret = bret.loc[common_index]
+
+        ser = pd.Series()
+
+        if len(common_index) < 60:
+            return ser
+
+        for i in range(60, len(common_index)):
+
+            tmp_dates = common_index[:i+1]
+            y = ret.loc[tmp_dates].values
+            x = bret.loc[tmp_dates].values.reshape(-1,1)
+            x = sm.add_constant(x)
+            mod = sm.OLS(y, x).fit()
+            beta = mod.params[1]
+            sigma = mod.resid.std()
+            btsg = pow(beta * sigma, 0.5)
+
+            ser.loc[tmp_dates[-1]] = btsg
+
+        today = get_today()
+        ser.loc[today] = np.nan
+        ser = ser.resample('d').last().fillna(method = 'pad')
+
+        return ser
+
+
+    def cal_cmra(self, stock_id):
+
         stock_quote = StockAsset.get_stock(stock_id).quote
-        high = stock_quote.thigh
-        high = high.replace(0.0, method = 'pad')
-        hi = high.rolling(period).max()
+        close = stock_quote.tcloseaf
+        close = close.replace(0.0, method = 'pad')
+        nav = close / close.iloc[0]
 
-        low = stock_quote.tlow
-        low = low.replace(0.0, method = 'pad')
-        lo = low.rolling(period).min()
+        zt = np.log(nav)
+        zt_max = zt.rolling(window = 252 * 5).max()
+        zt_min = zt.rolling(window = 252 * 5).min()
+        cmra = np.log((1 + zt_max) / (1 + zt_min))
+        cmra = cmra.fillna(method = 'pad')
+        cmra = cmra.dropna()
 
-        hilo = np.log(hi / low)
-
-        return hilo
+        return cmra
 
 
 class MomStockFactor(StockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(MomStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
-        days = 23
+        days = 21
         self.desc_methods = [
-            partial(self.cal_mom, period = days),
-            partial(self.cal_mom, period = days*2),
-            partial(self.cal_mom, period = days*3),
-            partial(self.cal_mom, period = days*6),
-            partial(self.cal_mom, period = days*12),
+            # partial(self.cal_mom, period = days),
+            # partial(self.cal_mom, period = days*2),
+            # partial(self.cal_mom, period = days*3),
+            # partial(self.cal_mom, period = days*6),
+            # partial(self.cal_mom, period = days*60),
+            partial(self.cal_halpha),
         ]
 
     def cal_mom(self, stock_id, period = 23):
+
         stock_quote = StockAsset.get_stock(stock_id).quote
-        close = stock_quote.tclose
+        close = stock_quote.tcloseaf
         close = close.replace(0.0, method = 'pad')
         ret = close.pct_change()
         tr = stock_quote.turnrate
@@ -399,6 +478,41 @@ class MomStockFactor(StockFactor):
         mom = ret_tr / weight
 
         return mom
+
+    def cal_halpha(self, stock_id):
+
+        stock_quote = StockAsset.get_stock(stock_id).quote
+        close = stock_quote.tcloseaf
+        close = close.replace(0.0, method = 'pad')
+        ret = close.pct_change()
+
+        sz = Asset.load_nav_series('120000016')
+        bret = sz.pct_change()
+
+        ret = ret.resample('m').sum().iloc[:-1]
+        bret = bret.resample('m').sum().iloc[:-1]
+        common_index = ret.index.intersection(bret.index)
+        ret = ret.loc[common_index]
+        bret = bret.loc[common_index]
+
+        ser = pd.Series()
+
+        if len(common_index) < 60:
+            return ser
+
+        for i in range(60, len(common_index)):
+
+            tmp_dates = common_index[i-59: i+1]
+            y = ret.loc[tmp_dates].values
+            x = bret.loc[tmp_dates].values.reshape(-1,1)
+            mod = LinearRegression().fit(x, y)
+            ser.loc[tmp_dates[-1]] = mod.intercept_
+
+        today = get_today()
+        ser.loc[today] = np.nan
+        ser = ser.resample('d').last().fillna(method = 'pad')
+
+        return ser
 
 
 class TurnoverStockFactor(StockFactor):
@@ -532,6 +646,40 @@ class LeverageStockFactor(StockFactor):
         equtotliab = stock_fdmt.equtotliab
 
         return equtotliab
+
+
+class GrowthStockFactor(StockFactor):
+
+    def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
+        super(GrowthStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
+        self.desc_methods = [
+            self.cal_egro,
+        ]
+
+    def cal_egro(self, stock_id):
+
+        def cal_egro_single(x):
+
+            mod = LinearRegression().fit(np.arange(5).reshape(-1,1), x)
+            return mod.coef_[0]/np.mean(x)
+
+        stock_fdmt = StockAsset.get_stock(stock_id).fdmt
+        stock_quote = StockAsset.get_stock(stock_id).quote
+        p = stock_quote.tclose
+        pe = stock_fdmt.pettm
+        eps = p / pe
+        eps = eps[eps.diff() > 0.001]
+        eps_y = pd.Series()
+        for k,v in eps.groupby(eps.index.strftime('%Y')):
+            eps_y.loc[v.index[-1]] = v.values[-1]
+
+        eps_y = eps_y.rolling(5).apply(cal_egro_single)
+        today = datetime.now()
+        today_idx = pd.tslib.Timestamp(today.year, today.month, today.day)
+        eps_y.loc[today_idx] = np.nan
+        eps_y = eps_y.resample('d').last().fillna(method = 'pad').dropna()
+
+        return eps_y
 
 
 class IndustryStockFactor(StockFactor):
@@ -742,7 +890,7 @@ if __name__ == '__main__':
     #    print StockAsset.get_stock(stock_id).quote.tail()
     #StockAsset.all_stock_fdmt()
     #sf = StockFactor()
-    #print sf.cal_factor_return(['SF.000001', 'SF.000002', 'SF.000003', 'SF.000004','SF.000005', 'SF.000006','SF.000007', 'SF.000008'])
+    # print sf.cal_factor_return(['SF.000001', 'SF.000002', 'SF.000003', 'SF.000004','SF.000005', 'SF.000006','SF.000007', 'SF.000008'])
     #sf = SizeStockFactor()
     #print sf.exposure.tail()
     #sf = VolStockFactor()
@@ -760,8 +908,13 @@ if __name__ == '__main__':
     #StockFactor.stock_factor_filter(pd.DataFrame())
     # asset_stock_factor.update_exposure(SizeStockFactor(factor_id = 'SF.000001'))
 
-    sf = FarmingStockFactor('SF.000009')
-    print sf.cal_factor_exposure()
+    # sf = FarmingStockFactor('SF.000009')
+    # print sf.cal_factor_exposure()
+    # sf = GrowthStockFactor('SF.000009')
+    # sf = MomStockFactor('SF.000009')
+    sf = GrowthStockFactor('SF.000009')
+    # print sf.cal_factor_exposure()
+    print sf.cal_factor_return(['SF.000009'])
 
 
 

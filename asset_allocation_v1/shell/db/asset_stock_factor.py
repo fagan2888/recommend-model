@@ -2,6 +2,7 @@
 
 import sys
 sys.path.append('shell')
+from datetime import datetime
 import pandas as pd
 from ipdb import set_trace
 from sqlalchemy import Column, String, Integer, Text, Date, DateTime, Float
@@ -325,10 +326,23 @@ def update_exposure_mongo(sf):
     mg.insert_many(dicv)
 
 
-def load_exposure_mongo(stock_id):
+def load_exposure_mongo(sf_id = None, stock_id = None, begin_date = None, end_date = None):
 
     mg = MyMongoDB(config_mongo.exposure)
-    data = mg.find({"stock_id": stock_id})
+
+    dic = {}
+    if sf_id:
+        dic["sf_id"] = sf_id
+    if stock_id:
+        dic["stock_id"] = stock_id
+    if begin_date or end_date:
+        dic["trade_date"] = {}
+    if begin_date:
+        dic["trade_date"]["$gte"] = begin_date
+    if end_date:
+        dic["trade_date"]["$lte"] = end_date
+
+    data = mg.find(dic)
     df = pd.DataFrame(list(data))
 
     return df
@@ -340,7 +354,14 @@ if __name__ == '__main__':
     #df2 = load_stock_factor_specific_return()
     #set_trace()
     #update_exposure(StockFactor.SizeStockFactor(factor_id = 'SF.000001'))
-    load_exposure_mongo("SK.000005")
+    t = datetime.now()
+    # df = load_exposure_mongo(begin_date = "2012-01-01")
+    df = load_exposure_mongo(begin_date = datetime(2012, 1, 1))
+    print datetime.now() - t
+    set_trace()
+
+
+
 
 
 
