@@ -1012,23 +1012,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 9:
         #定死波动率配置
-        tr = 0.0018
-        risk_dict = {
-            'MZ.JY2500': 10*tr,
-            'MZ.JY2510': 1*tr,
-            'MZ.JY2520': 2*tr,
-            'MZ.JY2530': 3*tr,
-            'MZ.JY2540': 4*tr,
-            'MZ.JY2550': 5*tr,
-            'MZ.JY2560': 6*tr,
-            'MZ.JY2570': 7*tr,
-            'MZ.JY2580': 8*tr,
-            'MZ.JY2590': 9*tr,
-        }
-        risk = risk_dict.get(markowitz_id, 0.012)
+        upper_risk = float(argv.get('upper_risk', 0.018))
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = MzFixRiskBootAllocate('ALC.000001', assets, trade_date, lookback, risk)
+        allocate = MzFixRiskBootAllocate('ALC.000001', assets, trade_date, lookback, upper_risk)
         df = allocate.allocate()
 
     else:
