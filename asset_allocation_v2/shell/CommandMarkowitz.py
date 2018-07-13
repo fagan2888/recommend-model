@@ -36,7 +36,8 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorRpAllocate, FactorMzAllocate, FactorSizeAllocate, FactorValidAllocate, FactorIndexAllocate
+# from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorRpAllocate, FactorMzAllocate, FactorSizeAllocate, FactorValidAllocate, FactorIndexAllocate, RpAllocate, MvpAllocate, LayerRpAllocate, LayerMvpAllocate
+from asset_allocate import *
 from trade_date import ATradeDate
 from view import View
 
@@ -1009,6 +1010,67 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
 
+    elif algo == 11:
+
+        lookback = 252
+        period = 5
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        # bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = RpAllocate('ALC.000001', assets, trade_date, lookback, period = period)
+        df = allocate.allocate()
+
+    elif algo == 12:
+
+        lookback = 126
+        period = 5
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        # bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MvpAllocate('ALC.000001', assets, trade_date, lookback, period = period)
+        df = allocate.allocate()
+
+    elif algo == 13:
+
+        lookback = 252
+        period = 5
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        # bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = LayerRpAllocate('ALC.000001', assets, trade_date, lookback, period = period)
+        df = allocate.allocate()
+
+    elif algo == 14:
+
+        lookback = 252
+        period = 5
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        # bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = LayerMvpAllocate('ALC.000001', assets, trade_date, lookback, period = period)
+        df = allocate.allocate()
+
+    elif algo == 15:
+
+        lookback = 252
+        period = 5
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        # bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = TrendAllocate('ALC.000001', assets, trade_date, lookback, period = period)
+        df = allocate.allocate()
+
+    elif algo == 16:
+
+        lookback = 252
+        period = 5
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        # bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MvpBootAllocate('ALC.000001', assets, trade_date, lookback, period = period)
+        df = allocate.allocate()
+
+
     elif algo == 20:
 
         lookback = 126
@@ -1278,7 +1340,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 20]
+    no_rolling_algos = [1, 15, 20]
     if algo in no_rolling_algos:
         pass
     else:

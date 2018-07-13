@@ -27,6 +27,7 @@ import statsmodels
 from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund
 from db.asset_stock_factor import *
 from db.asset_stock import *
+from db.asset_fund_factor import load_fund_factor_exposure
 from db import asset_trade_dates
 from multiprocessing import Pool
 import math
@@ -85,14 +86,30 @@ class Factor(object):
 
     @staticmethod
     def load_factor_exposure(factor_id):
+
         if factor_id[0:2] == 'SF':
             factor_exposure_df = load_stock_factor_exposure(sf_id = factor_id)
             factor_exposure_df = factor_exposure_df.swaplevel(0, 1).loc[factor_id].swaplevel(0,1).unstack()
             factor_exposure_df.columns = factor_exposure_df.columns.droplevel(0)
             print(factor_id ,'load exposure done')
             return factor_exposure_df
+
+        if factor_id[0:2] == 'FF':
+            factor_exposure_df = load_fund_factor_exposure(ff_id = factor_id)
+            factor_exposure_df = factor_exposure_df.swaplevel(0, 1).loc[factor_id].swaplevel(0,1).unstack()
+            factor_exposure_df.columns = factor_exposure_df.columns.droplevel(0)
+            now = datetime.now() + timedelta(1)
+            tomorrow = datetime(now.year, now.month, now.day)
+            factor_exposure_df.loc[tomorrow] = [np.nan] * factor_exposure_df.shape[1]
+            factor_exposure_df = factor_exposure_df.resample('d').last()
+            factor_exposure_df = factor_exposure_df.fillna(method = 'pad', limit = 365)
+            return factor_exposure_df
+
         else:
             pass
+
+
+
 
 
 

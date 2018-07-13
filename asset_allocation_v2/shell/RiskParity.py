@@ -52,20 +52,27 @@ def long_only_constraint(x):
 
 
 def cal_weight(V, x_t = None, cons2 = None, w0 = None):
+
     V = V * 10000
+
     if x_t is None:
         x_t = [1 / len(V)]*len(V)
+
     if w0 is None:
         w0 = [1 / len(x_t)]*len(x_t)
+
     cons1 = (
         {'type': 'eq', 'fun': total_weight_constraint},
-        {'type': 'ineq', 'fun': long_only_constraint}
     )
+
     if cons2 is not None:
         cons = cons1 + cons2
     else:
         cons = cons1
-    res = minimize(risk_budget_objective, w0, args=[V,x_t], method='SLSQP', constraints=cons, options={'disp': False})
+
+    b_ = [(0.0, 1.0) for i in range(len(x_t))]
+
+    res = minimize(risk_budget_objective, w0, args=[V,x_t], method='SLSQP', constraints=cons, bounds = b_, options={'disp': False})
     # w_rb = np.asmatrix(res.x)
 
     return res.x

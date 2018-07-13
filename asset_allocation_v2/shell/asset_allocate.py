@@ -33,13 +33,15 @@ from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
 from db.asset_stock_factor import *
+from CommandFactorCluster import clusterKMeansBase
+import MinVolPortfolio
 from util import xdict
 from util.xdebug import dd
 from asset import Asset, WaveletAsset
 from allocate import Allocate
 from trade_date import ATradeDate
 from view import View
-from RiskParity import cal_weight
+import RiskParity
 import util_optimize
 import RiskParity
 from stock_factor import StockFactor
@@ -48,7 +50,6 @@ from scipy.stats import rankdata
 
 import PureFactor
 import IndexFactor
-import traceback, code
 
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,6 @@ class AvgAllocate(Allocate):
         return ws
 
 
-
 class MzAllocate(Allocate):
 
 
@@ -79,6 +79,201 @@ class MzAllocate(Allocate):
     def allocate_algo(self, day, df_inc, bound):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
         ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
+
+
+class RpAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(RpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate_algo(self, day, df_inc, bound):
+        V = df_inc.cov()
+        risk_budget = np.array([1 / df_inc.shape[1]] * df_inc.shape[1])
+        weight = cal_weight(V, risk_budget)
+        print(np.round(weight, 3))
+        ws = dict(zip(df_inc.columns.ravel(), weight))
+        return ws
+
+
+class TrendAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(TrendAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        asset_ids = list(self.assets.keys())
+        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
+
+        s = 'perform %-12s' % self.__class__.__name__
+
+        with click.progressbar(
+                adjust_days, label=s.ljust(30),
+                item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+
+            pre_ws = None
+
+            for day in bar:
+
+                logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+
+                df_inc, bound = self.load_allocate_data(day, asset_ids)
+
+                ws = self.allocate_algo(day, df_inc, bound, pre_ws)
+
+                pre_ws = ws
+
+                for asset_id in list(ws.keys()):
+                    pos_df.loc[day, asset_id] = ws[asset_id]
+
+        return pos_df
+
+    # def allocate_algo(self, day, df_inc, bound, pre_ws):
+
+    #     alloc_num = 1
+    #     dfm = df_inc.mean()
+    #     dfm = dfm.sort_values(ascending = False)
+
+    #     if pre_ws is None:
+    #     # if True:
+
+    #         dfm.iloc[:alloc_num] = 1 / alloc_num
+    #         dfm.iloc[alloc_num:] = 0.0
+    #         ws = dfm.to_dict()
+    #     else:
+    #         pre_ws_ser = pd.Series(pre_ws)
+    #         pre_factors = pre_ws_ser[pre_ws_ser > 0].index
+    #         if len(dfm[dfm > dfm.loc[pre_factors][0]]) < 5:
+    #             ws = pre_ws
+    #         else:
+    #             dfm.iloc[:alloc_num] = 1 / alloc_num
+    #             dfm.iloc[alloc_num:] = 0.0
+    #             ws = dfm.to_dict()
+
+    #     return ws
+
+
+    def allocate_algo(self, day, df_inc, bound, pre_ws):
+
+        alloc_num = 5
+        dfm = df_inc.mean()
+        dfm = dfm.sort_values(ascending = False)
+
+
+        if pre_ws is None:
+
+            dfm.iloc[:alloc_num] = 1 / alloc_num
+            dfm.iloc[alloc_num:] = 0.0
+            ws = dfm.to_dict()
+        else:
+
+            pre_ws_ser = pd.Series(pre_ws)
+            pre_factors = pre_ws_ser[pre_ws_ser > 0].index
+
+            valid_factors_pool = dfm.index[:10]
+            valid_pre_factors = np.intersect1d(pre_factors, valid_factors_pool)
+            valid_new_factors = np.setdiff1d(valid_factors_pool, valid_pre_factors)
+            valid_factors = np.append(valid_pre_factors, valid_new_factors[:alloc_num - len(valid_pre_factors)])
+            dfm.loc[valid_factors] = 1.0 / alloc_num
+            dfm = dfm.sort_values(ascending = False)
+            dfm.iloc[alloc_num:] = 0.0
+            ws = dfm.to_dict()
+
+        return ws
+
+
+class LayerRpAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(LayerRpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        V = df_inc.cov()
+        corr, cluster, silh = clusterKMeansBase(V, minNumClusters=2)
+        df_layer = {}
+        for k, v in cluster.items():
+            df_layer[k] = df_inc[cluster[k]].mean(1)
+        df_layer = pd.DataFrame(df_layer)
+
+        risk_budget = np.array([1 / df_layer.shape[1]] * df_layer.shape[1])
+        weight = RiskParity.cal_weight(df_layer.cov(), risk_budget)
+        ws = {}
+        for layer in cluster.keys():
+
+            layer_assets = cluster[layer]
+            layer_ws = [weight[layer]/len(layer_assets)] * len(layer_assets)
+            tmp_ws = dict(zip(layer_assets, layer_ws))
+            ws.update(tmp_ws)
+
+        # ws = dict(zip(df_inc.columns.ravel(), weight))
+
+        return ws
+
+
+class LayerMvpAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(LayerMvpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        V = df_inc.cov()
+        corr, cluster, silh = clusterKMeansBase(V, minNumClusters=2)
+        df_layer = {}
+        for k, v in cluster.items():
+            df_layer[k] = df_inc[cluster[k]].mean(1)
+        df_layer = pd.DataFrame(df_layer)
+
+        weight = MinVolPortfolio.cal_weight(df_layer.cov())
+
+        ws = {}
+        for layer in cluster.keys():
+
+            layer_assets = cluster[layer]
+            layer_ws = [weight[layer]/len(layer_assets)] * len(layer_assets)
+            tmp_ws = dict(zip(layer_assets, layer_ws))
+            ws.update(tmp_ws)
+
+        return ws
+
+
+class MvpAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(MvpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate_algo(self, day, df_inc, bound):
+        V = df_inc.cov()
+        weight = MinVolPortfolio.cal_weight(V)
+        print(np.round(weight, 3))
+        ws = dict(zip(df_inc.columns.ravel(), weight))
+        return ws
+
+
+class MvpBootAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+
+        super(MvpBootAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        if cpu_count is None:
+            count = multiprocessing.cpu_count() // 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+        self.__bootstrap_count = bootstrap_count
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        weight = PF.mvp_bootstrape(df_inc, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        weight[weight < 0.05] = 0.0
+        weight = weight / weight.sum()
+        ws = dict(zip(df_inc.columns.ravel(), weight))
+
         return ws
 
 
@@ -120,7 +315,7 @@ class MzBootAllocate(Allocate):
     def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
         super(MzBootAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
         if cpu_count is None:
-            count = multiprocessing.cpu_count() / 2
+            count = multiprocessing.cpu_count() // 2
             cpu_count = count if count > 0 else 1
             self.__cpu_count = cpu_count
         else:
@@ -141,7 +336,7 @@ class MzBootBlAllocate(MzBlAllocate):
     def __init__(self, globalid, assets, views, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
         super(MzBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
         if cpu_count is None:
-            count = multiprocessing.cpu_count() / 2
+            count = multiprocessing.cpu_count() // 2
             cpu_count = count if count > 0 else 1
             self.__cpu_count = cpu_count
         else:
@@ -161,7 +356,32 @@ class MzBootDownRiskAllocate(Allocate):
     def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
         super(MzBootDownRiskAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
         if cpu_count is None:
-            count = multiprocessing.cpu_count() / 2
+            count = multiprocessing.cpu_count() // 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+        self.__bootstrap_count = bootstrap_count
+
+
+    def allocate_algo(self, day, df_inc, bound):
+        df_inc[df_inc >= 0] = 0.0
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        tdate = ATradeDate.trade_date()
+        var = np.array([self.assets[code].origin_nav_sr.reindex(tdate).pct_change().loc[df_inc.index[-13]:df_inc.index[-1]].var() for code in df_inc.columns])
+        ws = np.array(ws).ravel()
+        ws = ws/var
+        ws = ws/ws.sum()
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
+
+
+class MzBootDownRiskAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+        super(MzBootDownRiskAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        if cpu_count is None:
+            count = multiprocessing.cpu_count() // 2
             cpu_count = count if count > 0 else 1
             self.__cpu_count = cpu_count
         else:

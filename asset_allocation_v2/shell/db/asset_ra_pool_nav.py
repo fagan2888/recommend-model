@@ -44,3 +44,38 @@ def load_series(id_, category, xtype, reindex=None, begin_date=None, end_date=No
 
     return df['nav']
 
+
+def load_series_new(id_, category = None, xtype = None, reindex=None, begin_date=None, end_date=None):
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t1 = Table('ra_pool_nav', metadata, autoload=True)
+
+    columns = [
+        t1.c.ra_date.label('date'),
+        t1.c.ra_nav.label('nav'),
+    ]
+
+    if category is None:
+        category = 0
+
+    if xtype is None:
+        xtype = 9
+
+    s = select(columns) \
+        .where(t1.c.ra_pool == id_) \
+        .where(t1.c.ra_category == category) \
+        .where(t1.c.ra_type == xtype)
+
+    if begin_date is not None:
+        s = s.where(t1.c.ra_date >= begin_date)
+    if end_date is not None:
+        s = s.where(t1.c.ra_date <= end_date)
+
+    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+
+    return df['nav']
+
+

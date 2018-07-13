@@ -99,6 +99,21 @@ class StockFactor(Factor):
             if sub_class_name == subclass.__name__:
                 return subclass(factor_id = sf_id)
 
+    @staticmethod
+    def load_multi_exposure(sf_ids):
+
+        sfs = []
+        for sf_id in sf_ids:
+            sfs.append(StockFactor.subclass(sf_id, StockFactor.stock_factors[sf_id]))
+
+        pool = Pool(len(sfs))
+        fe = pool.map(Factor.load_factor_exposure, sf_ids)
+        pool.close()
+        pool.join()
+        fed = dict(zip(sf_ids, fe))
+
+        return fed
+
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(StockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name)
         self.desc_methods = [self.cal_size]

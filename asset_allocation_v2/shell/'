@@ -17,7 +17,6 @@ import DFUtil
 import DBData
 import util_numpy as npu
 import Portfolio as PF
-import pickle
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
@@ -36,7 +35,7 @@ from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav,
 from util import xdict
 from util.xdebug import dd
 from wavelet import Wavelet
-# from pathos.multiprocessing import ProcessingPool as Pool
+#from pathos.multiprocessing import ProcessingPool as Pool
 from multiprocessing import Pool
 import db.asset_stock
 
@@ -103,13 +102,11 @@ class Asset(object):
                 #
                 # 基金池资产
                 #
-                # asset_id = int(asset_id) % 10000000
-                # (pool_id, category) = (asset_id // 100, asset_id % 100)
-                # ttype = pool_id // 10000
-                # sr = asset_ra_pool_nav.load_series(
-                #     pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
-                sr = asset_ra_pool_nav.load_series_new(
-                    asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                asset_id = int(asset_id) % 10000000
+                (pool_id, category) = (asset_id // 100, asset_id % 100)
+                ttype = pool_id // 10000
+                sr = asset_ra_pool_nav.load_series(
+                    pool_id, category, ttype, reindex=reindex, begin_date=begin_date, end_date=end_date)
             elif xtype == 3:
                 #
                 # 基金池资产
@@ -476,29 +473,17 @@ class StockFundAsset(FundAsset):
     def all_fund_pos():
 
         if len(StockFundAsset.__all_fund_pos) == 0:
-        #     stock_secode_dict = StockAsset.secode_dict()
-        #     stock_secode_dict = {v:k for k,v in stock_secode_dict.items()}
-        #     fund_pos = db.asset_fund.load_all_fund_pos()
-        #     fund_ids = np.intersect1d(StockFundAsset.all_fund_info().index, fund_pos.index)
-        #     StockFundAsset.__all_fund_info = StockFundAsset.__all_fund_info.loc[fund_ids]
-
-        #     for fund_id in fund_ids:
-        #         print(fund_id)
-        #         fp = fund_pos.loc[[fund_id]]
-        #         fp = fp.sort_values(['publishdate'])
-        #         fp = fp.fillna(0.0)
-        #         pub_ratio = fp['navrto'].groupby(fp.publishdate).sum()
-        #         valid_date = pub_ratio[pub_ratio > 30].index
-        #         fp = fp.set_index('publishdate').loc[valid_date].set_index('skcode', append=True)
-        #         StockFundAsset.__all_fund_pos[fund_id] = fp
-
-        #     with open('data/fund_pos.pkl', 'wb') as f:
-        #         pickle.dump(StockFundAsset.__all_fund_pos, f)
-
-            with open('data/fund_pos.pkl', 'rb') as f:
-                StockFundAsset.__all_fund_pos = pickle.load(f)
-
-        return StockFundAsset.__all_fund_pos
+            fund_pos = db.asset_fund.load_all_fund_pos()
+            for fund_id in StockFundAsset.all_fund_info().index:
+                fp = fund_pos.loc[fund_id]
+                fp = fp.sort_values(['publishdate'])
+                fp = fp.fillna(0.0)
+                pub_ratio = fp['navrto'].groupby(fp.publishdate).sum()
+                valid_date = pub_ratio[pub_ratio > 30].index
+                fp = fp.loc[valid_date]
+                fp = fp.set_index('publishdate').loc[valid_date].set_index('skcode', append=True)
+                StockFundAsset.__all_fund_pos[fund_id] = fp
+        return fund_pos
 
 
 if __name__ == '__main__':

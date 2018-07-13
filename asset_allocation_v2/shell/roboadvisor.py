@@ -34,6 +34,7 @@ import CommandAnalysis
 import CommandImport
 # import CommandStockFactor
 import CommandStockFactorNew
+import CommandFundFactor
 import CommandMacroTiming
 import CommandFactorCluster
 
@@ -274,6 +275,7 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandAnalysis.analysis)
     roboadvisor.add_command(CommandImport.import_command)
     roboadvisor.add_command(CommandStockFactorNew.sf)
+    roboadvisor.add_command(CommandFundFactor.ff)
     roboadvisor.add_command(CommandMacroTiming.mt)
     roboadvisor.add_command(CommandFactorCluster.fc)
     roboadvisor(obj={})

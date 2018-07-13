@@ -4,9 +4,9 @@
 import pandas as pd
 import numpy as np
 from sqlalchemy import MetaData, Table, select, func, literal_column
-import matplotlib
-matplotlib.use('pdf')
-import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('pdf')
+# import matplotlib.pyplot as plt
 import click
 import sys
 sys.path.append('shell/')
@@ -142,11 +142,11 @@ def load_ind(factor_ids, start_date, end_date):
     return corr
 
 
-def clusterKMeansBase(corr0,maxNumClusters=10,n_init=10):
+def clusterKMeansBase(corr0,minNumClusters=8,maxNumClusters=10,n_init=10):
     dist,silh=((1-corr0.fillna(0))/2.)**.5,pd.Series()
     # distance matrix
     for init in range(n_init):
-        for i in range(8,maxNumClusters+1):
+        for i in range(minNumClusters,maxNumClusters+1):
     # find optimal num clusters
             kmeans_ = KMeans(n_clusters=i,n_jobs=1,n_init=1)
             kmeans_ = kmeans_.fit(dist)
@@ -205,39 +205,65 @@ def clusterKMeansTop(corr0, maxNumClusters=10, n_init=10):
             return corrNew,clstrsNew,silhNew
 
 
-if  __name__ == '__main__':
+# if  __name__ == '__main__':
 
-    lookback_days = 365
-    blacklist = [24, 32, 40]
-    factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
-    trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
-    for date in trade_dates:
-        # start_date = '%d-%02d-01'%(year, month)
-        # end_date = '%d-%02d-01'%(year+1, month)
-        start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
-        end_date = date.strftime('%Y-%m-%d')
-        print(start_date, end_date)
-        # corr0 = load_fund(start_date, end_date)
-        corr0 = load_ind(factor_ids, start_date, end_date)
-        # corr1, clstrs, silh = clusterKMeansBase(corr0,maxNumClusters=10,n_init=1)
-        factor_name = base_ra_index.load()
-        # df_fund = base_ra_fund.load()
-        # df_fund.index = df_fund.ra_code.astype('int')
-        # df_fund = df_fund.set_index('ra_code')
-        # factor_name = df_fund.ra_name
-        res = None
-        while res is None:
-            try:
-                # res = clusterKMeansTop(corr0, maxNumClusters=10, n_init=1)
-                res = clusterKMeansBase(corr0, maxNumClusters=10, n_init=10)
-            except:
-                pass
+#     lookback_days = 365
+#     blacklist = [24, 32, 40]
+#     factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
+#     trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
+#     for date in trade_dates:
+#         # start_date = '%d-%02d-01'%(year, month)
+#         # end_date = '%d-%02d-01'%(year+1, month)
+#         start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
+#         end_date = date.strftime('%Y-%m-%d')
+#         print(start_date, end_date)
+#         # corr0 = load_fund(start_date, end_date)
+#         corr0 = load_ind(factor_ids, start_date, end_date)
+#         # corr1, clstrs, silh = clusterKMeansBase(corr0,maxNumClusters=10,n_init=1)
+#         factor_name = base_ra_index.load()
+#         # df_fund = base_ra_fund.load()
+#         # df_fund.index = df_fund.ra_code.astype('int')
+#         # df_fund = df_fund.set_index('ra_code')
+#         # factor_name = df_fund.ra_name
+#         res = None
+#         while res is None:
+#             try:
+#                 # res = clusterKMeansTop(corr0, maxNumClusters=10, n_init=1)
+#                 res = clusterKMeansBase(corr0, maxNumClusters=10, n_init=10)
+#             except:
+#                 pass
 
-        for k,v in res[1].items():
-            v = np.array(v).astype('int')
-            print(factor_name.loc[v])
-        #     factor_name.loc[v].to_csv('data/fund_cluster/cluster_%d.csv'%k, index_label = 'fund_code')
-        print()
+#         for k,v in res[1].items():
+#             v = np.array(v).astype('int')
+#             print(factor_name.loc[v])
+#         #     factor_name.loc[v].to_csv('data/fund_cluster/cluster_%d.csv'%k, index_label = 'fund_code')
+#         print()
+
+if __name__ == '__main__':
+
+    df = pd.read_csv('data/factor_inc.csv',  index_col = 0, parse_dates = True)
+    v = df.cov()
+    corr, cluster, silh = clusterKMeansBase(v, minNumClusters = 2)
+    set_trace()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -4,12 +4,14 @@ import sys
 sys.path.append('shell')
 from sqlalchemy import MetaData, Table, select, func, and_
 from sqlalchemy import Column, String, Integer, ForeignKey, Text, Date, DateTime, Float
+import numpy as np
 import pandas as pd
 import logging
 from . import database
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from ipdb import set_trace
+import asset
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,27 @@ class ra_fund_nav(Base):
     created_at = Column(DateTime)
 
 
+class tq_fd_skdetail(Base):
+
+    __tablename__ = 'tq_fd_skdetail'
+
+    id = Column(Integer, primary_key = True)
+    publishdate = Column(Date)
+    enddate = Column(Date)
+    secode = Column(String)
+    skcode = Column(String)
+    navrto = Column(Float)
+
+
+class tq_fd_basicinfo(Base):
+
+    __tablename__ = 'tq_fd_basicinfo'
+
+    id = Column(Integer, primary_key = True)
+    secode = Column(String)
+    fsymbol = Column(String)
+
+
 def load_fund_nav_series(code, reindex=None, begin_date=None, end_date=None):
 
     engine = database.connection('base')
@@ -70,9 +93,56 @@ def load_fund_nav_series(code, reindex=None, begin_date=None, end_date=None):
     return ser
 
 
+def load_fund_secode_dict():
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_fd_basicinfo)
+    df = pd.read_sql(sql.statement, session.bind)
+    session.commit()
+    session.close()
+
+    secode_dict = dict(zip(df.secode.values, df.fsymbol.values))
+    return secode_dict
+
+
+def load_all_fund_pos():
+
+    # engine = database.connection('caihui')
+    # Session = sessionmaker(bind=engine)
+    # session = Session()
+    # sql = session.query(tq_fd_skdetail)
+    # df = pd.read_sql(sql.statement, session.bind, index_col=['secode'], parse_dates=['publishdate', 'enddate'])
+    # session.commit()
+    # session.close()
+    # set_trace()
+    secode_dict = load_fund_secode_dict()
+    df = pd.read_csv('data/fund_pos.csv', index_col=['secode'], parse_dates=['publishdate', 'enddate'])
+    df.index = df.index.astype('str')
+    df = df.rename(index = secode_dict)
+    df = df.loc[:, ['publishdate', 'skcode', 'navrto']]
+    stock_secode_dict = asset.StockAsset.secode_dict()
+    stock_secode_dict = {v:k for k,v in stock_secode_dict.items()}
+    df['skcode'] = df['skcode'].astype('str')
+    # df['skcode'] = df['skcode'].replace(stock_secode_dict)
+    df['skcode'] = [stock_secode_dict.get(x, np.nan) for x in df['skcode'].values]
+    df = df.dropna()
+
+    return df
+
 
 
 if __name__ == '__main__':
 
     df = load_fund_nav_series('519983')
     set_trace()
+
+
+
+
+
+
+
+
+

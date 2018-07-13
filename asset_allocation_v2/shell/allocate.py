@@ -35,7 +35,7 @@ from util import xdict
 from util.xdebug import dd
 from asset import Asset, WaveletAsset
 from trade_date import ATradeDate
-
+from ipdb import set_trace
 
 import traceback, code
 
@@ -235,12 +235,14 @@ class Allocate(object):
     def nav_update(self):
         return
 
+
     def turnover_update(self):
         return
 
 
     def load_db(self):
         pass
+
 
     def to_db(self):
         pass
