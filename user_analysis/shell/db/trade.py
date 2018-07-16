@@ -54,6 +54,7 @@ class ts_holding_nav(Base):
     ts_share = Column(Float)
     ts_asset = Column(Float)
     ts_profit = Column(Float)
+    ts_processing_asset = Column(Float)
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)

@@ -11,7 +11,9 @@ import time
 import itertools
 import pandas as pd
 
-import CommandUser
+import CommandUserTrade
+import CommandUserQuestion
+import CommandUserTrain
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -55,5 +57,7 @@ def user_analysis(ctx):
 
 
 if __name__=='__main__':
-    user_analysis.add_command(CommandUser.user)
+    user_analysis.add_command(CommandUserTrade.user)
+    user_analysis.add_command(CommandUserQuestion.question)
+    user_analysis.add_command(CommandUserTrain.train)
     user_analysis(obj={})
