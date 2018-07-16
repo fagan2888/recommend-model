@@ -20,6 +20,7 @@ import Portfolio as PF
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
+from ipdb import set_trace
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -36,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1001,6 +1002,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         df = (bootbl_df + waveletbl_df) / 2
 
+
     elif algo == 8:
         #滤波下方差
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
@@ -1008,6 +1010,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
+
 
     elif algo == 10:
 
@@ -1017,6 +1020,23 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = FactorValidAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period)
+        df = allocate.allocate()
+
+
+    elif algo == 11:
+
+        lookback = 21
+        period = 5
+        factor_num = int(argv.get('factor_num'))
+        factor_loc = int(argv.get('factor_loc'))
+        factor_end = int(argv.get('factor_end'))
+        target = np.zeros(factor_num)
+        target[factor_loc] = 1
+        target = target * factor_end
+        trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.02)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorIndexAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
         df = allocate.allocate()
 
 
