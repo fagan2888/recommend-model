@@ -609,7 +609,7 @@ def pos_update(highlow, alloc):
         #
         # 姚氏策略
         #
-        df = yao(highlow, alloc)
+        df_high_riskmgr, df_low_riskmgr, df = yao(highlow, alloc)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, highlow_id), fg='red'))
         return
@@ -969,7 +969,6 @@ def yao(highlow, alloc):
 
     high = alloc['mz_markowitz_id']
     risk = int(alloc['mz_risk'] * 10)
-
     df_asset = asset_mz_highlow_asset.load([alloc['globalid']])
     df_asset.set_index(['mz_asset_id'], inplace=True)
 
@@ -998,9 +997,9 @@ def yao(highlow, alloc):
     #
     sr = 1.0 - df_h.sum(axis=1)
     if (sr > 0.000099).any():
-        df_h['120000039'] = sr
+        df_h['120000039'] = df_h['120000039'] + sr
 
-    return df_h
+    return df_high_riskmgr, pd.DataFrame(), df_h
 
 
 @highlow.command()

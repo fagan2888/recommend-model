@@ -378,6 +378,8 @@ def calc_vars(ctx, optid, optlist):
 
 def vars_update(riskmgr):
     riskmgr_id = riskmgr['globalid']
+    rm_start_date = pd.to_datetime(riskmgr['rm_start_date'])
+
     argv = dict()
     #Parse argv by json.
     if riskmgr['rm_argv'] != '':
@@ -401,6 +403,7 @@ def vars_update(riskmgr):
     vars_ = {_id: asset_rm_riskmgr_vars.load_series(_id) for _id in codes}
     for _id in codes:
         tdate = tdates[_id]
+        tdate = tdate[tdate >= rm_start_date]
         # Check if the VaRs table is empty
         if vars_[_id].empty:
             nav = database.load_nav_series(_id, reindex=tdate)

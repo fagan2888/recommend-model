@@ -771,7 +771,6 @@ def cal_sp_view():
 
     today = datetime.now()
     today = datetime(today.year, today.month, today.day)
-    set_trace()
     data.loc[today] = data.iloc[-1].values
 
     return data
