@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate, MzFixRiskBootAllocate,MzFixRiskBootBlAllocate , MzFixRiskBootWaveletAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorValidAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate, MzFixRiskBootAllocate,MzFixRiskBootBlAllocate , MzFixRiskBootWaveletAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorValidAllocate, FactorIndexAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1113,6 +1113,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzFixRiskBootWaveletBlAllocate('ALC.000001', assets, wavelet_assets, views, trade_date, lookback, upper_risk, bound = bounds)
         df = allocate.allocate()
 
+
     elif algo == 10:
 
         lookback = 21
@@ -1121,6 +1122,23 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = FactorValidAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period)
+        df = allocate.allocate()
+
+
+    elif algo == 11:
+
+        lookback = 21
+        period = 5
+        factor_num = int(argv.get('factor_num'))
+        factor_loc = int(argv.get('factor_loc'))
+        factor_end = int(argv.get('factor_end'))
+        target = np.zeros(factor_num)
+        target[factor_loc] = 1
+        target = target * factor_end
+        trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
+        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.02)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = FactorIndexAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
         df = allocate.allocate()
 
 
