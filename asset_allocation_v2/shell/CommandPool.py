@@ -26,7 +26,9 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund
+from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_stock_factor, asset_fund_factor
+from asset import StockFundAsset
+from trade_date import ATradeDate
 from ipdb import set_trace
 
 import traceback, code
@@ -63,14 +65,14 @@ def pool(ctx, optid, datadir):
 @click.pass_context
 def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, opteliminateratio, optcalc, optperiod, optpoints):
     '''run constant risk model
-    '''    
+    '''
     if datadir is None:
         datadir = "./tmp"
     Const.datadir = datadir
 
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
     if optid is not None:
         pools = [s.strip() for s in optid.split(',')]
     else:
@@ -110,14 +112,14 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, opteliminat
 @click.pass_context
 def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
     '''run constant risk model
-    '''    
+    '''
     if datadir is None:
         datadir = "./tmp"
     Const.datadir = datadir
 
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
     if optid is not None:
         pools = [s.strip() for s in optid.split(',')]
     else:
@@ -142,6 +144,113 @@ def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit,
 
     for _, pool in df_pool.iterrows():
         fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc)
+
+
+@pool.command()
+@click.option('--datadir', '-d', type=click.Path(exists=True), help='dir used to store tmp data')
+@click.option('--start-date', 'startdate', default='2011-02-01', help='start date to calc')
+# @click.option('--end-date', 'enddate', default = '2018-05-31', help='end date to calc')
+@click.option('--end-date', 'enddate', help='end date to calc')
+@click.option('--period', 'optperiod', type=int, default=1, help='adjust period by week')
+@click.option('--id', 'optid', help='fund pool id to update')
+@click.option('--list/--no-list', 'optlist', default=False, help='list pool to update')
+@click.option('--calc/--no-calc', 'optcalc', default=True, help='re calc label')
+@click.option('--limit', 'optlimit', type=int, default=20, help='how many fund selected for each category')
+@click.option('--points', 'optpoints', help='Adjust points')
+@click.pass_context
+def fund_factor_pool(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
+    '''run constant risk model
+    '''
+    if datadir is None:
+        datadir = "./tmp"
+    Const.datadir = datadir
+
+    if not enddate:
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
+    if optid is not None:
+        pools = [s.strip() for s in optid.split(',')]
+    else:
+        pools = None
+    df_pool = load_pools(pools)
+
+    if optlist:
+        #print df_pool
+        #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
+        df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
+        print(tabulate(df_pool, headers='keys', tablefmt='psql'))
+        return 0
+
+    if optpoints is not None:
+        adjust_points=pd.DatetimeIndex(optpoints.split(','))
+    else:
+        adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate, enddate = enddate)
+
+    print("adjust point:")
+    for date in adjust_points:
+        print(date.strftime("%Y-%m-%d"))
+
+    for _, pool in df_pool.iterrows():
+        fund_update_factor_pool(pool, adjust_points, optlimit, optcalc)
+
+
+def fund_update_factor_pool(pool, adjust_points, optlimit, optcalc):
+    ''' re calc fund for single fund pool
+    '''
+    lookback = pool.ra_lookback
+    limit = optlimit
+
+    if optcalc:
+        #
+        # 计算每个调仓点的最新配置
+        #
+        # ffr = asset_fund_factor.load_fund_factor_return()
+        ffr = asset_stock_factor.load_stock_factor_return()
+        ffr = ffr.unstack().T
+        ffr.index = ffr.index.levels[1]
+        ffe = asset_fund_factor.load_fund_factor_exposure()
+        # ffe.to_csv('data/factor/fund_factor_exposure.csv', index_label = ['fund_id', 'ff_id', 'trade_date'])
+        # ffe = pd.read_csv('data/factor/fund_factor_exposure.csv', index_col = ['fund_id', 'ff_id', 'trade_date'], parse_dates = ['trade_date'])
+        ffe = ffe.reset_index()
+        data = []
+        pre_codes = None
+
+        with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
+            for day in adjust_points:
+                bar.update(1)
+                # codes, codes_pool = pool_by_factor(pool, day, lookback, limit, ffr, ffe)
+                codes, codes_pool = pool_by_single_factor(pool, day, lookback, limit, ffr, ffe)
+                if pre_codes is None:
+                    pre_codes = codes
+                else:
+                    pre_codes_origin = pre_codes.copy()
+                    pre_codes = np.intersect1d(pre_codes, codes_pool)
+                    new_codes = np.setdiff1d(codes, pre_codes)
+                    fund_lack_num = limit - len(pre_codes)
+                    codes = np.append(pre_codes, new_codes[:fund_lack_num])
+                    pre_codes = codes
+                    print('turnover rate:', 1 - len(np.intersect1d(codes, pre_codes_origin))/float(limit))
+
+                print(day, len(codes), codes)
+                if codes is None or len(codes) == 0:
+                    continue
+                ra_fund = base_ra_fund.load(codes = codes)
+                ra_fund = ra_fund.set_index(['ra_code'])
+                ra_pool = pool['id']
+                for code in ra_fund.index:
+                    ra_fund_id = ra_fund.loc[code, 'globalid']
+                    data.append([ra_pool, day, ra_fund_id, code])
+        fund_df = pd.DataFrame(data, columns = ['ra_pool', 'ra_date', 'ra_fund_id', 'ra_fund_code'])
+        fund_df = fund_df.set_index(['ra_pool', 'ra_date', 'ra_fund_id'])
+
+        df_new = fund_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        db = database.connection('asset')
+        ra_pool_fund_t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+        s = s.where(ra_pool_fund_t.c.ra_pool.in_(df_new.index.get_level_values(0).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, ra_pool_fund_t, df_new, df_old)
 
 
 def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
@@ -247,7 +356,7 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
         df_new.drop('stability', axis=1, inplace=True)
 
         df_new = df_new.applymap(lambda x: round(x, 4) if type(x) == float else x)
-        
+
         codes = df_new.index.get_level_values(2)
         xtab = fund_code_to_globalid(codes)
         df_new['ra_fund_id'] = xtab[df_new.index.get_level_values('ra_fund_code')].values
@@ -258,12 +367,12 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
         df_new.reset_index(inplace=True)
         df_new = df_new.reindex_axis(['ra_pool', 'ra_category',  'ra_date', 'ra_fund_id', 'ra_fund_code', 'ra_fund_type', 'ra_fund_level', 'ra_sharpe', 'ra_jensen', 'ra_sortino', 'ra_ppw'], axis='columns')
         df_new.sort_values(by=['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'], inplace=True)
-        
+
         #df_new.to_csv(datapath('pool_%s.csv' % (pool['id'])), index=False)
-        
+
     else:
         df_new = pd.read_csv(datapath('pool_%s.csv' % (pool['id'])), parse_dates=['ra_date'], dtype={'ra_fund_code': str})
-        
+
     df_new.set_index(['ra_pool', 'ra_category', 'ra_date', 'ra_fund_id'], inplace=True)
     df_new = df_new.applymap(lambda x: '%.4f' % (x) if type(x) == float else x)
 
@@ -305,9 +414,9 @@ def fund_code_to_globalid(codes):
         s = select(columns, ra_fund.c.ra_code.in_(codes))
     else:
         s = select(columns)
-        
+
     df_result = pd.read_sql(s, db, index_col='ra_code')
-    
+
     return df_result['globalid']
 
 
@@ -335,17 +444,17 @@ def load_pools(pools, pool_type=None):
             s = s.where(ra_pool.c.ra_fund_type.in_(pool_type))
         else:
             s = s.where(ra_pool.c.ra_fund_type == pool_type)
-        
+
     df_pool = pd.read_sql(s, db)
 
     return df_pool
-        
+
 
 def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
     # 加载时间轴数据
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
 
     index = base_trade_dates.load_trade_dates(startdate, end_date=enddate)
     index = index[index.td_type >= 8].index
@@ -374,7 +483,7 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
     #     '2016-08-05',
     #     '2016-11-05',
     # ])
-  
+
     return label_index
 
 @pool.command()
@@ -429,7 +538,7 @@ def nav_update_category(db, pool, category):
     df_position = df.unstack().fillna(0.0)
     df_position.columns = df_position.columns.droplevel(0)
 
-    
+
     # 加载基金收益率
     min_date = df_position.index.min()
     #max_date = df_position.index.max()
@@ -453,7 +562,7 @@ def nav_update_category(db, pool, category):
     df_result['ra_category'] = category
     df_result['ra_type'] = pool['ra_type']
     df_result = df_result.reset_index().set_index(['ra_pool', 'ra_category', 'ra_type', 'ra_date'])
-    
+
     df_new = df_result.apply(format_nav_and_inc)
 
 
@@ -484,19 +593,19 @@ def format_nav_and_inc(x):
         ret = x
 
     return ret
-    
-    
+
+
 def load_pool_category(pid):
     db = database.connection('asset')
     t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
-    
+
     # 加载就数据
     columns = [
         t.c.ra_pool,
         t.c.ra_category,
     ]
     stmt_select = select(columns, t.c.ra_pool == pid).distinct()
-    
+
     df = pd.read_sql(stmt_select, db)
 
     return df
@@ -514,12 +623,12 @@ def load_fund_category(pid, category):
         s = s.distinct()
     else:
         s = s.where(t.c.ra_category == category)
-    
+
     df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
 
     return df
-    
-    
+
+
 @pool.command(name='import')
 @click.option('--id', 'optid', type=int, help='specify fund pool id')
 @click.option('--name', 'optname', help='specify fund pool name')
@@ -645,8 +754,8 @@ def import_command(ctx, csv, optid, optname, optotype, optdtype, optftype, optre
         logger.info("insert %s (%5d) : %s " % (ra_pool_fund.name, len(df_tosave.index), df_tosave.index[0]))
 
     click.echo(click.style("import complement! instance id [%s]" % (optid), fg='green'))
-    
-    
+
+
     return 0
 
 def query_max_pool_id_between(min_id, max_id):
@@ -679,14 +788,14 @@ def turnover(ctx, optid, optlist):
         df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_pool, headers='keys', tablefmt='psql'))
         return 0
-    
+
     for _, pool in df_pool.iterrows():
         turnover_update(pool)
 
 def turnover_update(pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
-    
+
     with click.progressbar(length=len(categories) + 1, label=('update turnover for pool %s' % (pool.id)).ljust(30)) as bar:
         for category in categories:
             turnover_update_category(pool, category)
@@ -706,7 +815,7 @@ def turnover_update_category(pool, category):
     df_prev = df.shift(1).fillna(0).astype(int)
 
     df_prev.iloc[0] = df.iloc[0]
-    
+
     df_and = np.bitwise_and(df, df_prev)
 
     df_new = (1 - df_and.sum(axis=1) / df_prev.sum(axis=1)).to_frame('ra_turnover')
@@ -714,7 +823,7 @@ def turnover_update_category(pool, category):
     df_new['ra_category'] = category
 
     df_new = df_new.reset_index().set_index(['ra_pool', 'ra_category', 'ra_date'])
-    
+
     df_new = df_new.applymap("{:.4f}".format)
 
 
@@ -746,7 +855,7 @@ def corr(ctx, optid, optlist):
         pools = [s.strip() for s in optid.split(',')]
     else:
         pools = None
-    
+
     df_pool = load_pools(pools)
 
     if optlist:
@@ -755,14 +864,14 @@ def corr(ctx, optid, optlist):
         df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_pool, headers='keys', tablefmt='psql'))
         return 0
-    
+
     for _, pool in df_pool.iterrows():
         corr_update(pool)
 
 def corr_update(pool):
     df_categories = load_pool_category(pool['id'])
     categories = df_categories['ra_category']
-    
+
     with click.progressbar(length=len(categories) + 1, label=('update corr for pool %s' % (pool.id)).ljust(30)) as bar:
         for category in categories:
             corr_update_category(pool, category, 52)
@@ -780,7 +889,7 @@ def corr_update_category(pool, category, lookback):
         index = DBData.trade_date_lookback_index(end_date=k0, lookback=lookback)
         start_date = index.min().strftime("%Y-%m-%d")
         end_date = k0
-        
+
         df_nav = DBData.db_fund_value_daily(start_date, end_date, codes=v0['ra_fund_code'])
         df_inc = df_nav.pct_change().fillna(0.0)
         df_corr = df_inc.corr()
@@ -797,7 +906,7 @@ def corr_update_category(pool, category, lookback):
     df_new['ra_category'] = category
 
     df_new = df_new.reset_index().set_index(['ra_pool', 'ra_category', 'ra_date'])
-    
+
     df_new = df_new.applymap("{:.4f}".format)
 
 
@@ -875,4 +984,42 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
 
         final_codes = final_codes[0 : limit]
         return final_codes
+
+
+def pool_by_single_factor(pool, day, lookback, limit, ffr, ffe):
+
+    index = ATradeDate.week_trade_date(begin_date = day, end_date = day, lookback = lookback)
+    sdate = index.min()
+    edate = index.max()
+
+    ffe = ffe[(ffe.trade_date >= sdate) & (ffe.trade_date <= edate)]
+    ffe = ffe[['fund_id', 'ff_id', 'exposure']].groupby(['fund_id', 'ff_id']).last().unstack()
+    ffe.columns = ffe.columns.levels[1]
+    ffe = ffe.dropna()
+
+    vf = np.zeros(ffe.shape[1])
+    pos = int(pool.ra_index_id[-2:])-1
+    if pool.ra_fund_type == 11113:
+        vf[pos] = -1
+    elif pool.ra_fund_type == 11114:
+        pos = pos + 9
+        vf[pos] = 1
+    elif pool.ra_fund_type == 11112:
+        vf[pos] = 1
+
+    all_fund_scale = StockFundAsset.all_fund_scale()
+    df_valid = all_fund_scale.loc[day].dropna()
+    df_valid = df_valid[df_valid > 1e8].index
+    df_valid = df_valid.intersection(ffe.index)
+
+    score = np.dot(ffe, vf)
+    df_score = pd.Series(score, index = ffe.index).sort_values(ascending = False)
+    df_score = df_score.loc[df_valid]
+    final_codes = df_score.index[:limit]
+    final_codes_large = df_score.index[:1*limit]
+
+    return final_codes, final_codes_large
+
+
+
 
