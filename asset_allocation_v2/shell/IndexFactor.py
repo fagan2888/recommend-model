@@ -84,3 +84,6 @@ if __name__ == '__main__':
     weight = cal_weight(sfe, x_t)
     set_trace()
 
+
+
+

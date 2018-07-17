@@ -40,6 +40,7 @@ from multiprocessing import Pool
 import db.asset_stock
 import pickle
 from trade_date import ATradeDate
+import pickle
 
 import traceback, code
 
@@ -535,7 +536,6 @@ class StockFundAsset(FundAsset):
             StockFundAsset.__all_fund_info = StockFundAsset.__all_fund_info.loc[fund_ids]
 
             for fund_id in fund_ids:
-                # print(fund_id)
                 fp = fund_pos.loc[[fund_id]]
                 fp = fp.sort_values(['publishdate'])
                 fp = fp.fillna(0.0)
@@ -544,11 +544,7 @@ class StockFundAsset(FundAsset):
                 fp = fp.set_index('publishdate').loc[valid_date].set_index('skcode', append=True)
                 StockFundAsset.__all_fund_pos[fund_id] = fp
 
-            # with open('data/fund_pos.pkl', 'wb') as f:
-            #     pickle.dump(StockFundAsset.__all_fund_pos, f)
 
-            # with open('data/fund_pos.pkl', 'rb') as f:
-            #     StockFundAsset.__all_fund_pos = pickle.load(f)
 
         return StockFundAsset.__all_fund_pos
 
@@ -599,3 +595,9 @@ if __name__ == '__main__':
     # df = db.asset_fund.load_all_fund_share()
     #print(StockAsset.all_stock_quote().keys())
     #print(len(StockAsset.all_stock_quote().keys()))
+    # print(StockAsset.all_stock_quote().keys())
+    # print(len(StockAsset.all_stock_quote().keys()))
+    # df = StockFundAsset.all_fund_info()
+    df = StockFundAsset.all_fund_scale()
+
+    # df = db.asset_fund.load_all_fund_share()
