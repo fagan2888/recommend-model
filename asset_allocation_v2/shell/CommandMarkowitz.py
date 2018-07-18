@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate, MzFixRiskBootAllocate,MzFixRiskBootBlAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate, MzFixRiskBootAllocate,MzFixRiskBootBlAllocate , MzFixRiskBootWaveletAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1025,7 +1025,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.allocate()
 
 
-    elif algo == 10:
+    elif algo == 100:
 
         lookback = 21
         period = 5
@@ -1036,7 +1036,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.allocate()
 
 
-    elif algo == 11:
+    elif algo == 110:
 
         lookback = 21
         period = 5
@@ -1078,6 +1078,19 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         allocate = MzFixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk)
         df = allocate.allocate()
+
+    elif algo == 11:
+
+        #固定波动率滤波配置
+        upper_risk = float(argv.get('upper_risk', 0.018))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 2))
+        wavelet_assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, trade_date, lookback, upper_risk)
+        df = allocate.allocate()
+
+
 
 
     else:
@@ -1432,5 +1445,3 @@ def copy(ctx, optsrc, optdst, optlist):
     df_markowitz_asset = df_markowitz_asset.set_index(['mz_markowitz_id', 'mz_markowitz_asset_id'])
 
     asset_mz_markowitz_asset.save(df_xtab['globalid'], df_markowitz_asset)
-
-

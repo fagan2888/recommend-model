@@ -44,8 +44,8 @@ def wavelet(ctx, startdate, enddate, viewid, idx, wavenum, max_wave_num, wave_na
 
 
     if idx is None:
-        idx = ['120000001', '120000002', '120000013', '120000014', '120000015', '120000080' ,'ERI000001', 'ERI000002']
-        #idx = ['120000001']
+        #idx = ['120000001', '120000002', '120000013', '120000014', '120000015', '120000080' ,'ERI000001', 'ERI000002']
+        idx = ['120000001']
     for _id in idx:
         trade_dates = ATradeDate.trade_date()
         nav = Asset(_id).nav(reindex = trade_dates).fillna(method = 'pad').dropna()
@@ -54,12 +54,15 @@ def wavelet(ctx, startdate, enddate, viewid, idx, wavenum, max_wave_num, wave_na
         for d in dates:
             _tmp_nav = nav[nav.index <= d]
             wave_nav = wavefilter(_tmp_nav, wavenum, wname = wave_name, maxlevel = max_wave_num)
+            inc = wave_nav.pct_change().fillna(0.0).iloc[-120:]
             wave_diff_rolling = wave_nav.diff().rolling(5).mean()
             views.append(wave_diff_rolling[-1])
+            #print(d, views[-1])
+            print(_id, d, inc.mean(), inc.std())
 
         view_df = pd.DataFrame(views, index = dates, columns = ['bl_view'])
         view_df[view_df > 0] = 1.0
-        view_df[view_df < 0] = -1.0
+        view_df[view_df < 0] = 0
         view_df.index.name = 'bl_date'
         view_df['globalid'] = viewid
         view_df['bl_index_id'] = _id
@@ -67,7 +70,7 @@ def wavelet(ctx, startdate, enddate, viewid, idx, wavenum, max_wave_num, wave_na
         view_df['updated_at'] = datetime.now()
         df_new = view_df.reset_index().set_index(['globalid','bl_date','bl_index_id'])
 
-        print(df_new.tail())
+        #print(df_new.head())
 
         db = database.connection('asset')
         metadata = MetaData(bind=db)
@@ -85,17 +88,18 @@ def wavelet(ctx, startdate, enddate, viewid, idx, wavenum, max_wave_num, wave_na
         database.batch(db, t, df_new, df_old, timestamp = False)
 
 
-def wavefilter(data, wavenum, wname = 'sym4', maxlevel = 7):
+def wavefilter(data, wavenum, wname = 'sym4', maxlevel = 7, wave_threshold = [0, 50, 80]):
 
     if len(data)%2 == 1:
         data = data[1:]
 
     # Decompose the signal
     c = pywt.wavedec(data, wname, level = maxlevel)
-    filter_level = list(np.arange(maxlevel + 1))
-    filter_level.pop(wavenum)
+    filter_level = list(np.arange(wavenum + 1, maxlevel + 1))
     for j in filter_level:
         c[j][:] = 0
+    for j in range(0, wavenum):
+        c[j][:] = pywt.threshold(c[j], np.percentile(abs(c[j]), wave_threshold[j]) + 1, 'soft', 0)
     fdata = pywt.waverec(c, wname)
     sr = pd.Series(fdata.ravel(), index = data.index)
     return sr
