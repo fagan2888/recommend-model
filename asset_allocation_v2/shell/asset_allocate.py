@@ -346,20 +346,15 @@ class MzFixRiskBootWaveletAllocate(Allocate):
 
     def load_wavelet_allocate_data(self, day ,asset_ids):
 
-        bound_limit = self.bound.get_day_bound(day).loc[asset_ids]
-        bound_limit = bound_limit[bound_limit.upper > 0.0]
-        asset_ids_tmp = bound_limit.index
         reindex = self.index[self.index <= day][-1 * self.lookback:]
         data = {}
-        for asset_id in asset_ids_tmp:
+        for asset_id in asset_ids:
             data[asset_id] = self.wavelet_assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
-        # df_inc  = df_nav.pct_change().fillna(0.0)
         df_inc  = df_nav.pct_change().dropna()
-
         bound = []
         for asset_id in df_inc.columns:
-            bound.append(bound_limit.loc[asset_id].to_dict())
+            bound.append(self.bound[asset_id].get_day_bound(day).to_dict())
 
         return df_inc, bound
 
