@@ -338,7 +338,6 @@ class MzFixRiskBootWaveletAllocate(Allocate):
 
     def allocate_algo(self, day, df_inc, bound):
         wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, list(self.assets.keys()))
-        wavelet_df_inc[wavelet_df_inc > 0] = 0.0
         df_inc = df_inc + wavelet_df_inc * 2
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc.columns.ravel(), ws))
