@@ -1046,7 +1046,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         wavelet_filter_num = int(argv.get('allocate_wavelet', 2))
         wavelet_assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = MzFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, trade_date, lookback, upper_risk)
+        bound = {}
+        bound['120000010'] = AssetBound('AB.000001', '120000010', upper = 1.0)
+        allocate = MzFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, trade_date, lookback, upper_risk, bound = bound)
         df = allocate.allocate()
 
 

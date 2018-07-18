@@ -46,23 +46,19 @@ logger = logging.getLogger(__name__)
 
 class AssetBound(object):
 
-    def __init__(self, globalid = None, asset_ids = None, bound = None, upper = 0.5):
+    def __init__(self, globalid = None, asset_id = None, bound = None, upper = 0.5):
 
         self.__globalid = globalid
         #TODO : load from database by globalid
 
-        self.__asset_ids = asset_ids
+        self.__asset_id = asset_id
 
         if bound is None:
 
             asset_bound = {'sum1': 0, 'sum2' : 0, 'upper': upper, 'lower': 0.0, 'lower_sum1' : 0, 'lower_sum2' : 0, 'upper_sum1' : 0, 'upper_sum2' : 0}
             trade_date = [pd.datetime(1900,1,1)]
-            date_num = len(trade_date)
-            trade_date = trade_date * len(asset_ids)
-            trade_date.sort(reverse = False)
-            asset_ids = list(asset_ids) * date_num
-            date_asset_index = pd.MultiIndex.from_arrays([trade_date, asset_ids], names = ['trade_date', 'asset'])
-            self.__bound = pd.DataFrame([asset_bound] * len(date_asset_index), index = date_asset_index)
+            self.__bound = pd.DataFrame(asset_bound, index = trade_date)
+            self.__bound.index.name = 'trade_date'
 
         else:
 
@@ -73,8 +69,8 @@ class AssetBound(object):
         return self.__globalid
 
     @property
-    def asset_ids(self):
-        return self.__asset_ids.copy()
+    def asset_id(self):
+        return self.__asset_id.copy()
 
     @property
     def bound(self):
@@ -82,7 +78,8 @@ class AssetBound(object):
 
     def get_day_bound(self, day):
         bound = self.__bound.copy().sort_index(ascending=True)
-        days = bound.index.get_level_values(0)
+        days = bound.index
+        days = days[days <= day]
         last_day = days[-1]
         return bound.loc[last_day]
 
@@ -107,11 +104,13 @@ class Allocate(object):
         self.__index = reindex
         self.__lookback = lookback
         self.__period = period
+        self.__bound = {}
+        for asset_id in list(assets.keys()):
+            self.__bound[asset_id] = AssetBound('asset_bound_default', asset_id)
+        if bound is not None:
+            for asset_id in list(bound.keys()):
+                self.__bound[asset_id] = bound[asset_id]
 
-        if bound is None:
-            self.__bound = AssetBound('asset_bound_default', [asset_id for asset_id in list(assets.keys())])
-        else:
-            self.__bound = bound
 
     @property
     def globalid(self):
@@ -185,20 +184,16 @@ class Allocate(object):
 
     def load_allocate_data(self, day ,asset_ids):
 
-        bound_limit = self.bound.get_day_bound(day).loc[asset_ids]
-        bound_limit = bound_limit[bound_limit.upper > 0.0]
-        asset_ids_tmp = bound_limit.index
         reindex = self.index[self.index <= day][-1 * self.lookback:]
         data = {}
-        for asset_id in asset_ids_tmp:
+        for asset_id in asset_ids:
             data[asset_id] = self.assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
-        # df_inc  = df_nav.pct_change().fillna(0.0)
         df_inc  = df_nav.pct_change().dropna()
 
         bound = []
         for asset_id in df_inc.columns:
-            bound.append(bound_limit.loc[asset_id].to_dict())
+            bound.append(self.bound[asset_id].get_day_bound(day).to_dict())
 
         return df_inc, bound
 
@@ -243,4 +238,7 @@ if __name__ == '__main__':
         assets[asset_id] = Asset(asset_id)
 
     allocate = Allocate('ALC.000001', assets, trade_date, 26)
-    allocate.allocate()
+    print(allocate.allocate())
+
+    bound = AssetBound('AB.000001', '120000001')
+    print(bound.get_day_bound('2018-01-01'))
