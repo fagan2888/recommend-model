@@ -213,7 +213,6 @@ def update_exposure(sf, last_date = None):
     database.batch(db, t, df_new, pd.DataFrame())
 
 
-
 def update_valid_stock_table(quotation):
 
         engine = database.connection('asset')
@@ -237,8 +236,8 @@ def update_valid_stock_table(quotation):
                 valid_stock.stock_id = globalid
                 valid_stock.trade_date = date
                 valid_stock.valid = 1.0
-                valid_stock.created_at = datetime.datetime.now()
-                valid_stock.updated_at = datetime.datetime.now()
+                valid_stock.created_at = datetime.now()
+                valid_stock.updated_at = datetime.now()
 
                 records.append(valid_stock)
 

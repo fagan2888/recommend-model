@@ -527,27 +527,27 @@ class StockFundAsset(FundAsset):
     def all_fund_pos():
 
         if len(StockFundAsset.__all_fund_pos) == 0:
-        #     stock_secode_dict = StockAsset.secode_dict()
-        #     stock_secode_dict = {v:k for k,v in stock_secode_dict.items()}
-        #     fund_pos = db.asset_fund.load_all_fund_pos()
-        #     fund_ids = np.intersect1d(StockFundAsset.all_fund_info().index, fund_pos.index)
-        #     StockFundAsset.__all_fund_info = StockFundAsset.__all_fund_info.loc[fund_ids]
+            stock_secode_dict = StockAsset.secode_dict()
+            stock_secode_dict = {v:k for k,v in stock_secode_dict.items()}
+            fund_pos = db.asset_fund.load_all_fund_pos()
+            fund_ids = np.intersect1d(StockFundAsset.all_fund_info().index, fund_pos.index)
+            StockFundAsset.__all_fund_info = StockFundAsset.__all_fund_info.loc[fund_ids]
 
-        #     for fund_id in fund_ids:
-        #         print(fund_id)
-        #         fp = fund_pos.loc[[fund_id]]
-        #         fp = fp.sort_values(['publishdate'])
-        #         fp = fp.fillna(0.0)
-        #         pub_ratio = fp['navrto'].groupby(fp.publishdate).sum()
-        #         valid_date = pub_ratio[pub_ratio > 30].index
-        #         fp = fp.set_index('publishdate').loc[valid_date].set_index('skcode', append=True)
-        #         StockFundAsset.__all_fund_pos[fund_id] = fp
+            for fund_id in fund_ids:
+                # print(fund_id)
+                fp = fund_pos.loc[[fund_id]]
+                fp = fp.sort_values(['publishdate'])
+                fp = fp.fillna(0.0)
+                pub_ratio = fp['navrto'].groupby(fp.publishdate).sum()
+                valid_date = pub_ratio[pub_ratio > 30].index
+                fp = fp.set_index('publishdate').loc[valid_date].set_index('skcode', append=True)
+                StockFundAsset.__all_fund_pos[fund_id] = fp
 
-        #     with open('data/fund_pos.pkl', 'wb') as f:
-        #         pickle.dump(StockFundAsset.__all_fund_pos, f)
+            # with open('data/fund_pos.pkl', 'wb') as f:
+            #     pickle.dump(StockFundAsset.__all_fund_pos, f)
 
-            with open('data/fund_pos.pkl', 'rb') as f:
-                StockFundAsset.__all_fund_pos = pickle.load(f)
+            # with open('data/fund_pos.pkl', 'rb') as f:
+            #     StockFundAsset.__all_fund_pos = pickle.load(f)
 
         return StockFundAsset.__all_fund_pos
 
