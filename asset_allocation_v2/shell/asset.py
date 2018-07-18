@@ -545,7 +545,6 @@ class StockFundAsset(FundAsset):
                 StockFundAsset.__all_fund_pos[fund_id] = fp
 
 
-
         return StockFundAsset.__all_fund_pos
 
 
