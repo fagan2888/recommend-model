@@ -30,7 +30,7 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group()  
+@click.group()
 @click.pass_context
 def fund(ctx):
     '''fund pool group
@@ -52,7 +52,7 @@ def corr(ctx, optid, optfund, optlist):
     codes = None
     if optfund is not None:
         codes = optfund.split(',')
-        
+
     df_corr = load_ra_corr(corrs)
 
     if optlist:
@@ -61,7 +61,7 @@ def corr(ctx, optid, optfund, optlist):
         df_corr['ra_name'] = df_corr['ra_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_corr, headers='keys', tablefmt='psql'))
         return 0
-    
+
     for _, corr in df_corr.iterrows():
         corr_update(corr, codes)
 
@@ -72,9 +72,9 @@ def corr_update(corr, codes):
             "unknown index [%s]for calc corr!" % (corr['ra_index_id']), fg="yellow"))
         return False
 
-    yesterday = (datetime.now() - timedelta(days=1)); 
-    enddate = yesterday.strftime("%Y-%m-%d")        
-    
+    yesterday = (datetime.now() - timedelta(days=1));
+    enddate = yesterday.strftime("%Y-%m-%d")
+
     #
     # 加载指数数据
     #
@@ -89,7 +89,7 @@ def corr_update(corr, codes):
     # 加载基金列表
     #
     df_fund = base_ra_fund.load(codes=codes)
-    
+
     data = []
     with click.progressbar(length=len(df_fund.index), label=('update corr for corr %d' % (corr['globalid'])).ljust(30)) as bar:
         for _,fund in df_fund.iterrows():
@@ -105,7 +105,7 @@ def corr_update(corr, codes):
 
     df_new = pd.DataFrame(data, columns=['ra_corr_id', 'ra_fund_id', 'ra_fund_code', 'ra_corr'])
     df_new = df_new.set_index(['ra_corr_id', 'ra_fund_id'])
-    
+
     db = database.connection('base')
     # 加载旧数据
     t2 = Table('ra_corr_fund', MetaData(bind=db), autoload=True)
@@ -118,17 +118,17 @@ def corr_update(corr, codes):
     stmt_select = select(columns2, (t2.c.ra_corr_id == corr['globalid']))
     if codes is not None:
         stmt_select = stmt_select.where(t2.c.ra_fund_code.in_(codes))
-        
+
     df_old = pd.read_sql(stmt_select, db, index_col=['ra_corr_id', 'ra_fund_id'])
     if not df_old.empty:
         df_old['ra_corr'] = df_old['ra_corr'].map("{:.4f}".format)
 
     # 更新数据库
     database.batch(db, t2, df_new, df_old, timestamp=True)
-            
+
 def corr_update_fund(corr, fund, df_inc_index):
-    yesterday = (datetime.now() - timedelta(days=1)); 
-    enddate = yesterday.strftime("%Y-%m-%d")        
+    yesterday = (datetime.now() - timedelta(days=1));
+    enddate = yesterday.strftime("%Y-%m-%d")
     #
     # 加载基金数据
     #
@@ -141,9 +141,9 @@ def corr_update_fund(corr, fund, df_inc_index):
     if df_nav_fund.empty:
         logger.warn("missing nav for fund [id: %d, code:%s]", fund['globalid'], fund['ra_code'])
         return None
-    
+
     df_inc_fund = df_nav_fund.pct_change().fillna(0.0)
-    
+
     # print df_inc_index.head()
     # print fund, df_inc_fund.head()
     df_inc = pd.DataFrame({'ra_index':df_inc_index.iloc[:, 0], 'ra_fund':df_inc_fund.ix[df_inc_index.index, 0]})
@@ -179,7 +179,7 @@ def load_ra_corr(corrs):
     df = pd.read_sql(s, db)
 
     return df
-    
+
 @fund.command(name='type')
 @click.option('--id', 'optid', help='specify type id (e.g. 1001,1002')
 @click.option('--fund', 'optfund', help='specify fund code (e.g. 519983,213009')
@@ -195,7 +195,7 @@ def type_command(ctx, optid, optfund, optlist):
     codes = None
     if optfund is not None:
         codes = optfund.split(',')
-        
+
     df_corr = load_ra_corr(corrs)
 
     if optlist:
@@ -204,6 +204,6 @@ def type_command(ctx, optid, optfund, optlist):
         df_corr['ra_name'] = df_corr['ra_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_corr, headers='keys', tablefmt='psql'))
         return 0
-    
+
     for _, corr in df_corr.iterrows():
         corr_update(corr, codes)

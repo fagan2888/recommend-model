@@ -1009,17 +1009,16 @@ def pool_by_single_factor(pool, day, lookback, limit, ffr, ffe):
 
     all_fund_scale = StockFundAsset.all_fund_scale()
     df_valid = all_fund_scale.loc[day].dropna()
-    df_valid = df_valid[df_valid > 1e8].index
+    df_valid = df_valid[df_valid > 2e8].index
     df_valid = df_valid.intersection(ffe.index)
 
     score = np.dot(ffe, vf)
-    df_score = pd.Series(score, index = ffe.index).sort_values(ascending = False)
+    df_score = pd.Series(score, index = ffe.index)
     df_score = df_score.loc[df_valid]
+    df_score = df_score.sort_values(ascending = False)
     final_codes = df_score.index[:limit]
-    final_codes_large = df_score.index[:1*limit]
+    final_codes_large = df_score.index[:5*limit]
 
     return final_codes, final_codes_large
-
-
 
 

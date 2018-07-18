@@ -192,10 +192,7 @@ def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None
     record = session.query(ra_stock.sk_secode).filter(ra_stock.globalid == asset_id).first()
     session.commit()
     session.close()
-    try:
-        secode = record[0]
-    except:
-        set_trace()
+    secode = record[0]
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
