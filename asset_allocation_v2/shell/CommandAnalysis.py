@@ -659,3 +659,22 @@ def passive_fund_ratio(ctx):
 
     df.to_csv('active_passive_fund_ratio.csv')
     return
+
+
+
+#线上风险10资产配置比例
+@analysis.command()
+@click.pass_context
+def online_asset_ratio(ctx):
+    ratio_df = pd.read_csv('on_online_fund.csv', index_col = ['date','type'], parse_dates = ['date'])
+    ratio_df = ratio_df.groupby(level = [0, 1]).sum().unstack().fillna(0.0)
+
+    nav_df = pd.read_csv('on_online_nav.csv', index_col = ['date'], parse_dates = ['date'])
+
+    #ratio_df = ratio_df.reindex(nav_df.index).fillna(method = 'pad')
+
+    df = pd.concat([ratio_df, nav_df], axis = 1, join_axes = [nav_df.index]).fillna(method = 'pad')
+    df = df[df.index >= '2018-01-01']
+    df.nav = df.nav / df.nav[0]
+
+    df.to_csv('ratio_nav.csv')
