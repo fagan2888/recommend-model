@@ -28,7 +28,7 @@ def mt(ctx):
     '''
     if ctx.invoked_subcommand is None:
         ctx.invoke(macro_view_update)
-        #ctx.invoke(bond_view_update)
+        ctx.invoke(bond_view_update)
         ctx.invoke(sp_view_update)
         #ctx.invoke(gold_view_update)
     else:
@@ -99,7 +99,7 @@ def macro_view_update(ctx, startdate, enddate, viewid, idx):
 @mt.command()
 @click.option('--start-date', 'startdate', default='2012-07-27', help='start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help='start date to calc')
-@click.option('--viewid', 'viewid', default='MC.VW0002', help='macro timing view id')
+@click.option('--viewid', 'viewid', default='BL.000001', help='macro timing view id')
 @click.pass_context
 def bond_view_update(ctx, startdate, enddate, viewid):
     backtest_interval = pd.date_range(startdate, enddate)
@@ -114,28 +114,39 @@ def bond_view_update(ctx, startdate, enddate, viewid):
     updated_at = np.repeat(today, len(mv))
     #df_inc_value = np.column_stack([mv_view_id, mv_date, mv_inc, created_at, updated_at])
     #df_inc = pd.DataFrame(df_inc_value, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
+
     union_mv = {}
-    union_mv['mc_view_id'] = mv_view_id
-    union_mv['mc_date'] = mv_date
-    union_mv['mc_inc'] = mv_inc
+    union_mv['globalid'] = mv_view_id
+    union_mv['bl_date'] = mv_date
+    union_mv['bl_view'] = np.sign(mv_inc)
     union_mv['created_at'] = created_at
     union_mv['updated_at'] = updated_at
-    union_mv_df = pd.DataFrame(union_mv, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
-    df_new = union_mv_df.set_index(['mc_view_id', 'mc_date'])
+    union_mv_df = pd.DataFrame(union_mv, columns = ['globalid', 'bl_date', 'bl_view', 'created_at', 'updated_at'])
 
-    db = database.connection('asset')
-    metadata = MetaData(bind=db)
-    t = Table('mc_view_strength', metadata, autoload = True)
-    columns = [
-        t.c.mc_view_id,
-        t.c.mc_date,
-        t.c.mc_inc,
-        t.c.created_at,
-        t.c.updated_at,
-    ]
-    s = select(columns).where(t.c.globalid == mc_view_id)
-    df_old = pd.read_sql(s, db, index_col = ['mc_view_id', 'mc_date'], parse_dates = ['mc_date'])
-    database.batch(db, t, df_new, df_old, timestamp = False)
+
+    for index_id in ['120000010', '120000011']:
+
+        df_new = union_mv_df
+        df_new['bl_index_id'] = index_id
+        df_new = df_new.set_index(['globalid','bl_date','bl_index_id'])
+
+        db = database.connection('asset')
+        metadata = MetaData(bind=db)
+        t = Table('ra_bl_view', metadata, autoload = True)
+        columns = [
+            t.c.globalid,
+            t.c.bl_date,
+            t.c.bl_view,
+            t.c.bl_index_id,
+            t.c.created_at,
+            t.c.updated_at,
+        ]
+        s = select(columns).where(t.c.globalid == viewid).where(t.c.bl_index_id == index_id)
+        df_old = pd.read_sql(s, db, index_col = ['globalid', 'bl_date', 'bl_index_id'], parse_dates = ['bl_date'])
+        database.batch(db, t, df_new, df_old, timestamp = False)
+
+        print(df_new.tail())
+
 
 
 @mt.command()

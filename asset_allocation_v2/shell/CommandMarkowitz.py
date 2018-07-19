@@ -1084,7 +1084,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #固定波动率滤波配置
         upper_risk = float(argv.get('upper_risk', 0.018))
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
-        wavelet_filter_num = int(argv.get('allocate_wavelet', 4))
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
         wavelet_assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MzFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, trade_date, lookback, upper_risk)
@@ -1096,7 +1096,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #固定波动率滤波Bl配置
         upper_risk = float(argv.get('upper_risk', 0.018))
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
-        wavelet_filter_num = int(argv.get('allocate_wavelet', 4))
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
         wavelet_assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         view_df = View.load_view(argv.get('bl_view_id'))
         confidence = float(argv.get('bl_confidence'))
@@ -1106,8 +1106,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MzFixRiskBootWaveletBlAllocate('ALC.000001', assets, wavelet_assets, views, trade_date, lookback, upper_risk)
         df = allocate.allocate()
-
-
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
