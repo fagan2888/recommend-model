@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate, MzFixRiskBootAllocate,MzFixRiskBootBlAllocate , MzFixRiskBootWaveletAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate, MzFixRiskBootAllocate,MzFixRiskBootBlAllocate , MzFixRiskBootWaveletAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1084,14 +1084,28 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #固定波动率滤波配置
         upper_risk = float(argv.get('upper_risk', 0.018))
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
-        wavelet_filter_num = int(argv.get('allocate_wavelet', 2))
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 4))
         wavelet_assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        bound = {}
-        bound['120000010'] = AssetBound('AB.000001', '120000010', upper = 1.0)
-        allocate = MzFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, trade_date, lookback, upper_risk, bound = bound)
+        allocate = MzFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, trade_date, lookback, upper_risk)
         df = allocate.allocate()
 
+
+    elif algo == 12:
+
+        #固定波动率滤波Bl配置
+        upper_risk = float(argv.get('upper_risk', 0.018))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 4))
+        wavelet_assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+        views = {}
+        for asset_id in assets.keys():
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzFixRiskBootWaveletBlAllocate('ALC.000001', assets, wavelet_assets, views, trade_date, lookback, upper_risk)
+        df = allocate.allocate()
 
 
 
