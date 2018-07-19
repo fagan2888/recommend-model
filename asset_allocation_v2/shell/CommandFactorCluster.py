@@ -14,9 +14,12 @@ from scipy.stats import rankdata, spearmanr, pearsonr
 from scipy.spatial import distance_matrix
 from sklearn.cluster import AgglomerativeClustering, KMeans
 from sklearn.metrics import silhouette_score, silhouette_samples
+from sklearn.cluster import SpectralClustering
 import statsmodels.api as sm
 import datetime
 from ipdb import set_trace
+import networkx as nx
+from networkx.algorithms import minimum_spanning_tree
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -28,6 +31,7 @@ import DBData
 import CommandMarkowitz
 from trade_date import ATradeDate
 from asset import Asset
+from graphviz import PlotGraph
 
 @click.group(invoke_without_command=True)
 @click.option('--id', 'optid', help='specify markowitz id')
@@ -50,23 +54,65 @@ def fc(ctx, optid):
 def fc_rolling(ctx, optid):
 
     lookback_days = 365
-    blacklist = [24, 32, 40]
-    factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
+    # blacklist = [24, 32, 40]
+    # factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
+    factor_ids_1 = ['120000013', '120000020', '120000014', '120000044', '120000015', '120000019', '120000034', '120000009', '120000018', '120000025', '120000026']
+    # factor_ids_1 = ['120000010', '120000011', '120000039', '120000013', '120000020', '120000014', '120000044', '120000015', '120000019', '120000034']
+    # factor_ids_2 = ['1200000%d'%i for i in range(52, 80)]
+    # factor_ids_2 = ['120000052', '120000056', '120000058', '120000073', '120000078', '120000079']
+    factor_ids_3 = ['MZ.F000%d0'%i for i in range(1, 10)] + ['MZ.F100%d0'%i for i in range(1, 10)]
+    # factor_ids = factor_ids_1 + factor_ids_2 + factor_ids_3
+    factor_ids = factor_ids_1 + factor_ids_3
     trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
     for date in trade_dates:
         start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
         end_date = date.strftime('%Y-%m-%d')
         print(start_date, end_date)
         corr0 = load_ind(factor_ids, start_date, end_date)
-        factor_name = base_ra_index.load()
-        res = clusterKMeansBase(corr0, maxNumClusters=10, n_init=100)
-        asset_cluster = res[1]
+        # factor_name = base_ra_index.load()
+        _, asset_cluster, _ = clusterKMeansBase(corr0, maxNumClusters=10, n_init=10)
+        # asset_cluster = clusterSpectral(corr0)
         asset_cluster = dict(list(zip(sorted(asset_cluster), sorted(asset_cluster.values()))))
 
         for k,v in asset_cluster.items():
-            v = np.array(v).astype('int')
-            print(factor_name.loc[v])
+            # v = np.array(v).astype('int')
+            # print(factor_name.loc[v])
+            print(v)
         print()
+
+
+@fc.command()
+@click.option('--id', 'optid', help='specify cluster id')
+@click.pass_context
+def fc_mst(ctx, optid):
+
+    # out_file = 'graph/mst_1'
+    # blacklist = [56]
+    lookback_days = 365
+    # factor_ids_1 = ['120000042', '120000043', '120000044']
+    # factor_ids_1 = ['120000042', '120000043']
+    # factor_ids_1 = ['120000043']
+    factor_ids_1 = []
+    factor_ids_2 = ['1200000%d'%i for i in range(52, 80)]
+    # factor_ids_2 = ['1200000%d'%i for i in range(52, 80) if i not in blacklist]
+    # factor_ids_2 = ['120000052', '120000056', '120000058', '120000073', '120000078', '120000079']
+    factor_ids_3 = ['MZ.F000%d0'%i for i in range(1, 10)] + ['MZ.F100%d0'%i for i in range(1, 10)]
+    # factor_ids = factor_ids_1 + factor_ids_2 + factor_ids_3
+    # factor_ids = factor_ids_1 + factor_ids_3
+    factor_ids = factor_ids_2
+    trade_dates = ATradeDate.month_trade_date(begin_date = '2017-01-01')
+    for date in trade_dates:
+        start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
+        end_date = date.strftime('%Y-%m-%d')
+        corr0 = load_ind(factor_ids, start_date, end_date)
+        # G = nx.from_numpy_array(corr0)
+        G = nx.from_pandas_adjacency(corr0)
+        mst = minimum_spanning_tree(G)
+        # df_res = pd.DataFrame(data = mod.toarray(), index = corr0.index, columns = corr0.columns)
+        # PlotGraph.plot_graph(G, filename=out_file, colored_edges=mst.edges())
+        PlotGraph.plot_graph(G, colored_edges=mst.edges())
+        set_trace()
+
 
 
 @fc.command()
@@ -129,10 +175,12 @@ def fc_update_nav(ctx, optid):
 
 def load_ind(factor_ids, start_date, end_date):
 
-    trade_dates = DBData.trade_dates(start_date, end_date)
+    # trade_dates = DBData.trade_dates(start_date, end_date)
+    trade_dates = ATradeDate.trade_date(start_date, end_date)
     asset_navs = {}
     for factor_id in factor_ids:
-        asset_navs[factor_id] = CommandMarkowitz.load_nav_series(factor_id, reindex = trade_dates)
+        # asset_navs[factor_id] = CommandMarkowitz.load_nav_series(factor_id, reindex = trade_dates)
+        asset_navs[factor_id] = Asset.load_nav_series(factor_id, reindex = trade_dates)
 
     df_asset_navs = pd.DataFrame(asset_navs)
     df_asset_incs = df_asset_navs.pct_change().dropna()
@@ -141,11 +189,11 @@ def load_ind(factor_ids, start_date, end_date):
     return corr
 
 
-def clusterKMeansBase(corr0,maxNumClusters=10,n_init=10):
+def clusterKMeansBase(corr0,maxNumClusters=10,n_init=100):
     dist,silh=((1-corr0.fillna(0))/2.)**.5,pd.Series()
     # distance matrix
     for init in range(n_init):
-        for i in range(8,maxNumClusters+1):
+        for i in range(5,maxNumClusters+1):
     # find optimal num clusters
             kmeans_ = KMeans(n_clusters=i,n_jobs=1,n_init=1)
             kmeans_ = kmeans_.fit(dist)
@@ -202,6 +250,19 @@ def clusterKMeansTop(corr0, maxNumClusters=10, n_init=10):
             return corr1,clstrs,silh
         else:
             return corrNew,clstrsNew,silhNew
+
+
+def clusterSpectral(feature, n_clusters = 7):
+
+    feature =((1-feature.fillna(0))/2.)**.5
+    mod = SpectralClustering(n_clusters = n_clusters, eigen_solver = 'arpack', random_state = 10, n_init = 100, n_jobs = 10)
+    res = mod.fit(feature)
+    cluster = {}
+    assets = feature.columns.values
+    for label in res.labels_:
+        cluster[label] = list(assets[res.labels_ == label])
+
+    return cluster
 
 
 if  __name__ == '__main__':
