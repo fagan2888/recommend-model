@@ -31,8 +31,6 @@ from asset import StockFundAsset
 from trade_date import ATradeDate
 from ipdb import set_trace
 
-import traceback, code
-
 logger = logging.getLogger(__name__)
 
 @click.group(invoke_without_command=True)
@@ -1144,15 +1142,24 @@ def pool_by_layer_factor(pool, day, lookback, limit, ffr, ffe):
     df_valid = df_valid.intersection(ffe.index)
 
     if pool.id == '11115001':
-        pos = [0, 4, 5, 6, 1, 3, 17]
-        ends = [1, 1, 1, 1, -1,-1, 1]
+        pos = [0, 4, 5, 6, 17, 26, 27]
+        ends = [1, 1, 1, 1, 1, 1, 1]
+        factor_pool_num = 0
         df_nav_index = base_ra_index_nav.load_series('120000001', begin_date = sdate, end_date = edate)
+
     elif pool.id == '11115002':
         # pos = [0, 4, 5, 6, 1, 13, 35]
         # ends = [-1, -1, -1, -1, 1, 1, 1]
-        pos = [0, 5, 34]
-        ends = [-1, -1, 1]
+        pos = [0, 20]
+        ends = [-1, 1]
+        factor_pool_num = 40
         df_nav_index = base_ra_index_nav.load_series('120000002', begin_date = sdate, end_date = edate)
+
+    elif pool.id == '11115003':
+        pos = [0, 4, 5, 5, 10, 17, 26, 27, 33]
+        ends = [0, 1, 1, -1, 1, 1, 1, 1, 1]
+        factor_pool_num = 10
+        df_nav_index = base_ra_index_nav.load_series('120000016', begin_date = sdate, end_date = edate)
 
     final_codes = []
     for factor, end in zip(pos, ends):
@@ -1162,7 +1169,18 @@ def pool_by_layer_factor(pool, day, lookback, limit, ffr, ffe):
         df_score = pd.Series(score, index = ffe.index)
         df_score = df_score.loc[df_valid]
         df_score = df_score.sort_values(ascending = False)
-        final_codes = np.union1d(df_score.index[:limit], final_codes)
+
+        if factor < 9:
+            valid_codes = df_score[df_score > 2.0].index
+            if len(valid_codes) < factor_pool_num:
+                valid_codes = df_score.index[:factor_pool_num]
+        else:
+            valid_codes = df_score[df_score > 0.9].index
+
+        final_codes = np.union1d(valid_codes, final_codes)
+
+    # if len(valid_codes) < factor_pool_num:
+    #     valid_codes = df_score.index[:factor_pool_num]
 
     df_nav_fund  = base_ra_fund_nav.load_daily(sdate, edate, codes = final_codes)
 
@@ -1175,9 +1193,10 @@ def pool_by_layer_factor(pool, day, lookback, limit, ffr, ffe):
     df_jensen = pd.Series(code_jensen)
     df_jensen = df_jensen.sort_values(ascending = False)
     final_codes = df_jensen.index[:limit]
-    final_codes_large = df_jensen.index
+    final_codes_large = df_jensen.index[:5*limit]
 
     return final_codes, final_codes_large
+
 
 
 

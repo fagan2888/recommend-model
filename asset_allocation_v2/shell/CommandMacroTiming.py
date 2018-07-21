@@ -53,6 +53,7 @@ def macro_view_update(ctx, startdate, enddate, viewid, idx):
 
     mv = pd.concat([rev, irv, epsv], 1)
     mv['mv'] = mv['rev'] + mv['irv'] + mv['epsv']
+    print(mv.tail())
     #print mv.tail()
     #mv = mv.loc[:, ['mv']]
 
@@ -148,6 +149,7 @@ def sp_view_update(ctx, startdate, enddate, viewid):
     mv = cal_sp_view()
     mv = mv.resample('d').last().fillna(method = 'pad')
     mv = mv.rolling(30).mean().dropna()
+    print(mv.tail())
 
     today = datetime.now()
     mv_view_id = np.repeat(viewid, len(mv))
@@ -771,7 +773,6 @@ def cal_sp_view():
 
     today = datetime.now()
     today = datetime(today.year, today.month, today.day)
-    set_trace()
     data.loc[today] = data.iloc[-1].values
 
     return data

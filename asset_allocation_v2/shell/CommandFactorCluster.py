@@ -56,11 +56,12 @@ def fc_rolling(ctx, optid):
     lookback_days = 365
     # blacklist = [24, 32, 40]
     # factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
-    factor_ids_1 = ['120000013', '120000020', '120000014', '120000044', '120000015', '120000019', '120000034', '120000009', '120000018', '120000025', '120000026']
+    factor_ids_1 = ['120000013', '120000020', '120000014', '120000044', '120000015', '120000019', '120000034']
     # factor_ids_1 = ['120000010', '120000011', '120000039', '120000013', '120000020', '120000014', '120000044', '120000015', '120000019', '120000034']
     # factor_ids_2 = ['1200000%d'%i for i in range(52, 80)]
     # factor_ids_2 = ['120000052', '120000056', '120000058', '120000073', '120000078', '120000079']
-    factor_ids_3 = ['MZ.F000%d0'%i for i in range(1, 10)] + ['MZ.F100%d0'%i for i in range(1, 10)]
+    # factor_ids_3 = ['MZ.F000%d0'%i for i in range(1, 10)] + ['MZ.F100%d0'%i for i in range(1, 10)]
+    factor_ids_3 = ['MZ.F00010', 'MZ.F00050', 'MZ.F00060', 'MZ.F00070', 'MZ.F10010', '120000053', '120000056', '120000058', '120000073']
     # factor_ids = factor_ids_1 + factor_ids_2 + factor_ids_3
     factor_ids = factor_ids_1 + factor_ids_3
     trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
@@ -70,8 +71,9 @@ def fc_rolling(ctx, optid):
         print(start_date, end_date)
         corr0 = load_ind(factor_ids, start_date, end_date)
         # factor_name = base_ra_index.load()
-        _, asset_cluster, _ = clusterKMeansBase(corr0, maxNumClusters=10, n_init=10)
-        # asset_cluster = clusterSpectral(corr0)
+        # _, asset_cluster, _ = clusterKMeansBase(corr0, maxNumClusters=10, n_init=10)
+        asset_cluster = clusterSpectral(corr0)
+        asset_cluster = clusterSimple(corr0)
         asset_cluster = dict(list(zip(sorted(asset_cluster), sorted(asset_cluster.values()))))
 
         for k,v in asset_cluster.items():
@@ -263,6 +265,26 @@ def clusterSpectral(feature, n_clusters = 7):
         cluster[label] = list(assets[res.labels_ == label])
 
     return cluster
+
+def clusterSimple(corr0):
+
+    asset_cluster = {}
+    factor_ids = corr0.keys()
+    asset_cluster[0] = factor_ids[0]
+    for factor_id in factor_ids[1:]:
+        flag = False
+        new_layer = len(asset_cluster)
+        for layer in asset_cluster.keys():
+            set_trace()
+            tmp_corr = corr0[factor_id, asset_cluster[layer]].values.mean()
+            if tmp_corr > 0.8:
+                flag = True
+        if not flag:
+            asset_cluster[new_layer] = [factor_id]
+
+    set_trace()
+
+
 
 
 if  __name__ == '__main__':
