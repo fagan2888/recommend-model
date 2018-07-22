@@ -28,7 +28,7 @@ def mt(ctx):
     '''
     if ctx.invoked_subcommand is None:
         ctx.invoke(macro_view_update)
-        ctx.invoke(bond_view_update)
+        #ctx.invoke(bond_view_update)
         ctx.invoke(sp_view_update)
         #ctx.invoke(gold_view_update)
     else:
