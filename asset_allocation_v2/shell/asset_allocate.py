@@ -137,7 +137,7 @@ class MzRiskMgrAllocate(Allocate):
                         pos.append(pos_rolling_ser.loc[d])
                 data[asset_id] = pd.Series(pos, index = dates)
             else:
-                data[asset_id] = pos_ser
+                data[asset_id] = pos_ser.rolling(4, min_periods = 1).mean()
 
         pos_df = pd.DataFrame(data).fillna(0.0)
 
@@ -424,6 +424,7 @@ class MzRiskMgrFixRiskBootWaveletAllocate(MzRiskMgrAllocate):
     def allocate_algo(self, day, df_inc, bound):
         wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, list(self.assets.keys()))
         df_inc = df_inc + wavelet_df_inc * 2
+        #风控当天把收益率降低一倍，更多的降低仓位
         for asset_id in df_inc.columns:
             if asset_id in self.riskmgr_df.columns:
                 if (day in self.riskmgr_df.index) and (self.riskmgr_df.loc[day, asset_id] < 1.0):

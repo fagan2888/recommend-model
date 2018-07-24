@@ -1075,7 +1075,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
         wavelet_assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
-        assets_riskmgr = {'120000001':'61110404', '120000002':'61110504', '120000080':'61110805', 'ERI000001':'61110605', 'ERI000002':'61110705' , '120000010':'61210100', '120000020':'61210200'}
+        assets_riskmgr = {'120000001':'61110404', '120000002':'61110504', '120000080':'61110805', 'ERI000001':'61110605', 'ERI000002':'61110705' , '120000010':'61210101', '120000020':'61210203'}
+        #assets_riskmgr = {'120000001':'61110404', '120000002':'61110504', '120000080':'61110805', 'ERI000001':'61110605', 'ERI000002':'61110705'}
         allocate = MzRiskMgrFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, assets_riskmgr, trade_date, lookback, upper_risk)
         df = allocate.allocate()
 

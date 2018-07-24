@@ -530,13 +530,16 @@ def signal_update(riskmgr):
         risk_mgr = RiskManagement.RiskManagement()
     elif riskmgr['rm_algo'] == 2:
         risk_mgr = RiskMgrSimple.RiskMgrSimple(empty=argv['e'])
-    elif riskmgr['rm_algo'] == 3:
+    elif riskmgr['rm_algo'] in [3, 8]:
         risk_mgr = RiskMgrLow.RiskMgrLow()
     else:
         click.echo(click.style("\nunsupported riskmgr algo (%s, %s)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
         return False
 
-    df_result = risk_mgr.perform(riskmgr_id, df)
+    if riskmgr['rm_algo'] == 8:
+        df_result = risk_mgr.perform_no_timing(riskmgr_id, df)
+    else:
+        df_result = risk_mgr.perform(riskmgr_id, df)
     # df_result.drop(['nav', 'timing'], axis=1, inplace=True)
     df_result = DFUtil.filter_same_with_last(df_result)
 
