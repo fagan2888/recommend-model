@@ -120,6 +120,31 @@ class MzRiskMgrAllocate(Allocate):
                 for asset_id in list(ws.keys()):
                     pos_df.loc[day, asset_id] = ws[asset_id]
 
+        data = {}
+        for asset_id in pos_df.columns:
+            pos_ser = pos_df[asset_id]
+            if asset_id in self.riskmgr_df.columns:
+                riskmgr_diff_ser = self.riskmgr_df[asset_id].diff()
+                riskmgr_diff_ser = riskmgr_diff_ser.reindex(adjust_days).fillna(0.0)
+                pos = []
+                dates = pos_ser.index
+                for d in dates:
+                    if riskmgr_diff_ser.loc[d] < 0:
+                        pos_ser = pos_ser[pos_ser.index >= d]
+                        pos.append(pos_ser.loc[d])
+                    else:
+                        pos_rolling_ser = pos_ser.rolling(4, min_periods = 1).mean()
+                        pos.append(pos_rolling_ser.loc[d])
+                data[asset_id] = pd.Series(pos, index = dates)
+            else:
+                data[asset_id] = pos_ser
+
+        pos_df = pd.DataFrame(data).fillna(0.0)
+
+        sr = 1.0 - pos_df.sum(axis=1)
+        if (sr > 0.000099).any():
+            pos_df['120000039'] = pos_df['120000039'] + sr
+
         return pos_df
 
 
@@ -399,6 +424,10 @@ class MzRiskMgrFixRiskBootWaveletAllocate(MzRiskMgrAllocate):
     def allocate_algo(self, day, df_inc, bound):
         wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, list(self.assets.keys()))
         df_inc = df_inc + wavelet_df_inc * 2
+        for asset_id in df_inc.columns:
+            if asset_id in self.riskmgr_df.columns:
+                if (day in self.riskmgr_df.index) and (self.riskmgr_df.loc[day, asset_id] < 1.0):
+                    df_inc.loc[day, asset_id] = df_inc.loc[day, asset_id] * 2 if df_inc.loc[day, asset_id] < 0 else 0.0
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws

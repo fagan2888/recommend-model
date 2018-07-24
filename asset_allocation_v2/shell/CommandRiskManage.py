@@ -370,7 +370,7 @@ def calc_vars(ctx, optid, optlist):
     #         bar.update(1)
     #         signal_update(riskmgr)
     for _, riskmgr in df_riskmgr.iterrows():
-        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5 or riskmgr['rm_algo'] == 6 or riskmgr['rm_algo'] == 7:
+        if riskmgr['rm_algo'] in [4, 5, 6, 7]:
             vars_update(riskmgr)
         else:
             pass
@@ -490,7 +490,7 @@ def signal(ctx, optid, optlist, optonline):
     #         bar.update(1)
     #         signal_update(riskmgr)
     for _, riskmgr in df_riskmgr.iterrows():
-        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5 or riskmgr['rm_algo'] == 6 or riskmgr['rm_algo'] == 7:
+        if riskmgr['rm_algo'] in [4,5,6,7]:
             signal_update_garch(riskmgr)
         else:
             signal_update(riskmgr)

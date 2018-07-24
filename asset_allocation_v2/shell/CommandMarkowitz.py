@@ -1111,7 +1111,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 20]
+    no_rolling_algos = [1, 13, 20]
     if algo in no_rolling_algos:
         pass
     else:

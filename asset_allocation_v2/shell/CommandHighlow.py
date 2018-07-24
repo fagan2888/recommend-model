@@ -991,7 +991,7 @@ def yao(highlow, alloc):
         df_high_riskmgr = df_high_riskmgr.reindex(index, method='pad')
         df_high_riskmgr_diff = df_high_riskmgr.diff()
         for column in df_high.columns:
-            #data_h[column] = df_high[column] * df_high_riskmgr[column]
+            data_h[column] = df_high[column] * df_high_riskmgr[column]
             pos_ser = df_high[column]
             riskmgr_diff_ser = df_high_riskmgr_diff[column]
             pos = []
