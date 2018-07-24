@@ -183,8 +183,9 @@ class Allocate(object):
 
 
     def load_allocate_data(self, day ,asset_ids):
-
         reindex = self.index[self.index <= day][-1 * self.lookback:]
+        if not (reindex[-1] == day):
+            reindex = reindex.insert(len(reindex), day)[1:]
         data = {}
         for asset_id in asset_ids:
             data[asset_id] = self.assets[asset_id].nav(reindex = reindex)

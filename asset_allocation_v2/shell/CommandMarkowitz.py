@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, MzRiskMgrAllocate, MzRiskMgrFixRiskBootAllocate, MzRiskMgrFixRiskBootWaveletAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1013,6 +1013,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
 
     elif algo == 9:
+
         #固定波动率配置
         upper_risk = float(argv.get('upper_risk', 0.018))
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
@@ -1065,6 +1066,20 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MzFixRiskBootWaveletBlAllocate('ALC.000001', assets, wavelet_assets, views, trade_date, lookback, upper_risk)
         df = allocate.allocate()
+
+    elif algo == 13:
+
+        #风险控制配置
+        upper_risk = float(argv.get('upper_risk', 0.018))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+        wavelet_assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        assets_riskmgr = {'120000001':'61110404', '120000002':'61110504', '120000080':'61110805', 'ERI000001':'61110605', 'ERI000002':'61110705' , '120000010':'61210100', '120000020':'61210200'}
+        allocate = MzRiskMgrFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, assets_riskmgr, trade_date, lookback, upper_risk)
+        df = allocate.allocate()
+
+
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))

@@ -286,9 +286,6 @@ def markowitz_fixrisk(df_inc, bound, target_risk):
     final_ws = res.x
     final_sharp = (final_return - Const.rf) / final_risk
 
-    # print()
-    # print(target_risk, final_risk)
-
     return final_risk, final_return, final_ws, final_sharp
 
 

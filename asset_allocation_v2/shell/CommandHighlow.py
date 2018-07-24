@@ -396,6 +396,9 @@ def load_riskmgr2(assets, sr_riskmgr, reindex=None, enable=True):
 
     return df
 
+
+
+
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
 
@@ -979,17 +982,34 @@ def yao(highlow, alloc):
 
     df_high = asset_mz_markowitz_pos.load_raw(high)
     df_high_riskmgr = load_riskmgr2(df_high.columns, df_asset['mz_riskmgr_id'], df_high.index, True)
-    index = df_high.index.union(df_high_riskmgr.index)
+    #index = df_high.index.union(df_high_riskmgr.index)
+    index = df_high.index
 
     data_h = {}
     if not df_high.empty:
         df_high = df_high.reindex(index, method='pad')
         df_high_riskmgr = df_high_riskmgr.reindex(index, method='pad')
+        df_high_riskmgr_diff = df_high_riskmgr.diff()
         for column in df_high.columns:
-            data_h[column] = df_high[column] * df_high_riskmgr[column]
+            #data_h[column] = df_high[column] * df_high_riskmgr[column]
+            pos_ser = df_high[column]
+            riskmgr_diff_ser = df_high_riskmgr_diff[column]
+            pos = []
+            dates = pos_ser.index
+            for d in dates:
+                if riskmgr_diff_ser.loc[d] < 0:
+                    pos_ser = pos_ser[pos_ser.index >= d]
+                    pos.append(pos_ser.loc[d])
+                else:
+                    pos_rolling_ser = pos_ser.rolling(4, min_periods = 1).mean()
+                    pos.append(pos_rolling_ser.loc[d])
+                #if column == 'ERI000002':
+                #    print(d, pos[-1], riskmgr_diff_ser.loc[d], pos_ser.loc[d])
+            data_h[column] = pd.Series(pos, index = dates)
 
     df_h = pd.DataFrame(data_h)
 
+    print(df_h.tail())
     #
     # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
     # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一

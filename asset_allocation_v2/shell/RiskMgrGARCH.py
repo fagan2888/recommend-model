@@ -123,6 +123,57 @@ class RiskMgrGARCH(RiskMgrGARCHPrototype):
             #  self.calc_winrate(df_result, target)
         return df_result
 
+
+
+    def perform_no_timing(self, target=None, disp=True):
+        if target is None:
+            target = self.target
+        df = self.generate_df_for_garch(target)
+        sr_nav = self.nav(target)
+        df_vars = self.vars[target]
+        status, empty_days, action = 0, 0, 0
+        result_status = {}
+        result_pos = {} #结果仓位
+        result_act = {} #结果动作
+        for day, row in df.iterrows():
+            status, position, action = 0, 1, 0
+            if not (day in df_vars.index):
+                pass
+            else:
+                #Remove the extreme values
+                tmp_vars = df_vars.loc[:day]
+                median = tmp_vars.median()
+                mad = np.abs(tmp_vars - median).median()*1.483
+                vars_today = tmp_vars.iloc[-1]
+                vars_today[vars_today < (median - 3*mad)] = (median - 3*mad)
+
+                # Trigger Risk Ctrl when the hard line of local drawdown is approached
+                tmp_nav = sr_nav.loc[:day]
+                local_max = tmp_nav.iloc[-self.ddlookback:].max()
+                local_drawdown = (sr_nav[day] - local_max)/local_max
+
+                if local_drawdown < self.maxdd*0.75:
+                    status, position, action = 2, 0, 6
+
+                # Regular Risk Ctrl by VaRs
+                if row['inc2d'] < vars_today['var_2d']:
+                    status, position, action = 2, 0, 2
+                elif row['inc3d'] < vars_today['var_3d']:
+                    status, position, action = 2, 0, 3
+                elif row['inc5d'] < vars_today['var_5d']:
+                    status, position, action = 2, 0, 5
+
+            result_status[day] = status
+            result_act[day] = action
+            result_pos[day] = position
+
+        df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
+        df_result.index.name = 'rm_date'
+        return df_result
+
+
+
+
     def calc_winrate(self, df_result, target):
         nav = self.df_nav[target].reindex(self.tdates[target])
         inc = np.log(1+nav.pct_change()).fillna(0)
@@ -248,6 +299,75 @@ class RiskMgrMGARCH(RiskMgrGARCHPrototype):
         df_result.index.name = 'rm_date'
         #  self.calc_winrate_joint(df_result)
         return df_result
+
+
+
+    def perform_no_timing(self):
+        # Calculate where the joint distribution get exceeded
+        df_joint = self.joints
+        others = df_joint.columns
+        df_result_garch = pd.DataFrame({k:self.garch.perform(k, disp=False)['rm_status'] for k in others}) \
+                            .reindex(df_joint.index) \
+                            .fillna(method='pad')    \
+                            .fillna(0)
+
+        #对每个资产, 检查是否联合分布被击穿, 且其处于风控状态, 并最后求或(any(axis=1))
+        if_joint_controlled = pd.DataFrame({k: (df_joint[k]!=0) & (df_result_garch[k]!=0) for k in others}).any(1)
+
+        # Start the Risk Ctrl for the target asset
+        df = self.generate_df_for_garch(self.target)
+        df['joint_status'] = if_joint_controlled
+        sr_nav = self.nav(self.target)
+        df_vars = self.vars[self.target]
+        status, empty_days, action = 0, 0, 0
+        result_status = {}
+        result_pos = {} # 结果仓位
+        result_act = {} # 结果动作
+        for day, row in df.iterrows():
+            status, position, action = 2, 1, 0
+            if not (day in df_vars.index):
+                pass
+            else:
+                #Remove the extreme values
+                tmp_vars = df_vars.loc[:day]
+                median = tmp_vars.median()
+                mad = np.abs(tmp_vars - median).median()*1.483
+                vars_today = tmp_vars.iloc[-1]
+                vars_today[vars_today < (median - 3*mad)] = (median - 3*mad)
+
+                # Trigger Risk Ctrl when the hard line of local drawdown is approached
+                tmp_nav = sr_nav.loc[:day]
+                local_max = tmp_nav.iloc[-self.ddlookback:].max()
+                local_drawdown = (sr_nav[day] - local_max)/local_max
+
+                if local_drawdown < self.maxdd*0.75:
+                    status, position, action = 2,  0, 6
+
+                if row['inc2d'] < df_vars.loc[day]['var_2d']:
+                    status,  position, action = 2,  0, 2
+                elif row['inc3d'] < df_vars.loc[day]['var_3d']:
+                    status,  position, action = 2,  0, 3
+                elif row['inc5d'] < df_vars.loc[day]['var_5d']:
+                    status,  position, action = 2,  0, 5
+
+                if row['joint_status']:
+                    if status == 0:
+                        status,  position, action = 1, self.joint_ratio, 4
+
+            result_status[day] = status
+            result_act[day] = action
+            result_pos[day] = position
+
+        df_result = pd.DataFrame({'rm_pos': result_pos, 'rm_action': result_act, 'rm_status': result_status})
+        df_result.index.name = 'rm_date'
+        #  self.calc_winrate_joint(df_result)
+        return df_result
+
+
+
+
+
+
 
     def calc_winrate_joint(self, df_result):
         nav = self.df_nav[self.target].reindex(self.tdates[self.target])

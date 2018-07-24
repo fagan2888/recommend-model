@@ -370,7 +370,7 @@ def calc_vars(ctx, optid, optlist):
     #         bar.update(1)
     #         signal_update(riskmgr)
     for _, riskmgr in df_riskmgr.iterrows():
-        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5:
+        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5 or riskmgr['rm_algo'] == 6 or riskmgr['rm_algo'] == 7:
             vars_update(riskmgr)
         else:
             pass
@@ -385,11 +385,11 @@ def vars_update(riskmgr):
     if riskmgr['rm_argv'] != '':
         argv.update({k: json.loads(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(';')]})
 
-    if riskmgr['rm_algo'] == 4:
+    if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 6:
         #Univariate GARCH
         codes = [riskmgr['rm_asset_id']]
 
-    if riskmgr['rm_algo'] == 5:
+    if riskmgr['rm_algo'] == 5 or riskmgr['rm_algo'] == 7:
         #Multivariate GARCH
         #In this case, we concern others assets that will involve into multivarate distribution fitting.
         tmp_df_riskmgrs = asset_rm_riskmgr.load(argv['assets'])
@@ -403,7 +403,7 @@ def vars_update(riskmgr):
     vars_ = {_id: asset_rm_riskmgr_vars.load_series(_id) for _id in codes}
     for _id in codes:
         tdate = tdates[_id]
-        tdate = tdate[tdate >= rm_start_date]
+        tdate = tdate[tdate >= rm_start_date] if rm_start_date is not None else tdate
         # Check if the VaRs table is empty
         if vars_[_id].empty:
             nav = database.load_nav_series(_id, reindex=tdate)
@@ -424,7 +424,7 @@ def vars_update(riskmgr):
         df_vars['index_id'] = _id
         df_tosave = df_vars.reset_index().set_index(['index_id', 'ix_date'])
         asset_rm_riskmgr_vars.save(_id, df_tosave)
-    if riskmgr['rm_algo'] == 5:
+    if riskmgr['rm_algo'] == 5 or riskmgr['rm_algo'] == 7:
         mgarch_update(tmp_df_riskmgrs, riskmgr_id, tdates)
 
 
@@ -490,7 +490,7 @@ def signal(ctx, optid, optlist, optonline):
     #         bar.update(1)
     #         signal_update(riskmgr)
     for _, riskmgr in df_riskmgr.iterrows():
-        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5:
+        if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 5 or riskmgr['rm_algo'] == 6 or riskmgr['rm_algo'] == 7:
             signal_update_garch(riskmgr)
         else:
             signal_update(riskmgr)
@@ -555,11 +555,11 @@ def signal_update_garch(riskmgr):
     if riskmgr['rm_argv'] != '':
         argv.update({k: json.loads(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(';')]})
     
-    if riskmgr['rm_algo'] == 4:
+    if riskmgr['rm_algo'] == 4 or riskmgr['rm_algo'] == 6:
         #Univariate GARCH
         codes = {riskmgr['globalid'] : {"id" : riskmgr['rm_asset_id'], "timing" : riskmgr['rm_timing_id']}}
 
-    if riskmgr['rm_algo'] == 5:
+    if riskmgr['rm_algo'] == 5 or riskmgr['rm_algo'] == 7:
         #Multivariate GARCH
         tmp_df_riskmgrs = asset_rm_riskmgr.load(argv['assets'])
         tmp_df_riskmgrs = tmp_df_riskmgrs.append(riskmgr)
@@ -581,12 +581,22 @@ def signal_update_garch(riskmgr):
 
     if riskmgr['rm_algo'] == 4:
         risk_mgr = RiskMgrGARCH.RiskMgrGARCH(codes, target, tdates, df_nav, timing, vars_)
+        df_result = risk_mgr.perform()
+    if riskmgr['rm_algo'] == 6:
+        risk_mgr = RiskMgrGARCH.RiskMgrGARCH(codes, target, tdates, df_nav, timing, vars_)
+        df_result = risk_mgr.perform_no_timing()
     elif riskmgr['rm_algo'] == 5:
         others = [k for k in codes if k != target]
         joint = asset_rm_riskmgr_mgarch_signal.load_series(riskmgr_id).loc[:, others]
         risk_mgr = RiskMgrGARCH.RiskMgrMGARCH(codes, target, tdates, df_nav, timing, vars_, joint)
+        df_result = risk_mgr.perform()
+    elif riskmgr['rm_algo'] == 7:
+        others = [k for k in codes if k != target]
+        joint = asset_rm_riskmgr_mgarch_signal.load_series(riskmgr_id).loc[:, others]
+        risk_mgr = RiskMgrGARCH.RiskMgrMGARCH(codes, target, tdates, df_nav, timing, vars_, joint)
+        df_result = risk_mgr.perform_no_timing()
 
-    df_result = risk_mgr.perform()
+
     df_result = df_result.drop(['rm_status'], axis=1)
     df_result = DFUtil.filter_same_with_last(df_result)
 
