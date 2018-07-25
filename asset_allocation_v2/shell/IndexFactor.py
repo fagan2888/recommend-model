@@ -58,6 +58,26 @@ def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, cons2 = None, w
     return res.x
 
 
+def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, cons2 = None, w0 = None):
+
+    target_num = 100
+    target_exposure = np.dot(sfe, x_t)
+    df = pd.Series(data = target_exposure, index = sfe.index)
+    df = df.nlargest(100)
+
+    tmp_df = df[df == max(df)]
+    if len(tmp_df) >= target_num:
+        pos = tmp_df.index
+    else:
+        pos = df.nlargest(target_num).index
+
+    weight = pd.Series(0.0, index = sfe.index)
+    weight.loc[pos] = 1 / len(pos)
+
+    return weight.values
+
+
+
 if __name__ == '__main__':
 
     sfe = np.random.randn(100, 5)

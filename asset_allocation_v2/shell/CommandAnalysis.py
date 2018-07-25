@@ -23,7 +23,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, base_ra_fund_nav
 from util import xdict
 from trade_date import ATradeDate
 
@@ -696,5 +696,53 @@ def cal_online_indic(risk):
     sharpe = df_ret.mean() / df_ret.std()
 
     return ret, std, mdd, calmar, sharpe
+
+
+@analysis.command()
+@click.pass_context
+def cal_noadjust_indic(ctx):
+
+    on_id = '800000'
+
+    df_pos = asset_on_online_fund.load_fund_pos(on_id)
+    df_pos = df_pos.loc['2017-11-10']
+    df_pos = df_pos.reset_index()
+    df_pos = df_pos.loc[:, ['on_fund_id', 'on_fund_ratio']]
+    df_pos = df_pos.set_index(['on_fund_id'])
+
+    df_nav_fund  = base_ra_fund_nav.load_daily_2('2017-11-10', '2018-07-21', fund_ids = df_pos.index)
+    df_ret_fund = df_nav_fund.pct_change().dropna()
+
+    pret = np.dot(df_ret_fund, df_pos)
+    df = pd.DataFrame(data = pret, columns = ['pret'], index = df_ret_fund.index)
+    df = df[df.index > '2018-01-01']
+    df = (1 + df).cumprod()
+    # ret = df.iloc[-1] - 1
+    # mdd = -(df / df.rolling(min_periods=1, window=len(df)).max() - 1).min()
+
+    df_real = asset_on_online_nav.load_series(on_id, xtype = 8, reindex = df.index)
+    df_res = pd.concat([df, df_real] ,1)
+    df_res.columns = ['no_adjust', 'online']
+    df_res = df_res / df_res.iloc[0]
+    ret = df_res.iloc[-1] - 1
+    mdd = -(df_res / df_res.rolling(min_periods=1, window=len(df_res)).max() - 1).min()
+    print(ret, mdd)
+
+    df_res.to_csv('sta/sta_7.csv')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

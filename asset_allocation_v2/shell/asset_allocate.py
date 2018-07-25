@@ -29,7 +29,7 @@ from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_stock
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
 from db.asset_stock_factor import *
 from util import xdict
@@ -124,11 +124,25 @@ class MzBootAllocate(Allocate):
         self.__bootstrap_count = bootstrap_count
 
 
+    # def allocate_algo(self, day, df_inc, bound):
+    #     df_inc['FC1'] = (df_inc['ERI000001'] + df_inc['ERI000005']) / 2
+    #     df_inc['FC2'] = (df_inc['ERI000002'] + df_inc['ERI000006']) / 2
+    #     df_inc = df_inc.loc[:, ['120000001', '120000002', '120000014', 'FC1', 'FC2']]
+    #     risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+    #     ws = dict(zip(df_inc.columns.ravel(), ws))
+    #     ws['ERI000001'] = ws['FC1'] / 2
+    #     ws['ERI000005'] = ws['FC1'] / 2
+    #     ws['ERI000002'] = ws['FC2'] / 2
+    #     ws['ERI000006'] = ws['FC2'] / 2
+    #     del ws['FC1']
+    #     del ws['FC2']
+    #     return ws
+
     def allocate_algo(self, day, df_inc, bound):
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc.columns.ravel(), ws))
-        return ws
 
+        return ws
 
 
 class MzBootBlAllocate(MzBlAllocate):
@@ -241,46 +255,55 @@ class FactorIndexAllocate(Allocate):
 
     def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, target = None):
 
-       super(FactorIndexAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-       # sf_ids = ['SF.0000%02d'%i for i in range(1, 10)] + ['SF.1000%02d'%i for i in range(1, 29)]
-       sf_ids = ['SF.0000%02d'%i for i in range(1, 10)]
-       self.sf_ids = sf_ids
+        super(FactorIndexAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
 
-       if target is None:
-           self.target = [1] + [0] * 8
-       else:
-           self.target = target
+        sf_ids = ['SF.0000%02d'%i for i in range(1, 10)]
+        self.sf_ids = sf_ids
 
-       self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2010-01-01')
-       # self.sfe.to_csv('data/factor/stock_factor_exposure.csv', index_label = ['stock_id', 'sf_id', 'trade_date'])
-       # self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
+        if target is None:
+            self.target = [1] + [0] * 8
+        else:
+            self.target = target
+
+        # self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2010-01-01')
+        # self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2010-01-01')
+        # self.sfe.to_csv('data/factor/stock_factor_exposure.csv', index_label = ['stock_id', 'sf_id', 'trade_date'])
+        self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
 
     def allocate(self):
 
         adjust_days = self.index[self.lookback - 1::self.period]
-        asset_ids = list(self.assets.keys())
-        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
 
-        pool = Pool(32)
+        # asset_ids = list(self.assets.keys())
+        df = pd.DataFrame()
+        pos_df = {}
+
+        pool = Pool(16)
         wss = pool.map(self.allocate_algo, adjust_days)
         pool.close()
         pool.join()
-        # self.allocate_algo(adjust_days[-1])
+        # self.allocate_algo(adjust_days[0])
 
         for day, ws in zip(adjust_days, wss):
-            for asset_id in ws.keys():
-                pos_df.loc[day, asset_id] = ws[asset_id]
+            pos_df[day] = ws
+
+        pos_df = df.from_dict(pos_df, orient = 'index')
+        pos_df = pos_df.fillna(0.0)
 
         return pos_df
 
     def allocate_algo(self, day):
-
         print(day)
+
+        index_pos = asset_stock.load_index_pos('2070000191', day)
+        asset_ids = self.sfe.index.levels[0].intersection(index_pos).values
+        sfe = self.sfe.loc[asset_ids]
 
         begin_date = (day.date() - timedelta(self.lookback - 1)).strftime('%Y-%m-%d')
         end_date = day.date().strftime('%Y-%m-%d')
 
-        sfe = self.sfe[(self.sfe.index.get_level_values(2) > begin_date) & (self.sfe.index.get_level_values(2) < end_date)].reset_index()
+        sfe = sfe[(sfe.index.get_level_values(2) > begin_date) & (sfe.index.get_level_values(2) < end_date)]
+        sfe = sfe.reset_index()
         sfe = sfe.groupby(['stock_id', 'sf_id']).mean()
         sfe = sfe.unstack()
         sfe.columns = sfe.columns.droplevel(0)

@@ -73,6 +73,7 @@ def load_series(gid, xtype, reindex=None, begin_date=None, end_date=None):
 
 
 
+
 def save(gid, xtype, df):
     fmt_columns = ['on_nav', 'on_inc']
     fmt_precision = 6

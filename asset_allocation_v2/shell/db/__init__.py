@@ -62,3 +62,4 @@ from . import base_fund_split
 from . import mapi_fp_da_question
 from . import asset_fund
 from . import asset_fund_factor
+from . import asset_stock_factor

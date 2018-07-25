@@ -26,6 +26,7 @@ from sqlalchemy import *
 from tabulate import tabulate
 from db import *
 from util.xdebug import dd
+from ipdb import set_trace
 
 
 logger = logging.getLogger(__name__)
@@ -177,6 +178,10 @@ def cny(ctx, optfull, optid):
                     ra_index_nav_df['ra_index_id'] = 120000080
                 elif exchange_rate_index_nav_df['eri_index_id'].iloc[0] == 'ERI000004':
                     ra_index_nav_df['ra_index_id'] = 120000081
+                elif exchange_rate_index_nav_df['eri_index_id'].iloc[0] == 'ERI000005':
+                    ra_index_nav_df['ra_index_id'] = 120000020
+                elif exchange_rate_index_nav_df['eri_index_id'].iloc[0] == 'ERI000006':
+                    ra_index_nav_df['ra_index_id'] = 120000034
 
 
                 ra_index_nav_df = ra_index_nav_df.set_index(['ra_index_id', 'ra_date'])

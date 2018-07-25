@@ -94,7 +94,7 @@ class ValidFactor():
         ffe = ffe.set_index('ff_id')
         factor_ids = ffe.index.unique()
 
-        for factor_id in factor_ids:
+        for factor_id in factor_ids[:9]:
             print(factor_id)
 
             tmp_ffe = ffe.loc[factor_id]
@@ -105,50 +105,50 @@ class ValidFactor():
             tmp_ffe = tmp_ffe.fillna(method = 'pad', limit = 126)
             tmp_ffe = tmp_ffe[tmp_ffe.index >= '2010-01-01']
             tmp_ffe = tmp_ffe.fillna(0.0)
-            # ffe_mean = np.sort(tmp_ffe.values, 1)[:, -20:].mean(1)
-            ffe_mean = np.sort(tmp_ffe.values, 1)[:, :20].mean(1)
+            ffe_mean = np.sort(tmp_ffe.values, 1)[:, -20:].mean(1)
+            # ffe_mean = np.sort(tmp_ffe.values, 1)[:, :20].mean(1)
             df_res = pd.Series(data = ffe_mean, index = tmp_ffe.index)
-            # print(df_res.tail(10))
-            print(df_res.mean())
+            print(df_res.tail(1))
+            # print(df_res.mean())
 
 
-    def pool_corr(self):
+    def index_factor_exposure(self):
 
-        pool_id = '11115001'
-        # pool_id = '11110101'
-        index_id = '120000001'
+        factor_loc = 9
+        mz_id = 'MZ.F100%d0'%factor_loc
 
-        # pool_nav = asset_ra_pool_nav.load_series('11110101', 0, 9)
-        pool_nav = asset_ra_pool_nav.load_series(pool_id, 0, 9)
-        pool_ret = pool_nav.resample('w').last().pct_change().dropna()
+        mz_pos = asset_mz_markowitz_pos.load(mz_id)
+        sfe = self.sfe
+        dates = mz_pos.index.intersection(sfe.index)
+        dates = dates.unique()
+        for date in dates[::12]:
+            tmp_pos = mz_pos.loc[date]
+            tmp_sfe = sfe.loc[date]
+            tmp_sfe = tmp_sfe.set_index(['stock_id', 'sf_id'])
+            tmp_sfe = tmp_sfe.unstack()
+            tmp_sfe.columns = tmp_sfe.columns.levels[1]
+            tmp_sfe = tmp_sfe.loc[tmp_pos.index]
+            tmp_sfe = tmp_sfe.fillna(0.0)
+            tmp_pe = np.dot(tmp_pos, tmp_sfe)
+            print(date, tmp_pe[factor_loc - 1])
 
-        index_nav = base_ra_index_nav.load_series(index_id)
-        index_nav = index_nav.reindex(pool_nav.index)
-        index_ret = index_nav.resample('w').last().pct_change().dropna()
-        index_ret = index_ret.reindex(pool_ret.index)
-
-        # corr = np.corrcoef(index_ret, pool_ret)[1, 0]
-        corr = np.corrcoef(index_nav, pool_nav)[1, 0]
-        print(index_id, pool_id, corr)
 
 
     def handle(self):
 
         # self.split_filter()
 
-        # self.ffe = asset_fund_factor.load_fund_factor_exposure()
+        self.ffe = asset_fund_factor.load_fund_factor_exposure()
         # self.continuity_filter()
-        # self.exposure_filter()
+        self.exposure_filter()
 
-        self.pool_corr()
+        # self.sfe = asset_stock_factor.load_stock_factor_exposure(begin_date = '2010-01-01')
+        # self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['trade_date'], parse_dates = ['trade_date'])
+        # self.index_factor_exposure()
 
 
 if __name__ == '__main__':
 
     vf = ValidFactor()
     vf.handle()
-
-
-
-
 
