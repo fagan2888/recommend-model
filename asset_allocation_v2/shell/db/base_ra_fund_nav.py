@@ -86,6 +86,10 @@ def load_series(code, reindex=None, begin_date=None, end_date=None):
         t1.c.ra_nav_adjusted.label('nav'),
     ]
 
+    prefix = code[0:2]
+    if prefix == 'FD':
+        code = code[3:]
+
     s = select(columns) \
         .where((t1.c.ra_code == code) | (t1.c.ra_fund_id == code))
 

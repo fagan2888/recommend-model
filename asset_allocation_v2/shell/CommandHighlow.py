@@ -574,6 +574,7 @@ def pos_update(highlow, alloc):
     # algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
     algo = highlow['mz_algo']
 
+
     if algo == 1 or algo == 3 or algo == 4:
         #
         # 焦氏策略
@@ -613,6 +614,10 @@ def pos_update(highlow, alloc):
         # 姚氏策略
         #
         df_high_riskmgr, df_low_riskmgr, df = yao(highlow, alloc)
+
+    elif algo == 5:
+
+        df_high_riskmgr, df_low_riskmgr, df = do_nothing(highlow, alloc)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, highlow_id), fg='red'))
         return
@@ -646,14 +651,17 @@ def pos_update(highlow, alloc):
     for k, v in df_tosave.groupby(df_tosave.index):
         riskmgr_date = k[1]
         asset_id = k[2]
-        if asset_id == '11310100' or asset_id == '11310101':
+        if algo == 5:
             riskmgr_signal = 1.0
-        elif asset_id in df_high_riskmgr.columns:
-            riskmgr_signal = df_high_riskmgr.loc[riskmgr_date, asset_id]
-        elif asset_id in df_low_riskmgr.columns:
-            riskmgr_signal = df_low_riskmgr.loc[riskmgr_date, asset_id]
         else:
-            raise Exception('no riskmgr signal')
+            if asset_id == '11310100' or asset_id == '11310101':
+                riskmgr_signal = 1.0
+            elif asset_id in df_high_riskmgr.columns:
+                riskmgr_signal = df_high_riskmgr.loc[riskmgr_date, asset_id]
+            elif asset_id in df_low_riskmgr.columns:
+                riskmgr_signal = df_low_riskmgr.loc[riskmgr_date, asset_id]
+            else:
+                raise Exception('no riskmgr signal')
         df_tosave.loc[k, 'mz_riskmgr_pos'] = riskmgr_signal
         #print(riskmgr_date, asset_id, v)
     #df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0)]
@@ -992,24 +1000,9 @@ def yao(highlow, alloc):
         df_high_riskmgr_diff = df_high_riskmgr.diff()
         for column in df_high.columns:
             data_h[column] = df_high[column] * df_high_riskmgr[column]
-            pos_ser = df_high[column]
-            riskmgr_diff_ser = df_high_riskmgr_diff[column]
-            pos = []
-            dates = pos_ser.index
-            for d in dates:
-                if riskmgr_diff_ser.loc[d] < 0:
-                    pos_ser = pos_ser[pos_ser.index >= d]
-                    pos.append(pos_ser.loc[d])
-                else:
-                    pos_rolling_ser = pos_ser.rolling(4, min_periods = 1).mean()
-                    pos.append(pos_rolling_ser.loc[d])
-                #if column == 'ERI000002':
-                #    print(d, pos[-1], riskmgr_diff_ser.loc[d], pos_ser.loc[d])
-            data_h[column] = pd.Series(pos, index = dates)
 
     df_h = pd.DataFrame(data_h)
 
-    print(df_h.tail())
     #
     # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
     # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
@@ -1021,6 +1014,23 @@ def yao(highlow, alloc):
 
     return df_high_riskmgr, pd.DataFrame(), df_h
 
+
+def do_nothing(highlow, alloc):
+
+    high = alloc['mz_markowitz_id']
+    risk = int(alloc['mz_risk'] * 10)
+
+    df_h = asset_mz_markowitz_pos.load_raw(high)
+
+    sr = 1.0 - df_h.sum(axis=1)
+    if (sr > 0.000099).any():
+        df_h['120000039'] = df_h['120000039'] + sr
+
+    return pd.DataFrame(), pd.DataFrame(), df_h
+
+    #
+    # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
+    # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
 
 @highlow.command()
 @click.option('--id', 'optid', help='ids of highlow to update')
