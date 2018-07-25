@@ -1105,7 +1105,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         lookback = 21
         period = 5
         target = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0])
-        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = FactorIndexAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)

@@ -172,47 +172,10 @@ class FundFactor(Factor):
         return df_ret, df_sret
 
 
-    #去极值标准化
-    @staticmethod
-    def normalized(factor_df):
-        factor_df = factor_df.fillna(np.nan)
-
-        #去极值
-        factor_median = factor_df.median(axis = 1)
-
-        factor_df_sub_median = abs(factor_df.sub(factor_median, axis = 0))
-        factor_df_sub_median_median = factor_df_sub_median.median(axis = 1)
-
-        max_factor_df = factor_median + 10.000 * factor_df_sub_median_median
-        min_factor_df = factor_median - 10.000 * factor_df_sub_median_median
-
-        stock_num = len(factor_df.columns)
-        stock_ids = factor_df.columns
-        max_factor_df = pd.concat([max_factor_df]*stock_num, 1)
-        min_factor_df = pd.concat([min_factor_df]*stock_num, 1)
-        max_factor_df.columns = stock_ids
-        min_factor_df.columns = stock_ids
-
-        factor_df = factor_df.mask(factor_df < min_factor_df, min_factor_df)
-        factor_df = factor_df.mask(factor_df > max_factor_df, max_factor_df)
-
-        #归一化
-        factor_std  = factor_df.std(axis = 1)
-        factor_mean  = factor_df.mean(axis = 1)
-
-        factor_df = factor_df.sub(factor_mean, axis = 0)
-        factor_df = factor_df.div(factor_std, axis = 0)
-
-        return factor_df
 
 
 if __name__ == '__main__':
 
     ff = FundFactor('FF.000001')
     ff.cal_factor_exposure()
-
-
-
-
-
 
