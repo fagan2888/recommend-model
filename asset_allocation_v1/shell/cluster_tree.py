@@ -79,6 +79,7 @@ def load_factor():
 
 def clusterKMeansBase(corr0,maxNumClusters=10,n_init=10):
     dist,silh=((1-corr0.fillna(0))/2.)**.5,pd.Series()
+    dist = dist.fillna(0.0)
     # distance matrix
     for init in range(n_init):
         for i in xrange(2, maxNumClusters+1):

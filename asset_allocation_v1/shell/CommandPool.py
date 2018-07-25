@@ -112,14 +112,14 @@ def fund(ctx, datadir, startdate, enddate, optid, optlist, optlimit, opteliminat
 
 @pool.command()
 @click.option('--datadir', '-d', type=click.Path(exists=True), help=u'dir used to store tmp data')
-@click.option('--start-date', 'startdate', default='2010-01-08', help=u'start date to calc')
+@click.option('--start-date', 'startdate', default='2012-06-01', help=u'start date to calc')
 @click.option('--end-date', 'enddate', help=u'end date to calc')
 @click.option('--period', 'optperiod', type=int, default=1, help=u'adjust period by week')
 @click.option('--id', 'optid', help=u'fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help=u'list pool to update')
 @click.option('--calc/--no-calc', 'optcalc', default=True, help=u're calc label')
 @click.option('--if/--no-if', 'optif', default=False, help=u'cal industry factors')
-@click.option('--limit', 'optlimit', type=int, default=10, help=u'how many fund selected for each category')
+@click.option('--limit', 'optlimit', type=int, default=20, help=u'how many fund selected for each category')
 @click.option('--points', 'optpoints', help=u'Adjust points')
 @click.pass_context
 def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optif, optperiod, optpoints):
@@ -161,6 +161,7 @@ def fund_corr_jensen(ctx, datadir, startdate, enddate, optid, optlist, optlimit,
 
     for _, pool in df_pool.iterrows():
         fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc)
+        # fund_update_multi_factor(pool, adjust_points, optlimit, optcalc)
 
 
 def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
@@ -194,23 +195,98 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
 
                 # codes = pool_by_corr_jensen(pool, day, lookback, limit, df_nav_fund)
                 # codes = pool_by_lasso_regression(pool, day, lookback, limit, df_nav_fund)
-                # if pre_codes is not None:
-                #     final_codes = []
-                #     for pre_code in pre_codes:
-                #         if pre_code in codes:
-                #             final_codes.append(pre_code)
-                #     for code in codes:
-                #         if (code not in final_codes) and (len(final_codes) < limit):
-                #             final_codes.append(code)
-                #     codes = pre_codes = final_codes
-                # else:
-                #     codes = codes[:3]
-                #     pre_codes = codes
+
+                if pool.ra_fund_type == 11101:
+                    vf.handle(day, 'large')
+                    codes = vf.large_fund_codes
+                elif pool.ra_fund_type == 11102:
+                    vf.handle(day, 'small')
+                    codes = vf.small_fund_codes
+
+                if pre_codes is not None:
+                    final_codes = []
+                    for pre_code in pre_codes:
+                        if pre_code in codes:
+                            final_codes.append(pre_code)
+                    for code in codes:
+                        if (code not in final_codes) and (len(final_codes) < limit):
+                            final_codes.append(code)
+
+                    final_codes = final_codes[:20]
+                    codes = pre_codes = final_codes
+                else:
+                    codes = codes[:20]
+                    pre_codes = codes
+
+
+                # print day, codes
+                if codes is None or len(codes) == 0:
+                    continue
+                ra_fund = base_ra_fund.load(codes = codes)
+                ra_fund = ra_fund.set_index(['ra_code'])
+                ra_pool    = pool['id']
+                for code in ra_fund.index:
+                    ra_fund_id = ra_fund.loc[code, 'globalid']
+                    data.append([ra_pool, day, ra_fund_id, code])
+        fund_df = pd.DataFrame(data, columns = ['ra_pool', 'ra_date', 'ra_fund_id', 'ra_fund_code'])
+        fund_df = fund_df.set_index(['ra_pool', 'ra_date', 'ra_fund_id'])
+
+        df_new = fund_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        s = s.where(ra_pool_fund_t.c.ra_pool.in_(df_new.index.get_level_values(0).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, ra_pool_fund_t, df_new, df_old)
+
+
+def fund_update_multi_factor(pool, adjust_points, optlimit, optcalc):
+    ''' re calc fund for single fund pool
+    '''
+    lookback = pool.ra_lookback
+    limit = optlimit
+
+    if optcalc:
+        #
+        # 计算每个调仓点的最新配置
+        #
+
+        db = database.connection('asset')
+        # ra_pool_sample_t = Table('ra_pool_sample', MetaData(bind=db), autoload=True)
+        ra_pool_fund_t= Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+
+        ## Load df_nav_fund
+        # today = datetime.now().strftime('%Y-%m-%d')
+        # dates = base_trade_dates.trade_date_lookback_index(today, 500)
+        # pool_codes = list(base_ra_fund.find_type_fund(1).ra_code.ravel())
+        # start_date = dates.min().strftime("%Y-%m-%d")
+        # df_nav_fund  = base_ra_fund_nav.load_daily(start_date, today, codes = pool_codes)
+
+        data = []
+        with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
+            pre_codes = None
+            vf = ValidFactor()
+            for day in adjust_points:
+                bar.update(1)
+
+                # codes = pool_by_corr_jensen(pool, day, lookback, limit, df_nav_fund)
+                # codes = pool_by_lasso_regression(pool, day, lookback, limit, df_nav_fund)
 
                 # vf.handle(day, 'large')
-                # codes = vf.large_fund_codes
+                # df_res = vf.df_res_large
                 vf.handle(day, 'small')
-                codes = vf.small_fund_codes
+                df_res = vf.df_res_small
+
+                if pre_codes is not None:
+                    used_num = int(np.ceil(0.8 * len(pre_codes)))
+                    df_pre_codes = df_res.loc[np.intersect1d(pre_codes, df_res.index)]
+                    valid_pre_codes = df_pre_codes.sort_values('alpha', ascending = False).index.values[:used_num]
+                    new_codes = df_res.drop(valid_pre_codes).index.values[:20]
+                    codes = np.append(valid_pre_codes, new_codes)[:20]
+                    pre_codes = codes
+
+                else:
+                    codes = df_res.index.values[:20]
+                    pre_codes = codes
 
                 print day, codes
                 # print day, codes
