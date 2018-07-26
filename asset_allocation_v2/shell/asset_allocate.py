@@ -40,6 +40,8 @@ from trade_date import ATradeDate
 from view import View
 from RiskParity import cal_weight
 import util_optimize
+from scipy.optimize import minimize
+from sklearn.neighbors import KernelDensity
 
 import PureFactor
 import traceback, code
@@ -449,6 +451,94 @@ class MzRiskMgrFixRiskBootWaveletAllocate(MzRiskMgrAllocate):
             bound.append(self.bound[asset_id].get_day_bound(day).to_dict())
 
         return df_inc, bound
+
+
+
+class MzSTPAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(MzSTPAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        kde = KernelDensity(bandwidth = 0.0001)
+        kde.fit(df_inc)
+        roots = []
+        for root in range(1000):
+            roots.append(kde.sample(250, random_state = root))
+
+        w0 = [0 / len(df_inc.columns)] * len(df_inc.columns)
+        w0[df_inc.columns.tolist().index('120000039')] = 1.0
+        cons = (
+            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1},
+            {'type': 'ineq', 'fun': lambda x : x}
+        )
+
+        res = minimize(self.spt_objective, w0, args = [roots], method = 'SLSQP', constraints=cons, options={'disp':False, 'eps':0.01})
+        ws = res.x
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+        print(ws)
+        return ws
+
+
+    def spt_objective(self, x, pars):
+
+        roots = pars[0]
+        count = 0.0
+        fail = 0.0
+        rets = []
+        for root in roots:
+            count += 1
+            ret = np.dot(root, x)
+            nav = (1+ret).cumprod()
+            # ret = root[:, 0]
+            # nav = (1+ret).cumprod()
+            loss = min(nav) - 1
+            tret = nav[-1] - 1
+            rets.append(tret)
+            mdd = self.maxdd(nav)
+            # print 'loss:', loss
+            # print 'tret:',tret
+
+            if mdd < -0.15:
+                fail += 1
+
+        if fail / count > 0.01:
+            return 1.0
+        else:
+            return -1.0 * np.mean(rets)
+
+
+    def maxdd(self, nav):
+        return pd.Series(nav).rolling(len(nav), min_periods = 1).apply(lambda x: x[-1]/max(x) - 1).min()
+
+
+    def allocate(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        asset_ids = list(self.assets.keys())
+        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
+
+        s = 'perform %-12s' % self.__class__.__name__
+
+        with click.progressbar(
+                adjust_days, label=s.ljust(30),
+                item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+
+            for day in bar:
+
+                logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+
+                df_inc, bound = self.load_allocate_data(day, asset_ids)
+
+                ws = self.allocate_algo(day, df_inc, bound)
+
+                for asset_id in list(ws.keys()):
+                    pos_df.loc[day, asset_id] = ws[asset_id]
+
+        return pos_df
 
 
 if __name__ == '__main__':
