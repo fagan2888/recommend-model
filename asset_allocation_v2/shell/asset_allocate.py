@@ -451,7 +451,6 @@ class MzRiskMgrFixRiskBootWaveletAllocate(MzRiskMgrAllocate):
         return df_inc, bound
 
 
-
 if __name__ == '__main__':
 
     asset = Asset('120000001')

@@ -391,12 +391,11 @@ def load_riskmgr2(assets, sr_riskmgr, reindex=None, enable=True):
     df = pd.DataFrame(data, index=index).fillna(method='pad')
     df.columns.name = 'mz_asset_id'
 
+    df = df.loc[abs(df.diff()).sum(axis = 1) > 0]
     if reindex is not None:
         df = df[reindex.min():]
 
     return df
-
-
 
 
 def load_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
@@ -616,12 +615,12 @@ def pos_update(highlow, alloc):
         df_high_riskmgr, df_low_riskmgr, df = yao(highlow, alloc)
 
     elif algo == 5:
-
         df_high_riskmgr, df_low_riskmgr, df = do_nothing(highlow, alloc)
+    elif algo == 6:
+        df_high_riskmgr, df_low_riskmgr, df = yuan(highlow, alloc)
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, highlow_id), fg='red'))
         return
-
 
     #
     # 导入数据: highlow_pos
@@ -1003,6 +1002,55 @@ def yao(highlow, alloc):
 
     df_h = pd.DataFrame(data_h)
 
+    #
+    # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
+    # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
+    # 天的持仓100%， 如果因为风控空仓，需要用货币补足。
+    #
+    sr = 1.0 - df_h.sum(axis=1)
+    if (sr > 0.000099).any():
+        df_h['120000039'] = df_h['120000039'] + sr
+
+    return df_high_riskmgr, pd.DataFrame(), df_h
+
+
+def yuan(highlow, alloc):
+
+
+    high = alloc['mz_markowitz_id']
+    risk = int(alloc['mz_risk'] * 10)
+    df_asset = asset_mz_highlow_asset.load([alloc['globalid']])
+    df_asset.set_index(['mz_asset_id'], inplace=True)
+
+    #
+    # 加载高风险资产仓位
+    #
+    index = None
+
+    df_high = asset_mz_markowitz_pos.load_raw(high)
+    df_high_riskmgr = load_riskmgr2(df_high.columns, df_asset['mz_riskmgr_id'], df_high.index, True)
+    index = df_high.index.union(df_high_riskmgr.index)
+    #index = df_high.index
+
+    data_h = {}
+    if not df_high.empty:
+        df_high = df_high.reindex(index, method='pad')
+        for d in df_high_riskmgr.index:
+            record = 1.0 - df_high_riskmgr.loc[d]
+            asset_ratio = df_high.loc[d]
+            if (asset_ratio * record).sum() > 0.4:
+                pass
+            else:
+                record[asset_ratio * record < 0.07] = 0
+            df_high_riskmgr.loc[d] = 1.0 - record
+        df_high_riskmgr = df_high_riskmgr.reindex(index, method='pad').fillna(1.0)
+        for column in df_high.columns:
+            data_h[column] = df_high[column] * df_high_riskmgr[column]
+
+
+    riskmgr = df_high_riskmgr.loc[abs(df_high_riskmgr.diff()).sum(axis = 1) > 0]
+    print(riskmgr)
+    df_h = pd.DataFrame(data_h)
     #
     # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
     # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
