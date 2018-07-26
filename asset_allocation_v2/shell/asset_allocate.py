@@ -486,6 +486,23 @@ class MzSTPAllocate(Allocate):
     def spt_objective(self, x, pars):
 
         roots = pars[0]
+        rets = np.dot(roots, x)
+        navs = (1+rets).cumprod(1)
+        ret = navs[:, -1].mean()
+        df_navs = pd.DataFrame(navs.T)
+        maxdds = (df_navs / df_navs.cummax() - 1).min()
+        # maxdds = np.apply_along_axis(self.maxdd, 1, navs)
+        P = len(maxdds[maxdds < -0.1]) / len(maxdds)
+
+        if P > 0.01:
+            return 1.0
+        else:
+            return -ret
+
+
+    def spt_objective_old(self, x, pars):
+
+        roots = pars[0]
         count = 0.0
         fail = 0.0
         rets = []
@@ -495,7 +512,7 @@ class MzSTPAllocate(Allocate):
             nav = (1+ret).cumprod()
             # ret = root[:, 0]
             # nav = (1+ret).cumprod()
-            loss = min(nav) - 1
+            # loss = min(nav) - 1
             tret = nav[-1] - 1
             rets.append(tret)
             mdd = self.maxdd(nav)
