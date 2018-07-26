@@ -162,6 +162,12 @@ class Asset(object):
                 #
                 sr = db.asset_stock.load_stock_nav_series(
                     asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+            elif prefix == 'MZ':
+                #
+                # markowitz asset
+                #
+                sr = db.asset_mz_markowitz_nav.load_series(
+                asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
             else:
                 sr = pd.Series()
 

@@ -278,9 +278,17 @@ class MzFixRiskBootAllocate(Allocate):
         #ts = [0.5 ** (t / len(df_inc)) for t in range(0, len(df_inc))]
         #ts.reverse()
         #df_inc = df_inc.mul(ts, axis = 0)
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
-        # risk, returns, ws, sharpe = PF.markowitz_fixrisk(df_inc, bound, self.risk)
-        ws = dict(zip(df_inc.columns.ravel(), ws))
+        if day < datetime(2014,1,1):
+            df_inc = df_inc.drop(['120000058', '120000073'], axis=1)
+            bound = bound[2:]
+            risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+            ws = dict(zip(df_inc.columns.ravel(), ws))
+            ws['120000058'] = 0.0
+            ws['120000073'] = 0.0
+        else:
+            risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+            ws = dict(zip(df_inc.columns.ravel(), ws))
+
         return ws
 
 
