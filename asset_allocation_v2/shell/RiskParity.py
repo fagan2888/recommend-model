@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-# from ipdb import set_trace
+from ipdb import set_trace
 import sys
 sys.path.append('shell')
 from db import asset_mz_markowitz_nav, base_trade_dates
@@ -15,7 +15,9 @@ import DBData
 def calculate_portfolio_var(w,V):
     # function that calculates portfolio risk
     w = np.matrix(w)
-    return (w*V*w.T)[0,0]
+    pvar = np.dot(np.dot(w,V),w.T)[0,0]
+    # return (w*V*w.T)[0,0]
+    return pvar
 
 
 def calculate_risk_contribution(w,V):
@@ -23,7 +25,7 @@ def calculate_risk_contribution(w,V):
     w = np.matrix(w)
     sigma = np.sqrt(calculate_portfolio_var(w,V))
     # Marginal Risk Contribution
-    MRC = V*w.T
+    MRC = np.dot(V,w.T)
     # Risk Contribution
     RC = np.multiply(MRC,w.T)/sigma
     return RC
@@ -49,6 +51,7 @@ def long_only_constraint(x):
 
 
 def cal_weight(V, x_t, cons2 = None, w0 = None):
+    V = V*10000
     if w0 is None:
         w0 = [1/len(x_t)]*len(x_t)
     cons1 = (

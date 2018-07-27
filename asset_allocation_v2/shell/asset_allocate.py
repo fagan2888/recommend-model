@@ -38,7 +38,7 @@ from asset import Asset, WaveletAsset
 from allocate import Allocate
 from trade_date import ATradeDate
 from view import View
-from RiskParity import cal_weight
+import RiskParity
 import util_optimize
 from multiprocessing import Pool
 
@@ -74,6 +74,22 @@ class MzAllocate(Allocate):
 
     def allocate_algo(self, day, df_inc, bound):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
+
+
+class RpAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(RpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+
+    def allocate_algo(self, day, df_inc, bound):
+        asset_num = df_inc.shape[1]
+        V = df_inc.cov()
+        x_t = np.array([1 / asset_num] * asset_num)
+        ws = RiskParity.cal_weight(V, x_t)
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws
 

@@ -38,7 +38,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate, RpAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1038,6 +1038,13 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.02)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = FactorIndexAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        df = allocate.allocate()
+
+    elif algo == 12:
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = RpAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
 
 
