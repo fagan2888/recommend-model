@@ -462,6 +462,7 @@ def online_return_reason(ctx, optsdate, optedate):
     trade_date = trade_date_df.index
     trade_date = list(set(trade_date))
     trade_date.sort()
+    trade_date_df = trade_date_df.sort_index()
 
     #trade_date_df = trade_date_df[trade_date_df.index < datetime.strptime(optsdate, '%Y-%m-%d').date()]
     trade_date_df = trade_date_df[trade_date_df.index < optsdate]
@@ -516,6 +517,7 @@ def online_risk_reason(optsdate, optedate):
     trade_date = trade_date_df.index
     trade_date = list(set(trade_date))
     trade_date.sort()
+
 
     gid = 800000
     sql = "SELECT on_fund_id, sum(on_return_value) FROM on_online_contrib WHERE on_online_id = %d AND on_type = 8 \
