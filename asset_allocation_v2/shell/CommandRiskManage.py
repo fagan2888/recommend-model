@@ -403,7 +403,7 @@ def vars_update(riskmgr):
     vars_ = {_id: asset_rm_riskmgr_vars.load_series(_id) for _id in codes}
     for _id in codes:
         tdate = tdates[_id]
-        tdate = tdate[tdate >= rm_start_date]
+        tdate = tdate[tdate >= rm_start_date] if rm_start_date is not None else tdate
         # Check if the VaRs table is empty
         if vars_[_id].empty:
             nav = database.load_nav_series(_id, reindex=tdate)
