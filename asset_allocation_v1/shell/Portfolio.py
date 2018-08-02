@@ -48,6 +48,8 @@ def markowitz_r_spe(funddfr, bounds):
         if risks[j] == 0:
             continue
         sharp = (returns[j] - rf) / risks[j]
+        # if sharp < 0:
+        #     sharp = 1 / sharp
         if sharp > final_sharp:
             final_risk = risks[j]
             final_return = returns[j]
@@ -81,6 +83,8 @@ def markowitz_r_spe_bl(funddfr, P, eta, alpha, bounds):
         if risks[j] == 0:
             continue
         sharp = (returns[j] - rf) / risks[j]
+        # if sharp < 0:
+        #     sharp = 1 / sharp
         if sharp > final_sharp:
             final_risk = risks[j]
             final_return = returns[j]

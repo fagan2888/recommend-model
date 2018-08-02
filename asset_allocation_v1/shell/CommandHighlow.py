@@ -655,8 +655,8 @@ def range_cons(x):
 def limit_update(highlow, alloc, ratio_hl):
     # ratio_hl = cal_limit(highlow, alloc)
     risk = alloc.mz_risk
-    hl_range1 = 0.5
-    hl_range2 = 0.2
+    hl_range1 = 0.2
+    hl_range2 = 1.0
     arg1 = 1 / (hl_range1 * 2)
     arg2 = 1 - hl_range1
     arg3 = 1 / (hl_range2 * 2)
