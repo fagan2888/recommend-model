@@ -18,6 +18,7 @@ import Const
 import DFUtil
 from TimingGFTD import TimingGFTD
 from TimingHmm import TimingHmm
+from CommandGoldTiming import cal_gold_view
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -26,6 +27,7 @@ from sqlalchemy import MetaData, Table, select, func
 from tabulate import tabulate
 from db import *
 from util.xdebug import dd
+from ipdb import set_trace
 
 import traceback, code
 
@@ -60,15 +62,13 @@ def signal(ctx, optid, optlist, optonline):
     xtypes = None
     if optonline == False:
         xtypes = [1]
-
+    print 'timings:',timings
     df_timing = asset_tc_timing.load(timings, xtypes)
-
 
     if optlist:
 
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
         return 0
-    
     with click.progressbar(length=len(df_timing), label='update signal'.ljust(30)) as bar:
         for _, timing in df_timing.iterrows():
             bar.update(1)
@@ -76,6 +76,43 @@ def signal(ctx, optid, optlist, optonline):
                 signal_update_gftd(timing)
             elif timing['tc_method'] == 3:
                 signal_update_hmm(timing)
+            elif timing['tc_method'] == 5:
+                signal_update_gold(timing)
+
+def signal_update_gold(timing):
+    '''cal timing signal for gold
+    '''
+    # 加载数据
+    timing_id = timing['globalid']
+    df_data = cal_gold_view()
+
+    df_data = df_data[['view_gold']]
+    #print df_data[['view_gold']]
+    df_data.rename(columns={'view_gold':'tc_signal'}, inplace = True)
+    df_data.index.name='tc_date'
+    df_data['tc_signal'] = np.where(df_data['tc_signal'].values >= 0,1,-1)
+    #print df_data
+
+    df_new = df_data[['tc_signal']]
+    df_new['tc_timing_id'] = timing_id
+    df_new = df_new.reset_index().set_index(['tc_timing_id', 'tc_date'])
+    print df_new
+
+    # 保存择时结果到数据库,更新tc_timing_signal
+    db = database.connection('asset')
+    df_new = df_new[['tc_signal']]
+    t3 = Table('tc_timing_signal', MetaData(bind=db), autoload=True)
+    columns5 = [
+        t3.c.tc_timing_id,
+        t3.c.tc_date,
+        t3.c.tc_signal,
+    ]
+    s = select(columns5, (t3.c.tc_timing_id == timing_id))
+    df_old = pd.read_sql(s, db, index_col=['tc_timing_id', 'tc_date'], parse_dates=['tc_date'])
+
+    # 更新数据库
+    database.batch(db, t3, df_new, df_old, timestamp=False)
+    return 0
 
 
 
