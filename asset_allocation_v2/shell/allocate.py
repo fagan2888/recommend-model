@@ -31,7 +31,7 @@ from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
-from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl, asset_allocate
 from util import xdict
 from util.xdebug import dd
 from asset import Asset, WaveletAsset
@@ -46,23 +46,21 @@ logger = logging.getLogger(__name__)
 
 class AssetBound(object):
 
-    def __init__(self, globalid = None, asset_id = None, bound = None, upper = 0.7):
+    def __init__(self, globalid = None, asset_id = None, bound = None, upper = 0.6, start_date = None, end_date = None):
 
         self.__globalid = globalid
+        self.__asset_id = asset_id
+        self.__start_date = start_date
+        self.__end_date = end_date
         #TODO : load from database by globalid
 
-        self.__asset_id = asset_id
-
         if bound is None:
-
-            asset_bound = {'sum1': 0, 'sum2' : 0, 'upper': upper, 'lower': 0.0, 'lower_sum1' : 0, 'lower_sum2' : 0, 'upper_sum1' : 0, 'upper_sum2' : 0}
-            trade_date = [pd.datetime(1900,1,1)]
-            self.__bound = pd.DataFrame(asset_bound, index = trade_date)
-            self.__bound.index.name = 'trade_date'
-
+            asset_bound = {'sum1': 0, 'sum2' : 0, 'upper': upper, 'lower': 0.0, 'lower_sum1' : 0, 'lower_sum2' : 0, 'upper_sum1' : 0, 'upper_sum2' : 0, 'asset_id' : asset_id}
         else:
-
-            self.__bound = bound
+            asset_bound = bound
+        trade_date = [pd.datetime(1900,1,1)]
+        self.__bound = pd.DataFrame(asset_bound, index = trade_date)
+        self.__bound.index.name = 'trade_date'
 
     @property
     def globalid(self):
@@ -76,6 +74,15 @@ class AssetBound(object):
     def bound(self):
         return self.__bound.copy()
 
+    @property
+    def start_date(self):
+        return self.__start_date
+
+    @property
+    def end_date(self):
+        return self.__end_date
+
+
     def get_day_bound(self, day):
         bound = self.__bound.copy().sort_index(ascending=True)
         days = bound.index
@@ -83,9 +90,38 @@ class AssetBound(object):
         last_day = days[-1]
         return bound.loc[last_day]
 
-    def load_db():
-        pass
 
+    @staticmethod
+    def load_asset_bounds(globalid):
+        df = asset_allocate.load_mz_markowitz_bounds(globalid)
+        df = df.rename(columns = {'mz_upper_limit': 'upper', 'mz_lower_limit': 'lower', 'mz_sum1_limit': 'sum1', 'mz_sum2_limit': 'sum2',
+                                'mz_lower_sum1_limit':'lower_sum1', 'mz_lower_sum2_limit':'lower_sum2', 'mz_upper_sum1_limit':'upper_sum1', 'mz_upper_sum1_limit':'upper_sum1',})
+        bounds = {}
+        for asset_id in df.index:
+            bound_dict = df.loc[asset_id].to_dict()
+            bound = bounds.setdefault(asset_id, [])
+            bound.append(
+                AssetBound(globalid = globalid, asset_id = asset_id, bound = bound_dict, start_date = bound_dict['mz_allocate_start_date'], end_date = bound_dict['mz_allocate_end_date'])
+            )
+        return bounds
+
+
+    @staticmethod
+    def get_asset_day_bound(asset_id, day, bounds):
+
+        if type(day) == str:
+            day = datetime.strptime(day, '%Y-%m-%d')
+
+        if not (asset_id in bounds.keys()):
+            return AssetBound(asset_id = asset_id).get_day_bound(day)
+        else:
+            for asset_bound in bounds[asset_id]:
+                if pd.isnull(asset_bound.start_date) and pd.isnull(asset_bound.end_date):
+                    return asset_bound.get_day_bound(day)
+                elif (asset_bound.start_date <= day) and (pd.isnull(asset_bound.end_date) or (asset_bound.end_date > day)):
+                    return asset_bound.get_day_bound(day)
+
+            return AssetBound(asset_id = asset_id, upper = 0.0).get_day_bound(day)
 
     def to_db():
         pass
@@ -106,7 +142,7 @@ class Allocate(object):
         self.__period = period
         self.__bound = {}
         for asset_id in list(assets.keys()):
-            self.__bound[asset_id] = AssetBound('asset_bound_default', asset_id)
+            self.__bound[asset_id] = [AssetBound('asset_bound_default', asset_id = asset_id)]
         if bound is not None:
             for asset_id in list(bound.keys()):
                 self.__bound[asset_id] = bound[asset_id]
@@ -189,11 +225,11 @@ class Allocate(object):
         for asset_id in asset_ids:
             data[asset_id] = self.assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
-        df_inc  = df_nav.pct_change().dropna()
+        df_inc  = df_nav.pct_change().fillna(0.0)
 
         bound = []
         for asset_id in df_inc.columns:
-            bound.append(self.bound[asset_id].get_day_bound(day).to_dict())
+            bound.append(AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict())
 
         return df_inc, bound
 
@@ -237,8 +273,9 @@ if __name__ == '__main__':
     for asset_id in asset_globalids:
         assets[asset_id] = Asset(asset_id)
 
-    allocate = Allocate('ALC.000001', assets, trade_date, 26)
-    print(allocate.allocate())
+    #allocate = Allocate('ALC.000001', assets, trade_date, 26)
+    #print(allocate.allocate())
 
-    bound = AssetBound('AB.000001', '120000001')
-    print(bound.get_day_bound('2018-01-01'))
+    bounds = AssetBound.load_asset_bounds('AB.000001')
+    print(AssetBound.get_asset_day_bound('120000016', '2003-01-03', bounds))
+    #print(bound.get_day_bound('2018-01-01'))

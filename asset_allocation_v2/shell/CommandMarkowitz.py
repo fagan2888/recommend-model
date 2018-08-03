@@ -871,9 +871,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df_asset = df_asset[['mz_upper_limit', 'mz_lower_limit', 'mz_sum1_limit', 'mz_sum2_limit']];
     df_asset = df_asset.rename(columns={'mz_upper_limit': 'upper', 'mz_lower_limit': 'lower', 'mz_sum1_limit': 'sum1', 'mz_sum2_limit': 'sum2'})
     assets = df_asset.T.to_dict()
-    bounds = {}
-    for asset_id in assets.keys():
-        bounds[asset_id] = AssetBound(asset_id = asset_id, upper = assets[asset_id]['upper'])
     #
     # 加载参数
     #
@@ -885,6 +882,12 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     adjust_period = int(argv.get('allocate_adjust_position_period', 1))
     wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
     turnover = float(argv.get('allocate_turnover_filter', 0))
+    bound_id = argv.get('asset_bound', None)
+    if bound_id is not None:
+        bounds = AssetBound.load_asset_bounds(bound_id)
+    else:
+        bounds = None
+
 
     algo = alloc['mz_algo'] if alloc['mz_algo'] != 0 else markowitz['mz_algo']
 

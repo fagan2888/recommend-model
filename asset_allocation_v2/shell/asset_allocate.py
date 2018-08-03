@@ -230,8 +230,7 @@ class MzFixRiskBootWaveletAllocate(Allocate):
         df_inc  = df_nav.pct_change().dropna()
         bound = []
         for asset_id in df_inc.columns:
-            bound.append(self.bound[asset_id].get_day_bound(day).to_dict())
-
+            bound.append(AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict())
         return df_inc, bound
 
 
@@ -270,8 +269,7 @@ class MzFixRiskBootWaveletBlAllocate(MzBlAllocate):
         df_inc  = df_nav.pct_change().dropna()
         bound = []
         for asset_id in df_inc.columns:
-            bound.append(self.bound[asset_id].get_day_bound(day).to_dict())
-
+            bound.append(AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict())
         return df_inc, bound
 
 
