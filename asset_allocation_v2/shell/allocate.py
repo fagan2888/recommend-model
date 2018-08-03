@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 class AssetBound(object):
 
-    def __init__(self, globalid = None, asset_id = None, bound = None, upper = 0.6, start_date = None, end_date = None):
+    def __init__(self, globalid = None, asset_id = None, bound = None, upper = 0.7, start_date = None, end_date = None):
 
         self.__globalid = globalid
         self.__asset_id = asset_id
