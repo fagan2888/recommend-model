@@ -871,6 +871,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df_asset = df_asset[['mz_upper_limit', 'mz_lower_limit', 'mz_sum1_limit', 'mz_sum2_limit']];
     df_asset = df_asset.rename(columns={'mz_upper_limit': 'upper', 'mz_lower_limit': 'lower', 'mz_sum1_limit': 'sum1', 'mz_sum2_limit': 'sum2'})
     assets = df_asset.T.to_dict()
+    bounds = {}
+    for asset_id in assets.keys():
+        bounds[asset_id] = AssetBound(asset_id = asset_id, upper = assets[asset_id]['upper'])
     #
     # 加载参数
     #
@@ -1014,10 +1017,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 9:
         #固定波动率配置
-        upper_risk = float(argv.get('upper_risk', 0.018))
+        upper_risk = float(argv.get('upper_risk', 0.015))
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = MzFixRiskBootAllocate('ALC.000001', assets, trade_date, lookback, upper_risk)
+        allocate = MzFixRiskBootAllocate('ALC.000001', assets, trade_date, lookback, upper_risk, bound = bounds)
         df = allocate.allocate()
 
     elif algo == 10:
@@ -1035,7 +1038,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
 
 
-        allocate = MzFixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk)
+        allocate = MzFixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
         df = allocate.allocate()
 
     elif algo == 11:
