@@ -347,16 +347,22 @@ class MzFixRiskBootWaveletAllocate(Allocate):
     def load_wavelet_allocate_data(self, day ,asset_ids):
 
         reindex = self.index[self.index <= day][-1 * self.lookback:]
-        data = {}
+
+        bound = []
+        allocate_asset_ids = []
         for asset_id in asset_ids:
+            asset_bound = AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict()
+            if asset_bound['upper'] > 0:
+                bound.append(asset_bound)
+                allocate_asset_ids.append(asset_id)
+
+        data = {}
+        for asset_id in allocate_asset_ids:
             data[asset_id] = self.wavelet_assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
-        df_inc  = df_nav.pct_change().dropna()
-        bound = []
-        for asset_id in df_inc.columns:
-            bound.append(AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict())
-        return df_inc, bound
+        df_inc  = df_nav.pct_change().fillna(0.0)
 
+        return df_inc, bound
 
 
 class MzFixRiskBootWaveletBlAllocate(MzBlAllocate):
@@ -386,14 +392,21 @@ class MzFixRiskBootWaveletBlAllocate(MzBlAllocate):
     def load_wavelet_allocate_data(self, day ,asset_ids):
 
         reindex = self.index[self.index <= day][-1 * self.lookback:]
-        data = {}
+
+        bound = []
+        allocate_asset_ids = []
         for asset_id in asset_ids:
+            asset_bound = AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict()
+            if asset_bound['upper'] > 0:
+                bound.append(asset_bound)
+                allocate_asset_ids.append(asset_id)
+
+        data = {}
+        for asset_id in allocate_asset_ids:
             data[asset_id] = self.wavelet_assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
-        df_inc  = df_nav.pct_change().dropna()
-        bound = []
-        for asset_id in df_inc.columns:
-            bound.append(AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict())
+        df_inc  = df_nav.pct_change().fillna(0.0)
+
         return df_inc, bound
 
 
