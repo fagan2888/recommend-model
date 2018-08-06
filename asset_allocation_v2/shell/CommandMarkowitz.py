@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, FactorIndexAllocate, MzFixRiskBootAllocate,MzFixRiskBootBlAllocate , MzFixRiskBootWaveletAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorValidAllocate, FactorIndexAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1031,33 +1031,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.allocate()
 
 
-    elif algo == 100:
-
-        lookback = 21
-        period = 5
-        trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
-        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
-        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = FactorValidAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period)
-        df = allocate.allocate()
-
-
-    elif algo == 110:
-
-        lookback = 21
-        period = 5
-        factor_num = int(argv.get('factor_num'))
-        factor_loc = int(argv.get('factor_loc'))
-        factor_end = int(argv.get('factor_end'))
-        target = np.zeros(factor_num)
-        target[factor_loc] = 1
-        target = target * factor_end
-        trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
-        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.02)
-        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = FactorIndexAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
-        df = allocate.allocate()
-
 
     elif algo == 9:
         #固定波动率配置
@@ -1114,10 +1087,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.allocate()
 
 
-    elif algo == 10:
+    elif algo == 13:
 
-        lookback = 21
-        period = 5
+        #multifactor index
         trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
@@ -1125,10 +1097,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.allocate()
 
 
-    elif algo == 11:
+    elif algo == 14:
 
-        lookback = 21
-        period = 5
+
+        #single factor index
         factor_num = int(argv.get('factor_num'))
         factor_loc = int(argv.get('factor_loc'))
         factor_end = int(argv.get('factor_end'))
