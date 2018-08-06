@@ -949,6 +949,19 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         allocate = MzAllocate('ALC.000001', assets, trade_date, lookback)
         df = allocate.allocate()
+    elif algo == 34:
+        #boot和滤波均配
+        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
+        allocate_wavelet = MzAllocate('ALC.000001', assets, trade_date, lookback)
+        df_wavelet = allocate_wavelet.allocate()
+
+        allocate_boot = MzBootAllocate('ALC.000001', assets, trade_date, lookback)
+        df_boot = allocate_boot.allocate()
+
+        df = (df_wavelet + df_boot) / 2
+
     elif algo == 5:
         #blacklitterman
         #df = markowitz_days(

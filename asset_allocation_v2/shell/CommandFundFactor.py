@@ -53,8 +53,7 @@ def factor_exposure_update(ctx):
     '''
 
     ffs = [FundFactor('FF.0000%02d'%i) for i in range(1,10)]+[FundFactor('FF.1000%02d'%i) for i in range(1,29)]
-
-    pool = Pool(len(ffs))
+    pool = Pool(16)
     pool.map(exposure_update, ffs)
     pool.close()
     pool.join()
