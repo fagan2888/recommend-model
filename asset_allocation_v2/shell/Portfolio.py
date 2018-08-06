@@ -269,8 +269,7 @@ def markowitz_fixrisk(df_inc, bound, target_risk):
 
     w0 = [1/len(df_inc.columns)]*len(df_inc.columns)
 
-
-    bnds = [(bound[i]['lower'], bound[i]['upper']) for i in range(len(bound))]
+    bnds = [(bound[i]['lower'], bound[i]['upper']) for i in range(df_inc.shape[1])]
     ret = df_inc.mean().values
     vol = df_inc.cov().values
 

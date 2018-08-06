@@ -156,7 +156,6 @@ class Allocate(object):
 
     def allocate(self):
 
-
         adjust_days = self.index[self.lookback - 1::self.period]
         asset_ids = list(self.assets.keys())
         pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)

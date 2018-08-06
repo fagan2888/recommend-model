@@ -38,7 +38,7 @@ from asset import Asset, WaveletAsset
 from allocate import Allocate
 from trade_date import ATradeDate
 from view import View
-from RiskParity import cal_weight
+import RiskParity
 import util_optimize
 from scipy.optimize import minimize
 from sklearn.neighbors import KernelDensity
@@ -75,6 +75,23 @@ class MzAllocate(Allocate):
     def allocate_algo(self, day, df_inc, bound):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
         ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
+
+
+class RpAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(RpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+
+    def allocate_algo(self, day, df_inc, bound):
+        asset_num = df_inc.shape[1]
+        V = df_inc.cov()
+        x_t = np.array([1 / asset_num] * asset_num)
+        ws = RiskParity.cal_weight(V, x_t)
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+        # print(ws['120000014'])
         return ws
 
 
@@ -283,6 +300,43 @@ class MzFixRiskBootAllocate(Allocate):
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         # risk, returns, ws, sharpe = PF.markowitz_fixrisk(df_inc, bound, self.risk)
         ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
+
+
+class MzLayerFixRiskBootAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+        super(MzLayerFixRiskBootAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        if cpu_count is None:
+            count = int(multiprocessing.cpu_count()) // 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+        self.__bootstrap_count = bootstrap_count
+        self.df_alayer_nav = asset_mz_markowitz_nav.load_series('MZ.A00010')
+        self.df_pos = asset_mz_markowitz_pos.load('MZ.A00010')
+        self.risk = risk
+
+
+    def allocate_algo(self, day, df_inc, bound):
+        layer_assets_1 = ['120000053', '120000056','120000058','120000073']
+        layer_assets_2 = ['MZ.F00010', 'MZ.F00050','MZ.F00070','MZ.F10010']
+        layer_assets = layer_assets_1 + layer_assets_2
+        df_alayer_nav = self.df_alayer_nav
+        df_alayer_nav = df_alayer_nav.loc[df_inc.index]
+        df_alayer_inc = df_alayer_nav.pct_change().fillna(0.0)
+
+        df_inc['ALayer'] = df_alayer_inc
+        df_inc_layer = df_inc[['120000080', '120000082', 'ERI000001', 'ERI000002', 'ALayer']]
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc_layer, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        ws = dict(zip(df_inc_layer.columns.ravel(), ws))
+        df_pos = self.df_pos
+        df_pos = df_pos[df_pos.index <= day].iloc[-1]
+        for asset in layer_assets:
+            ws[asset] = ws['ALayer'] * df_pos.loc[asset]
+        del ws['ALayer']
+
         return ws
 
 

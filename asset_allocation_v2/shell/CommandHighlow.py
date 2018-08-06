@@ -595,6 +595,7 @@ def pos_update(highlow, alloc):
 
         if algo == 1:
             df_high_riskmgr, df_low_riskmgr, df = jiao(highlow, alloc)
+            set_trace()
 
         elif algo == 3:
             #df_highlow = asset_mz_highlow.load(highlow)
@@ -664,7 +665,7 @@ def pos_update(highlow, alloc):
         df_tosave.loc[k, 'mz_riskmgr_pos'] = riskmgr_signal
         #print(riskmgr_date, asset_id, v)
     #df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0)]
-    
+
     #print alloc
     #print df_tosave[df_tosave.index.duplicated()]
     #if alloc['mz_risk'] == 0.9:
