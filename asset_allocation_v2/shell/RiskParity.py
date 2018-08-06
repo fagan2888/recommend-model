@@ -35,10 +35,11 @@ def risk_budget_objective(x,pars):
     # calculate portfolio risk
     V = pars[0]# covariance table
     x_t = pars[1] # risk target in percent of portfolio risk
-    sig_p =  np.sqrt(calculate_portfolio_var(x,V)) # portfolio sigma
+    sig_p = np.sqrt(calculate_portfolio_var(x,V)) # portfolio sigma
     risk_target = np.asmatrix(np.multiply(sig_p,x_t))
     asset_RC = calculate_risk_contribution(x,V)
     J = sum(np.square(asset_RC-risk_target.T))[0,0] # sum of squared error
+    # J = sum(np.power(asset_RC-risk_target.T, 4))[0,0] # sum of squared error
     return J
 
 
@@ -51,9 +52,10 @@ def long_only_constraint(x):
 
 
 def cal_weight(V, x_t, cons2 = None, w0 = None):
-    V = V*10000
     if w0 is None:
         w0 = [1/len(x_t)]*len(x_t)
+        # w0 = np.zeros(len(x_t))
+        # w0[0] = 1.0
     cons1 = (
         {'type': 'eq', 'fun': total_weight_constraint},
         {'type': 'ineq', 'fun': long_only_constraint}
@@ -62,7 +64,12 @@ def cal_weight(V, x_t, cons2 = None, w0 = None):
         cons = cons1 + cons2
     else:
         cons = cons1
-    res = minimize(risk_budget_objective, w0, args=[V,x_t], method='SLSQP', constraints=cons, options={'disp': False})
+        res = minimize(risk_budget_objective, w0, args=[V*3000,x_t], method='SLSQP', constraints=cons, options={'disp': False})
+        # res = minimize(risk_budget_objective, w0, args=[V,x_t], method='SLSQP', constraints=cons, options={'disp': True, 'ftol':1e-100})
+    # print()
+    # print(calculate_risk_contribution(res.x, V).T)
+    if not res.success:
+        print('ERROR!!!')
     # w_rb = np.asmatrix(res.x)
 
     return res.x

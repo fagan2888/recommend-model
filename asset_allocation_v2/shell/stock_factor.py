@@ -149,10 +149,11 @@ class StockFactor(Factor):
 
         dates = ret.index
         dates = dates[dates >= '2005-01-01']
+        dates = dates[dates <= '2018-06-01']
 
         df_ret = pd.DataFrame(columns = sf_ids)
         df_sret = pd.DataFrame(columns = StockAsset.all_stock_info().index)
-
+        df_rs = pd.DataFrame(columns = ['Rsquare'])
 
         pool = Pool(len(sfs))
         sfs = pool.map(multiprocess_load_factor_exposure, sfs)
@@ -173,8 +174,11 @@ class StockFactor(Factor):
             # mod = sm.WLS(tmp_ret, tmp_exposure_df.values, weights = tmp_amount, missing = 'drop').fit()
             # print(mod.summary())
 
+            df_rs.loc[next_date] = mod.rsquared
             df_ret.loc[next_date] = mod.params
             df_sret.loc[next_date] = tmp_ret - np.dot(tmp_exposure_df.values, mod.params)
+
+            df_rs.to_csv('data/factor_rs.csv')
 
         return df_ret, df_sret
 
@@ -857,17 +861,6 @@ class CommunicationStockFactor(IndustryStockFactor):
 
     def __init__(self, factor_id = None, asset_ids = None, exposure = None, factor_name = None):
         super(CommunicationStockFactor, self).__init__(factor_id, asset_ids, exposure, factor_name, '730000')
-
-
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':

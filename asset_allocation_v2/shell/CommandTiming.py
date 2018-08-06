@@ -68,7 +68,6 @@ def signal(ctx, optid, optlist, optonline):
 
         df_timing['tc_name'] = df_timing['tc_name'].map(lambda e: e.decode('utf-8'))
         return 0
-    
     with click.progressbar(length=len(df_timing), label='update signal'.ljust(30)) as bar:
         for _, timing in df_timing.iterrows():
             bar.update(1)

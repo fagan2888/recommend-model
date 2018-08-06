@@ -271,6 +271,6 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandImport.import_command)
     roboadvisor.add_command(CommandStockFactor.sf)
     roboadvisor.add_command(CommandMacroTiming.mt)
-    roboadvisor.add_command(CommandFactorClusterNew.fc)
+    roboadvisor.add_command(CommandFactorCluster.fc)
     roboadvisor.add_command(CommandFundFactor.ff)
     roboadvisor(obj={})

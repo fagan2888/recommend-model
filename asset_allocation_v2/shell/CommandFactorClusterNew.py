@@ -54,17 +54,19 @@ def fc(ctx, optid):
 @click.pass_context
 def fc_rolling(ctx, optid):
 
-    lookback_days = 365
+    lookback_days = 365 * 15
     # blacklist = [24, 32, 40]
     # factor_ids = ['1200000%02d'%i for i in range(1, 40) if i not in blacklist]
-    factor_ids_1 = ['120000013', '120000020', '120000014', '120000015', '120000034']
+    factor_ids_1 = ['120000013', '120000020', '120000014', '120000015']
     # factor_ids_1 = ['120000010', '120000011', '120000039', '120000013', '120000020', '120000014', '120000044', '120000015', '120000019', '120000034']
     # factor_ids_2 = ['1200000%d'%i for i in range(52, 80)]
+    factor_ids_2 = ['120000010', '120000011', '120000039']
     # factor_ids_2 = ['120000052', '120000056', '120000058', '120000073', '120000078', '120000079']
     # factor_ids_3 = ['MZ.F000%d0'%i for i in range(1, 10)] + ['MZ.F100%d0'%i for i in range(1, 10)]
-    factor_ids_3 = ['120000053', '120000056', '120000058', '120000073', 'MZ.F00010', 'MZ.F00050', 'MZ.F00060', 'MZ.F00070', 'MZ.F10010',]
+    # factor_ids_3 = ['120000053', '120000056', '120000058', '120000073', 'MZ.F00010', 'MZ.F00050', 'MZ.F00060', 'MZ.F00070', 'MZ.F10010',]
+    factor_ids_3 = ['120000053', '120000056', '120000058', '120000073']
     # factor_ids = factor_ids_1 + factor_ids_2 + factor_ids_3
-    factor_ids = factor_ids_3 + factor_ids_1
+    factor_ids = factor_ids_1 + factor_ids_2 + factor_ids_3
     # factor_ids = factor_ids_3
     trade_dates = ATradeDate.month_trade_date(begin_date = '2018-01-01')
     for date in trade_dates:
@@ -75,9 +77,10 @@ def fc_rolling(ctx, optid):
         # corr0 = load_feature(factor_ids, start_date, end_date)
         # corr0 = corr0 / 10
         # factor_name = base_ra_index.load()
-        # _, asset_cluster, _ = clusterKMeansBase(corr0, minNumCluster = 5, maxNumClusters=5, n_init=10)
+        set_trace()
+        _, asset_cluster, _ = clusterKMeansBase(corr0, minNumCluster = 6, maxNumClusters=6, n_init=10)
         # asset_cluster = clusterSpectral(corr0)
-        asset_cluster = clusterSimple(corr0, threshold = 0.90)
+        # asset_cluster = clusterSimple(corr0, threshold = 0.90)
         asset_cluster = dict(list(zip(sorted(asset_cluster), sorted(asset_cluster.values()))))
 
         for k,v in asset_cluster.items():
@@ -118,7 +121,6 @@ def fc_mst(ctx, optid):
         # PlotGraph.plot_graph(G, filename=out_file, colored_edges=mst.edges())
         PlotGraph.plot_graph(G, colored_edges=mst.edges())
         set_trace()
-
 
 
 @fc.command()
@@ -189,8 +191,9 @@ def load_ind(factor_ids, start_date, end_date):
         asset_navs[factor_id] = Asset.load_nav_series(factor_id, reindex = trade_dates)
 
     df_asset_navs = pd.DataFrame(asset_navs)
-    df_asset_incs = df_asset_navs.pct_change().dropna()
-    corr = df_asset_incs.corr()
+    # df_asset_incs = df_asset_navs.pct_change().dropna()
+    # corr = df_asset_incs.corr()
+    corr = df_asset_navs.corr()
 
     return corr
 

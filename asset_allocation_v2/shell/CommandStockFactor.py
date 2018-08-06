@@ -165,8 +165,8 @@ def factor_return_update(ctx):
     # StockAsset.all_stock_fdmt()
     # print('load all fdmt done')
 
-    #sfs = ['SF.0000%02d'%i for i in range(1, 10)] + ['SF.1000%02d'%i for i in range(1, 29)]
-    sfs = ['SF.0000%02d'%i for i in range(1, 10)]
+    sfs = ['SF.0000%02d'%i for i in range(1, 10)] + ['SF.1000%02d'%i for i in range(1, 27)] + ['SF.100028']
+    # sfs = ['SF.0000%02d'%i for i in range(1, 10)]
     sf = StockFactor()
     df_ret, df_sret = sf.cal_factor_return(sfs)
 
