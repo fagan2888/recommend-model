@@ -1,6 +1,6 @@
 #!/bin/bash
 
-nohup python3 /home/yaojiahui/recommend_model2/recommend_model/asset_allocation_v2/shell/roboadvisor.py composite nav --asset MZ.F00010 2>&1 &
+nohup python3 /home/yaojiahui/recommend_model2/recommend_model/asset_allocation_v2/shell/roboadvisor.py composite nav --asset MZ.FA0010 2>&1 &
 nohup python3 /home/yaojiahui/recommend_model2/recommend_model/asset_allocation_v2/shell/roboadvisor.py composite nav --asset MZ.F00020 2>&1 &
 nohup python3 /home/yaojiahui/recommend_model2/recommend_model/asset_allocation_v2/shell/roboadvisor.py composite nav --asset MZ.F00030 2>&1 &
 nohup python3 /home/yaojiahui/recommend_model2/recommend_model/asset_allocation_v2/shell/roboadvisor.py composite nav --asset MZ.F00040 2>&1 &

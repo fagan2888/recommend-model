@@ -32,30 +32,28 @@ def total_weight_constraint(x):
     return np.sum(x)-1.0
 
 
-def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, cons2 = None, w0 = None):
+# def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, cons2 = None, w0 = None):
 
-    stock_num = sfe.shape[0]
+#     stock_num = sfe.shape[0]
 
-    if lower_limit is None:
-        lower_limit = 0.0
+#     if lower_limit is None:
+#         lower_limit = 0.0
 
-    if upper_limit is None:
-        upper_limit = 0.02
+#     if upper_limit is None:
+#         upper_limit = 0.02
 
-    if w0 is None:
-        w0 = np.array([1.0/stock_num]*stock_num)
+#     if w0 is None:
+#         w0 = np.array([1.0/stock_num]*stock_num)
 
-    cons = (
-        {'type': 'eq', 'fun': total_weight_constraint},
-    )
+#     cons = (
+#         {'type': 'eq', 'fun': total_weight_constraint},
+#     )
 
-    bnds = tuple([(lower_limit, upper_limit) for i in range(stock_num)])
+#     bnds = tuple([(lower_limit, upper_limit) for i in range(stock_num)])
 
-    # res = minimize(risk_budget_objective, w0, args=[sfe, x_t], method='L-BFGS-B', constraints=cons, options={'disp': False}, bounds = bnds)
-    res = minimize(risk_budget_objective, w0, args=[sfe, x_t], method='SLSQP', constraints=cons, options={'disp': False}, bounds = bnds)
-    # print('Loss value:', res.fun)
+#     res = minimize(risk_budget_objective, w0, args=[sfe, x_t], method='SLSQP', constraints=cons, options={'disp': False}, bounds = bnds)
 
-    return res.x
+#     return res.x
 
 
 def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, cons2 = None, w0 = None):

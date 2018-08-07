@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1096,10 +1096,25 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         target[factor_loc] = 1
         target = target * factor_end
         trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
-        set_trace()
-        bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.02)
+        allocate = FactorIndexAllocate('ALC.000001', trade_date, lookback, period = period, target = target)
+        df = allocate.allocate()
+
+    elif algo == 15:
+
+        # Layer Fix Risk Boot Bl
+        upper_risk = float(argv.get('upper_risk', 0.015))
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+
+        asset_ids = list(assets.keys())
+        asset_ids.append('ALayer')
+        views = {}
+        for asset_id in asset_ids:
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = FactorIndexAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)
+        allocate = MzLayerFixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
         df = allocate.allocate()
 
 

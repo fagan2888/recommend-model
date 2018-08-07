@@ -35,10 +35,10 @@ from db.asset_stock_factor import *
 from util import xdict
 from util.xdebug import dd
 from asset import Asset, WaveletAsset
-from allocate import Allocate
+from allocate import Allocate, AssetBound
 from trade_date import ATradeDate
 from view import View
-from RiskParity import cal_weight
+import RiskParity
 import util_optimize
 from multiprocessing import Pool
 
@@ -76,6 +76,23 @@ class MzAllocate(Allocate):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws
+
+
+class RpAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(RpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+
+    def allocate_algo(self, day, df_inc, bound):
+        asset_num = df_inc.shape[1]
+        V = df_inc.cov()
+        x_t = np.array([1 / asset_num] * asset_num)
+        ws = RiskParity.cal_weight(V, x_t)
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+        return ws
+
 
 
 class MzBlAllocate(Allocate):
@@ -427,51 +444,60 @@ class FactorValidAllocate(Allocate):
 
         return ws
 
-
 class FactorIndexAllocate(Allocate):
 
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, target = None):
+    def __init__(self, globalid, reindex, lookback, assets = None, period = 1, bound = None, target = None):
 
-       super(FactorIndexAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-       # sf_ids = ['SF.0000%02d'%i for i in range(1, 10)] + ['SF.1000%02d'%i for i in range(1, 29)]
-       sf_ids = ['SF.0000%02d'%i for i in range(1, 10)]
-       self.sf_ids = sf_ids
+        super(FactorIndexAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        sf_ids = ['SF.0000%02d'%i for i in range(1, 10)]
+        self.sf_ids = sf_ids
 
-       if target is None:
-           self.target = [1] + [0] * 8
-       else:
-           self.target = target
+        if target is None:
+            self.target = [1] + [0] * 8
+        else:
+            self.target = target
 
-       self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2010-01-01')
-       # self.sfe.to_csv('data/factor/stock_factor_exposure.csv', index_label = ['stock_id', 'sf_id', 'trade_date'])
-       # self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
+
+        # self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2010-01-01')
+        # self.sfe.to_csv('data/factor/stock_factor_exposure.csv', index_label = ['stock_id', 'sf_id', 'trade_date'])
+        self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
 
     def allocate(self):
 
         adjust_days = self.index[self.lookback - 1::self.period]
-        asset_ids = list(self.assets.keys())
-        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
 
-        pool = Pool(32)
+        df = pd.DataFrame()
+        pos_df = {}
+
+        pool = Pool(8)
         wss = pool.map(self.allocate_algo, adjust_days)
         pool.close()
         pool.join()
-        # self.allocate_algo(adjust_days[-1])
+
+        # wss = []
+        # for day in adjust_days:
+        #     wss.append(self.allocate_algo(day))
 
         for day, ws in zip(adjust_days, wss):
-            for asset_id in ws.keys():
-                pos_df.loc[day, asset_id] = ws[asset_id]
+            pos_df[day] = ws
+
+        pos_df = df.from_dict(pos_df, orient = 'index')
+        pos_df = pos_df.fillna(0.0)
 
         return pos_df
 
     def allocate_algo(self, day):
-
         print(day)
+
+        index_pos = asset_stock.load_index_pos('2070000191', day)
+        asset_ids = self.sfe.index.levels[0].intersection(index_pos).values
 
         begin_date = (day.date() - timedelta(self.lookback - 1)).strftime('%Y-%m-%d')
         end_date = day.date().strftime('%Y-%m-%d')
 
-        sfe = self.sfe[(self.sfe.index.get_level_values(2) > begin_date) & (self.sfe.index.get_level_values(2) < end_date)].reset_index()
+        sfe = self.sfe[(self.sfe.index.get_level_values(2) > begin_date) & (self.sfe.index.get_level_values(2) < end_date)]
+        sfe = sfe.loc[asset_ids]
+        sfe = sfe.reset_index()
         sfe = sfe.groupby(['stock_id', 'sf_id']).mean()
         sfe = sfe.unstack()
         sfe.columns = sfe.columns.droplevel(0)
@@ -484,6 +510,56 @@ class FactorIndexAllocate(Allocate):
         ws = dict(zip(sfe.index, stock_weights))
 
         return ws
+
+
+class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
+
+    def __init__(self, globalid, assets, views, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+        super(MzLayerFixRiskBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
+        if cpu_count is None:
+            count = int(multiprocessing.cpu_count()) // 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+        self.__bootstrap_count = bootstrap_count
+        self.risk = risk
+
+
+    def allocate_algo(self, day, df_inc, bound):
+
+
+        layer_assets_1 = ['120000053', '120000056','120000058','120000073']
+        layer_assets_2 = ['MZ.FA0010', 'MZ.FA0050','MZ.FA0070']
+        layer_assets = layer_assets_1 + layer_assets_2
+
+        layer_assets = dict([(asset_id , Asset(asset_id)) for asset_id in layer_assets])
+        layer_bounds = {}
+        for asset in layer_assets.keys():
+            layer_bounds[asset] = self.bound[asset]
+        rp_allocate = RpAllocate('ALC.000001', layer_assets, self.index, self.lookback, bound = layer_bounds)
+        layer_ws, df_alayer_inc = rp_allocate.allocate_day(day)
+
+        df_inc['ALayer'] = df_alayer_inc
+        df_inc_layer = df_inc[df_inc.columns.difference(layer_assets)]
+        P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
+
+        bound = []
+        allocate_asset_ids = []
+        for asset_id in df_inc_layer.columns:
+            asset_bound = AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict()
+            if asset_bound['upper'] > 0:
+                bound.append(asset_bound)
+                allocate_asset_ids.append(asset_id)
+
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        ws = dict(zip(df_inc_layer.columns.ravel(), ws))
+        for asset in layer_ws.index:
+            ws[asset] = ws['ALayer'] * layer_ws.loc[asset]
+        del ws['ALayer']
+
+        return ws
+
 
 
 if __name__ == '__main__':

@@ -73,7 +73,7 @@ def macro_view_update(ctx, startdate, enddate, viewid, idx):
     union_mv['updated_at'] = updated_at
     union_mv_df = pd.DataFrame(union_mv, columns = ['globalid', 'bl_date', 'bl_view', 'created_at', 'updated_at'])
 
-    for index_id in ['120000001', '120000002', '120000053', '120000056', '120000058', '120000073', 'MZ.F00010', 'MZ.F00050', 'MZ.F00070', 'MZ.F10010']:
+    for index_id in ['120000001', '120000002', '120000053', '120000056', '120000058', '120000073', 'MZ.FA0010', 'MZ.FA0050', 'MZ.FA0070', 'MZ.FA1010', 'ALayer']:
 
         df_new = union_mv_df
         df_new['bl_index_id'] = index_id
