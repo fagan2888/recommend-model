@@ -103,7 +103,7 @@ class MzBlAllocate(Allocate):
         self.__views = views
 
     def allocate_algo(self, day, df_inc, bound):
-        P, eta, alpha = self.load_bl_view(day, list(self.assets.keys()))
+        P, eta, alpha = self.load_bl_view(day, df_inc.columns)
         risk, returns, ws, sharpe = PF.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
         ws = dict(zip(df_inc.columns.ravel(), ws))
 
@@ -163,7 +163,7 @@ class MzBootBlAllocate(MzBlAllocate):
 
 
     def allocate_algo(self, day, df_inc, bound):
-        P, eta, alpha = self.load_bl_view(day, list(self.assets.keys()))
+        P, eta, alpha = self.load_bl_view(day, df_inc.columns)
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws
@@ -337,7 +337,7 @@ class MzFixRiskBootWaveletBlAllocate(MzBlAllocate):
     def allocate_algo(self, day, df_inc, bound):
         wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, list(self.assets.keys()))
         df_inc = df_inc + wavelet_df_inc
-        P, eta, alpha = self.load_bl_view(day, list(self.assets.keys()))
+        P, eta, alpha = self.load_bl_view(day, df_inc.columns)
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl_fixrisk(df_inc, P, eta, alpha ,bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws
@@ -380,9 +380,11 @@ class MzFixRiskBootBlAllocate(MzBlAllocate):
 
 
     def allocate_algo(self, day, df_inc, bound):
-        P, eta, alpha = self.load_bl_view(day, list(self.assets.keys()))
+        P, eta, alpha = self.load_bl_view(day, df_inc.columns)
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc.columns.ravel(), ws))
+
+        return ws
 
 
 class FactorValidAllocate(Allocate):
