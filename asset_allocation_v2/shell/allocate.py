@@ -131,7 +131,7 @@ class AssetBound(object):
 class Allocate(object):
 
 
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+    def __init__(self, globalid, assets = None, reindex = None, lookback = None, period = 1, bound = None):
 
         self.__globalid = globalid
         self.__assets = assets
@@ -141,8 +141,9 @@ class Allocate(object):
         self.__lookback = lookback
         self.__period = period
         self.__bound = {}
-        for asset_id in list(assets.keys()):
-            self.__bound[asset_id] = [AssetBound('asset_bound_default', asset_id = asset_id)]
+        if assets is not None:
+            for asset_id in list(assets.keys()):
+                self.__bound[asset_id] = [AssetBound('asset_bound_default', asset_id = asset_id)]
         if bound is not None:
             for asset_id in list(bound.keys()):
                 self.__bound[asset_id] = bound[asset_id]
@@ -206,7 +207,6 @@ class Allocate(object):
             for day in bar:
 
                 logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
-
                 df_inc, bound = self.load_allocate_data(day, asset_ids)
 
                 ws = self.allocate_algo(day, df_inc, bound)
@@ -215,6 +215,17 @@ class Allocate(object):
                     pos_df.loc[day, asset_id] = ws[asset_id]
 
         return pos_df
+
+
+    def allocate_day(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
+        ws = self.allocate_algo(day, df_inc, bound)
+        ws = pd.Series(ws)
+        inc = np.dot(df_inc, ws)
+
+        return ws, inc
 
 
 

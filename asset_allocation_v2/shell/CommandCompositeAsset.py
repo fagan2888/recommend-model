@@ -25,13 +25,14 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database
+from db import database, asset_mz_markowitz_nav
+from ipdb import set_trace
 
 import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group()  
+@click.group()
 @click.pass_context
 def composite(ctx):
     '''fund composite group
@@ -54,11 +55,11 @@ def load_asset_by_type(db, asset_type, assets):
         s = s.where(t.c.globalid.in_(assets.split(',')))
     if asset_type is not None:
         s = s.where(t.c.ra_calc_type.in_(asset_type))
-        
+
     df_asset = pd.read_sql(s, db)
 
     return df_asset
-        
+
 
 @composite.command()
 @click.option('--asset', 'optasset', help='nav of which asset to update')
@@ -72,7 +73,7 @@ def nav(ctx, optasset, optlist):
     db_base = create_engine(config.db_base_uri)
     db = {'asset':db_asset, 'base':db_base}
 
-    df_asset = load_asset_by_type(db['asset'], [2, 3], optasset)
+    df_asset = load_asset_by_type(db['asset'], [2, 3, 4], optasset)
 
     if optlist:
         #print df_asset
@@ -80,13 +81,15 @@ def nav(ctx, optasset, optlist):
         df_asset['ra_name'] = df_asset['ra_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_asset, headers='keys', tablefmt='psql'))
         return 0
-    
+
     with click.progressbar(length=len(df_asset.index), label='update nav for assets'.ljust(30)) as bar:
         for _, asset in df_asset.iterrows():
             if asset['ra_calc_type'] == 2:
                 nav_update_index(db, asset)
             elif asset['ra_calc_type'] == 3:
                 nav_update_fund(db, asset)
+            elif asset['ra_calc_type'] == 4:
+                nav_update_factor_index(db, asset)
             else:
                 pass
             bar.update(1)
@@ -99,7 +102,7 @@ def nav_update_index(db, asset):
     df_position = df.unstack().fillna(0.0)
     df_position.columns = df_position.columns.droplevel(0)
 
-    
+
     # 加载基金收益率
     min_date = df_position.index.min()
     #max_date = df_position.index.max()
@@ -119,7 +122,7 @@ def nav_update_index(db, asset):
     df_result['ra_inc'] = df_result['ra_nav'].pct_change().fillna(0.0)
     df_result['ra_asset_id'] = asset['globalid']
     df_result = df_result.reset_index().set_index(['ra_asset_id', 'ra_date'])
-    
+
     df_new = df_result.apply(format_nav_and_inc)
 
 
@@ -147,7 +150,7 @@ def nav_update_fund(db, asset):
     df_position = df.unstack().fillna(0.0)
     df_position.columns = df_position.columns.droplevel(0)
 
-    
+
     # 加载基金收益率
     min_date = df_position.index.min()
     #max_date = df_position.index.max()
@@ -171,7 +174,7 @@ def nav_update_fund(db, asset):
     df_result['ra_inc'] = df_result['ra_nav'].pct_change().fillna(0.0)
     df_result['ra_asset_id'] = asset['globalid']
     df_result = df_result.reset_index().set_index(['ra_asset_id', 'ra_date'])
-    
+
     df_new = df_result.apply(format_nav_and_inc)
 
     # 加载旧数据
@@ -189,7 +192,34 @@ def nav_update_fund(db, asset):
 
     # 更新数据库
     database.batch(db['asset'], t2, df_new, df_old, timestamp=False)
-    
+
+def nav_update_factor_index(db, asset):
+
+    df = asset_mz_markowitz_nav.load_series(asset.globalid)
+    df = df.to_frame()
+    df = df.reset_index()
+    df['ra_asset_id'] = asset.globalid
+    df['ra_inc'] = df['mz_nav'].pct_change().fillna(0.0)
+    df.columns = ['ra_date', 'ra_nav', 'ra_asset_id', 'ra_inc']
+    df = df.set_index(['ra_asset_id', 'ra_date'])
+    df_new = df
+
+    # 加载旧数据
+    t2 = Table('ra_composite_asset_nav', MetaData(bind=db['asset']), autoload=True)
+    columns2 = [
+        t2.c.ra_asset_id,
+        t2.c.ra_date,
+        t2.c.ra_nav,
+        t2.c.ra_inc,
+    ]
+    stmt_select = select(columns2, (t2.c.ra_asset_id == asset['globalid']))
+    df_old = pd.read_sql(stmt_select, db['asset'], index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
+    if not df_old.empty:
+        df_old = df_old.apply(format_nav_and_inc)
+
+    # 更新数据库
+    database.batch(db['asset'], t2, df_new, df_old, timestamp=False)
+
 def format_nav_and_inc(x):
     if x.name == "ra_nav":
         ret = x.map("{:.6f}".format)
@@ -199,8 +229,8 @@ def format_nav_and_inc(x):
         ret = x
 
     return ret
-    
-    
+
+
 def load_fund_category(db, pid, category):
     # 加载基金列表
     t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
@@ -213,7 +243,7 @@ def load_fund_category(db, pid, category):
         s = s.distinct()
     else:
         s = s.where(t.c.ra_category == category)
-    
+
     df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
 
     return df
@@ -227,9 +257,9 @@ def load_index_for_asset(db, asset_id):
         t.c.ra_fund_ratio,
     ]
     s = select(columns, (t.c.ra_asset_id == asset_id))
-    
+
     df = pd.read_sql(s, db, index_col = ['ra_date', 'ra_fund_code'], parse_dates=['ra_date'])
 
     return df
 
-    
+

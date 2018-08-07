@@ -183,6 +183,16 @@ class tq_fin_prottmindic(Base):
     roedilutedcut = Column(Float)
     roa = Column(Float)
 
+class tq_ix_mweight(Base):
+
+    __tablename__ = 'tq_ix_mweight'
+
+    ID = Column(Integer, primary_key = True)
+
+    tradedate = Column(Date)
+    secode = Column(String)
+    constituentcode = Column(String)
+    weight = Column(Float)
 
 def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None):
 
@@ -192,10 +202,7 @@ def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None
     record = session.query(ra_stock.sk_secode).filter(ra_stock.globalid == asset_id).first()
     session.commit()
     session.close()
-    try:
-        secode = record[0]
-    except:
-        set_trace()
+    secode = record[0]
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
@@ -214,6 +221,25 @@ def load_stock_nav_series(asset_id, reindex=None, begin_date=None, end_date=None
     session.close()
 
     return ser
+
+def load_index_pos(secode, day):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_ix_mweight.tradedate, tq_ix_mweight.constituentcode).filter(tq_ix_mweight.secode == secode)
+    df = pd.read_sql(sql.statement, session.bind, index_col = ['tradedate'], parse_dates = ['tradedate'])
+
+    session.commit()
+    session.close()
+
+    last_date = df.index[df.index < day].max()
+    df_tmp = df.loc[last_date]
+    pos = df_tmp.values.ravel()
+    pos = np.array(['SK.%s'%stock for stock in pos])
+
+    return pos
 
 
 def load_ohlcavntt(globalid):

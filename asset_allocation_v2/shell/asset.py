@@ -39,6 +39,7 @@ from wavelet import Wavelet
 from multiprocessing import Pool
 import db.asset_stock
 from trade_date import ATradeDate
+import pickle
 
 import traceback, code
 
@@ -161,6 +162,12 @@ class Asset(object):
                 # 股票资产
                 #
                 sr = db.asset_stock.load_stock_nav_series(
+                    asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+            elif prefix == 'MZ':
+                #
+                # Markowitz asset
+                #
+                sr = db.asset_mz_markowitz_nav.load_series(
                     asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
             else:
                 sr = pd.Series()
@@ -369,6 +376,183 @@ class StockAsset(Asset):
         return StockAsset.__all_st_stocks
 
 
+class FundAsset(Asset):
+
+    __all_fund_info = None
+    __all_fund_share = None
+    __all_fund_pos = {}
+    __all_fund_quote = {}
+    __all_funds = {}
+
+    def __init__(self, code, secode = None, name = None, nav_sr = None):
+
+        super(FundAsset, self).__init__(code, name = name, nav_sr = nav_sr)
+        self.__secode = None
+        self.__quote = None
+        self.__pos = None
+
+    @property
+    def code(self):
+        return self.__code
+
+    @staticmethod
+    def get_fund(code):
+        if not code in FundAsset.__all_funds:
+            FundAsset.__all_funds[code] = FundAsset(code)
+        return FundAsset.__all_funds[code]
+
+    @staticmethod
+    def all_funds():
+        fund_ids = list(set(FundAsset.all_fund_info().index.ravel()).difference(FundAsset.__all_funds.keys()))
+        if len(fund_ids) > 0:
+            count = multiprocessing.cpu_count()
+            pool = Pool(count // 2)
+            results = pool.map(db.asset_fund.load_fund_nav_series, fund_ids)
+            pool.close()
+            pool.join()
+            for i in range(0, len(fund_ids)):
+                asset = FundAsset(fund_ids[i], nav_sr = results[i])
+                FundAsset.__all_funds[fund_ids[i]] = asset
+        return FundAsset.__all_funds
+
+    @staticmethod
+    def all_fund_nav():
+        FundAsset.all_funds()
+        fund_nav = {}
+        for fund_id in FundAsset.all_fund_info().index:
+            asset = FundAsset.get_fund(fund_id)
+            fund_nav[fund_id] = asset.nav().replace(0.0, method = 'pad')
+        fund_nav_df = pd.DataFrame(fund_nav)
+        return fund_nav_df
+
+    #所有股票代码
+    @staticmethod
+    def all_fund_info(codes = None):
+        if FundAsset.__all_fund_info is None:
+            engine = database.connection('base')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            all_funds = pd.read_sql(session.query(db.asset_fund.ra_fund).statement, session.bind, index_col = ['ra_code'])
+            session.commit()
+            session.close()
+            FundAsset.__all_fund_info = all_funds;
+        if codes is None:
+            return FundAsset.__all_fund_info
+        else:
+            return FundAsset.__all_fund_info.loc[codes]
+
+    @staticmethod
+    def all_fund_share():
+        if FundAsset.__all_fund_share is None:
+            df = db.asset_fund.load_all_fund_share()
+            FundAsset.__all_fund_share = df
+
+        return FundAsset.__all_fund_share
+
+
+class StockFundAsset(FundAsset):
+
+    __all_fund_info = None
+    __all_fund_share = None
+    __all_fund_scale = None
+    __all_fund_pos = {}
+    __all_fund_quote = {}
+    __all_funds = {}
+
+    def __init__(self, code, secode = None, name = None, nav_sr = None):
+
+        super(StockFundAsset, self).__init__(code, name = name, nav_sr = nav_sr)
+        self.__secode = None
+        self.__quote = None
+        self.__pos = None
+
+    @staticmethod
+    def all_fund_info(codes = None):
+        if StockFundAsset.__all_fund_info is None:
+            engine = database.connection('base')
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            all_funds = pd.read_sql(session.query(db.asset_fund.ra_fund).filter(db.asset_fund.ra_fund.ra_type == 1).statement, session.bind, index_col = ['ra_code'])
+            session.commit()
+            session.close()
+            StockFundAsset.__all_fund_info = all_funds;
+        if codes is None:
+            return StockFundAsset.__all_fund_info
+        else:
+            return StockFundAsset.__all_fund_info.loc[codes]
+
+    @staticmethod
+    def all_fund_nav():
+        StockFundAsset.all_funds()
+        fund_nav = {}
+        for fund_id in StockFundAsset.all_fund_info().index:
+            asset = StockFundAsset.get_fund(fund_id)
+            fund_nav[fund_id] = asset.nav().replace(0.0, method = 'pad')
+        fund_nav_df = pd.DataFrame(fund_nav)
+        return fund_nav_df
+
+    @staticmethod
+    def all_fund_unit_nav():
+
+        fund_ids = StockFundAsset.all_fund_info().index
+        pool = Pool(32)
+        results = pool.map(db.asset_fund.load_fund_unit_nav_series, fund_ids)
+        pool.close()
+        pool.join()
+        fund_nav = dict(zip(fund_ids, results))
+        fund_nav_df = pd.DataFrame(fund_nav)
+
+        # fund_nav = {}
+        # for fund_id in StockFundAsset.all_fund_info().index:
+        #     fund_unit_nav = db.asset_fund.load_fund_unit_nav_series(fund_id)
+        #     fund_nav[fund_id] = fund_unit_nav
+        # fund_nav_df = pd.DataFrame(fund_nav)
+
+        return fund_nav_df
+
+    @staticmethod
+    def all_fund_scale():
+
+        if StockFundAsset.__all_fund_scale is None:
+
+            all_fund_share = StockFundAsset.all_fund_share()
+            all_unit_nav = StockFundAsset.all_fund_unit_nav()
+            common_fund_ids = all_fund_share.columns.intersection(all_unit_nav.columns)
+            all_fund_share = all_fund_share[common_fund_ids]
+            all_unit_nav = all_unit_nav[common_fund_ids]
+            all_fund_share = all_fund_share[all_fund_share.index > '2010-01-01']
+            all_unit_nav = all_unit_nav[all_unit_nav.index > '2010-01-01']
+            all_fund_share = all_fund_share.reindex(all_unit_nav.index).fillna(method = 'pad')
+            all_fund_scale = (all_unit_nav * all_fund_share).fillna(method = 'pad')
+
+            StockFundAsset.__all_fund_scale = all_fund_scale
+
+        return StockFundAsset.__all_fund_scale
+
+
+    @staticmethod
+    def all_fund_pos():
+
+        if len(StockFundAsset.__all_fund_pos) == 0:
+            stock_secode_dict = StockAsset.secode_dict()
+            stock_secode_dict = {v:k for k,v in stock_secode_dict.items()}
+            fund_pos = db.asset_fund.load_all_fund_pos()
+            fund_ids = np.intersect1d(StockFundAsset.all_fund_info().index, fund_pos.index)
+            StockFundAsset.__all_fund_info = StockFundAsset.__all_fund_info.loc[fund_ids]
+
+            for fund_id in fund_ids:
+                fp = fund_pos.loc[[fund_id]]
+                fp = fp.sort_values(['publishdate'])
+                fp = fp.fillna(0.0)
+                pub_ratio = fp['navrto'].groupby(fp.publishdate).sum()
+                valid_date = pub_ratio[pub_ratio > 30].index
+                fp = fp.set_index('publishdate').loc[valid_date].set_index('skcode', append=True)
+                StockFundAsset.__all_fund_pos[fund_id] = fp
+
+
+        return StockFundAsset.__all_fund_pos
+
+
 
 if __name__ == '__main__':
 
@@ -409,3 +593,10 @@ if __name__ == '__main__':
 
     #print(StockAsset.all_stock_quote().keys())
     #print(len(StockAsset.all_stock_quote().keys()))
+    # print(StockAsset.all_stock_quote().keys())
+    # print(len(StockAsset.all_stock_quote().keys()))
+    # df = StockFundAsset.all_fund_info()
+    df = StockFundAsset.all_fund_scale()
+
+    # df = db.asset_fund.load_all_fund_share()
+

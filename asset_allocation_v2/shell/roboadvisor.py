@@ -33,6 +33,7 @@ import CommandStockFactor
 import CommandMacroTiming
 import CommandFactorCluster
 import CommandView
+import CommandFundFactor
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -272,4 +273,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandMacroTiming.mt)
     roboadvisor.add_command(CommandFactorCluster.fc)
     roboadvisor.add_command(CommandView.view)
+    roboadvisor.add_command(CommandFundFactor.ff)
     roboadvisor(obj={})

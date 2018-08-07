@@ -25,6 +25,7 @@ from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
 from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
 from util import xdict
+from trade_date import ATradeDate
 
 import traceback, code
 
@@ -604,7 +605,7 @@ def online_portfolio_month_nav(ctx):
     ser = asset_on_online_nav.load_series(800000, 8)
     ser = ser.groupby(ser.index.strftime('%Y-%m')).last()
     online_ser = ser.pct_change()
- 
+
     ser = asset_ra_portfolio_nav.load_series('PO.000030', 8)
     ser = ser.groupby(ser.index.strftime('%Y-%m')).last()
     portfolio_ser = ser.pct_change()
@@ -663,6 +664,42 @@ def passive_fund_ratio(ctx):
     return
 
 
+#线上风险10权益类资产被动管理型基金占比
+@analysis.command()
+@click.pass_context
+def online_sharpe(ctx):
+
+    df_ret = pd.DataFrame(columns = ['ret', 'std', 'mdd', 'calmar', 'sharpe'])
+    for risk in range(800000, 800010):
+        df_ret.loc[risk] = cal_online_indic(risk)
+
+    df_ret.to_csv('data/result_fee.csv')
+    set_trace()
+
+    return
+
+def cal_online_indic(risk):
+
+    df = pd.read_csv('data/on_online_nav.csv', index_col = ['on_date'], parse_dates = ['on_date'])
+    df = df[df.on_type == 8]
+    df = df[df.on_online_id == risk]
+    df = df['on_nav']
+
+    reindex = ATradeDate.week_trade_date(begin_date = '2017-12-29', end_date = '2018-06-30')
+    df = df.reindex(reindex)
+    df_ret = df.pct_change().dropna()
+    ret = df.iloc[-1] / df.iloc[0] - 1
+    weeks = len(df) - 1
+    year_ret = ret * 52 / weeks - 0.015
+    mdd = -(df / df.rolling(min_periods=1, window=len(df)).max() - 1).min()
+
+    calmar = year_ret / mdd
+    std = df_ret.std()
+    sharpe = df_ret.mean() / df_ret.std()
+
+    return ret, std, mdd, calmar, sharpe
+
+
 
 #线上风险10资产配置比例
 @analysis.command()
@@ -680,3 +717,40 @@ def online_asset_ratio(ctx):
     df.nav = df.nav / df.nav[0]
 
     df.to_csv('ratio_nav.csv')
+
+
+#线上风险10权益类资产被动管理型基金占比
+@analysis.command()
+@click.pass_context
+def online_sharpe(ctx):
+
+    df_ret = pd.DataFrame(columns = ['ret', 'std', 'mdd', 'calmar', 'sharpe'])
+    for risk in range(800000, 800010):
+        df_ret.loc[risk] = cal_online_indic(risk)
+
+    df_ret.to_csv('data/result_fee.csv')
+    set_trace()
+
+    return
+
+def cal_online_indic(risk):
+
+    df = pd.read_csv('data/on_online_nav.csv', index_col = ['on_date'], parse_dates = ['on_date'])
+    df = df[df.on_type == 8]
+    df = df[df.on_online_id == risk]
+    df = df['on_nav']
+
+    reindex = ATradeDate.week_trade_date(begin_date = '2017-12-29', end_date = '2018-06-30')
+    df = df.reindex(reindex)
+    df_ret = df.pct_change().dropna()
+    ret = df.iloc[-1] / df.iloc[0] - 1
+    weeks = len(df) - 1
+    year_ret = ret * 52 / weeks - 0.015
+    mdd = -(df / df.rolling(min_periods=1, window=len(df)).max() - 1).min()
+
+    calmar = year_ret / mdd
+    std = df_ret.std()
+    sharpe = df_ret.mean() / df_ret.std()
+
+    return ret, std, mdd, calmar, sharpe
+

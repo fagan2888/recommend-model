@@ -60,3 +60,5 @@ from . import base_fund_fee
 from . import base_fund_infos
 from . import base_fund_split
 from . import mapi_fp_da_question
+from . import asset_fund
+from . import asset_fund_factor

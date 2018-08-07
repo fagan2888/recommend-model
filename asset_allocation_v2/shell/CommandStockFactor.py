@@ -32,13 +32,16 @@ from pyspark import SparkContext
 
 logger = logging.getLogger(__name__)
 
+def exposure_update(sf):
+    sf.cal_factor_exposure()
+    asset_stock_factor.update_exposure(sf)
+
 @click.group(invoke_without_command=True)
 @click.pass_context
 def sf(ctx):
     '''multi factor
     '''
     pass
-
 
 @sf.command()
 @click.pass_context
@@ -47,7 +50,6 @@ def factor_valid_update(ctx):
     '''
 
     StockFactor.valid_stock_table()
-
 
 @sf.command()
 @click.pass_context
@@ -63,14 +65,14 @@ def factor_exposure_update(ctx):
     print('load all fdmt done')
 
     sfs = [
-        # SizeStockFactor(factor_id = "SF.000001"),
-        # VolStockFactor(factor_id = "SF.000002"),
-        # MomStockFactor(factor_id = "SF.000003"),
-        # TurnoverStockFactor(factor_id = "SF.000004"),
-        # EarningStockFactor(factor_id = "SF.000005"),
-        # ValueStockFactor(factor_id = "SF.000006"),
-        # FqStockFactor(factor_id = "SF.000007"),
-        # LeverageStockFactor(factor_id = "SF.000008"),
+        SizeStockFactor(factor_id = "SF.000001"),
+        VolStockFactor(factor_id = "SF.000002"),
+        MomStockFactor(factor_id = "SF.000003"),
+        TurnoverStockFactor(factor_id = "SF.000004"),
+        EarningStockFactor(factor_id = "SF.000005"),
+        ValueStockFactor(factor_id = "SF.000006"),
+        FqStockFactor(factor_id = "SF.000007"),
+        LeverageStockFactor(factor_id = "SF.000008"),
         GrowthStockFactor(factor_id = "SF.000009"),
         # FarmingStockFactor(factor_id = 'SF.100001'),
         # MiningStockFactor(factor_id = 'SF.100002'),
@@ -107,25 +109,19 @@ def factor_exposure_update(ctx):
     #     MomStockFactor(factor_id = "SF.000003"),
     # ]
 
-    for _sf in sfs:
-        t = datetime.now()
-        _sf.cal_factor_exposure()
-        print(_sf.factor_id, 'cal factor exposure done')
-        asset_stock_factor.update_exposure(_sf)
-        # asset_stock_factor.update_exposure_mongo(_sf)
-        print(_sf.factor_id, 'update done')
-        print(datetime.now() - t)
-
-    # def exposure_update(sf):
-    #     print sf.factor_id
-    #     sf.cal_factor_exposure()
-    #     asset_stock_factor.update_exposure(sf)
+    # for _sf in sfs:
+    #     t = datetime.now()
+    #     _sf.cal_factor_exposure()
+    #     print(_sf.factor_id, 'cal factor exposure done')
+    #     asset_stock_factor.update_exposure(_sf)
+    #     print(_sf.factor_id, 'update done')
+    #     print(datetime.now() - t)
 
 
-    # pool = Pool(len(sfs))
-    # pool.map(asset_stock_factor.update_exposure, sfs)
-    # pool.close()
-    # pool.join()
+    pool = Pool(len(sfs))
+    pool.map(exposure_update, sfs)
+    pool.close()
+    pool.join()
 
 
 @sf.command()
