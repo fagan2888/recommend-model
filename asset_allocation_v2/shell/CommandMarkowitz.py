@@ -955,18 +955,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         allocate = MzAllocate('ALC.000001', assets, trade_date, lookback, bound = bounds)
         df = allocate.allocate()
-    elif algo == 34:
-        #boot和滤波均配
-        wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
-        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
-        assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
-        allocate_wavelet = MzAllocate('ALC.000001', assets, trade_date, lookback)
-        df_wavelet = allocate_wavelet.allocate()
-
-        allocate_boot = MzBootAllocate('ALC.000001', assets, trade_date, lookback)
-        df_boot = allocate_boot.allocate()
-
-        df = (df_wavelet + df_boot) / 2
 
     elif algo == 5:
         #blacklitterman
@@ -982,6 +970,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
         allocate = MzBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, bound = bounds)
         df = allocate.allocate()
+
     elif algo == 6:
         #blacklitterman 滤波
         #df = markowitz_days(
@@ -997,6 +986,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
         allocate = MzBlAllocate('ALC.000001', assets, views, trade_date, lookback, bound = bounds)
         df = allocate.allocate()
+
     elif algo == 7:
 
         #blacklitterman和滤波blacklitterman均配
@@ -1030,8 +1020,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzBootDownRiskAllocate('ALC.000001', assets, trade_date, lookback, bound = bounds)
         df = allocate.allocate()
 
-
-
     elif algo == 9:
         #固定波动率配置
         upper_risk = float(argv.get('upper_risk', 0.015))
@@ -1053,7 +1041,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-
 
         allocate = MzFixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
         df = allocate.allocate()
@@ -1099,8 +1086,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 14:
 
-
         #single factor index
+        lookback = int(argv.get('lookback'))
+        period = int(argv.get('period'))
         factor_num = int(argv.get('factor_num'))
         factor_loc = int(argv.get('factor_loc'))
         factor_end = int(argv.get('factor_end'))
@@ -1108,6 +1096,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         target[factor_loc] = 1
         target = target * factor_end
         trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
+        set_trace()
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.02)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = FactorIndexAllocate('ALC.000001', assets, trade_date, lookback, bound = bound, period = period, target = target)

@@ -236,69 +236,6 @@ class FactorValidAllocate(Allocate):
 
         return ws
 
-
-class FactorIndexAllocate(Allocate):
-
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, target = None):
-
-        super(FactorIndexAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-        sf_ids = ['SF.0000%02d'%i for i in range(1, 10)]
-        self.sf_ids = sf_ids
-
-        if target is None:
-            self.target = [1] + [0] * 8
-        else:
-            self.target = target
-
-
-        self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2010-01-01')
-        # self.sfe.to_csv('data/factor/stock_factor_exposure.csv', index_label = ['stock_id', 'sf_id', 'trade_date'])
-        # self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
-
-    def allocate(self):
-
-        adjust_days = self.index[self.lookback - 1::self.period]
-
-        df = pd.DataFrame()
-        pos_df = {}
-
-        pool = Pool(16)
-        wss = pool.map(self.allocate_algo, adjust_days)
-        pool.close()
-        pool.join()
-        # self.allocate_algo(adjust_days[0])
-
-        for day, ws in zip(adjust_days, wss):
-            pos_df[day] = ws
-
-        pos_df = df.from_dict(pos_df, orient = 'index')
-        pos_df = pos_df.fillna(0.0)
-
-        return pos_df
-
-    def allocate_algo(self, day):
-        print(day)
-
-        index_pos = asset_stock.load_index_pos('2070000191', day)
-        asset_ids = self.sfe.index.levels[0].intersection(index_pos).values
-        sfe = self.sfe.loc[asset_ids]
-
-        begin_date = (day.date() - timedelta(self.lookback - 1)).strftime('%Y-%m-%d')
-        end_date = day.date().strftime('%Y-%m-%d')
-
-        sfe = sfe[(sfe.index.get_level_values(2) > begin_date) & (sfe.index.get_level_values(2) < end_date)]
-        sfe = sfe.reset_index()
-        sfe = sfe.groupby(['stock_id', 'sf_id']).mean()
-        sfe = sfe.unstack()
-        sfe.columns = sfe.columns.droplevel(0)
-        sfe = sfe.dropna(how = 'all')
-        sfe = sfe.fillna(0.0)
-        sfe = sfe[self.sf_ids]
-
-        stock_weights = IndexFactor.cal_weight(sfe, self.target)
-
-        ws = dict(zip(sfe.index, stock_weights))
-
 class MzFixRiskBootAllocate(Allocate):
 
     def __init__(self, globalid, assets, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
