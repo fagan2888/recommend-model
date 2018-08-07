@@ -35,24 +35,25 @@ def gt(ctx):
 
 def load_gold_indicator():
     feature_names = {
-        'MC.GD0013':'LD_sg',
-        'MC.GD0014':'USrdi',
-        'MC.GD0015':'UScpi',
-        'MC.GD0016':'USrty',
-        'MC.GD0017':'USndi',
-        'MC.GD0018':'USnrty',
-        'MC.GD0019': 'comex_uncom_long',
-        'MC.GD0020': 'comex_uncom_short',
-        'MC.GD0021': 'comex_com_long',
-        'MC.GD0022': 'comex_com_short',
-        'MC.GD0023': 'comex_inventory',
-        'MC.GD0024': 'comex_Pos',
-        'MC.GD0025': 'SPDR_Pos',
-        'MC.GD0026': 'iShares_vol',
-        'MC.GD0027': 'SPDR_vol',
-        'MC.GD0028': 'comex_price',
-        'MC.GD0029': 'SPDR_price',
-        'MC.GD0030': 'iShares_price',
+        'MC.GD0013': 'LD_sg',
+        'MC.GD0014': 'USrdi',
+        'MC.GD0015': 'UScpi',
+        'MC.GD0016': 'USrty',
+        'MC.GD0017': 'USndi',
+        'MC.GD0018': 'USnrty',
+        'MC.GD0019': 'spdr_holding',
+        'MC.GD0020': 'spdr_price',
+        'MC.GD0021': 'spdr_volume',
+        'MC.GD0022': 'ishare_price',
+        'MC.GD0023': 'ishare_volume',
+        'MC.GD0024': 'comex_price',
+        'MC.GD0025': 'comex_holding',
+        'MC.GD0026': 'comex_pos',
+        'MC.GD0027': 'comex_pos_fundlong',
+        'MC.GD0028': 'comex_pos_fundshort',
+        'MC.GD0029': 'comex_pos_arbitrage',
+        'MC.GD0030': 'comex_pos_comlong',
+        'MC.GD0031': 'comex_pos_comshort',
     }
     '''
     'LD_sg' 伦敦现货黄金价格
@@ -61,7 +62,21 @@ def load_gold_indicator():
     ’USrty‘ 美国10年期国债实际收益率
     'USndi' 名义美元指数
     'USnrty'美国10年期国债收益率
-    '''
+    'spdr_holding',SPDR：黄金ETF：持有量（金盎司）
+    'spdr_price',SPDR：黄金ETF：收市价
+    'spdr_volume',SPDR：黄金ETF：成交量
+    'ishare_price',iShare：黄金ETF：收市价
+    'ishare_volume',iShare：黄金ETF：成交量
+    'comex_price',COMEX：黄金：期货收盘价（连续）
+    'comex_holding',COMEX：黄金：库存
+    'comex_pos',COMEX：黄金：期货和期权：总持仓
+    'comex_pos_fundlong',COMEX：黄金：期货和期权：基金多头持仓数量
+    'comex_pos_fundshort',COMEX：黄金：期货和期权：基金空头持仓数量
+    'comex_pos_arbitrage',COMEX：黄金：期货和期权：基金套利持仓数量
+    'comex_pos_comlong',COMEX：黄金：期货和期权：商业多头持仓数量
+    'comex_pos_comshort',COMEX：黄金：期货和期权：商业空头持仓数量
+    }
+   '''
     engine = database.connection('wind')
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -89,24 +104,63 @@ def load_gold_indicator():
 
 #更新数据库函数
 def save(gid, df):
-    fmt_columns = ['globalid','mc_gold_date','mc_gold_value','created_at' 'updated_at']
-    fmt_precision = 6
-    if not df.empty:
-        df = database.number_format(df, fmt_columns, fmt_precision)
-    # 保存到数据库
-    db = database.connection('lcmf_wind')
+    # 读入旧数据
+    db = database.connection('wind')#数据表lcmf_wind表格
     t2 = Table('mc_gold_indicator', MetaData(bind=db), autoload=True)
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
-    s = select(columns, (t2.c.globalid == gid))
+    s = select(columns).where(t2.c.globalid == gid)
     df_old = pd.read_sql(s, db, index_col=['globalid', 'mc_gold_date'], parse_dates=['mc_gold_date'])
-    if not df_old.empty:
-        df_old = database.number_format(df_old, fmt_columns, fmt_precision)
     # 更新数据库
     database.batch(db, t2, df, df_old, timestamp=False)
 
 #更新数据库
-def mc_gold_indicator_save():
-    pass
+def initial_data_update():
+    feature_names = {
+        'MC.GD0013': 'LD_sg',
+        'MC.GD0014': 'USrdi',
+        'MC.GD0015': 'UScpi',
+        'MC.GD0016': 'USrty',
+        'MC.GD0017': 'USndi',
+        'MC.GD0018': 'USnrty',
+        'MC.GD0019': 'spdr_holding',
+        'MC.GD0020': 'spdr_price',
+        'MC.GD0021': 'spdr_volume',
+        'MC.GD0022': 'ishare_price',
+        'MC.GD0023': 'ishare_volume',
+        'MC.GD0024': 'comex_price',
+        'MC.GD0025': 'comex_holding',
+        'MC.GD0026': 'comex_pos',
+        'MC.GD0027': 'comex_pos_fundlong',
+        'MC.GD0028': 'comex_pos_fundshort',
+        'MC.GD0029': 'comex_pos_arbitrage',
+        'MC.GD0030': 'comex_pos_comlong',
+        'MC.GD0031': 'comex_pos_comshort',
+    }
+
+    today = datetime.now()
+    df1 = pd.read_csv('wind_update1.csv')#其他数据
+    df2 = pd.read_csv('wind_update2.csv')#伦敦金现
+    df1 = df1.set_index(['date'])
+    df2 = df2.set_index(['date'])
+    sorted_keys = sorted(feature_names.keys())
+
+    for i in range(0,len(sorted_keys)):
+        key_i = sorted_keys[i]
+        columns_name  = feature_names[key_i]
+
+        if sorted_keys[i] == 'MC.GD0013':
+            df = df2
+        else:
+            df = df1.loc[:,[columns_name]]
+
+        df.index.name = 'mc_gold_date'
+        df.columns = ['mc_gold_value']
+        df.loc[:,'globalid'] = key_i
+        df.loc[:,'created_at'] = today
+        df.loc[:,'updated_at'] = today
+        df = df.reset_index().set_index(['globalid','mc_gold_date'])
+        print key_i,df.tail(10)
+        save(key_i,df)
 
 
 ##############################################################################
@@ -128,25 +182,25 @@ def next_month(now_time):
 # 指数移动平均
 def ema(s, n):
     """
-    returns an n period exponential moving average for
-    the time series s
+    输入：array
+    输出:EMA
+    公式：EMA（i) = (s(i) - EMA(i-1)) * (2/float(1+n)) + EMA(i-1)
     """
     #s = np.array(s)
     ema = []
     j = 1
-    #get n sma first and calculate the next n period ema
+    #获取第一期EMA值
     sma = sum(s[:n]) / n
     multiplier = 2 / float(1 + n)
     ema.append(sma)
-    #EMA(current) = ( (Price(current) - EMA(prev) ) x Multiplier) + EMA(prev)
     ema.append(((s[n] - sma)*multiplier) + sma)
-    #now calculate the rest of the values
+    #计算EMA剩余期限的EMA值<循环>
     for i in s[n+1:]:
         tmp = ((i - ema[j]) * multiplier) + ema[j]
         j = j + 1
         ema.append(tmp)
     ema1 = []
-    for m in range(1,n):
+    for m in range(n-1):
         n = s[:m]
         ema1.append(np.mean(n))
     ema = ema1 + ema
@@ -155,8 +209,8 @@ def ema(s, n):
 # 数据平滑
 def smooth(df,para=0.34,win_obs=7,para_obs=0):
     #df第1列必须为观点数据,df['data','','',...]
-    
-    df_data = df.iloc[:,0]
+
+    df_data = df.iloc[:,0]#观点数据
     data = df.loc[:,['USrdi','USrty']]#USrdi和USrty数据
     #
     data_ema = ema(df_data.values,win_obs)
@@ -282,15 +336,15 @@ def cal_gold_view(para_IR=0,obs1=7,obs2=7):
     #@para
     #para_IR = 0,1,2
     #obs1 = 6,7,obs2=0,7
-
+    #set_trace()
     #####
-    # 1、导入数据，分别得到月频和日频数据集：M_data D_data
+    # 1、导入数据，分别得到月频和日频数据集：M_data D_data  月频数据需要另外处理
     data = load_gold_indicator()
     #print data
     M_data = data.loc[:,['UScpi']].dropna()
     M_data = M_data[~M_data.iloc[:,0].isin([0])]
     M_data = M_data.truncate(before = '1997-07-01')#获取该日期之后的数据
-
+    
     ######
     # 2、获取real_dataset和forcast_dataset数据集@para_IR
     a_trade_date = trade_date.ATradeDate()
@@ -301,6 +355,7 @@ def cal_gold_view(para_IR=0,obs1=7,obs2=7):
     data_month = pd.concat([data_month,M_data],axis=1,join='inner')
     data_month['UScpi_ratio'] = data_month.loc[:,['UScpi']].pct_change(12).fillna(method='bfill')*100
     data_month = data_month.fillna(method='pad')
+    print data_month
     ### 获取real_dataset
     real_dataset = data_month.loc[:,['UScpi_ratio']].copy()
     real_dataset['USrdi'] = data_month.loc[:,'USndi'] / data_month.loc[:,'UScpi']
@@ -382,10 +437,42 @@ def cal_gold_view(para_IR=0,obs1=7,obs2=7):
 @gt.command()
 @click.option('--start-date', 'startdate', default='2003-01-01', help=u'start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help=u'start date to calc')
-@click.option('--viewid', 'viewid', default='MC.VW0006', help=u'macro timing view id')
+#@click.option('--viewid', 'viewid', default='MC.VW0006', help=u'macro timing view id')
+@click.option('--viewid', 'viewid', default='BL.000009', help=u'macro timing view id')
 @click.pass_context
 def gold_view_update(ctx, startdate, enddate, viewid):
-    #backtest_interval = pd.date_range(startdate, enddate)
+    mv = cal_gold_view()
+    today = datetime.now()
+    union_mv = {}
+    union_mv['globalid'] = np.repeat(viewid,len(mv))
+    union_mv['bl_date'] = mv.index
+    union_mv['bl_view'] = np.where(mv.view_gold >= 0,1,-1)
+    union_mv['bl_index_id'] = np.repeat('120000014',len(mv))
+    union_mv['created_at'] = np.repeat(today,len(mv))
+    union_mv['updated_at'] = np.repeat(today,len(mv))
+    union_mv_df = pd.DataFrame(union_mv, columns = ['globalid', 'bl_date', 'bl_view','bl_index_id','created_at', 'updated_at'])
+    df_new = union_mv_df.set_index(['globalid', 'bl_date'])
+
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('ra_bl_view', metadata, autoload = True)
+    columns = [
+        t.c.globalid,
+        t.c.bl_date,
+        t.c.bl_view,
+        t.c.bl_index_id,
+        t.c.created_at,
+        t.c.updated_at,
+    ]
+    s = select(columns, (t.c.globalid == viewid))
+    df_old = pd.read_sql(s, db, index_col = ['globalid', 'bl_date'], parse_dates = ['bl_date'])
+    database.batch(db, t, df_new, df_old, timestamp = False)
+
+
+def view_update(viewid='MC.VW0006'):
+    '''
+    id=MC.VW0006,保存到表格：asset/mc_view_strength
+    '''
     mv = cal_gold_view()
     today = datetime.now()
     union_mv = {}
@@ -396,7 +483,6 @@ def gold_view_update(ctx, startdate, enddate, viewid):
     union_mv['updated_at'] = np.repeat(today,len(mv))
     union_mv_df = pd.DataFrame(union_mv, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
     df_new = union_mv_df.set_index(['mc_view_id', 'mc_date'])
-
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t = Table('mc_view_strength', metadata, autoload = True)
@@ -411,17 +497,18 @@ def gold_view_update(ctx, startdate, enddate, viewid):
     df_old = pd.read_sql(s, db, index_col = ['mc_view_id', 'mc_date'], parse_dates = ['mc_date'])
     database.batch(db, t, df_new, df_old, timestamp = False)
 
+
 ##############################################################################
 #########################
 
 if __name__ == '__main__':
-    view = cal_gold_view()
-    print view
-    view.to_csv('gold_view.csv')
-    #print view['view_gold']
-    #####
-    #黄金持仓观点
-    #pos_data = data.loc[:,['comex_uncom_long','comex_uncom_short','comex_com_long','comex_com_short','comex_Pos']].truncate(before = '1997-07-01')
-    #print pos_data
+    view_update()
+    print '###### asset/mc_view_strength 表格数据更新 ######'
+
+
+
+
+
+
 
 

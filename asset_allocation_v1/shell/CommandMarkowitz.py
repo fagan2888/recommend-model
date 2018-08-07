@@ -20,6 +20,7 @@ import Portfolio as PF
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
+from ipdb import set_trace
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -950,6 +951,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, blacklitterman = True, wavelet = False, wavelet_filter_num = wavelet_filter_num, markowitz_id = markowitz_id)
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         view_df = View.load_view(argv.get('bl_view_id'))
+        print view_df
         confidence = float(argv.get('bl_confidence'))
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         views = {}

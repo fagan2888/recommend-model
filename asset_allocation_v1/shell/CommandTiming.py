@@ -87,11 +87,10 @@ def signal_update_gold(timing):
     df_data = cal_gold_view()
 
     df_data = df_data[['view_gold']]
-    #print df_data[['view_gold']]
+    print df_data
     df_data.rename(columns={'view_gold':'tc_signal'}, inplace = True)
     df_data.index.name='tc_date'
     df_data['tc_signal'] = np.where(df_data['tc_signal'].values >= 0,1,-1)
-    #print df_data
 
     df_new = df_data[['tc_signal']]
     df_new['tc_timing_id'] = timing_id

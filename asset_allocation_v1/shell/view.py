@@ -85,7 +85,7 @@ class View(object):
         engine = database.connection('asset')
         Session = sessionmaker(bind=engine)
         session = Session()
-        sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(asset_ra_bl.ra_bl_view.globalid == 'BL.000001').statement
+        sql = session.query(asset_ra_bl.ra_bl_view.bl_date, asset_ra_bl.ra_bl_view.bl_index_id, asset_ra_bl.ra_bl_view.bl_view).filter(asset_ra_bl.ra_bl_view.globalid == bf_id).statement
         view_df = pd.read_sql(sql, session.bind, index_col = ['bl_date', 'bl_index_id'], parse_dates =  ['bl_date'])
         view_df = view_df.unstack()
         view_df.columns = view_df.columns.droplevel(0)
