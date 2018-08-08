@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 def exposure_update(ff):
-    print(ff.factor_id)
+    print(ff.factor_id, 'exposure updating')
     ff.cal_factor_exposure()
     asset_fund_factor.update_exposure(ff)
 
@@ -52,14 +52,16 @@ def factor_exposure_update(ctx):
     '''insert factor info
     '''
 
+    # ff_ids = ['FF.000001', 'FF.000005', 'FF.000007', 'FF.100009', 'FF.100012', 'FF.100018', 'FF.100019']
+    ff_ids = ['FF.000007']
+    ffs = [FundFactor(ff_id) for ff_id in ff_ids]
     # ffs = [FundFactor('FF.0000%02d'%i) for i in range(1,10)]+[FundFactor('FF.1000%02d'%i) for i in range(1,29)]
-    ffs = ['FF.000001', 'FF.000005', 'FF.000006', 'FF.100009', 'FF.100012', 'FF.100018', 'FF.100019']
-    # pool = Pool(16)
-    # pool.map(exposure_update, ffs)
-    # pool.close()
-    # pool.join()
-    for ff in ffs:
-        exposure_update(ff)
+    pool = Pool(len(ffs))
+    pool.map(exposure_update, ffs)
+    pool.close()
+    pool.join()
+    # for ff in ffs:
+    #     exposure_update(ff)
 
 
 @ff.command()

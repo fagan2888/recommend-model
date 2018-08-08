@@ -176,7 +176,7 @@ def sp_view_update(ctx, startdate, enddate, viewid):
     union_mv['updated_at'] = updated_at
     union_mv_df = pd.DataFrame(union_mv, columns = ['globalid', 'bl_date', 'bl_view', 'created_at', 'updated_at'])
 
-    for index_id in ['120000013']:
+    for index_id in ['120000013', 'ERI000001']:
 
         df_new = union_mv_df
         df_new['bl_index_id'] = index_id

@@ -998,11 +998,11 @@ def pool_by_single_factor(pool, day, lookback, limit, ffr, ffe):
     ffe = ffe.dropna()
 
     vf = np.zeros(ffe.shape[1])
-    pos = int(pool.ra_index_id[-2:])-1
+    # pos = int(pool.ra_index_id[-2:])-1
+    pos = ffe.columns.values.tolist().index(pool.ra_index_id)
     if pool.ra_fund_type == 11113:
         vf[pos] = -1
     elif pool.ra_fund_type == 11114:
-        pos = pos + 9
         vf[pos] = 1
     elif pool.ra_fund_type == 11112:
         vf[pos] = 1
