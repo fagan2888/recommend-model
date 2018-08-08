@@ -204,7 +204,6 @@ class FactorValidAllocate(Allocate):
         self.sf_ids = sf_ids
 
         self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2010-01-01')
-        self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
         self.sfr = load_stock_factor_return(sf_ids = sf_ids, begin_date = '2012-01-01')
 
     def allocate(self):
@@ -398,7 +397,6 @@ class FactorValidAllocate(Allocate):
         self.sf_ids = sf_ids
 
         self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2010-01-01')
-        self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
         self.sfr = load_stock_factor_return(sf_ids = sf_ids, begin_date = '2012-01-01')
 
     def allocate(self):
@@ -461,9 +459,7 @@ class FactorIndexAllocate(Allocate):
             self.target = target
 
 
-        # self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2010-01-01')
-        # self.sfe.to_csv('data/factor/stock_factor_exposure.csv', index_label = ['stock_id', 'sf_id', 'trade_date'])
-        self.sfe = pd.read_csv('data/factor/stock_factor_exposure.csv', index_col = ['stock_id', 'sf_id', 'trade_date'], parse_dates = ['trade_date'])
+        self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2010-01-01')
 
     def allocate(self):
 

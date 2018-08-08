@@ -82,17 +82,17 @@ def factor_exposure_update(ctx):
         # ElectronicStockFactor(factor_id = 'SF.100006'),
         # CTEquipStockFactor(factor_id = 'SF.100007'),
         # HouseholdElecStockFactor(factor_id = 'SF.100008'),
-        # FoodBeverageStockFactor(factor_id = 'SF.100009'),
+        FoodBeverageStockFactor(factor_id = 'SF.100009'),
         # TextileStockFactor(factor_id = 'SF.100010'),
         # LightIndustryStockFactor(factor_id = 'SF.100011'),
-        # MedicalStockFactor(factor_id = 'SF.100012'),
+        MedicalStockFactor(factor_id = 'SF.100012'),
         # PublicStockFactor(factor_id = 'SF.100013'),
         # ComTransStockFactor(factor_id = 'SF.100014'),
         # RealEstateStockFactor(factor_id = 'SF.100015'),
         # TradingStockFactor(factor_id = 'SF.100016'),
         # TourismStockFactor(factor_id = 'SF.100017'),
-        # BankStockFactor(factor_id = 'SF.100018'),
-        # FinancialStockFactor(factor_id = 'SF.100019'),
+        BankStockFactor(factor_id = 'SF.100018'),
+        FinancialStockFactor(factor_id = 'SF.100019'),
         # CompositeStockFactor(factor_id = 'SF.100020'),
         # ConstructionStockFactor(factor_id = 'SF.100021'),
         # ArchitecturalStockFactor(factor_id = 'SF.100022'),
@@ -105,17 +105,14 @@ def factor_exposure_update(ctx):
     ]
 
     # sfs = [
-    #     VolStockFactor(factor_id = "SF.000002"),
-    #     MomStockFactor(factor_id = "SF.000003"),
+    #     FqStockFactor(factor_id = "SF.000007"),
     # ]
 
     # for _sf in sfs:
-    #     t = datetime.now()
     #     _sf.cal_factor_exposure()
     #     print(_sf.factor_id, 'cal factor exposure done')
     #     asset_stock_factor.update_exposure(_sf)
     #     print(_sf.factor_id, 'update done')
-    #     print(datetime.now() - t)
 
 
     pool = Pool(len(sfs))
