@@ -75,7 +75,6 @@ def load_gold_indicator():
     'comex_pos_arbitrage',COMEX：黄金：期货和期权：基金套利持仓数量
     'comex_pos_comlong',COMEX：黄金：期货和期权：商业多头持仓数量
     'comex_pos_comshort',COMEX：黄金：期货和期权：商业空头持仓数量
-    }
    '''
     engine = database.connection('wind')
     Session = sessionmaker(bind=engine)
@@ -200,7 +199,7 @@ def ema(s, n):
         j = j + 1
         ema.append(tmp)
     ema1 = []
-    for m in range(n-1):
+    for m in range(1,n):
         n = s[:m]
         ema1.append(np.mean(n))
     ema = ema1 + ema
@@ -268,8 +267,6 @@ def smooth(df,para=0.34,win_obs=7,para_obs=0):
         if (data_strength[i-1]*data_strength[i-2]>=0 and data_strength[i-1]*data_strength[i]<=0 and \
             abs(data_strength[i]) < para_strength):
             data_strength[i] = -1.0*data_strength[i]
-
-    #print '###########data_strength##########',pd.DataFrame(data_strength)
 
     return data_strength,df['gold_smooth']
 
@@ -352,10 +349,12 @@ def cal_gold_view(para_IR=0,obs1=7,obs2=7):
     vecdict=dict(zip(M_data.index,index_month))#将index月末日期重命名为交易日期
     M_data = M_data.rename(index=vecdict)
     data_month = data.loc[:,['LD_sg','USnrty','USndi']].reindex(index_month)
-    data_month = pd.concat([data_month,M_data],axis=1,join='inner')
+    data_month = pd.concat([data_month,M_data],axis=1,join='inner')#部分0值代替了NAN，需要处理成前值
+    #新增数据调整
+    data_month[data_month.isin([0])] = float('nan')
+    data_month.fillna(method='pad',inplace = True)
     data_month['UScpi_ratio'] = data_month.loc[:,['UScpi']].pct_change(12).fillna(method='bfill')*100
     data_month = data_month.fillna(method='pad')
-    print data_month
     ### 获取real_dataset
     real_dataset = data_month.loc[:,['UScpi_ratio']].copy()
     real_dataset['USrdi'] = data_month.loc[:,'USndi'] / data_month.loc[:,'UScpi']
@@ -441,6 +440,9 @@ def cal_gold_view(para_IR=0,obs1=7,obs2=7):
 @click.option('--viewid', 'viewid', default='BL.000009', help=u'macro timing view id')
 @click.pass_context
 def gold_view_update(ctx, startdate, enddate, viewid):
+    '''
+    id=BL.00009,保存到表格：asset/ra_bl_view
+    '''
     mv = cal_gold_view()
     today = datetime.now()
     union_mv = {}
@@ -467,7 +469,7 @@ def gold_view_update(ctx, startdate, enddate, viewid):
     s = select(columns, (t.c.globalid == viewid))
     df_old = pd.read_sql(s, db, index_col = ['globalid', 'bl_date'], parse_dates = ['bl_date'])
     database.batch(db, t, df_new, df_old, timestamp = False)
-
+    print '#######  id=BL.00009,保存到表格：asset/ra_bl_vie  w######'
 
 def view_update(viewid='MC.VW0006'):
     '''
@@ -496,14 +498,13 @@ def view_update(viewid='MC.VW0006'):
     s = select(columns, (t.c.mc_view_id == viewid))
     df_old = pd.read_sql(s, db, index_col = ['mc_view_id', 'mc_date'], parse_dates = ['mc_date'])
     database.batch(db, t, df_new, df_old, timestamp = False)
-
+    print '######  id=MC.VW0006,保存到表格：asset/mc_view_strength  ######'
 
 ##############################################################################
 #########################
 
 if __name__ == '__main__':
     view_update()
-    print '###### asset/mc_view_strength 表格数据更新 ######'
 
 
 
