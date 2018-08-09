@@ -390,8 +390,8 @@ def raw_db_index_value(start_date, end_date, codes=None, date_selector=None):
 
         #code_selector
         D = select([t_idx.c.globalid]) \
-                .where(t_idx.ra_code.in_(codes)) \
-                .alias(D)
+                .where(t_idx.c.ra_code.in_(codes)) \
+                .alias('D')
         #date_selector
 
         # code_sql = "SELECT globalid FROM ra_index WHERE ra_code IN (%s)" % (code_str);
@@ -538,14 +538,14 @@ if __name__ == '__main__':
     # sql = "SELECT ra_date, ra_code, ra_nav_adjusted FROM `ra_fund_nav` JOIN trade_dates ON ra_date = td_date WHERE ra_code IN ('206018', '100058', '000509') AND ra_date >= '2015-10-20' ORDER BY ra_date"
 
     # print "stock_fund_value", sql
-    
+
     # conn  = MySQLdb.connect(**config.db_base)
     # df = pd.read_sql(sql, conn, index_col = ['ra_date', 'ra_code'], parse_dates=['ra_date'])
     # conn.close()
 
     # df = df.unstack().fillna(method='pad')
     # df.columns = df.columns.droplevel(0)
-    
+
     # df.to_csv("~/tmp.csv", columns=['206018', '100058', '000509'])
     #df = stock_fund_value('2014-01-03', '2016-06-03')
     #df = bond_fund_value('2014-01-03', '2016-06-03')

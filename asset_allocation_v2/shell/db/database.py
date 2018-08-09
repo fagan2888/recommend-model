@@ -120,6 +120,7 @@ def number_format(df, columns=[], precision=2, **kwcolumns):
 def batch(db, table, df_new, df_old, timestamp=True):
     try:
         db = db.connect()
+        table = Table(table.name, MetaData(bind=db), autoload=True)
         transaction = db.begin()
         index_insert = df_new.index.difference(df_old.index)
         index_delete = df_old.index.difference(df_new.index)
