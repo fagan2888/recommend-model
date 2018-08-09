@@ -390,7 +390,7 @@ class MzFixRiskBootBlAllocate(MzBlAllocate):
 class FactorValidAllocate(Allocate):
 
 
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, cpu_count = None):
 
         super(FactorValidAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
         sf_ids = ['SF.0000%02d'%i for i in range(1, 10)]
@@ -399,13 +399,20 @@ class FactorValidAllocate(Allocate):
         self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, stock_ids = assets.keys(), begin_date = '2010-01-01')
         self.sfr = load_stock_factor_return(sf_ids = sf_ids, begin_date = '2012-01-01')
 
+        if cpu_count is None:
+            count = int(multiprocessing.cpu_count()) // 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+
     def allocate(self):
 
         adjust_days = self.index[self.lookback - 1::self.period]
         asset_ids = list(self.assets.keys())
         pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
 
-        pool = Pool(32)
+        pool = Pool(self.__cpu_count)
         wss = pool.map(self.allocate_algo, adjust_days)
         pool.close()
         pool.join()
@@ -486,7 +493,6 @@ class FactorIndexAllocate(Allocate):
         return pos_df
 
     def allocate_algo(self, day):
-        print(day)
 
         index_pos = asset_stock.load_index_pos('2070000191', day)
         asset_ids = self.sfe.index.levels[0].intersection(index_pos).values
