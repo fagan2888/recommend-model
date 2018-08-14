@@ -61,8 +61,7 @@ def user_question_answer(ctx):
     session.close()
     user_question_answer_df.to_csv('tmp/user_question_answer.csv')
 
-
-    spark_conf = (SparkConf().setAppName('order holding').setMaster('local[16]')
+    spark_conf = (SparkConf().setAppName('order holding').setMaster('local[24]')
             .set("spark.executor.memory", "50G")
             .set('spark.driver.memory', '50G')
             .set('spark.driver.maxResultSize', '50G')
@@ -81,7 +80,7 @@ def user_question_answer(ctx):
             v.uq_questionnaire_id = v.uq_questionnaire_id.astype(int)
             v.uq_question_type = v.uq_question_type.astype(int)
             v = v[v.uq_questionnaire_id == max(v.uq_questionnaire_id)]
-            v = v[v.uq_question_type == 0]
+            #v = v[v.uq_question_type == 0]
             v.uq_question_id = v.uq_question_id.astype(str)
             v['uq_question_answer'] = v.uq_question_id + v.uq_answer
             v = v.drop(columns = ['uq_question_type', 'uq_start_time', 'uq_end_time' ,'uq_question_id', 'uq_answer', 'uq_questionnaire_id'])
@@ -95,7 +94,6 @@ def user_question_answer(ctx):
         return v
 
 
-    vs = user_question_answer_rdd.groupBy(lambda row : row.uq_uid).map(question_answer_feature).collect()
-    user_question_answer_df = pd.concat(vs, axis = 0).fillna(0.0)
+    user_question_answer_df = user_question_answer_rdd.groupBy(lambda row : row.uq_uid).map(question_answer_feature).reduce(lambda a, b : pd.concat([a,b], axis = 0, sort=True).fillna(0.0))
     print(user_question_answer_df.tail())
     user_question_answer_df.to_csv('tmp/user_question_answer_feature.csv')

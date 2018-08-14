@@ -28,6 +28,8 @@ class ts_order(Base):
     id = Column(Integer, primary_key = True)
     ts_uid = Column(String)
     ts_portfolio_id = Column(String)
+    ts_txn_id = Column(String)
+    ts_portfolio_id = Column(String)
     ts_trade_type = Column(Integer)
     ts_trade_status = Column(Integer)
     ts_trade_date = Column(Date)

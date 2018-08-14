@@ -238,12 +238,12 @@ def user_risk_match(ctx):
     for k,v in redeem_order.groupby(level=[0, 1]):
         v = v.loc[k]
         buy_date = v.ts_buy_date
-        buy_date_start = buy_date - timedelta(7)
-        buy_date_end = buy_date + timedelta(7)
+        buy_date_start = buy_date - timedelta(0)
+        buy_date_end = buy_date + timedelta(0)
         risk = v.ts_risk
         redeem_date = k[1]
-        redeem_date_start = redeem_date - timedelta(7)
-        redeem_date_end = redeem_date + timedelta(7)
+        redeem_date_start = redeem_date - timedelta(0)
+        redeem_date_end = redeem_date + timedelta(0)
         redeem_uid = k[0]
         buy_user = buy_order[(buy_order.ts_risk == risk) &
                 (buy_order.ts_buy_date >= buy_date_start) & (buy_order.ts_buy_date <= buy_date_end) &

@@ -12,7 +12,7 @@ import itertools
 import pandas as pd
 
 import CommandUserTrade
-import CommandUserQuestion
+import CommandUserData
 import CommandUserTrain
 
 from util import ProgressBar
@@ -58,6 +58,6 @@ def user_analysis(ctx):
 
 if __name__=='__main__':
     user_analysis.add_command(CommandUserTrade.user)
-    user_analysis.add_command(CommandUserQuestion.question)
+    user_analysis.add_command(CommandUserData.data)
     user_analysis.add_command(CommandUserTrain.train)
     user_analysis(obj={})
