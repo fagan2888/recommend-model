@@ -72,6 +72,15 @@ class tq_fd_basicinfo(Base):
     fsymbol = Column(String)
 
 
+class tq_fd_typeclass(Base):
+
+    __tablename__ = 'tq_fd_typeclass'
+
+    id = Column(Integer, primary_key = True)
+    securityid = Column(String)
+    l1codes = Column(String)
+
+
 class tq_fd_sharestat(Base):
 
     __tablename__ = 'tq_fd_sharestat'
@@ -81,6 +90,19 @@ class tq_fd_sharestat(Base):
     publishdate = Column(Date)
     holdernum = Column(Float)
     avgshare = Column(Float)
+
+
+def load_fund_by_type(l1codes = 2001):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_fd_typeclass.securityid, tq_fd_typeclass.l1codes).filter(tq_fd_typeclass.l1codes == l1codes)
+    df = pd.read_sql(sql.statement, session.bind, index_col = ['securityid'])
+    session.commit()
+    session.close()
+
+    return df
 
 
 def load_fund_nav_series(code, reindex=None, begin_date=None, end_date=None):

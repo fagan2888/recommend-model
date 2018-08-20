@@ -100,25 +100,63 @@ def factor_exposure_update(ctx):
         # MachineryStockFactor(factor_id = 'SF.100024'),
         # MilitaryStockFactor(factor_id = 'SF.100025'),
         # ComputerStockFactor(factor_id = 'SF.100026'),
-        # MedicalStockFactor(factor_id = 'SF.100027'),
-        # CommunicationStockFactor(factor_id = 'SF.100028'),
+        # CommunicationStockFactor(factor_id = 'SF.100027'),
+    ]
+
+    sfs = [
+        SizeStockFactor(factor_id = "SF.000001"),
+        VolStockFactor(factor_id = "SF.000002"),
+        MomStockFactor(factor_id = "SF.000003"),
+        TurnoverStockFactor(factor_id = "SF.000004"),
+        EarningStockFactor(factor_id = "SF.000005"),
+        ValueStockFactor(factor_id = "SF.000006"),
+        FqStockFactor(factor_id = "SF.000007"),
+        LeverageStockFactor(factor_id = "SF.000008"),
+        GrowthStockFactor(factor_id = "SF.000009"),
+        FarmingStockFactor(factor_id = 'SF.100001'),
+        MiningStockFactor(factor_id = 'SF.100002'),
+        ChemicalStockFactor(factor_id = 'SF.100003'),
+        FerrousStockFactor(factor_id = 'SF.100004'),
+        NonFerrousStockFactor(factor_id = 'SF.100005'),
+        ElectronicStockFactor(factor_id = 'SF.100006'),
+        CTEquipStockFactor(factor_id = 'SF.100007'),
+        HouseholdElecStockFactor(factor_id = 'SF.100008'),
+        FoodBeverageStockFactor(factor_id = 'SF.100009'),
+        TextileStockFactor(factor_id = 'SF.100010'),
+        LightIndustryStockFactor(factor_id = 'SF.100011'),
+        MedicalStockFactor(factor_id = 'SF.100012'),
+        PublicStockFactor(factor_id = 'SF.100013'),
+        ComTransStockFactor(factor_id = 'SF.100014'),
+        RealEstateStockFactor(factor_id = 'SF.100015'),
+        TradingStockFactor(factor_id = 'SF.100016'),
+        TourismStockFactor(factor_id = 'SF.100017'),
+        BankStockFactor(factor_id = 'SF.100018'),
+        FinancialStockFactor(factor_id = 'SF.100019'),
+        CompositeStockFactor(factor_id = 'SF.100020'),
+        ConstructionStockFactor(factor_id = 'SF.100021'),
+        ArchitecturalStockFactor(factor_id = 'SF.100022'),
+        ElecEquipStockFactor(factor_id = 'SF.100023'),
+        MachineryStockFactor(factor_id = 'SF.100024'),
+        MilitaryStockFactor(factor_id = 'SF.100025'),
+        ComputerStockFactor(factor_id = 'SF.100026'),
+        CommunicationStockFactor(factor_id = 'SF.100027'),
     ]
 
     # sfs = [
     #     FqStockFactor(factor_id = "SF.000007"),
     # ]
 
-    # for _sf in sfs:
-    #     _sf.cal_factor_exposure()
-    #     print(_sf.factor_id, 'cal factor exposure done')
-    #     asset_stock_factor.update_exposure(_sf)
-    #     print(_sf.factor_id, 'update done')
+    for _sf in sfs:
+        _sf.cal_factor_exposure()
+        print(_sf.factor_id, 'cal factor exposure done')
+        asset_stock_factor.update_exposure(_sf)
+        print(_sf.factor_id, 'update done')
 
 
-    pool = Pool(len(sfs))
-    pool.map(exposure_update, sfs)
-    pool.close()
-    pool.join()
+    # pool = Pool(len(sfs))
+    # pool.map(exposure_update, sfs)
+    # pool.close()
+    # pool.join()
 
 
 @sf.command()

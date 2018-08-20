@@ -286,8 +286,6 @@ def load_mv(factor_ids, start_date, end_date):
 
 
 
-
-
 if  __name__ == '__main__':
 
     pass

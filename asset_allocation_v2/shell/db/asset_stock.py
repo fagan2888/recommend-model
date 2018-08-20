@@ -242,6 +242,45 @@ def load_index_pos(secode, day):
     return pos
 
 
+def load_index_all_pos(secode):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_ix_mweight.tradedate, tq_ix_mweight.constituentcode, tq_ix_mweight.weight).filter(tq_ix_mweight.secode == secode)
+    df = pd.read_sql(sql.statement, session.bind, index_col = ['tradedate', 'constituentcode'], parse_dates = ['tradedate'])
+
+    session.commit()
+    session.close()
+    df = df.unstack().fillna(0.0)
+    df.columns = df.columns.levels[1]
+    df.columns = ['SK.%s'%i for i in df.columns]
+    df = df / 100
+
+    return df
+
+
+def load_pos_stock(secode):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    sql = session.query(tq_ix_mweight.tradedate, tq_ix_mweight.constituentcode).filter(tq_ix_mweight.secode == secode)
+    df = pd.read_sql(sql.statement, session.bind, index_col = ['tradedate', 'constituentcode'], parse_dates = ['tradedate'])
+
+    session.commit()
+    session.close()
+    df['valid'] = 1
+    df = df.unstack()
+    stocks = df.columns.levels[1].values.ravel()
+    stocks = np.array(['SK.%s'%stock for stock in stocks])
+    df.columns = stocks
+
+    return df
+
+
 def load_ohlcavntt(globalid):
 
     secode = asset.StockAsset.secode_dict()[globalid]

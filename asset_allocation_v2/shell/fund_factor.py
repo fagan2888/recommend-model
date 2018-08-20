@@ -58,8 +58,8 @@ class FundFactor(Factor):
 
     def cal_factor_exposure(self):
 
-        sf_ids = ['SF.0000%02d'%i for i in range(1,10)]+['SF.1000%02d'%i for i in range(1,29)]
-        ff_ids = ['FF.0000%02d'%i for i in range(1,10)]+['FF.1000%02d'%i for i in range(1,29)]
+        sf_ids = ['SF.0000%02d'%i for i in range(1,10)]+['SF.1000%02d'%i for i in range(1,28)]
+        ff_ids = ['FF.0000%02d'%i for i in range(1,10)]+['FF.1000%02d'%i for i in range(1,28)]
         ff_sf = dict(zip(ff_ids, sf_ids))
         sfe = StockFactor.load_factor_exposure(ff_sf[self.factor_id])
         fund_pos = StockFundAsset.all_fund_pos()
@@ -70,6 +70,7 @@ class FundFactor(Factor):
         for fund_id in fund_ids:
             fp = fund_pos[fund_id]
             dates = fp.index.levels[0]
+            dates = dates[dates > '2007-01-31']
             df_fund_exposure = {}
             for date in dates:
                 pos = fp.loc[date]

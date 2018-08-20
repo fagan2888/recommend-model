@@ -955,7 +955,6 @@ def pool_by_corr_jensen(pool, day, lookback, limit):
     df_nav_fund  = df_nav_fund.loc[df_nav_index.index]
     fund_index_df = pd.concat([df_nav_index, df_nav_fund], axis = 1, join_axes = [df_nav_index.index])
 
-
     fund_index_corr_df = fund_index_df.pct_change().fillna(0.0).corr().fillna(0.0)
 
     corr = fund_index_corr_df[ra_index_id][1:]

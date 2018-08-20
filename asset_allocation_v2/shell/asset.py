@@ -30,7 +30,7 @@ from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_index
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl
 from util import xdict
 from util.xdebug import dd
@@ -347,7 +347,7 @@ class StockAsset(Asset):
             all_stocks = pd.read_sql(session.query(db.asset_stock.ra_stock.globalid, db.asset_stock.ra_stock.sk_secode, db.asset_stock.ra_stock.sk_compcode, db.asset_stock.ra_stock.sk_name, db.asset_stock.ra_stock.sk_listdate, db.asset_stock.ra_stock.sk_swlevel1code).statement, session.bind, index_col = ['globalid'])
             session.commit()
             session.close()
-            StockAsset.__all_stock_info = all_stocks;
+            StockAsset.__all_stock_info = all_stocks
         if globalids is None:
             return StockAsset.__all_stock_info
         else:
@@ -553,50 +553,104 @@ class StockFundAsset(FundAsset):
         return StockFundAsset.__all_fund_pos
 
 
+class IndexAsset(Asset):
+
+
+    __all_index_info = None
+    __all_index_pos = {}
+    __all_index_quote = {}
+    __all_indexes = {}
+
+
+    def __init__(self, code, secode = None, name = None, nav_sr = None):
+
+
+        super(IndexAsset, self).__init__(code, name = name, nav_sr = nav_sr)
+        self.__secode = None
+        self.__quote = None
+        self.__pos = None
+
+
+    @property
+    def code(self):
+        return self.__code
+
+
+    @staticmethod
+    def get_index(code):
+        if not code in IndexAsset.__all_indexes:
+            IndexAsset.__all_indexes[code] = IndexAsset(code)
+        return IndexAsset.__all_indexes[code]
+
+
+    @staticmethod
+    def all_indexes():
+        index_ids = list(set(IndexAsset.all_index_info().index.ravel()).difference(IndexAsset.__all_indexes.keys()))
+        if len(index_ids) > 0:
+            count = multiprocessing.cpu_count()
+            pool = Pool(count // 2)
+            results = pool.map(Asset.load_nav_series, index_ids)
+            pool.close()
+            pool.join()
+            for i in range(0, len(index_ids)):
+                asset = IndexAsset(index_ids[i], nav_sr = results[i])
+                IndexAsset.__all_indexes[index_ids[i]] = asset
+        return IndexAsset.__all_indexes
+
+
+    @staticmethod
+    def all_index_nav():
+        IndexAsset.all_indexes()
+        index_nav = {}
+        for index_id in IndexAsset.all_index_info().index:
+            asset = IndexAsset.get_index(index_id)
+            index_nav[index_id] = asset.nav().replace(0.0, method = 'pad')
+        index_nav_df = pd.DataFrame(index_nav)
+        return index_nav_df
+
+
+    #所有股票代码
+    @staticmethod
+    def all_index_info(codes = None):
+        if IndexAsset.__all_index_info is None:
+            all_indexes = db.asset_index.load_all_index_factor()
+            IndexAsset.__all_index_info = all_indexes;
+        if codes is None:
+            return IndexAsset.__all_index_info
+        else:
+            return IndexAsset.__all_index_info.loc[codes]
+
+
+    @staticmethod
+    def all_index_pos():
+
+        if len(IndexAsset.__all_index_pos) == 0:
+            all_indexes = IndexAsset.all_index_info()
+            index_ids = all_indexes.index
+            for index_id in index_ids:
+                if index_id.startswith('MZ'):
+                    df_pos = asset_mz_markowitz_pos.load(index_id)
+                else:
+                    secode = all_indexes.loc[index_id, 'secode']
+                    df_pos = db.asset_stock.load_index_all_pos(secode)
+                IndexAsset.__all_index_pos[index_id] = df_pos
+
+
+        return IndexAsset.__all_index_pos
+
+
+
 
 if __name__ == '__main__':
 
-    asset = Asset('120000001')
-    nav = asset.nav(reindex = ATradeDate.week_trade_date())
-    inc = nav.pct_change().dropna()
-    print(inc.std())
-    print(np.mean(inc ** 2) ** 0.5)
-    #print asset.origin_nav_sr.head()
+    IndexAsset.all_index_pos()
 
-    # asset = WaveletAsset('120000013', 2)
-    #print asset.nav('2010-01-01', datetime.now()).tail()
-    #print asset.origin_nav_sr.tail()
 
-    # asset = StockAsset('SK.601318')
-    # print asset.nav()
-    # print asset.name
-    #StockAsset.all_stock_fdmt()
-    #for globalid in StockAsset.all_stock_info().index:
-    #    asset = StockAsset('SK.601318')
-    #    print time.time()
-    #    asset.fdmt
-    #    print time.time()
-    #    print
-    #print asset.nav()
-    #print asset.name
-    #print asset.load_ohlcavntt()
 
-    #print StockAsset.all_stock_info()
-    # print StockAsset.stock_st()
-    # set_trace()
-    # print asset.load_quote().head()
-    #print asset.load_fdmt().head()
 
-    # print asset.load_quote().head()
-    # print asset.load_fdmt().head()
-    # print asset.load_fdmt().head()
 
-    #print(StockAsset.all_stock_quote().keys())
-    #print(len(StockAsset.all_stock_quote().keys()))
-    # print(StockAsset.all_stock_quote().keys())
-    # print(len(StockAsset.all_stock_quote().keys()))
-    # df = StockFundAsset.all_fund_info()
-    df = StockFundAsset.all_fund_scale()
 
-    # df = db.asset_fund.load_all_fund_share()
+
+
+
 

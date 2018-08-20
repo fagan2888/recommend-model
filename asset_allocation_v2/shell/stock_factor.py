@@ -91,8 +91,7 @@ class StockFactor(Factor):
         'SF.100024':'MachineryStockFactor',
         'SF.100025':'MilitaryStockFactor',
         'SF.100026':'ComputerStockFactor',
-        'SF.100027':'MedicalStockFactor',
-        'SF.100028':'CommunicationStockFactor',
+        'SF.100027':'CommunicationStockFactor',
     }
 
     __valid_stock_filter = None
@@ -116,7 +115,7 @@ class StockFactor(Factor):
             for stock_id in all_stocks.index:
                 stock_exposure[stock_id] = desc_method(stock_id)
             stock_exposure_df = pd.DataFrame(stock_exposure)
-            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df)
+            stock_exposure_df = StockFactor.stock_factor_filter(stock_exposure_df, '2070000191')
             if int(self.factor_id[3:]) <= 9:
                 stock_exposure_df = StockFactor.normalized(stock_exposure_df)
             factor_exposure.append(stock_exposure_df)
@@ -247,7 +246,7 @@ class StockFactor(Factor):
 
     #过滤掉不合法股票
     @staticmethod
-    def stock_factor_filter(factor_df):
+    def stock_factor_filter(factor_df, field = None):
 
         if StockFactor.__valid_stock_filter is None:
 
@@ -258,6 +257,16 @@ class StockFactor(Factor):
             valid_df = pd.read_sql(sql, session.bind, index_col = ['trade_date', 'stock_id'], parse_dates = ['trade_date'])
             valid_df = valid_df.unstack()
             valid_df.columns = valid_df.columns.droplevel(0)
+
+            if field is not None:
+                field_df = asset_stock.load_pos_stock(field)
+                valid_df = valid_df[valid_df.index >= field_df.index[0]]
+                field_df = field_df.reindex(valid_df.index).fillna(method = 'pad', limit = 30)
+                joint_stocks = field_df.columns.intersection(valid_df.columns)
+                field_df = field_df.loc[:, joint_stocks]
+                valid_df = valid_df.loc[:, joint_stocks]
+                valid_df = valid_df * field_df
+
             StockFactor.__valid_stock_filter = valid_df
             session.commit()
             session.close()
@@ -269,6 +278,7 @@ class StockFactor(Factor):
             valid_df = valid_df.reindex(factor_df.index)
             valid_df = valid_df.reindex_axis(factor_df.columns, axis = 1)
             factor_df[~(valid_df == 1)] = np.nan
+
 
         logger.info('vailid filter done')
 
@@ -918,9 +928,11 @@ if __name__ == '__main__':
     # print sf.cal_factor_exposure()
     # sf = GrowthStockFactor('SF.000009')
     # sf = MomStockFactor('SF.000009')
-    sf = GrowthStockFactor('SF.000009')
+    # sf = GrowthStockFactor('SF.000009')
     # print sf.cal_factor_exposure()
-    print(sf.cal_factor_return(['SF.000009']))
+    # print(sf.cal_factor_return(['SF.000009']))
+    field = '2070000191'
+    field_df = asset_stock.load_pos_stock(field)
 
 
 
