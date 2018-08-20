@@ -23,7 +23,8 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_pos, asset_mz_markowitz_nav, asset_mz_markowitz_asset, base_ra_index_nav
+from asset import Asset
 from util import xdict
 from trade_date import ATradeDate
 
@@ -733,6 +734,46 @@ def online_sharpe(ctx):
 
     return
 
+
+#模型在配置的所有指数中的排名
+@analysis.command()
+@click.pass_context
+def model_rank(ctx):
+
+    df = asset_mz_markowitz_nav.load_series('MZ.100060')
+    df_asset = asset_mz_markowitz_asset.load(['MZ.100060'])
+    asset_ids = df_asset.mz_markowitz_asset_id.values
+    df_asset_nav = {}
+    for asset_id in asset_ids:
+        tmp_asset_nav = Asset.load_nav_series(asset_id)
+        df_asset_nav[asset_id] = tmp_asset_nav
+    df_asset_nav = pd.DataFrame(df_asset_nav)
+    df_asset_nav = df_asset_nav.reindex(df.index)
+    df_asset_nav = df_asset_nav.fillna(method = 'pad')
+
+    year_days = 365
+    days = int(year_days * 5)
+    dates = df.index
+    df_rank = pd.DataFrame(index = dates[days:], columns = ['rank'])
+    for sdate, edate in zip(dates[:-days], dates[days:]):
+        print(edate)
+        tmp_asset_nav = df_asset_nav.loc[sdate:edate]
+        tmp_model_nav = df.loc[sdate:edate]
+
+        tmp_asset_nav = tmp_asset_nav.dropna(1)
+        tmp_asset_ret = tmp_asset_nav.iloc[-1] / tmp_asset_nav.iloc[0]
+        tmp_model_ret = tmp_model_nav.iloc[-1] / tmp_model_nav.iloc[0]
+
+        asset_beated = len(tmp_asset_ret[tmp_asset_ret < tmp_model_ret])
+        model_rank = asset_beated / (len(tmp_asset_ret) + 1)
+        df_rank.loc[edate] = model_rank
+
+    df_rank.to_csv('result/model_5_year.csv', index_label = 'date')
+    set_trace()
+
+    return
+
+
 def cal_online_indic(risk):
 
     df = pd.read_csv('data/on_online_nav.csv', index_col = ['on_date'], parse_dates = ['on_date'])
@@ -753,4 +794,7 @@ def cal_online_indic(risk):
     sharpe = df_ret.mean() / df_ret.std()
 
     return ret, std, mdd, calmar, sharpe
+
+
+
 
