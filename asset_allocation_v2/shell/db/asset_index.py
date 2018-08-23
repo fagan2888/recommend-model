@@ -18,6 +18,16 @@ logger = logging.getLogger(__name__)
 Base = declarative_base()
 
 
+class tq_ix_basicinfo(Base):
+
+    __tablename__ = 'tq_ix_basicinfo'
+
+    id = Column(Integer, primary_key = True)
+    secode = Column(String)
+    indexname = Column(String)
+    symbol = Column(String)
+
+
 class index_factor(Base):
 
     __tablename__ = 'index_factor'
@@ -26,6 +36,36 @@ class index_factor(Base):
     if_type = Column(Integer)
     secode = Column(String)
     index_name = Column(String)
+
+
+def load_tq_ix_basicinfo(secodes = None):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_ix_basicinfo.secode, tq_ix_basicinfo.symbol, tq_ix_basicinfo.indexname)
+    if secodes is not None:
+        sql = sql.filter(tq_ix_basicinfo.secode.in_(secodes))
+    index_info = pd.read_sql(sql.statement, session.bind, index_col = ['secode'])
+    session.commit()
+    session.close()
+
+    return index_info
+
+
+def load_ix_secode_by_symbol(symbols = None):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_ix_basicinfo.secode, tq_ix_basicinfo.symbol)
+    if symbols is not None:
+        sql = sql.filter(tq_ix_basicinfo.symbol.in_(symbols))
+    all_indexes = pd.read_sql(sql.statement, session.bind, index_col = ['secode'])
+    session.commit()
+    session.close()
+
+    return all_indexes
 
 
 def load_all_index_factor(if_type = None):

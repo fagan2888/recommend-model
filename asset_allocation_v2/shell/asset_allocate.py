@@ -454,7 +454,7 @@ class FactorValidAllocate(Allocate):
 
 class FactorIndexAllocate(Allocate):
 
-    def __init__(self, globalid, reindex, lookback, assets = None, period = 1, bound = None, target = None):
+    def __init__(self, globalid, reindex, lookback, assets = None, period = 1, bound = None, target = None, target_num = None):
 
         super(FactorIndexAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
         sf_ids = ['SF.0000%02d'%i for i in range(1, 10)]
@@ -464,6 +464,11 @@ class FactorIndexAllocate(Allocate):
             self.target = [1] + [0] * 8
         else:
             self.target = target
+
+        if target_num is None:
+            self.target_num = 100
+        else:
+            self.target_num = target_num
 
 
         # self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2007-01-31')
@@ -511,7 +516,7 @@ class FactorIndexAllocate(Allocate):
         sfe = sfe.fillna(0.0)
         sfe = sfe[self.sf_ids]
 
-        stock_weights = IndexFactor.cal_weight(sfe, self.target)
+        stock_weights = IndexFactor.cal_weight(sfe, self.target, self.target_num)
 
         ws = dict(zip(sfe.index, stock_weights))
 
@@ -535,6 +540,8 @@ class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
     def allocate_algo(self, day, df_inc, bound):
 
 
+        # layer_assets_1 = ['120000002', '120000058', '120000073', '120000079']
+        # layer_assets_2 = ['MZ.FA0010', 'MZ.FA0070']
         layer_assets_1 = ['120000053', '120000056','120000058','120000073']
         layer_assets_2 = ['MZ.FA0010', 'MZ.FA0050','MZ.FA0070']
         layer_assets = layer_assets_1 + layer_assets_2
@@ -566,6 +573,70 @@ class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
 
         return ws
 
+
+class MzLayer2FixRiskBootBlAllocate(MzBlAllocate):
+
+    def __init__(self, globalid, assets, views, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+        super(MzLayer2FixRiskBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
+        if cpu_count is None:
+            count = int(multiprocessing.cpu_count()) // 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+        self.__bootstrap_count = bootstrap_count
+        self.risk = risk
+
+
+    def allocate_algo(self, day, df_inc, bound):
+
+
+        layer_assets_1 = ['120000058', 'MZ.FA0010', 'MZ.FA0070']
+        layer_assets_2 = ['120000002', '120000018', '120000073', '120000079']
+        layer_assets = layer_assets_1 + layer_assets_2
+
+        layer_assets_1 = dict([(asset_id , Asset(asset_id)) for asset_id in layer_assets_1])
+        layer_bounds_1 = {}
+        for asset in layer_assets_1.keys():
+            layer_bounds_1[asset] = self.bound[asset]
+        rp_allocate = RpAllocate('ALC.000001', layer_assets_1, self.index, self.lookback, bound = layer_bounds_1)
+        layer_ws_1, df_alayer_inc_1 = rp_allocate.allocate_day(day)
+
+        layer_assets_2 = dict([(asset_id , Asset(asset_id)) for asset_id in layer_assets_2])
+        layer_bounds_2 = {}
+        for asset in layer_assets_2.keys():
+            layer_bounds_2[asset] = self.bound[asset]
+        rp_allocate = RpAllocate('ALC.000001', layer_assets_2, self.index, self.lookback, bound = layer_bounds_2)
+        layer_ws_2, df_alayer_inc_2 = rp_allocate.allocate_day(day)
+
+        df_inc['ALayer1'] = df_alayer_inc_1
+        df_inc['ALayer2'] = df_alayer_inc_2
+
+        df_inc_layer = df_inc[df_inc.columns.difference(layer_assets)]
+        P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
+
+        bound = []
+        allocate_asset_ids = []
+        for asset_id in df_inc_layer.columns:
+            asset_bound = AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict()
+            if asset_bound['upper'] > 0:
+                bound.append(asset_bound)
+                allocate_asset_ids.append(asset_id)
+
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        ws = dict(zip(df_inc_layer.columns.ravel(), ws))
+
+        for asset in layer_ws_1.index:
+            ws[asset] = ws['ALayer1'] * layer_ws_1.loc[asset]
+        del ws['ALayer1']
+
+
+        for asset in layer_ws_2.index:
+            ws[asset] = ws['ALayer2'] * layer_ws_2.loc[asset]
+        del ws['ALayer2']
+
+
+        return ws
 
 
 if __name__ == '__main__':

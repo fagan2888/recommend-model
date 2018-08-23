@@ -15,7 +15,6 @@ from scipy.spatial import distance_matrix
 from sklearn.cluster import AgglomerativeClustering, KMeans
 from sklearn.metrics import silhouette_score, silhouette_samples
 from sklearn.cluster import SpectralClustering
-from scipy.spatial import distance_matrix
 import statsmodels.api as sm
 import datetime
 from ipdb import set_trace
@@ -64,14 +63,14 @@ def ic_fund_style(ctx, optid):
 
     dates = ife.index.levels[2]
     dates = dates[::-6][::-1]
-    dates = dates[-2:]
+    dates = dates[-3:-1]
 
     for ldate, date in zip(dates[:-1], dates[1:]):
 
         tffe = cal_feature(ffe, ldate, date)
         tife = cal_index_feature(ife, date)
         # df_style, index_pool = cal_fund_style(tffe, tife, 0.90)
-        df_style, index_pool = cal_fund_style2(tffe, tife, 1.00)
+        df_style, index_pool = cal_fund_style2(tffe, tife, 1.50)
 
         for index_id in sorted(index_pool.keys()):
             index_funds = index_pool.get(index_id)
@@ -80,8 +79,6 @@ def ic_fund_style(ctx, optid):
                 print(all_indexes.loc[index_id, 'index_name'])
                 print(index_id)
                 print(fn.loc[index_funds])
-
-        set_trace()
 
 
 @ic.command()
@@ -117,8 +114,8 @@ def ic_cluster(ctx, optid):
 def ic_cluster2(ctx, optid):
 
 
-    # all_indexes = asset_index.load_all_index_factor(if_type = 9)
-    all_indexes = asset_index.load_all_index_factor()
+    all_indexes = asset_index.load_all_index_factor(if_type = 9)
+    # all_indexes = asset_index.load_all_index_factor()
     valid_indexes = all_indexes.index.values
     ife = asset_index_factor.load_index_factor_exposure(index_ids = valid_indexes)
 
@@ -133,7 +130,7 @@ def ic_cluster2(ctx, optid):
         dist = distance_matrix(tife, tife)
         df_dist = pd.DataFrame(data = dist, index = tife.index, columns = tife.index)
 
-        asset_cluster = clusterSimple2(df_dist, 1.0)
+        asset_cluster = clusterSimple2(df_dist, 3.0)
         clusters = sorted(asset_cluster, key = lambda x: len(asset_cluster[x]), reverse = True)
         for layer in clusters:
             print(layer)
@@ -160,6 +157,7 @@ def cal_index_feature(ife, date):
     ife = ife[['exposure']]
     ife = ife.unstack()
     ife.columns = ife.columns.levels[1]
+    ife = ife.fillna(0.0)
 
     return ife
 
@@ -266,6 +264,23 @@ def clusterSimple2(dist, threshold):
 def load_market_indexes():
 
     stock_funds = asset_fund.load_fund_by_type(l1codes = 2001)
+    index_funds = asset_fund.load_securitymap(maptype = 25)
+    stock_index_funds = stock_funds.index.intersection(index_funds.index).values
+    fund_indexes = asset_fund.load_fund_index(stock_index_funds)
+    fund_index_secodes = asset_index.load_ix_secode_by_symbol(fund_indexes.mapcode)
+    secode_symbol_dict = fund_index_secodes.to_dict()['symbol']
+    symbol_secode_dict = {v:k for k, v in secode_symbol_dict.items()}
+    secodes = [symbol_secode_dict[x] for x in fund_indexes.mapcode]
+    fund_indexes['ix_secode'] = secodes
+
+    index_info = asset_index.load_tq_ix_basicinfo(secodes)
+    all_indexes = fund_indexes.set_index('ix_secode')
+    all_indexes = all_indexes.join(index_info)
+    all_indexes_count = all_indexes['symbol'].groupby(all_indexes.indexname).count()
+    all_indexes_count = all_indexes_count.sort_values(ascending = False)
+
+    all_indexes_count_2 = all_indexes['symbol'].groupby(all_indexes.index).count()
+    all_indexes_count_2 = all_indexes_count_2.sort_values(ascending = False)
     set_trace()
 
 
@@ -277,8 +292,6 @@ if __name__ == '__main__':
     # fund_stability_filter()
     # fund_concentration_filter()
     load_market_indexes()
-
-
 
 
 

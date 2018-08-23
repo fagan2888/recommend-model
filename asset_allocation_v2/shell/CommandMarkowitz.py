@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, MzLayer2FixRiskBootBlAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -66,17 +66,18 @@ logger = logging.getLogger(__name__)
 @click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help=u'use wavelet filter num')
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.pass_context
-def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
+def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets, optrisk):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid, optappend=optappend, sdate = startdate, edate = enddate)
-            ctx.invoke(nav, optid=optid)
-            ctx.invoke(turnover, optid=optid)
+            ctx.invoke(pos, optid=optid, optappend=optappend, sdate = startdate, edate = enddate, optrisk = optrisk)
+            ctx.invoke(nav, optid=optid, optrisk = optrisk)
+            ctx.invoke(turnover, optid=optid, optrisk = optrisk)
         else:
             if optfull is False:
                 ctx.invoke(allocate, optid=optid, optname=optname, opttype=opttype, optreplace=optreplace, startdate=startdate, enddate=enddate, lookback=lookback, adjust_period=adjust_period, turnover=optturnover, optbootstrap=optbootstrap, optbootcount=optbootcount, optcpu=optcpu, optwavelet = optwavelet, optwaveletfilternum = optwaveletfilternum, short_cut=short_cut, assets=assets)
@@ -1091,11 +1092,13 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         factor_num = int(argv.get('factor_num'))
         factor_loc = int(argv.get('factor_loc'))
         factor_end = int(argv.get('factor_end'))
+        target_num = int(argv.get('target_num', 100))
+
         target = np.zeros(factor_num)
         target[factor_loc] = 1
         target = target * factor_end
         trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
-        allocate = FactorIndexAllocate('ALC.000001', trade_date, lookback, period = period, target = target)
+        allocate = FactorIndexAllocate('ALC.000001', trade_date, lookback, period = period, target = target, target_num = target_num)
         df = allocate.allocate()
 
     elif algo == 15:
@@ -1116,6 +1119,23 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzLayerFixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
         df = allocate.allocate()
 
+    elif algo == 16:
+
+        # Layer Fix Risk Boot Bl
+        upper_risk = float(argv.get('upper_risk', 0.015))
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+
+        asset_ids = list(assets.keys())
+        asset_ids.extend(['ALayer1', 'ALayer2'])
+        views = {}
+        for asset_id in asset_ids:
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzLayer2FixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
+        df = allocate.allocate()
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))

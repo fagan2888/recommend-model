@@ -107,8 +107,9 @@ def fc_high(ctx, optid):
     years = 5
     lookback_days = 365 * years
     factor_ids_1 = ['120000013', '120000015', '120000020', '120000014', '120000028']
-    factor_ids_2 = ['120000016', '120000051', '120000056', '120000073', 'MZ.FA0010', 'MZ.FA0050', 'MZ.FA0070', 'MZ.FA1010']
-    factor_ids = factor_ids_1 + factor_ids_2
+    factor_ids_2 = ['120000073', 'MZ.FA0010', 'MZ.FA0070', 'MZ.FA1010']
+    factor_ids_3 = ['120000018', '120000079', '120000002']
+    factor_ids = factor_ids_1 + factor_ids_2 + factor_ids_3
     trade_dates = ATradeDate.month_trade_date(begin_date = '2017-01-01')
     for date in trade_dates:
         start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
@@ -116,7 +117,8 @@ def fc_high(ctx, optid):
         print(start_date, end_date)
         corr0 = load_corr(factor_ids, start_date, end_date)
         std0 = load_std(factor_ids, start_date, end_date)
-        asset_cluster = clusterSimple(corr0, std0**3, years)
+        dist = corr0 * (std0)**3
+        asset_cluster = clusterSimple(dist, 0.6)
         asset_cluster = dict(list(zip(sorted(asset_cluster), sorted(asset_cluster.values()))))
 
         for k,v in asset_cluster.items():
@@ -183,26 +185,50 @@ def clusterSpectral(feature, n_clusters = 4):
     return cluster
 
 
-def clusterSimple(corr0, std0, years):
+def clusterSimple(dist, threshold):
 
-    threshold = 3 / years
-    threshold = min([0.6, threshold])
-    corr0 = corr0 * std0
     asset_cluster = {}
-    factor_ids = corr0.keys()
+    factor_ids = dist.keys()
     asset_cluster[0] = [factor_ids[0]]
     for factor_id in factor_ids[1:]:
+        # print(factor_id)
         flag = False
         new_layer = len(asset_cluster)
+        tmp_corrs = {}
         for layer in asset_cluster.keys():
-            tmp_corr = corr0.loc[factor_id, asset_cluster[layer]].values.mean()
-            if tmp_corr > threshold:
-                flag = True
-                asset_cluster[layer].append(factor_id)
+            # tmp_corrs[layer] = dist.loc[factor_id, asset_cluster[layer]].values.min()
+            tmp_corrs[layer] = dist.loc[factor_id, asset_cluster[layer]].values.mean()
+            tmp_corrs_ser = pd.Series(tmp_corrs)
+            tmp_corrs_ser = tmp_corrs_ser.sort_values(ascending = False)
+        if (tmp_corrs_ser.iloc[0] > threshold) and (not flag):
+            flag = True
+            asset_cluster[tmp_corrs_ser.index[0]].append(factor_id)
         if not flag:
             asset_cluster[new_layer] = [factor_id]
 
     return asset_cluster
+
+
+# def clusterSimple(corr0, std0, years):
+
+#     threshold = 3 / years
+#     threshold = min([0.6, threshold])
+#     corr0 = corr0 * std0
+#     asset_cluster = {}
+#     factor_ids = corr0.keys()
+#     asset_cluster[0] = [factor_ids[0]]
+#     for factor_id in factor_ids[1:]:
+#         flag = False
+#         new_layer = len(asset_cluster)
+#         for layer in asset_cluster.keys():
+#             tmp_corr = corr0.loc[factor_id, asset_cluster[layer]].values.mean()
+#             if tmp_corr > threshold:
+#                 flag = True
+#                 asset_cluster[layer].append(factor_id)
+#         if not flag:
+#             asset_cluster[new_layer] = [factor_id]
+
+#     return asset_cluster
 
 
 def load_corr(factor_ids, start_date, end_date):
@@ -214,7 +240,7 @@ def load_corr(factor_ids, start_date, end_date):
         asset_navs[factor_id] = Asset.load_nav_series(factor_id, reindex = trade_dates)
 
     df_asset_navs = pd.DataFrame(asset_navs)
-    # df_asset_incs = df_asset_navs.pct_change().dropna()
+    # df_asset_incs = df_asset_navs.pct_change(30).dropna()
     # corr = df_asset_incs.corr()
     corr = df_asset_navs.corr()
 

@@ -92,6 +92,29 @@ class tq_fd_sharestat(Base):
     avgshare = Column(Float)
 
 
+class tq_oa_securitymap(Base):
+
+    __tablename__ = 'tq_oa_securitymap'
+
+    id = Column(Integer, primary_key = True)
+    secode = Column(String)
+    mapcode = Column(String)
+    maptype = Column(String)
+
+
+def load_securitymap(maptype = 25):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_oa_securitymap.secode, tq_oa_securitymap.maptype).filter(tq_oa_securitymap.maptype == maptype)
+    df = pd.read_sql(sql.statement, session.bind, index_col = ['secode'])
+    session.commit()
+    session.close()
+
+    return df
+
+
 def load_fund_by_type(l1codes = 2001):
 
     engine = database.connection('caihui')
@@ -99,6 +122,21 @@ def load_fund_by_type(l1codes = 2001):
     session = Session()
     sql = session.query(tq_fd_typeclass.securityid, tq_fd_typeclass.l1codes).filter(tq_fd_typeclass.l1codes == l1codes)
     df = pd.read_sql(sql.statement, session.bind, index_col = ['securityid'])
+    session.commit()
+    session.close()
+
+    return df
+
+
+def load_fund_index(fund_codes = None):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_oa_securitymap.secode, tq_oa_securitymap.mapcode).filter(tq_oa_securitymap.maptype == 25)
+    if fund_codes is not None:
+        sql = sql.filter(tq_oa_securitymap.secode.in_(fund_codes))
+    df = pd.read_sql(sql.statement, session.bind, index_col = ['secode'])
     session.commit()
     session.close()
 

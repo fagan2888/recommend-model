@@ -56,12 +56,11 @@ def total_weight_constraint(x):
 #     return res.x
 
 
-def cal_weight(sfe, x_t, lower_limit = None, upper_limit = None, cons2 = None, w0 = None):
+def cal_weight(sfe, x_t, target_num = 100, lower_limit = None, upper_limit = None, cons2 = None, w0 = None):
 
-    target_num = 100
     target_exposure = np.dot(sfe, x_t)
     df = pd.Series(data = target_exposure, index = sfe.index)
-    df = df.nlargest(100)
+    df = df.nlargest(target_num)
 
     tmp_df = df[df == max(df)]
     if len(tmp_df) >= target_num:
