@@ -592,7 +592,7 @@ class MzLayer2FixRiskBootBlAllocate(MzBlAllocate):
 
 
         layer_assets_1 = ['120000058', 'MZ.FA0010', 'MZ.FA0070']
-        layer_assets_2 = ['120000002', '120000018', '120000073', '120000079']
+        layer_assets_2 = ['MZ.FA1010', '120000018', '120000073', '120000079']
         layer_assets = layer_assets_1 + layer_assets_2
 
         layer_assets_1 = dict([(asset_id , Asset(asset_id)) for asset_id in layer_assets_1])
@@ -629,7 +629,6 @@ class MzLayer2FixRiskBootBlAllocate(MzBlAllocate):
         for asset in layer_ws_1.index:
             ws[asset] = ws['ALayer1'] * layer_ws_1.loc[asset]
         del ws['ALayer1']
-
 
         for asset in layer_ws_2.index:
             ws[asset] = ws['ALayer2'] * layer_ws_2.loc[asset]

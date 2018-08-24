@@ -118,7 +118,7 @@ def fc_high(ctx, optid):
         corr0 = load_corr(factor_ids, start_date, end_date)
         std0 = load_std(factor_ids, start_date, end_date)
         dist = corr0 * (std0)**3
-        asset_cluster = clusterSimple(dist, 0.6)
+        asset_cluster = clusterSimple(dist, 0.5)
         asset_cluster = dict(list(zip(sorted(asset_cluster), sorted(asset_cluster.values()))))
 
         for k,v in asset_cluster.items():

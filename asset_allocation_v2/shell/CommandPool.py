@@ -1137,7 +1137,7 @@ def pool_by_ortho_factor(pool, day, lookback, limit, ffe, ife, all_fund_scale):
 
     ffe = cal_feature(ffe, sdate, edate)
     ife = cal_index_feature(ife, sdate, edate)
-    df_style, index_pool = cal_fund_style(ffe, ife, 1.5)
+    df_style, index_pool = cal_fund_style(ffe, ife, 3.0)
 
     df_valid = all_fund_scale.loc[day].dropna()
     df_valid = df_valid[df_valid > 5e7].index
