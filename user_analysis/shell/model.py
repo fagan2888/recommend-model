@@ -13,15 +13,13 @@ from torch.nn import utils as nn_utils
 
 class LSTMBuyRedeem(nn.Module):
 
-    def __init__(self, nav_dim, hidden_dim, tag_size, batch_size = 50, batch_first = True):
+    def __init__(self, nav_dim, hidden_dim, tag_size):
         super(LSTMBuyRedeem, self).__init__()
         self.hidden_dim = hidden_dim
-        self.batch_size = batch_size
-        self.batch_first = batch_first
 
         # The LSTM takes nav feature as inputs, and outputs hidden states
         # with dimensionality hidden_dim.
-        self.lstm = nn.LSTM(nav_dim, hidden_dim, batch_first = self.batch_first)
+        self.lstm = nn.LSTM(nav_dim, hidden_dim)
 
         # The linear layer that maps from hidden state space to tag space
         self.hidden2tag = nn.Linear(hidden_dim, tag_size)
@@ -32,14 +30,13 @@ class LSTMBuyRedeem(nn.Module):
         # Refer to the Pytorch documentation to see exactly
         # why they have this dimensionality.
         # The axes semantics are (num_layers, minibatch_size, hidden_dim)
-        return (torch.zeros(1, self.batch_size, self.hidden_dim).cuda(),
-                torch.zeros(1, self.batch_size, self.hidden_dim).cuda())
+        return (torch.zeros(1, 1, self.hidden_dim).cuda(),
+                torch.zeros(1, 1, self.hidden_dim).cuda())
 
 
     def forward(self, nav_ser):
         lstm_out, self.hidden = self.lstm(
-            nav_ser, self.hidden)
-        lstm_out = unpacked = nn_utils.rnn.pad_packed_sequence(lstm_out, batch_first = True)
-        tag_space = self.hidden2tag(lstm_out[0])
+            nav_ser.view(len(nav_ser), 1, -1), self.hidden)
+        tag_space = self.hidden2tag(lstm_out.view(len(nav_ser), -1))
         tag_scores = F.log_softmax(tag_space, dim=1)
         return tag_scores

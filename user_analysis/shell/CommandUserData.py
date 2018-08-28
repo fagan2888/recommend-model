@@ -23,7 +23,7 @@ from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from util import xdict
 from util.xdebug import dd
-from db import database, trade, recommend
+from db import database, trade, recommend, tongji, mapi
 from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
 import pickle
@@ -265,3 +265,184 @@ def feature(ctx):
     #feature = feature.iloc[:,~feature.columns.duplicated()]
     #print(feature.loc['1000373998'].sort_index())
     #feature.to_csv('tmp/feature.csv')
+
+
+@data.command()
+@click.pass_context
+def log_raw_apps(ctx):
+
+    engine = database.connection('tongji')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tongji.log_raw_apps.lr_date, tongji.log_raw_apps.lr_time, tongji.log_raw_apps.lr_uid, tongji.log_raw_apps.lr_pid, tongji.log_raw_apps.lr_page,
+            tongji.log_raw_apps.lr_ctrl, tongji.log_raw_apps.lr_oid, tongji.log_raw_apps.lr_tag, tongji.log_raw_apps.lr_ref, tongji.log_raw_apps.lr_ver,
+            tongji.log_raw_apps.lr_chn, tongji.log_raw_apps.lr_os, tongji.log_raw_apps.lr_flag, tongji.log_raw_apps.lr_ev).statement
+    log_raw_apps = pd.read_sql(sql, session.bind, index_col = ['lr_uid'], parse_dates = ['lr_date'])
+    session.commit()
+    session.close()
+
+    log_raw_apps.tail()
+    log_raw_apps.to_csv('tmp/log_raw_apps.csv')
+
+    pass
+
+
+@data.command()
+@click.pass_context
+def log_dirty_detection(ctx):
+
+    spark_conf = (SparkConf().setAppName('order holding').setMaster('local[32]')
+            .set("spark.executor.memory", "50G")
+            .set('spark.driver.memory', '50G')
+            .set('spark.driver.maxResultSize', '50G'))
+
+    spark = SparkSession.builder.config(conf = spark_conf).getOrCreate()
+    log_df = spark.read.csv("tmp/log_raw_apps.csv", header = True)
+
+
+    log_rdd = log_df.rdd.repartition(1000)
+
+
+    #def ver_page(iterator):
+    #    ver_page_num = {}
+    #    for x in iterator:
+    #        #print(x.lr_ver, x.lr_page)
+    #        pages = ver_page_num.setdefault(x.lr_ver, {})
+    #        page_num = pages.setdefault(x.lr_page, 0)
+    #        pages[x.lr_page] = page_num + 1
+    #    return list(ver_page_num.items())
+
+
+    #def ver_page_reduce(p1, p2):
+    #    for page in p1:
+    #        p2_num = p2.setdefault(page, 0)
+    #        p2[page] = p2_num + p1[page]
+    #    return p2
+
+
+    #page = log_rdd.mapPartitions(ver_page).reduceByKey(ver_page_reduce).collect()
+    #data = {}
+    #for ver, page_num in page:
+    #    page_num_ser = pd.Series(page_num)
+    #    data[ver] = page_num_ser
+
+    #page_num_df = pd.DataFrame(data).fillna(0.0)
+    #page_num_df.columns = page_num_df.columns.astype(int)
+    #ver_num_ser = page_num_df.sum(axis = 0)
+    #ver_num_ser = ver_num_ser[ver_num_ser > 5000]
+    #valid_ver = ver_num_ser.index
+    ##7077版本是智能组合上线的版本，对应2016年9月以后
+    ##7088版本是智能组合千人千面上线的版本，对应2017年5月以后
+    #valid_ver = list(valid_ver[valid_ver >= 7088])
+    #valid_ver.sort()
+    #page_num_df = page_num_df[valid_ver]
+    #page_ratio_df = page_num_df.div(page_num_df.sum(axis = 0))
+    #print(page_ratio_df.tail())
+    #page_ratio_df.to_csv('tmp/page_ratio.csv')
+
+
+    def ver_ctrl(iterator):
+        ver_ctrls_num = {}
+        for x in iterator:
+            ctrls = ver_ctrls_num.setdefault(x.lr_ver, {})
+            ctrl_id = x.lr_ref + '_'+ x.lr_page + '_' + x.lr_ctrl + '_' +  x.lr_oid
+            ctrl_num = ctrls.setdefault(ctrl_id, 0)
+            ctrls[ctrl_id] = ctrl_num + 1
+        return list(ver_ctrls_num.items())
+
+
+    def ver_ctrl_reduce(c1, c2):
+        for ctrl in c1:
+            c2_num = c2.setdefault(ctrl, 0)
+            c2[ctrl] = c2_num + c1[ctrl]
+        return c2
+
+
+    ctrl = log_rdd.mapPartitions(ver_ctrl).reduceByKey(ver_ctrl_reduce).collect()
+    data = {}
+    for ver, ctrl_num in ctrl:
+        ctrl_num_ser = pd.Series(ctrl_num)
+        data[ver] = ctrl_num_ser
+
+    ctrl_num_df = pd.DataFrame(data).fillna(0.0)
+    ctrl_num_df.columns = ctrl_num_df.columns.astype(int)
+    ver_num_ser = ctrl_num_df.sum(axis = 0)
+    ver_num_ser = ver_num_ser[ver_num_ser > 5000]
+    valid_ver = ver_num_ser.index
+    #7077版本是智能组合上线的版本，对应2016年9月以后
+    #7088版本是智能组合千人千面上线的版本，对应2017年5月以后
+    valid_ver = list(valid_ver[valid_ver >= 7088])
+    valid_ver.sort()
+    ctrl_num_df = ctrl_num_df[valid_ver]
+    ctrl_ratio_df = ctrl_num_df.div(ctrl_num_df.sum(axis = 0))
+    print(ctrl_ratio_df.tail())
+    ctrl_ratio_df.to_csv('tmp/ctrl_ratio.csv')
+
+
+
+@data.command()
+@click.pass_context
+def log_analysis(ctx):
+
+    spark_conf = (SparkConf().setAppName('order holding').setMaster('local[32]')
+            .set("spark.executor.memory", "50G")
+            .set('spark.driver.memory', '50G')
+            .set('spark.driver.maxResultSize', '50G'))
+
+    sc = SparkContext(conf=spark_conf)
+    log_rdd = sc.textFile('data/app_log.txt')
+    log_rdd = log_rdd.repartition(1000)
+
+
+    def ver_page(x):
+        x = eval(x)
+        try:
+            x = x['_source']
+            return (x['version'], {x['page_id']:1})
+        except:
+            return (-1, {-1:0})
+
+    def ver_page_reduce(p1, p2):
+        for page in p1:
+            p2_num = p2.setdefault(page, 0)
+            p2[page] = p2_num + p1[page]
+        return p2
+
+    pages = log_rdd.map(ver_page).reduceByKey(ver_page_reduce).collect()
+    sc.stop()
+
+
+    data = {}
+    for ver, page_num in pages:
+        page_num_ser = pd.Series(page_num)
+        data[ver] = page_num_ser
+
+    page_num_df = pd.DataFrame(data).fillna(0.0)
+    #page_num_df.columns = page_num_df.columns.astype(int)
+    ver_num_ser = page_num_df.sum(axis = 0)
+    ver_num_ser = ver_num_ser[ver_num_ser > 5000]
+    valid_ver = ver_num_ser.index
+    print(valid_ver)
+    #7077版本是智能组合上线的版本，对应2016年9月以后
+    #7088版本是智能组合千人千面上线的版本，对应2017年5月以后
+    #valid_ver = list(valid_ver[valid_ver >= 7088])
+    valid_ver.sort()
+    page_num_df = page_num_df[valid_ver]
+    page_ratio_df = page_num_df.div(page_num_df.sum(axis = 0))
+    print(page_ratio_df.tail())
+    #page_ratio_df.to_csv('tmp/page_ratio.csv')
+
+
+@data.command()
+@click.pass_context
+def wechat_user(ctx):
+
+    engine = database.connection('mapi')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(mapi.wechat_users.uid, mapi.wechat_users.mobile, mapi.wechat_users.service_id).statement
+    df = pd.read_sql(sql, session.bind, index_col = ['uid'])
+    session.commit()
+    session.close()
+    print(df)
+    df.to_csv('tmp/wechat_users.csv')
