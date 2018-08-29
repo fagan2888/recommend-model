@@ -148,9 +148,10 @@ class StockFactor(Factor):
         ret = ret[StockAsset.all_stock_info().index]
 
         dates = ret.index
-        dates = dates[dates >= '2005-01-01']
+        dates = dates[dates >= '2007-10-01']
 
         df_ret = pd.DataFrame(columns = sf_ids)
+        df_t_sta = pd.DataFrame(columns = sf_ids)
         df_sret = pd.DataFrame(columns = StockAsset.all_stock_info().index)
 
 
@@ -169,14 +170,61 @@ class StockFactor(Factor):
             tmp_exposure_df = pd.DataFrame(tmp_exposure)
             tmp_exposure_df = tmp_exposure_df[sf_ids].fillna(0.0)
             tmp_exposure_df = tmp_exposure_df.loc[StockAsset.all_stock_info().index]
+            x = tmp_exposure_df.values
+            x = sm.add_constant(x)
             mod = sm.OLS(tmp_ret, tmp_exposure_df.values, missing = 'drop').fit()
             # mod = sm.WLS(tmp_ret, tmp_exposure_df.values, weights = tmp_amount, missing = 'drop').fit()
             # print(mod.summary())
 
             df_ret.loc[next_date] = mod.params
+            df_t_sta.loc[next_date] = mod.tvalues
             df_sret.loc[next_date] = tmp_ret - np.dot(tmp_exposure_df.values, mod.params)
 
-        return df_ret, df_sret
+        return df_ret, df_t_sta, df_sret
+
+
+    def cal_factor_ic(self, sf_ids):
+
+        period = 21
+        sfs = []
+        for sf_id in sf_ids:
+            sfs.append(StockFactor.subclass(sf_id, StockFactor.stock_factors[sf_id]))
+
+        close = StockAsset.all_stock_nav()
+        ret = close.pct_change(period).iloc[period:]
+        ret = ret[StockAsset.all_stock_info().index]
+
+        dates = ret.index
+        dates = dates[dates >= '2007-10-01']
+
+        df_ic = pd.DataFrame(columns = sf_ids)
+
+        pool = Pool(len(sfs))
+        sfs = pool.map(multiprocess_load_factor_exposure, sfs)
+        pool.close()
+        pool.join()
+
+        for date, next_date in zip(dates[:-period], dates[period:]):
+
+            tmp_exposure = {}
+            tmp_ret = ret.loc[next_date]
+            for sf in sfs:
+                tmp_exposure[sf.factor_id] = sf.exposure.loc[date]
+            tmp_exposure_df = pd.DataFrame(tmp_exposure)
+            tmp_exposure_df = tmp_exposure_df[sf_ids].fillna(0.0)
+            tmp_exposure_df = tmp_exposure_df.loc[StockAsset.all_stock_info().index]
+            factor_ic = []
+            for factor_id in sf_ids:
+                tmp_factor_exposure = tmp_exposure_df[factor_id]
+                joint_stocks = tmp_ret.dropna().index.intersection(tmp_factor_exposure.dropna().index)
+                tmp_factor_exposure = tmp_factor_exposure.loc[joint_stocks]
+                tmp_stock_ret = tmp_ret.loc[joint_stocks]
+                tmp_ic = np.corrcoef(tmp_factor_exposure, tmp_stock_ret)[1,0]
+                factor_ic.append(tmp_ic)
+
+            df_ic.loc[next_date] = factor_ic
+
+        return df_ic
 
 
     #插入股票合法性表

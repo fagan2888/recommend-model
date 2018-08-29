@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, FactorWaveletAllocate, FactorIcAllocate, FactorTStaAllocate, FactorXgboostAllocate, FactorReturnAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -907,25 +907,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     if algo == 1:
         #均配
-        optappend = False
-        df = average_days(sdate, edate, assets)
-        if 'return' in df.columns:
-            df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
-        for asset in df.columns:
-            if asset.startswith('MZ'):
-                mz_pos_df = asset_mz_markowitz_pos.load_raw(asset)
-                asset_pos = df[asset]
-                dates = list(set(mz_pos_df.index | df.index))
-                dates.sort()
-                asset_pos = asset_pos.reindex(dates)
-                asset_pos.fillna(method = 'pad', inplace=True)
-                asset_pos.fillna(0.0, inplace=True)
-                mz_pos_df = mz_pos_df.mul(asset_pos, axis = 0).fillna(method = 'pad')
-                df = df.drop(asset, axis = 1)
-                df = pd.concat([df, mz_pos_df], axis = 1, join_axes = [mz_pos_df.index])
-        df = df.T
-        df = df.groupby(df.index).sum()
-        df = df.T
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = AvgAllocate('ALC.000001', assets, trade_date, lookback, bound = bounds)
+        df = allocate.allocate()
     elif algo == 2:
         #马科维兹
         #df = markowitz_days(
@@ -1116,6 +1101,55 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzLayerFixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
         df = allocate.allocate()
 
+    elif algo == 16:
+        #valid single stock factor allocate
+
+        lookback = int(argv.get('lookback'))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        allocate = SingleValidFactorAllocate('ALC.000001', trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 17:
+        #valid single stock factor allocate
+
+        lookback = 70
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , WaveletAsset(asset_id, 2)) for asset_id in list(assets.keys())])
+        allocate = FactorWaveletAllocate('ALC.000001', assets, trade_date, lookback, bound = bounds)
+        df = allocate.allocate()
+
+    elif algo == 18:
+        #valid single stock factor allocate
+
+        lookback = int(argv.get('lookback'))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        allocate = FactorIcAllocate('ALC.000001', trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 19:
+        #valid single stock factor allocate
+
+        lookback = int(argv.get('lookback'))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        allocate = FactorTStaAllocate('ALC.000001', trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 20:
+        #valid single stock factor allocate
+
+        lookback = int(argv.get('lookback'))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        allocate = FactorXgboostAllocate('ALC.000001', trade_date, lookback)
+        df = allocate.allocate()
+
+    elif algo == 21:
+        #valid single stock factor allocate
+
+        lookback = int(argv.get('lookback'))
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        allocate = FactorReturnAllocate('ALC.000001', trade_date, lookback)
+        df = allocate.allocate()
+
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
@@ -1124,7 +1158,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     if 'return' in df.columns:
         df_sharpe = df[['return', 'risk', 'sharpe']].copy()
         df.drop(['return', 'risk', 'sharpe'], axis=1, inplace=True)
-
 
     #if optappend:
     #    df = pd.concat([df_pos_old, df]).fillna(0.0)
@@ -1147,7 +1180,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 20]
+    no_rolling_algos = [1, 16, 17, 18, 19, 20, 21]
     if algo in no_rolling_algos:
         pass
     else:

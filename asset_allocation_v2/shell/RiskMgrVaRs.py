@@ -5,7 +5,7 @@ There are two classes: RiskMgrVaRs and RiskMgrJoint, they works similar.
 '''
 
 
-from RiskMgrGARCHHelper import *
+# from RiskMgrGARCHHelper import *
 
 import pandas as pd
 from queue import Queue

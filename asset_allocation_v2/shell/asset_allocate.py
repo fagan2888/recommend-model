@@ -34,6 +34,7 @@ from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav,
 from db.asset_stock_factor import *
 from util import xdict
 from util.xdebug import dd
+from CommandValidFactor import cal_valid_factor, cal_valid_factor_ic, cal_valid_factor_t_sta, cal_valid_factor_xgboost, cal_valid_factor_return
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
 from trade_date import ATradeDate
@@ -452,6 +453,7 @@ class FactorValidAllocate(Allocate):
 
         return ws
 
+
 class FactorIndexAllocate(Allocate):
 
     def __init__(self, globalid, reindex, lookback, assets = None, period = 1, bound = None, target = None):
@@ -466,7 +468,7 @@ class FactorIndexAllocate(Allocate):
             self.target = target
 
 
-        self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2010-01-01')
+        self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2007-10-01')
 
     def allocate(self):
 
@@ -499,7 +501,6 @@ class FactorIndexAllocate(Allocate):
 
         begin_date = (day.date() - timedelta(self.lookback - 1)).strftime('%Y-%m-%d')
         end_date = day.date().strftime('%Y-%m-%d')
-
         sfe = self.sfe[(self.sfe.index.get_level_values(2) > begin_date) & (self.sfe.index.get_level_values(2) < end_date)]
         sfe = sfe.loc[asset_ids]
         sfe = sfe.reset_index()
@@ -513,6 +514,91 @@ class FactorIndexAllocate(Allocate):
         stock_weights = IndexFactor.cal_weight(sfe, self.target)
 
         ws = dict(zip(sfe.index, stock_weights))
+
+        return ws
+
+
+class SingleValidFactorAllocate(Allocate):
+
+    def __init__(self, globalid, reindex, lookback, assets = None, period = 1, bound = None):
+        super(SingleValidFactorAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate(self):
+
+        df_valid, _ = cal_valid_factor(lookback = 70)
+        # df_valid, _ = cal_valid_factor(lookback = 1)
+        # df_valid = df_valid.shift(-1).dropna()
+        pos_df = df_valid / 5
+
+        return pos_df
+
+
+class FactorIcAllocate(Allocate):
+
+    def __init__(self, globalid, reindex, lookback, assets = None, period = 1, bound = None):
+        super(FactorIcAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate(self):
+
+        df_valid, _ = cal_valid_factor_ic(lookback = 65)
+        pos_df = df_valid / 5
+
+        return pos_df
+
+
+class FactorReturnAllocate(Allocate):
+
+    def __init__(self, globalid, reindex, lookback, assets = None, period = 1, bound = None):
+        super(FactorReturnAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate(self):
+
+        df_valid, _ = cal_valid_factor_return(lookback = 65)
+        pos_df = df_valid / 5
+
+        return pos_df
+
+
+class FactorTStaAllocate(Allocate):
+
+    def __init__(self, globalid, reindex, lookback, assets = None, period = 1, bound = None):
+        super(FactorTStaAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate(self):
+
+        df_valid, _ = cal_valid_factor_t_sta(lookback = 50)
+        pos_df = df_valid / 5
+
+        return pos_df
+
+
+class FactorXgboostAllocate(Allocate):
+
+    def __init__(self, globalid, reindex, lookback, assets = None, period = 1, bound = None):
+        super(FactorXgboostAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate(self):
+
+        df_valid, _ = cal_valid_factor_xgboost(70)
+        pos_df = df_valid / 5
+
+        return pos_df
+
+
+class FactorWaveletAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(FactorWaveletAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        ws_ser = df_inc.iloc[-1].copy()
+        valid_factors = df_inc.mean().nlargest(5).index
+        invalid_factors = ws_ser.index.difference(valid_factors)
+
+        ws_ser.loc[valid_factors] = 0.2
+        ws_ser.loc[invalid_factors] = 0.0
+        ws = ws_ser.to_dict()
 
         return ws
 
