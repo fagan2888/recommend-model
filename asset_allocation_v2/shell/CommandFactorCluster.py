@@ -111,8 +111,8 @@ def fc_high(ctx, optid):
 
     years = 5
     lookback_days = 365 * years
-    factor_ids_1 = ['120000013', '120000015', '120000020']
-    factor_ids_2 = ['120000056', '120000073', 'MZ.F00010', 'MZ.F00050', 'MZ.F00060', 'MZ.F00070', 'MZ.F10010',]
+    factor_ids_1 = ['120000013', '120000015', '120000020', '120000014', '120000028']
+    factor_ids_2 = ['120000016', '120000051', '120000056', '120000073', 'MZ.F00010', 'MZ.F00050', 'MZ.F00060', 'MZ.F00070', 'MZ.F10010',]
     factor_ids = factor_ids_1 + factor_ids_2
     trade_dates = ATradeDate.month_trade_date(begin_date = '2017-01-01')
     for date in trade_dates:
