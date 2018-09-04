@@ -566,6 +566,24 @@ class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
         return ws
 
 
+class SingleValidFactorAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, alloc_num, bound=None, period=1):
+        super(SingleValidFactorAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        self.alloc_num = alloc_num
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        df_mean = df_inc.mean()
+        df_pos = df_mean.copy()
+        valid_factors = df_mean.nlargest(self.alloc_num).index
+        invalid_factors = df_mean.index.difference(valid_factors)
+        df_pos.loc[valid_factors] = 1.0 / self.alloc_num
+        df_pos.loc[invalid_factors] = 0.0
+        ws = df_pos.to_dict()
+
+        return ws
+
 
 if __name__ == '__main__':
 

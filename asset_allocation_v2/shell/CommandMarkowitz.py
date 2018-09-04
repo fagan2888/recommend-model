@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1116,6 +1116,20 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzLayerFixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
         df = allocate.allocate()
 
+    elif algo == 16:
+        #马科维兹boot
+        #df = markowitz_days(
+        #    sdate, edate, assets,
+        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
+        #print df.tail()
+
+        lookback = int(argv.get('lookback', '26'))
+        alloc_num = int(argv.get('alloc_num', '5'))
+        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = SingleValidFactorAllocate('ALC.000001', assets, trade_date, lookback, alloc_num, bound = bounds)
+        df = allocate.allocate()
+
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
@@ -1147,7 +1161,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 20]
+    no_rolling_algos = [1, 16]
     if algo in no_rolling_algos:
         pass
     else:
