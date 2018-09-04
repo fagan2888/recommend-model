@@ -466,7 +466,7 @@ class FactorIndexAllocate(Allocate):
             self.target = target
 
 
-        self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2010-01-01')
+        self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2007-10-01')
 
     def allocate(self):
 
