@@ -444,5 +444,4 @@ def wechat_user(ctx):
     df = pd.read_sql(sql, session.bind, index_col = ['uid'])
     session.commit()
     session.close()
-    print(df)
     df.to_csv('tmp/wechat_users.csv')
