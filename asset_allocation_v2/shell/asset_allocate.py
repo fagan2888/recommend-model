@@ -553,7 +553,7 @@ class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
             if asset_bound['upper'] > 0:
                 bound.append(asset_bound)
                 allocate_asset_ids.append(asset_id)
-
+        set_trace()
         risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc_layer.columns.ravel(), ws))
         for asset in layer_ws.index:

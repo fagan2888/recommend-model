@@ -996,6 +996,7 @@ def pool_by_single_factor(pool, day, lookback, limit, ffr, ffe):
     ffe = ffe[['fund_id', 'ff_id', 'exposure']].groupby(['fund_id', 'ff_id']).last().unstack()
     ffe.columns = ffe.columns.levels[1]
     ffe = ffe.dropna()
+    set_trace()
 
     vf = np.zeros(ffe.shape[1])
     pos = int(pool.ra_index_id[-2:])-1
