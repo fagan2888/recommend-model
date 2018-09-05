@@ -16,23 +16,24 @@ logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
+
 class fund_pos(Base):
 
     __tablename__ = 'fund_pos'
 
-    fund_id = Column(Integer, primary_key = True)
-    index_id = Column(String, primary_key = True)
-    trade_date = Column(Date, primary_key = True)
+    fund_id = Column(Integer, primary_key=True)
+    index_id = Column(String, primary_key=True)
+    trade_date = Column(Date, primary_key=True)
     position = Column(Float)
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
 
 
-def load_fund_pos(fund_id = None, fund_ids = None, index_id = None, index_ids = None, begin_date = None, end_date = None):
+def load_fund_pos(fund_id=None, fund_ids=None, index_id=None, index_ids=None, begin_date=None, end_date=None):
 
     db = database.connection('asset')
-    Session = sessionmaker(bind = db)
+    Session = sessionmaker(bind=db)
     session = Session()
     record = session.query(
         fund_pos.fund_id,
@@ -52,19 +53,18 @@ def load_fund_pos(fund_id = None, fund_ids = None, index_id = None, index_ids = 
     if begin_date:
         record = record.filter(fund_pos.trade_date >= begin_date)
     if end_date:
-        record = record.filter(fund_pos.trade_date  <= end_date)
+        record = record.filter(fund_pos.trade_date <= end_date)
 
-    df = pd.read_sql(record.statement, session.bind, index_col = ['fund_id', 'index_id', 'trade_date'], parse_dates = ['trade_date'])
+    df = pd.read_sql(record.statement, session.bind, index_col=['fund_id', 'index_id', 'trade_date'], parse_dates=['trade_date'])
     session.commit()
     session.close()
 
     return df
 
 
-def update_fund_pos(df_new, last_date = None):
+def update_fund_pos(df_new, last_date=None):
 
     df_old = load_fund_pos()
     db = database.connection('asset')
-    t = Table('fund_factor_exposure', MetaData(bind=db), autoload = True)
+    t = Table('fund_pos', MetaData(bind=db), autoload=True)
     database.batch(db, t, df_new, df_old)
-

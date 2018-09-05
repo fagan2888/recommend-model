@@ -35,6 +35,7 @@ import CommandFactorCluster
 import CommandView
 import CommandFundFactor
 import CommandIndPos
+import CommandMvRot
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -276,4 +277,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandView.view)
     roboadvisor.add_command(CommandFundFactor.ff)
     roboadvisor.add_command(CommandIndPos.ip)
+    roboadvisor.add_command(CommandMvRot.mr)
     roboadvisor(obj={})
