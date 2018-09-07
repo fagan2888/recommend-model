@@ -1117,11 +1117,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.allocate()
 
     elif algo == 16:
-        #马科维兹boot
-        #df = markowitz_days(
-        #    sdate, edate, assets,
-        #    label='markowitz', lookback=lookback, adjust_period=adjust_period, bootstrap=0, cpu_count=optcpu, wavelet = False)
-        #print df.tail()
+        #use momentum algo to select valid factor
 
         lookback = int(argv.get('lookback', '26'))
         alloc_num = int(argv.get('alloc_num', '5'))
