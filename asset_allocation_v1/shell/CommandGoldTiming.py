@@ -31,7 +31,7 @@ def gt(ctx):
     else:
         pass
 
-##############################################################################
+################     数据读入STRAT       ######################################
 
 def load_gold_indicator():
     feature_names = {
@@ -109,6 +109,7 @@ def save(gid, df):
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
     s = select(columns).where(t2.c.globalid == gid)
     df_old = pd.read_sql(s, db, index_col=['globalid', 'mc_gold_date'], parse_dates=['mc_gold_date'])
+    print '###############################',df_old.tail()
     # 更新数据库
     database.batch(db, t2, df, df_old, timestamp=False)
 
@@ -135,7 +136,7 @@ def initial_data_update():
         'MC.GD0030': 'comex_pos_comlong',
         'MC.GD0031': 'comex_pos_comshort',
     }
-
+    #set_trace()
     today = datetime.now()
     df1 = pd.read_csv('wind_update1.csv')#其他数据
     df2 = pd.read_csv('wind_update2.csv')#伦敦金现
@@ -160,9 +161,11 @@ def initial_data_update():
         df = df.reset_index().set_index(['globalid','mc_gold_date'])
         print key_i,df.tail(10)
         save(key_i,df)
-
-
+################     数据读入END   ############################################
 ##############################################################################
+
+
+################     辅助函数STRAT  ###########################################
 
 # 当月日期转换为下月
 def next_month(now_time):
@@ -204,6 +207,37 @@ def ema(s, n):
         ema1.append(np.mean(n))
     ema = ema1 + ema
     return np.array(ema)
+
+##def/function: '计算cot值'
+def cal_cot(df,cot_rolling_win):
+    '''
+    function:将持仓数据处理成cot
+    '''
+    len_num  = len(df)
+    if len_num < cot_rolling_win:
+        print 'Error'
+    cal_df = pd.DataFrame()
+    cal_df['max'] = df.rolling(min_periods=1,window=cot_rolling_win).max()
+    cal_df['min'] = df.rolling(min_periods=1,window=cot_rolling_win).min()
+    cal_df['cot'] = (df - cal_df['min']) / (cal_df['max'] - cal_df['min'])
+    
+    return cal_df['cot'].fillna(0)
+
+def cal_netcot(df,cot_rolling_win,ema_win):
+    '''
+    function:将持仓多头及持仓空头处理成net_cot
+    input:df['long','short']
+    output:df['netcot']
+    '''
+    #set_trace()
+    df_netcot = cal_cot(df.iloc[:,0],cot_rolling_win) -  cal_cot(df.iloc[:,1],cot_rolling_win)
+    cot = pd.DataFrame()
+    cot['cot'] = ema(df_netcot.values,ema_win)
+    
+    return cot
+
+
+
 
 # 数据平滑
 def smooth(df,para=0.34,win_obs=7,para_obs=0):
@@ -304,8 +338,14 @@ def evaluation(df,para=0):
 
     return precision_ratio,strength_profit,win4M_ratio
 
-# 测试参数
-def para_test():
+
+################     辅助函数END       ########################################
+###############################################################################
+
+##################     参数测试START      #########################################
+
+##def/function: 测试参数及结果
+def para_test1():
     data_para = []
     for i in range(1):
         for j in range(6,8):
@@ -318,8 +358,7 @@ def para_test():
     df_data.to_csv('gold_paratest.csv')
     return df_data
 
-# 输出结果
-def result():
+def result1():
     for i in range(1):
         for j in range(6,8):
             for m in range(6,8):
@@ -329,7 +368,33 @@ def result():
 
     return data
 
-def cal_gold_view(para_IR=0,obs1=7,obs2=7):
+##def/function: 测试参数及结果输出
+def para_test2():
+    df_cot = pd.DataFrame()
+    df_view = pd.DataFrame()
+    for choice in [0,1]:
+        for cot_rolling_win in [10,20,30,40,50,60,70,80,90]:
+            for ema_win in range(4,30):
+                print ('choice=',str(choice),'cot_rolling_win',str(cot_rolling_win),'ema_win=',str(ema_win))
+                data = cal_gold_view(para_IR=0,obs1=7,obs2=7,choice=choice,cot_rolling_win=cot_rolling_win,ema_win=ema_win)
+                filename = '%s%s%s%s%s%s' % ('C',str(choice),'T',str(cot_rolling_win),'E',str(ema_win))
+                df_cot = pd.concat([df_cot,data[['cot']].rename(columns={'cot':filename})],axis=1)
+                df_view = pd.concat([df_view,data[['view_gold']].rename(columns={'view_gold':filename})],axis=1)
+                #print df_view.head()
+                #print df_cot.head()
+    df_cot.to_csv('para_cot.csv')
+    df_view.to_csv('para_view.csv')
+def result2():
+    pass
+
+
+##################     参数测试      #########################################
+##############################################################################
+
+
+#################      主体函数      ########################################
+
+def cal_gold_view(para_IR=0,obs1=7,obs2=7,choice=0,cot_rolling_win=30,ema_win=12):
     #@para
     #para_IR = 0,1,2
     #obs1 = 6,7,obs2=0,7
@@ -343,7 +408,7 @@ def cal_gold_view(para_IR=0,obs1=7,obs2=7):
     M_data = M_data.truncate(before = '1997-07-01')#获取该日期之后的数据
     
     ######
-    # 2、获取real_dataset和forcast_dataset数据集@para_IR
+    # 2、获取real_dataset数据集@para_IR
     a_trade_date = trade_date.ATradeDate()
     index_month = a_trade_date.month_trade_date(begin_date = '1997-07-01')
     vecdict=dict(zip(M_data.index,index_month))#将index月末日期重命名为交易日期
@@ -355,13 +420,37 @@ def cal_gold_view(para_IR=0,obs1=7,obs2=7):
     data_month.fillna(method='pad',inplace = True)
     data_month['UScpi_ratio'] = data_month.loc[:,['UScpi']].pct_change(12).fillna(method='bfill')*100
     data_month = data_month.fillna(method='pad')
-    ### 获取real_dataset
+    #新增自变量的数据调整/comex_fundcot/comex_comcot  20180810
+    data_comex = data.loc[:,['comex_pos_fundlong','comex_pos_fundshort','comex_pos_comlong','comex_pos_comshort']].replace(0,np.nan).fillna(method='bfill').reindex(index=data_month.index)
+    
+    if choice==0:
+        data_comex['netcot'] = cal_netcot(data_comex[['comex_pos_fundlong','comex_pos_fundshort']],cot_rolling_win,ema_win).values
+    elif choice==1:
+        data_comex['netcot'] = cal_netcot(data_comex[['comex_pos_comlong','comex_pos_comshort']],cot_rolling_win,ema_win).values
+    filter_para = 0.026#经验参数
+    filter_comex = []
+    netcot = data_comex['netcot'].values.flatten()
+    for i in range(len(netcot)):
+        if i <= 1:
+            filter_comex.append(data_comex['netcot'].values[i])
+        else:
+            if (netcot[i-1] * netcot[i-2] >= 0 and netcot[i-1] * netcot[i] <= 0 and abs(netcot[i]) < filter_para):
+                filter_comex.append(-1.0 * netcot[i])
+            else:
+                filter_comex.append(netcot[i])
+
+    data_comex['view_cot'] = filter_comex
+    ### 获取real_dataset(核心因素外，可添加其他因素)
     real_dataset = data_month.loc[:,['UScpi_ratio']].copy()
     real_dataset['USrdi'] = data_month.loc[:,'USndi'] / data_month.loc[:,'UScpi']
     real_dataset['USrty'] = data_month.loc[:,'USnrty'] - data_month.loc[:,'UScpi_ratio']
     real_dataset['LD_sg'] = data_month.loc[:,'LD_sg'] / data_month.loc[:,'UScpi']
     real_dataset['UScpi'] = data_month.loc[:,'UScpi']
     real_dataset.drop(['UScpi_ratio'],axis=1,inplace=True)
+    
+    real_dataset = pd.concat([real_dataset,data_comex.loc[:,['view_cot']]],axis=1,join_axes=[real_dataset.index])#增加的cot新因素，包基金cot，商业cot20180809
+
+    #real_dataset['cot'].to_csv('cot.csv')
     if para_IR == 0:#利率数据不处理
         pass
     elif para_IR == 1:#利率数据处理成零
@@ -378,28 +467,30 @@ def cal_gold_view(para_IR=0,obs1=7,obs2=7):
     win_rolling = 120
     forcast_gold = pd.DataFrame()
     for i in range(len(real_dataset)-win_rolling):
-        x_par_month = real_dataset.iloc[0:i+win_rolling,0:2]
-        y_par_month = real_dataset.iloc[0:i+win_rolling,2]
+        x_par_month = real_dataset.iloc[0:i+win_rolling,:].loc[:,['USrdi','USrty']]
+        #x_par_month = real_dataset.iloc[0:i+win_rolling,:].loc[:,['USrdi','USrty','cot']]#新增自变量'cot'  20180809
+        y_par_month = real_dataset.iloc[0:i+win_rolling,:].loc[:,['LD_sg']]
         model = linreg.fit(x_par_month,y_par_month)
         max_strength = max(y_par_month.pct_change().fillna(0).values) - min(y_par_month.pct_change().fillna(0).values)#便于强度值刻画
-        #max_strength.append(max_strength)
         # 获取预测值
         m = real_dataset.index[i+win_rolling-1].strftime('%Y-%m')
         next_m = next_month(m)
         x_test = real_dataset[next_m]
         y_pred = linreg.predict(x_test[['USrdi','USrty']])
+        #y_pred = linreg.predict(x_test[['USrdi','USrty','cot']])#新增'cot'   20180809
         index_x = x_test.index
         y_r = pd.DataFrame(y_pred,index=index_x,columns=['gold_real'])
         y = pd.DataFrame(y_pred*x_test['UScpi'].values,index=index_x,columns=['gold_forcast'])
         intercept_ = pd.DataFrame(linreg.intercept_,index=index_x,columns=['intercept'])
-        coef_rdi = pd.DataFrame(np.ones(len(y_pred))*linreg.coef_[0],index=index_x,columns=['coef_USrdi'])
-        coef_rty = pd.DataFrame(np.ones(len(y_pred))*linreg.coef_[1],index=index_x,columns=['coef_USrty'])
+        coef_rdi = pd.DataFrame(np.ones(len(y_pred))*linreg.coef_.flatten()[0],index=index_x,columns=['coef_USrdi'])
+        coef_rty = pd.DataFrame(np.ones(len(y_pred))*linreg.coef_.flatten()[1],index=index_x,columns=['coef_USrty'])
+        #coef_cot = pd.DataFrame(np.ones(len(y_pred))*linreg.coef_.flatten()[2],index=index_x,columns=['coef_cot'])#新增'coef_cot'    20180809
         zscore = pd.DataFrame(np.ones(len(y_pred))*model.score(x_par_month,y_par_month),index=index_x,columns=['zscore'])
         max_s = pd.DataFrame(np.ones(len(y_pred))*max_strength,index_x,columns=['max_s'])
         result = pd.concat([y_r,y,intercept_,coef_rdi,coef_rty,zscore,x_test[['USrdi','USrty','UScpi']],max_s],axis=1)
+        #result = pd.concat([y_r,y,intercept_,coef_rdi,coef_rty,coef_cot,zscore,x_test[['USrdi','USrty','cot','UScpi']],max_s],axis=1)#新增'coef_cot','cot'   20180809
         forcast_gold = forcast_gold.append(result)
     forcast_gold = pd.concat([forcast_gold,data.loc[:,'LD_sg']],axis=1,join_axes=[forcast_gold.index])
-    #print forcast_gold
 
     #####
     #4、结果
@@ -409,28 +500,59 @@ def cal_gold_view(para_IR=0,obs1=7,obs2=7):
     forcast_gold['smooth'] = gold_smooth
     gold_strength_b,gold_smooth = smooth(forcast_gold[['gold_real','USrdi','USrty']],para=0.36,win_obs=obs1,para_obs=obs2)
     forcast_gold['view_gold_b'] = gold_strength_b
+    forcast_gold['view_cot'] = real_dataset['view_cot'].values[len(real_dataset) - len(forcast_gold):len(real_dataset)]
+
     now = datetime.now()
     today_date = datetime(now.year,now.month,now.day)
     forcast_gold.loc[today_date] = None #增加一行
-    forcast_gold[['view_gold','view_gold_b']] = forcast_gold[['view_gold','view_gold_b']].shift(1).fillna(0)#对观点值往后移动一位以匹配日期
-    forcast_gold[['gold_forcast','gold_real','smooth','max_s','coef_USrdi','coef_USrty','intercept','zscore']] = \
-        forcast_gold[['gold_forcast','gold_real','smooth','max_s','coef_USrdi','coef_USrty','intercept','zscore']].shift(1)
-    #分析评估：方向准确率及强度择时收益及4个月周期稳定率
-    precision_ratio,net_value,M4_ratio = evaluation(forcast_gold[['LD_sg','view_gold']],para=0)
-    precision_ratio_b,net_value_b,M4_ratio_b = evaluation(forcast_gold[['LD_sg','view_gold_b']],para=0)
-    forcast_gold['precision'] = precision_ratio
-    forcast_gold['net'] = net_value
-    forcast_gold['M4_ratio'] = M4_ratio
-    forcast_gold['precision_b'] = precision_ratio
-    forcast_gold['net_b'] = net_value_b
-    forcast_gold['M4_ratio_b'] = M4_ratio_b
-    #输出结果
-    forcast_gold = forcast_gold[['gold_forcast','gold_real','LD_sg','smooth',\
-        'view_gold','view_gold_b','precision','net','M4_ratio','precision_b','net_b','M4_ratio_b',\
-        'UScpi','USrdi','USrty','coef_USrdi','coef_USrty','intercept','zscore']]
-    #print forcast_gold
+    forcast_gold[['view_gold','view_cot']] = forcast_gold[['view_gold','view_cot']].fillna(0)
+    forcast_gold['view'] = forcast_gold.loc[:,['view_gold']].values.flatten() * np.where(forcast_gold.view_gold.values*forcast_gold.view_cot.values <= 0,0,1)
+    forcast_gold['view_01'] = np.where(forcast_gold.view > 0,1,np.where(forcast_gold.view==0,0,-1))
+    name1 = ['view_01','view','view_gold','view_cot','gold_forcast','smooth','LD_sg','UScpi','USrdi','USrty','coef_USrdi','coef_USrty','intercept','zscore']
+    name2 = ['view_01','view','view_gold','view_cot','gold_forcast','smooth','coef_USrdi','coef_USrty','intercept','zscore']
+    forcast_gold[name2] = forcast_gold[name2].shift(1)
+    forcast_gold = forcast_gold[name1]
+    forcast_gold['view_cot'] = forcast_gold['view_cot']*10.0
+    forcast_gold.to_csv('forcast_gold.csv')
+
     return forcast_gold
 
+
+    #forcast_gold[['view_gold','view_gold_b','view_cot']] = forcast_gold[['view_gold','view_gold_b','view_cot']].shift(1).fillna(0)#对观点值往后移动一位以匹配日期
+    #分析评估：方向准确率及强度择时收益及4个月周期稳定率
+    #precision_ratio,net_value,M4_ratio = evaluation(forcast_gold[['LD_sg','view_gold']],para=0)
+    #precision_ratio_b,net_value_b,M4_ratio_b = evaluation(forcast_gold[['LD_sg','view_gold_b']],para=0)
+    #forcast_gold['precision'] = precision_ratio
+    #forcast_gold['net'] = net_value
+    #forcast_gold['M4_ratio'] = M4_ratio
+    #forcast_gold['precision_b'] = precision_ratio
+    #forcast_gold['net_b'] = net_value_b
+    #forcast_gold['M4_ratio_b'] = M4_ratio_b
+    #输出结果
+    #forcast_gold = forcast_gold[['gold_forcast','gold_real','LD_sg','smooth',\
+    #    'view_gold','view_gold_b','view_cot','precision','net','M4_ratio','precision_b','net_b','M4_ratio_b',\
+    #    'UScpi','USrdi','USrty','coef_USrdi','coef_USrty','intercept','zscore']]
+    #forcast_gold.to_csv('forcast_gold.csv')
+    
+    #df_viewgold = forcast_gold.loc[:,['view_gold','view_cot']]
+    #df_viewgold.rename(columns={'view_gold':'viewgold_fundamentals','view_cot':'viewgold_funds'},inplace=True)
+    #m = np.where(df_viewgold.viewgold_fundamentals >= 0,1,-1)
+    #n = np.where(df_viewgold.viewgold_funds >= 0,1,-1)
+    #mn = []
+    #for i in range(len(m)):
+    #    if (m[i]>0 and n[i]>0):
+    #        mn.append(1.0)
+    #    elif (m[i]<0 and n[i]<0):
+    #        mn.append(-1.0)
+    #    else:
+    #        mn.append(0.0)
+
+    #df_viewgold['viewgold'] = mn
+    #print df_viewgold.tail()
+    #return df_viewgold
+
+
+#################      主体函数END      ########################################
 ##############################################################################
 
 @gt.command()
@@ -448,7 +570,8 @@ def gold_view_update(ctx, startdate, enddate, viewid):
     union_mv = {}
     union_mv['globalid'] = np.repeat(viewid,len(mv))
     union_mv['bl_date'] = mv.index
-    union_mv['bl_view'] = np.where(mv.view_gold >= 0,1,-1)
+    #union_mv['bl_view'] = np.where(mv.view_gold >= 0,1,-1)
+    union_mv['bl_view'] = mv.view
     union_mv['bl_index_id'] = np.repeat('120000014',len(mv))
     union_mv['created_at'] = np.repeat(today,len(mv))
     union_mv['updated_at'] = np.repeat(today,len(mv))
@@ -480,7 +603,8 @@ def view_update(viewid='MC.VW0006'):
     union_mv = {}
     union_mv['mc_view_id'] = np.repeat(viewid,len(mv))
     union_mv['mc_date'] = mv.index
-    union_mv['mc_inc'] = mv.view_gold
+    #union_mv['mc_inc'] = mv.view_gold
+    union_mv['mc_inc'] = mv.view
     union_mv['created_at'] = np.repeat(today,len(mv))
     union_mv['updated_at'] = np.repeat(today,len(mv))
     union_mv_df = pd.DataFrame(union_mv, columns = ['mc_view_id', 'mc_date', 'mc_inc', 'created_at', 'updated_at'])
@@ -505,11 +629,3 @@ def view_update(viewid='MC.VW0006'):
 
 if __name__ == '__main__':
     view_update()
-
-
-
-
-
-
-
-
