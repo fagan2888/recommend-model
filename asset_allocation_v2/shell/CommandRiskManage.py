@@ -17,8 +17,8 @@ import time
 import Const
 import RiskMgrSimple
 import RiskMgrLow
-import RiskMgrGARCH
-import RiskMgrVaRs
+# import RiskMgrGARCH
+# import RiskMgrVaRs
 import DFUtil
 
 from datetime import datetime, timedelta
@@ -33,7 +33,7 @@ import traceback, code
 
 logger = logging.getLogger(__name__)
 
-@click.group(invoke_without_command=True)  
+@click.group(invoke_without_command=True)
 @click.option('--id', 'optid', help='reshape id')
 @click.option('--online/--no-online', 'optonline', default=False, help='include online instance')
 @click.pass_context
@@ -63,8 +63,8 @@ def test(ctx, datadir, startdate, enddate, label_asset, reshape, markowitz):
     Const.datadir = datadir
 
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
-        enddate = yesterday.strftime("%Y-%m-%d")        
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
 
     df_nav = pd.read_csv(datapath('../csvdata/000300_nav_2012.csv'),  index_col=['date'], parse_dates=['date'])
     #df_nav = pd.read_csv(datapath('dd.csv'),  index_col=['td_date'], parse_dates=['td_date'])
@@ -97,9 +97,9 @@ def simple(ctx, datadir, optinst, startdate, enddate):
     Const.datadir = datadir
 
     if not enddate:
-        yesterday = (datetime.now() - timedelta(days=1)); 
+        yesterday = (datetime.now() - timedelta(days=1));
         enddate = yesterday.strftime("%Y-%m-%d")
-        
+
     if optinst is None:
         optinst = 2016120600
 
@@ -145,15 +145,15 @@ def simple(ctx, datadir, optinst, startdate, enddate):
             'nav': df_nav[asset],
             'timing': df_timing[timing_id].reindex(df_nav.index, method='pad')
         })
-        
+
         df_new = risk_mgr.perform(asset, df)
-        
+
         df_new['rm_risk_mgr_id'] = optinst
         df_new['rm_category'] = category
         df_new = df_new.reset_index().set_index(['rm_risk_mgr_id', 'rm_category', 'rm_date'])
         if not df_new.empty:
             df_new = df_new.applymap("{:.0f}".format)
-        
+
         #
         # 保存风控仓位到数据库
         #
@@ -191,7 +191,7 @@ def simple(ctx, datadir, optinst, startdate, enddate):
         #     rmc = column
         rmc = column
         # print "use column %d for category %s" % (rmc, category)
-                
+
         if category in df_pos_markowitz:
             df_pos_tmp = df_pos_riskmgr[rmc].reindex(df_pos_markowitz.index)
             df_pos_markowitz[category] = df_pos_markowitz[category] * df_pos_tmp
@@ -202,7 +202,7 @@ def simple(ctx, datadir, optinst, startdate, enddate):
     # 调整货币的比例, 总和达到1
     #
     df_result['money'] = (1 - (df_result.sum(axis=1) - df_result['money']))
-    
+
     df_result.to_csv(datapath('riskmgr_position.csv'))
 
 def make_rm_risk_mgr_if_not_exist(id_):
@@ -332,7 +332,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
     df_tosave = df_tosave.loc[df_tosave['rm_ratio'] > 0, ['rm_ratio']]
     if not df_tosave.empty:
         database.number_format(df_tosave, columns=['rm_ratio'], precision=4)
-    
+
     df_tosave['updated_at'] = df_tosave['created_at'] = now
 
     df_tosave.to_sql(rm_risk_mgr_pos.name, db, index=True, if_exists='append', chunksize=500)
@@ -554,7 +554,7 @@ def signal_update_garch(riskmgr):
     #Parse argvs
     if riskmgr['rm_argv'] != '':
         argv.update({k: json.loads(v) for (k,v) in [x.split('=') for x in riskmgr['rm_argv'].split(';')]})
-    
+
     if riskmgr['rm_algo'] == 4:
         #Univariate GARCH
         codes = {riskmgr['globalid'] : {"id" : riskmgr['rm_asset_id'], "timing" : riskmgr['rm_timing_id']}}
@@ -616,7 +616,7 @@ def nav(ctx, optid, optlist):
         df_riskmgr['rm_name'] = df_riskmgr['rm_name'].map(lambda e: e.decode('utf-8'))
         print(tabulate(df_riskmgr, headers='keys', tablefmt='psql'))
         return 0
-    
+
     with click.progressbar(length=len(df_riskmgr), label='update nav'.ljust(30)) as bar:
         for _, riskmgr in df_riskmgr.iterrows():
             bar.update(1)
@@ -648,6 +648,6 @@ def nav_update(riskmgr):
     df_result['rm_inc'] = df_result['rm_nav'].pct_change().fillna(0.0)
     df_result['rm_riskmgr_id'] = riskmgr_id
     df_result = df_result.reset_index().set_index(['rm_riskmgr_id', 'rm_date'])
-    
+
     asset_rm_riskmgr_nav.save(riskmgr_id, df_result)
 

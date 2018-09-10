@@ -274,10 +274,20 @@ def markowitz_fixrisk(df_inc, bound, target_risk):
     ret = df_inc.mean().values
     vol = df_inc.cov().values
 
-    cons = (
-        {'type': 'eq', 'fun': lambda x : np.sum(x) - 1.0},
+    asset_sum1_limit = 0.0
+    sum1_limit_assets = []
+    for asset in range(len(bound)):
+        if bound[asset]['sum1'] != 0.0:
+            sum1_limit_assets.append(asset)
+            asset_sum1_limit = bound[asset]['sum1']
+
+    cons = [
+        {'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0},
         {'type': 'ineq', 'fun': lambda x: target_risk - np.sqrt(np.dot(x,np.dot(vol,x)))},
-    )
+    ]
+    if asset_sum1_limit > 0.0:
+        cons.append({'type': 'ineq', 'fun': lambda x: asset_sum1_limit - np.sum(x[sum1_limit_assets])})
+    cons = tuple(cons)
 
     res = scipy.optimize.minimize(risk_budget_objective, w0, args=[ret, vol, target_risk], method='SLSQP', bounds = bnds, constraints=cons, options={'disp': False, 'eps': 1e-3})
 
@@ -384,10 +394,20 @@ def markowitz_bl_fixrisk(df_inc, P, eta, alpha, bound, target_risk):
     expected_return = fin.black_litterman(initialvalue, vol, P, eta, alpha)
     ret = expected_return.reshape(-1)
 
-    cons = (
-        {'type': 'eq', 'fun': lambda x : np.sum(x) - 1.0},
+    asset_sum1_limit = 0.0
+    sum1_limit_assets = []
+    for asset in range(len(bound)):
+        if bound[asset]['sum1'] != 0.0:
+            sum1_limit_assets.append(asset)
+            asset_sum1_limit = bound[asset]['sum1']
+
+    cons = [
+        {'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0},
         {'type': 'ineq', 'fun': lambda x: target_risk - np.sqrt(np.dot(x,np.dot(vol,x)))},
-    )
+    ]
+    if asset_sum1_limit > 0.0:
+        cons.append({'type': 'ineq', 'fun': lambda x: asset_sum1_limit - np.sum(x[sum1_limit_assets])})
+    cons = tuple(cons)
 
     res = scipy.optimize.minimize(risk_budget_objective, w0, args=[ret, vol, target_risk], method='SLSQP', bounds = bnds, constraints=cons, options={'disp': False, 'eps': 1e-3})
 
