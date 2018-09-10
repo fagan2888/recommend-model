@@ -26,16 +26,64 @@ class tq_ix_basicinfo(Base):
     secode = Column(String)
     indexname = Column(String)
     symbol = Column(String)
+    estclass = Column(String)
 
 
 class index_factor(Base):
 
     __tablename__ = 'index_factor'
 
-    index_id = Column(String, primary_key = True)
+    index_id = Column(String, primary_key=True)
     if_type = Column(Integer)
     secode = Column(String)
     index_name = Column(String)
+
+
+class tq_qt_index(Base):
+
+    __tablename__ = 'tq_qt_index'
+
+    id = Column(Integer, primary_key=True)
+    secode = Column(String)
+    tradedate = Column(String)
+    tclose = Column(Float)
+
+
+def load_caihui_index(secodes=None, start_date=None, end_date=None):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_qt_index.tradedate, tq_qt_index.secode, tq_qt_index.tclose)
+    if secodes is not None:
+        sql = sql.filter(tq_qt_index.secode.in_(secodes))
+    if start_date is not None:
+        sql = sql.filter(tq_qt_index.tradedate >= start_date)
+    if end_date is not None:
+        sql = sql.filter(tq_qt_index.tradedate <= end_date)
+    df_nav = pd.read_sql(sql.statement, session.bind, index_col=['tradedate', 'secode'], parse_dates=['tradedate'])
+    session.commit()
+    session.close()
+
+    df_nav = df_nav.unstack()
+    df_nav.columns = df_nav.columns.get_level_values(1)
+
+    return df_nav
+
+
+def load_type_index(estclass=None):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_ix_basicinfo.secode, tq_ix_basicinfo.symbol, tq_ix_basicinfo.indexname)
+    if estclass is not None:
+        sql = sql.filter(tq_ix_basicinfo.estclass.in_(estclass))
+    index_info = pd.read_sql(sql.statement, session.bind, index_col=['secode'])
+    session.commit()
+    session.close()
+
+    return index_info
 
 
 def load_tq_ix_basicinfo(secodes = None):

@@ -72,7 +72,8 @@ class IndexFactor(Factor):
             ip = ip.resample('m').last()
             dates = ip.index
             dates = dates[dates > '2007-01-31']
-            dates = dates[dates < datetime.now()]
+            # dates = dates[dates < datetime.now()]
+            dates = dates[dates < '2018-08-01']
             df_index_exposure = {}
             for date in dates:
                 pos = ip.loc[date]
@@ -90,17 +91,8 @@ class IndexFactor(Factor):
         return df_factor_exposure
 
 
-
-
-
 if __name__ == '__main__':
 
     indexfactor = IndexFactor('IF.000001')
     indexfactor.cal_factor_exposure()
-
-
-
-
-
-
 

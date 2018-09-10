@@ -72,13 +72,13 @@ class tq_fd_basicinfo(Base):
     fsymbol = Column(String)
 
 
-class tq_fd_typeclass(Base):
+# class tq_fd_typeclass(Base):
 
-    __tablename__ = 'tq_fd_typeclass'
+    # __tablename__ = 'tq_fd_typeclass'
 
-    id = Column(Integer, primary_key = True)
-    securityid = Column(String)
-    l1codes = Column(String)
+    # id = Column(Integer, primary_key = True)
+    # securityid = Column(String)
+    # l1codes = Column(String)
 
 
 class tq_fd_sharestat(Base):
@@ -100,6 +100,42 @@ class tq_oa_securitymap(Base):
     secode = Column(String)
     mapcode = Column(String)
     maptype = Column(String)
+
+
+class tq_fd_typeclass(Base):
+
+    __tablename__ = 'tq_fd_typeclass'
+
+    id = Column(Integer, primary_key=True)
+    securityid = Column(String)
+    l1codes = Column(String)
+    l2codes = Column(String)
+    l3codes = Column(String)
+
+
+def load_type_fund(l1codes=None, l2codes=None, l3codes=None):
+
+    engine = database.connection('caihui')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(tq_fd_typeclass.securityid, tq_fd_typeclass.l1codes, tq_fd_typeclass.l2codes, tq_fd_typeclass.l3codes)
+
+    if l1codes is not None:
+        sql = sql.filter(tq_fd_typeclass.l1codes.in_(l1codes))
+    if l2codes is not None:
+        sql = sql.filter(tq_fd_typeclass.l2codes.in_(l2codes))
+    if l3codes is not None:
+        sql = sql.filter(tq_fd_typeclass.l3codes.in_(l3codes))
+    df = pd.read_sql(sql.statement, session.bind, index_col=['securityid'])
+
+    session.commit()
+    session.close()
+
+    secode_dict = load_fund_secode_dict()
+    df = df.rename(index=secode_dict)
+    df = df.sort_index()
+
+    return df
 
 
 def load_securitymap(maptype = 25):

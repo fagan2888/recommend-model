@@ -22,7 +22,7 @@ from ipdb import set_trace
 import warnings
 warnings.filterwarnings('ignore')
 
-from db import asset_ra_pool_nav, asset_ra_pool_fund, asset_ra_pool, base_ra_fund_nav, base_ra_fund, base_ra_index, asset_ra_composite_asset_nav, database, asset_stock_factor, asset_fund_factor
+from db import asset_ra_pool_nav, asset_ra_pool_fund, asset_ra_pool, base_ra_fund_nav, base_ra_fund, base_ra_index, asset_ra_composite_asset_nav, database, asset_stock_factor, asset_fund_factor, asset_fund, asset_index, asset_index_factor
 # from CommandMarkowitz import load_nav_series
 from trade_date import ATradeDate
 from asset import Asset
@@ -32,7 +32,7 @@ from asset import Asset
 @click.pass_context
 def fuc(ctx, optid):
     '''
-    factor layereing
+    factor layering
     '''
     if ctx.invoked_subcommand is None:
         # ctx.invoke(fuc_stability, optid = optid)
@@ -122,6 +122,86 @@ def fuc_ind_concentration(ctx, optid):
 @fuc.command()
 @click.option('--id', 'optid', help='specify cluster id')
 @click.pass_context
+def fuc_cluster_corr(ctx, optid):
+
+    start_date = '2010-01-01'
+    end_date = '2018-09-01'
+    # valid_funds = asset_fund.load_type_fund(l2codes=['200209']).index
+    # valid_funds = asset_fund.load_type_fund(l2codes=['200101']).index
+    # valid_funds = asset_fund.load_type_fund(l2codes=['200202']).index
+    valid_funds = asset_fund.load_type_fund(l1codes=['2001']).index
+    df_nav_fund = base_ra_fund_nav.load_daily(start_date, end_date, codes=valid_funds)
+
+    fn = base_ra_fund.load(codes=valid_funds)
+    fn = fn.set_index('ra_code')
+    fn = fn.loc[:, ['ra_name']]
+    # fn.to_csv('fund_name_strategy.csv', encoding='gbk')
+
+    dates = pd.date_range(start_date, end_date)
+    dates = dates[-3:]
+    for ldate, date in zip(dates[:-1], dates[1:]):
+
+        tnav = df_nav_fund.loc[ldate:date]
+        tnav = tnav.dropna(1)
+        tnav = tnav.pct_change().dropna()
+        df_dist = tnav.corr()
+        asset_cluster = clusterSimple(df_dist, 0.97)
+        clusters = sorted(asset_cluster, key=lambda x: len(asset_cluster[x]), reverse=True)
+        for layer in clusters:
+            print(layer)
+            funds = asset_cluster[layer]
+            fund_names = fn.loc[funds]
+            print(fund_names)
+            print('#############################################################################')
+        set_trace()
+
+
+@fuc.command()
+@click.option('--id', 'optid', help='specify cluster id')
+@click.pass_context
+def index_cluster_corr(ctx, optid):
+
+    df = asset_index_factor.load_index_factor_exposure(index_id=130000007)
+    df = df.loc['130000007']
+    df = df.unstack()
+    df.columns = df.columns.get_level_values(1)
+    df = df.T
+    set_trace()
+    start_date = '2010-01-01'
+    end_date = '2018-08-01'
+    estclass = ['中证策略指数', '上证策略指数', '国证策略指数', '深证策略指数', '申万量化策略指数']
+    valid_index_info = asset_index.load_type_index(estclass)
+    valid_index = valid_index_info.index
+    df_nav_index = asset_index.load_caihui_index(valid_index)
+    df_nav_index = df_nav_index.fillna(method='pad', limit=5)
+    df_nav_fund = base_ra_fund_nav.load_daily(start_date, end_date, codes=['020001'])
+    df_nav_index = pd.merge(df_nav_index, df_nav_fund, left_index=True, right_index=True, how='inner')
+
+    dates = pd.date_range(start_date, end_date, freq='365D')
+    dates = dates[-3:]
+    for ldate, date in zip(dates[:-1], dates[1:]):
+        ldate = '2012-01-01'
+        date = '2018-01-01'
+
+        tnav = df_nav_index.loc[ldate:date]
+        tnav = tnav.fillna(method='pad')
+        tnav = tnav.dropna(1)
+        tnav = tnav / tnav.iloc[0]
+        df_dist = tnav.corr()
+        asset_cluster = clusterSimple(df_dist, 0.95)
+        clusters = sorted(asset_cluster, key=lambda x: len(asset_cluster[x]), reverse=True)
+        for layer in clusters:
+            print(layer)
+            indexes = asset_cluster[layer]
+            index_names = valid_index_info.loc[indexes]
+            print(index_names)
+            print('#############################################################################')
+        set_trace()
+
+
+@fuc.command()
+@click.option('--id', 'optid', help='specify cluster id')
+@click.pass_context
 def fuc_cluster(ctx, optid):
 
     df_stability = pd.read_csv('data/factor/stability/fund_stability_mean.csv', index_col = ['date'], parse_dates = ['date'], encoding = 'gb2312')
@@ -135,7 +215,7 @@ def fuc_cluster(ctx, optid):
     valid_funds = df_stability[df_stability.stability > 0.9].index.values
     ffe = asset_fund_factor.load_fund_factor_exposure(fund_ids = valid_funds)
 
-    fn = base_ra_fund.load(codes = valid_funds)
+    fn = base_ra_fund.load(codes= valid_funds)
     fn = fn.set_index('ra_code')
     fn = fn.loc[:, ['ra_name']]
 
@@ -279,7 +359,7 @@ def clusterSimple(dist, threshold):
         for layer in asset_cluster.keys():
             tmp_corrs[layer] = dist.loc[factor_id, asset_cluster[layer]].values.mean()
             tmp_corrs_ser = pd.Series(tmp_corrs)
-            tmp_corrs_ser = tmp_corrs_ser.sort_values(ascending = False)
+            tmp_corrs_ser = tmp_corrs_ser.sort_values(ascending=False)
         if (tmp_corrs_ser.iloc[0] > threshold) and (not flag):
             flag = True
             asset_cluster[tmp_corrs_ser.index[0]].append(factor_id)
