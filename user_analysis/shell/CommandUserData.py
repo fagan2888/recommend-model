@@ -28,6 +28,7 @@ from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
 import pickle
 from tempfile import NamedTemporaryFile
+import functools
 from ipdb import set_trace
 import warnings
 warnings.filterwarnings("ignore")
@@ -445,3 +446,274 @@ def wechat_user(ctx):
     session.commit()
     session.close()
     df.to_csv('tmp/wechat_users.csv')
+
+
+@data.command()
+@click.pass_context
+def yingmi_user_account(ctx):
+
+    engine = database.connection('trade')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(trade.yingmi_accounts.ya_uid, trade.yingmi_accounts.ya_name).statement
+    df = pd.read_sql(sql, session.bind, index_col = ['ya_uid'])
+    session.commit()
+    session.close()
+    df.to_csv('tmp/user_name.csv')
+
+
+@data.command()
+@click.pass_context
+def user_log(ctx):
+
+    ts_order = pd.read_csv('./tmp/ts_order.csv', index_col = 'ts_order_uid')
+    ts_order_uids = set(ts_order.index)
+    print(len(ts_order_uids))
+
+    spark_conf = (SparkConf().setAppName('order holding').setMaster('local[32]')
+                    .set("spark.executor.memory", "50G")
+                            .set('spark.driver.memory', '50G')
+                                    .set('spark.driver.maxResultSize', '50G'))
+
+    sc = SparkContext(conf=spark_conf)
+    log_rdd = sc.textFile('data/app_log.txt')
+    log_rdd = log_rdd.repartition(1000)
+
+
+    def log_item(valid_uids, x):
+        try:
+            x = eval(x)
+            x = x['_source']
+            #用户不在购买用户中，直接过滤掉
+            if(int(x['uid']) not in valid_uids):
+                return (-1, {})
+            #某只基金详情页
+            elif x['page_id'] == '2032':
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{'page_id=' + x['page_id']: 1}})
+            #调整风险等级页
+            elif x['ref_id'] == '2147':
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{'ref_id=' + x['ref_id']: 1}})
+            #我的资产页面
+            elif x['page_id'] == '2013':
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{'page_id=' + x['page_id']: 1}})
+            #首页
+            elif x['page_id'] == '3078':
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{'page_id=' + x['page_id']: 1}})
+            #资产配置详情页
+            elif x['page_id'] == '2006':
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{'page_id=' + x['page_id']: 1}})
+            #点击追加购买按钮
+            elif (x['page_id'] == '2013') and (x['ctrl'] == '4'):
+                return (x['uid'], { datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{
+                      'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl']: 1}})
+            #点击赎回按钮
+            elif (x['page_id'] == '2013') and (x['ctrl'] == '6'):
+                return (x['uid'], { datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl']: 1}})
+            #点击持有基金按钮
+            elif (x['page_id'] == '2148') and (x['ctrl'] == '1') and (x['ref_id'] == '2013') and (x['oid'] == '20'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #点击投资分析按钮
+            elif (x['page_id'] == '2126') and (x['ctrl'] == '8') and (x['ref_id'] == '2013') and (x['oid'] == '20'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #点击交易记录按钮
+            elif (x['page_id'] == '2150') and (x['ctrl'] == '2') and (x['ref_id'] == '2013') and (x['oid'] == '20'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #点击调仓信息按钮
+            elif (x['page_id'] == '2127') and (x['ctrl'] == '3') and (x['ref_id'] == '2013') and (x['oid'] == '20'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #点击定投管理按钮
+            elif (x['page_id'] == '2133') and (x['ctrl'] == '4') and (x['ref_id'] == '2013') and (x['oid'] == '20'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d") :{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #邀请好友按钮
+            elif (x['page_id'] == '2154') and (x['ctrl'] == '5') and (x['ref_id'] == '2013') and (x['oid'] == '20'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #微信通知按钮
+            elif (x['page_id'] == '2171') and (x['ctrl'] == '9') and (x['ref_id'] == '2013') and (x['oid'] == '20'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #联系客服
+            elif (x['page_id'] == '2161'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                       'page_id=' + x['page_id']: 1}})
+            #智能组合页面-历史业绩
+            elif (x['page_id'] == '2139') and (x['ctrl'] == '2') and (x['ref_id'] == '2006') and (x['oid'] == '1'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #智能组合页面-未来预期
+            elif (x['page_id'] == '2146') and (x['ctrl'] == '2') and (x['ref_id'] == '2006') and (x['oid'] == '2'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #智能组合页面-风险控制
+            elif (x['page_id'] == '2141') and (x['ctrl'] == '2') and (x['ref_id'] == '2006') and (x['oid'] == '3'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #智能组合页面-全球配置
+            elif (x['page_id'] == '2142') and (x['ctrl'] == '2') and (x['ref_id'] == '2006') and (x['oid'] == '4'):
+                #print(x['uid'], {datetime.fromtimestamp(int(x['@timestamp']) / 1000).strftime("%Y-%m-%d"):{
+                #      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&oid=' + x['oid']: 1}})
+            #智能组合页面-动态调仓
+            elif (x['page_id'] == '2143') and (x['ctrl'] == '2') and (x['ref_id'] == '2006') and (x['oid'] == '5'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl'] + '&' + 'oid=' + x['oid']: 1}})
+            #智能组合页面-立即购买
+            elif (x['page_id'] == '2006') and (x['ctrl'] == '4'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl']: 1}})
+            #智能组合页面-查看配置详情
+            elif (x['page_id'] == '2138') and (x['ctrl'] == '3') and (x['ref_id'] == '2006'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl']: 1}})
+            #查看配置详情-立即购买
+            elif (x['page_id'] == '2110') and (x['ctrl'] == '2') and (x['ref_id'] == '2138'):
+                return (x['uid'], {datetime.fromtimestamp(int(x['c_time']) / 1000).strftime("%Y-%m-%d"):{
+                      'ref_id=' + x['ref_id'] + '&' + 'page_id=' + x['page_id'] + '&' + 'ctrl=' + x['ctrl']: 1}})
+            return (-1, {})
+            #return NULL
+        except:
+            return (-1, {})
+            #return NULL
+
+
+    def log_user(log1, log2):
+        for date in log1.keys():
+            date_log2 = log2.setdefault(date, {})
+            date_log1 = log1[date]
+            for ctrl in date_log1.keys():
+                date_log2_ctrl = date_log2.setdefault(ctrl, 0)
+                date_log2[ctrl] = date_log2_ctrl + date_log1[ctrl]  
+        return log2
+
+
+    def log_user_feature(x):
+        uid = x[0]
+        data = x[1]
+        if (uid == '') or (uid == -1):
+            return pd.DataFrame()
+        log_df = pd.DataFrame(data).T.fillna(0.0)
+        log_df.index.name = 'date'
+        log_df = log_df.reset_index()
+        log_df['uid'] = uid
+        log_df = log_df.set_index(['uid', 'date'])
+        log_df = log_df.sort_index()
+        if len(log_df) == 1:
+            return pd.DataFrame()
+        return log_df
+
+
+    logs = log_rdd.map(functools.partial(log_item, ts_order_uids)).reduceByKey(log_user) \
+                    .map(log_user_feature).reduce(lambda a, b : pd.concat([a,b], axis = 0, sort = True)).fillna(0.0)
+    sc.stop()
+    print(logs.tail())
+    logs.to_csv('tmp/log_feature.csv')
+
+
+
+@data.command()
+@click.pass_context
+def all_feature(ctx):
+
+    spark_conf = (SparkConf().setAppName('order holding').setMaster('local[32]')
+            .set("spark.executor.memory", "50G")
+            .set('spark.driver.memory', '50G')
+            .set('spark.driver.maxResultSize', '50G'))
+
+    spark = SparkSession.builder.config(conf = spark_conf).getOrCreate()
+    ts_order_df = spark.read.csv("tmp/ts_order.csv", header = True)
+    ts_holding_df = spark.read.csv("tmp/ts_holding_nav.csv", header = True)
+    log_df = spark.read.csv('tmp/log_feature.csv', header = True)
+
+
+    feature_rdd = ts_holding_df.rdd
+    feature_rdd = feature_rdd.union(log_df.rdd)
+    feature_rdd = feature_rdd.union(ts_order_df.rdd)
+
+    feature_rdd = feature_rdd.repartition(1000)
+
+    def combine_rdd(x):
+        v = x.asDict()
+        if 'uid'in v:
+            v['feature_uid'] = v['uid']
+            v['feature_date'] = v['date']
+        elif 'ts_holding_uid' in v:
+            v['feature_uid'] = v['ts_holding_uid']
+            v['feature_date'] = v['ts_date']
+        elif 'ts_order_uid' in v:
+            v['feature_uid'] = v['ts_order_uid']
+            v['feature_date'] = v['ts_trade_date']
+        return v
+
+
+    def user_feature(x):
+        uid = x[0]
+        vs = x[1]
+        data = {}
+        for item in list(vs):
+            item_date = item['feature_date']
+            item_data = data.setdefault(item_date, {})
+            for k in item.keys():
+                if (k == 'feature_date') or (k == 'ts_order_uid') or (k == 'ts_holding_uid') or (k == 'feature_uid') or (k == 'uid') \
+                        or (k == 'date') or (k == 'ts_trade_date') or (k == 'ts_date'):
+                    pass
+                else:
+                    item_data[k] = item[k]
+        v = pd.DataFrame(data).T
+        v.index.name = 'date'
+        v['uid'] = uid
+        v = v.reset_index()
+        #print(v)
+        v = v.set_index(['uid','date'])
+        v = v.sort_index()
+
+        try:
+            v.ts_risk = v.ts_risk.fillna(method = 'pad')
+        except:
+            print(uid, v.columns)
+        #v.ts_profit = v.ts_profit.fillna(method = 'pad')
+        #v.ts_asset = v.ts_asset.fillna(method = 'pad')
+        #v.ts_nav = v.ts_nav.fillna(method = 'pad')
+
+
+        '''
+        v.ts_trade_type_status = v.ts_trade_type_status.astype(float)
+        if len(v.ts_nav.dropna()) == 0:
+            return pd.DataFrame()
+        #有的数据第一条记录为nan
+        v.ts_nav.iloc[0] = 1.0
+        if len(v.ts_trade_type_status.dropna()) <= 0:
+            return pd.DataFrame()
+        #把最后一次赎回以后的净值数据去掉
+        if v.ts_trade_type_status.dropna().iloc[-1] == 46.0:
+            max_date = v.ts_trade_type_status.dropna().index[-1][1]
+            v = v[v.index.get_level_values(1) <= max_date]
+        nav = v.ts_nav
+        #v = v[['36', '46', '56', '66', 'ts_asset', 'ts_nav', 'ts_placed_amount', 'ts_placed_percent', 'ts_processing_asset', 'ts_profit', 'ts_risk']]
+        '''
+        return v
+
+
+
+
+    #features = feature_rdd.map(combine_rdd).groupBy(lambda x : x['ts_holding_uid']).map(user_feature).collect()
+    features = feature_rdd.map(combine_rdd).groupBy(lambda x : x['feature_uid']).map(user_feature).collect()
+    feature_df = pd.concat(features, axis = 0)
+
+
+
+
+    #feature_df.to_csv('tmp/feature.csv')
+    #feature_df = feature_rdd.map(combine_rdd).groupBy(lambda x : x['ts_uid']).map(user_feature).reduce(lambda a, b : pd.concat([a,b], axis = 0, sort=True))
+    #print(feature.ts_uid)
+    #feature = feature.toPandas().fillna(np.nan).set_index(['ts_uid'])
+    #print(feature.tail())
+    #feature = feature.iloc[:,~feature.columns.duplicated()]
+    #print(feature.loc['1000373998'].sort_index())
+    #feature.to_csv('tmp/feature.csv')

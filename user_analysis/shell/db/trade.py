@@ -60,3 +60,10 @@ class ts_holding_nav(Base):
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
+
+class yingmi_accounts(Base):
+
+    __tablename__ = 'yingmi_accounts'
+
+    ya_uid = Column(Integer, primary_key = True)
+    ya_name = Column(String)
