@@ -29,7 +29,7 @@ from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
-from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
+from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos, asset_fund_factor
 from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl, asset_stock
 from db.asset_stock_factor import *
 from util import xdict
@@ -623,7 +623,7 @@ class MzLayer2FixRiskBootBlAllocate(MzBlAllocate):
                 bound.append(asset_bound)
                 allocate_asset_ids.append(asset_id)
 
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count=self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc_layer.columns.ravel(), ws))
 
         for asset in layer_ws_1.index:
@@ -634,8 +634,32 @@ class MzLayer2FixRiskBootBlAllocate(MzBlAllocate):
             ws[asset] = ws['ALayer2'] * layer_ws_2.loc[asset]
         del ws['ALayer2']
 
-
         return ws
+
+
+class FundAllocate(Allocate):
+
+    def __init__(self, globalid, reindex, lookback, layer=0, assets=None):
+        super(FundAllocate, self).__init__(globalid, assets, reindex, lookback, period=None, bound=None)
+        self.layer = layer
+
+    def allocate(self):
+
+        fund_cluster = asset_fund_factor.load_fc_fund_cluster(cluster_ids=[self.layer])
+        fund_cluster = fund_cluster.reset_index()
+        fund_cluster = fund_cluster.loc[:, ['trade_date', 'fund_id']]
+        fund_cluster['valid'] = 1.0
+        fund_cluster = fund_cluster.set_index(['trade_date', 'fund_id'])
+        fund_cluster = fund_cluster.unstack()
+        fund_cluster.columns = fund_cluster.columns.get_level_values(1)
+        fund_cluster = fund_cluster.fillna(0.0)
+        fund_cluster = fund_cluster.div(fund_cluster.sum(1), axis=0)
+
+        fund_globalid = base_ra_fund.load(codes=fund_cluster.columns)
+        fund_cluster = fund_cluster[fund_globalid.ra_code]
+        fund_cluster.columns = fund_globalid.globalid
+
+        return fund_cluster
 
 
 if __name__ == '__main__':

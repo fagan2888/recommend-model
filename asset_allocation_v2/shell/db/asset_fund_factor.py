@@ -21,12 +21,12 @@ logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
-class fund_factor(Base):
 
+class fund_factor(Base):
 
     __tablename__ = 'fund_factor'
 
-    ff_id = Column(String, primary_key = True)
+    ff_id = Column(String, primary_key=True)
     ff_name = Column(String)
     created_at = Column(DateTime)
 
@@ -35,9 +35,9 @@ class fund_factor_exposure(Base):
 
     __tablename__ = 'fund_factor_exposure'
 
-    fund_id = Column(String, primary_key = True)
-    ff_id = Column(String, primary_key = True)
-    trade_date = Column(Date, primary_key = True)
+    fund_id = Column(String, primary_key=True)
+    ff_id = Column(String, primary_key=True)
+    trade_date = Column(Date, primary_key=True)
     exposure = Column(Float)
 
     updated_at = Column(DateTime)
@@ -48,8 +48,8 @@ class fund_factor_return(Base):
 
     __tablename__ = 'fund_factor_return'
 
-    ff_id = Column(String, primary_key = True)
-    trade_date = Column(Date, primary_key = True)
+    ff_id = Column(String, primary_key=True)
+    trade_date = Column(Date, primary_key=True)
     ret = Column(Float)
 
     updated_at = Column(DateTime)
@@ -60,18 +60,67 @@ class fund_factor_specific_return(Base):
 
     __tablename__ = 'fund_factor_specific_return'
 
-    fund_id = Column(String, primary_key = True)
-    trade_date = Column(Date, primary_key = True)
+    fund_id = Column(String, primary_key=True)
+    trade_date = Column(Date, primary_key=True)
     sret = Column(Float)
 
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
 
 
-def load_fund_factor_exposure(fund_id = None, fund_ids = None, ff_id = None, ff_ids = None, begin_date = None, end_date = None):
+class fc_fund_cluster(Base):
+
+    __tablename__ = 'fc_fund_cluster'
+
+    trade_date = Column(Date, primary_key=True)
+    cluster_id = Column(String)
+    fund_id = Column(String)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+def update_fc_fund_cluster(df_new):
 
     db = database.connection('asset')
-    Session = sessionmaker(bind = db)
+    t = Table('fc_fund_cluster', MetaData(bind=db), autoload=True)
+    df_old = load_fc_fund_cluster()
+    df_old = df_old.set_index('fund_id', append=True)
+    database.batch(db, t, df_new, df_old)
+    # database.batch_old(db, t, df_new, df_old)
+
+
+def load_fc_fund_cluster(begin_date=None, end_date=None, fund_ids=None, cluster_ids=None):
+
+    db = database.connection('asset')
+    Session = sessionmaker(bind=db)
+    session = Session()
+    record = session.query(
+        fc_fund_cluster.trade_date,
+        fc_fund_cluster.cluster_id,
+        fc_fund_cluster.fund_id,
+        )
+
+    if begin_date:
+        record = record.filter(fc_fund_cluster.trade_date >= begin_date)
+    if end_date:
+        record = record.filter(fc_fund_cluster.trade_date <= end_date)
+    if fund_ids is not None:
+        record = record.filter(fc_fund_cluster.fund_id.in_(fund_ids))
+    if cluster_ids is not None:
+        record = record.filter(fc_fund_cluster.cluster_id.in_(cluster_ids))
+
+    df = pd.read_sql(record.statement, session.bind, index_col=['trade_date', 'cluster_id'], parse_dates=['trade_date'])
+    session.commit()
+    session.close()
+
+    return df
+
+
+def load_fund_factor_exposure(fund_id=None, fund_ids=None, ff_id=None, ff_ids=None, begin_date=None, end_date=None):
+
+    db = database.connection('asset')
+    Session = sessionmaker(bind=db)
     session = Session()
     record = session.query(
         fund_factor_exposure.fund_id,
@@ -93,17 +142,17 @@ def load_fund_factor_exposure(fund_id = None, fund_ids = None, ff_id = None, ff_
     if end_date:
         record = record.filter(fund_factor_exposure.trade_date <= end_date)
 
-    df = pd.read_sql(record.statement, session.bind, index_col = ['fund_id', 'ff_id', 'trade_date'], parse_dates = ['trade_date'])
+    df = pd.read_sql(record.statement, session.bind, index_col=['fund_id', 'ff_id', 'trade_date'], parse_dates=['trade_date'])
     session.commit()
     session.close()
 
     return df
 
 
-def load_fund_factor_return(ff_id = None, ff_ids = None, trade_date = None, begin_date = None, end_date = None, reindex = None):
+def load_fund_factor_return(ff_id=None, ff_ids=None, trade_date=None, begin_date=None, end_date=None, reindex=None):
 
     db = database.connection('asset')
-    Session = sessionmaker(bind = db)
+    Session = sessionmaker(bind=db)
     session = Session()
     record = session.query(
         fund_factor_return.ff_id,
@@ -122,17 +171,17 @@ def load_fund_factor_return(ff_id = None, ff_ids = None, trade_date = None, begi
     if end_date:
         record = record.filter(fund_factor_return.trade_date <= end_date)
 
-    df = pd.read_sql(record.statement, session.bind, index_col = ['ff_id', 'trade_date'], parse_dates = ['trade_date'])
+    df = pd.read_sql(record.statement, session.bind, index_col=['ff_id', 'trade_date'], parse_dates=['trade_date'])
     session.commit()
     session.close()
 
     return df
 
 
-def load_fund_factor_specific_return(fund_id = None, fund_ids = None, trade_date = None, begin_date = None, end_date = None):
+def load_fund_factor_specific_return(fund_id=None, fund_ids=None, trade_date=None, begin_date=None, end_date=None):
 
     db = database.connection('asset')
-    Session = sessionmaker(bind = db)
+    Session = sessionmaker(bind=db)
     session = Session()
     record = session.query(
         fund_factor_specific_return.fund_id,
@@ -151,14 +200,14 @@ def load_fund_factor_specific_return(fund_id = None, fund_ids = None, trade_date
     if end_date:
         record = record.filter(fund_factor_specific_return.trade_date <= end_date)
 
-    df = pd.read_sql(record.statement, session.bind, index_col = ['fund_id', 'trade_date'], parse_dates = ['trade_date'])
+    df = pd.read_sql(record.statement, session.bind, index_col=['fund_id', 'trade_date'], parse_dates=['trade_date'])
     session.commit()
     session.close()
 
     return df
 
 
-def update_exposure(ff, last_date = None):
+def update_exposure(ff, last_date=None):
 
     ff_id = ff.factor_id
     exposure = ff.exposure
@@ -166,7 +215,7 @@ def update_exposure(ff, last_date = None):
     if last_date is None:
 
         db = database.connection('asset')
-        Session = sessionmaker(bind = db)
+        Session = sessionmaker(bind=db)
         session = Session()
         record = session.query(func.max(fund_factor_exposure.trade_date)).filter(fund_factor_exposure.ff_id == ff_id).first()
         last_date = record[0].strftime('%Y-%m-%d') if record[0] is not None else '1900-01-01'
@@ -176,7 +225,7 @@ def update_exposure(ff, last_date = None):
     exposure = exposure[exposure.index >= last_date]
 
     db = database.connection('asset')
-    Session = sessionmaker(bind = db)
+    Session = sessionmaker(bind=db)
     session = Session()
     session.query(fund_factor_exposure).filter(fund_factor_exposure.trade_date >= last_date).filter(fund_factor_exposure.ff_id == ff_id).delete()
     session.commit()
@@ -189,16 +238,16 @@ def update_exposure(ff, last_date = None):
     df_new = df_new.set_index(['fund_id', 'ff_id', 'trade_date'])
 
     db = database.connection('asset')
-    t = Table('fund_factor_exposure', MetaData(bind=db), autoload = True)
+    t = Table('fund_factor_exposure', MetaData(bind=db), autoload=True)
     database.batch(db, t, df_new, pd.DataFrame())
 
 
-def update_fund_factor_return(df_ret, last_date = None):
+def update_fund_factor_return(df_ret, last_date=None):
 
     if last_date is None:
 
         db = database.connection('asset')
-        Session = sessionmaker(bind = db)
+        Session = sessionmaker(bind=db)
         session = Session()
         record = session.query(func.max(fund_factor_return.trade_date)).first()
         last_date = record[0].strftime('%Y-%m-%d') if record[0] is not None else '1900-01-01'
@@ -208,7 +257,7 @@ def update_fund_factor_return(df_ret, last_date = None):
     df_ret = df_ret[df_ret.index >= last_date]
 
     db = database.connection('asset')
-    Session = sessionmaker(bind = db)
+    Session = sessionmaker(bind=db)
     session = Session()
     session.query(fund_factor_return).filter(fund_factor_return.trade_date >= last_date).delete()
     session.commit()
@@ -220,16 +269,16 @@ def update_fund_factor_return(df_ret, last_date = None):
     df_ret = df_ret.set_index(['ff_id', 'trade_date'])
 
     db = database.connection('asset')
-    t = Table('fund_factor_return', MetaData(bind=db), autoload = True)
+    t = Table('fund_factor_return', MetaData(bind=db), autoload=True)
     database.batch(db, t, df_ret, pd.DataFrame())
 
 
-def update_fund_factor_specific_return(df_sret, last_date = None):
+def update_fund_factor_specific_return(df_sret, last_date=None):
 
     if last_date is None:
 
         db = database.connection('asset')
-        Session = sessionmaker(bind = db)
+        Session = sessionmaker(bind=db)
         session = Session()
         record = session.query(func.max(fund_factor_specific_return.trade_date)).first()
         last_date = record[0].strftime('%Y-%m-%d') if record[0] is not None else '1900-01-01'
@@ -239,7 +288,7 @@ def update_fund_factor_specific_return(df_sret, last_date = None):
     df_sret = df_sret[df_sret.index >= last_date]
 
     db = database.connection('asset')
-    Session = sessionmaker(bind = db)
+    Session = sessionmaker(bind=db)
     session = Session()
     session.query(fund_factor_specific_return).filter(fund_factor_specific_return.trade_date >= last_date).delete()
     session.commit()
@@ -251,23 +300,15 @@ def update_fund_factor_specific_return(df_sret, last_date = None):
     df_sret = df_sret.set_index(['fund_id', 'trade_date'])
 
     db = database.connection('asset')
-    t = Table('fund_factor_specific_return', MetaData(bind=db), autoload = True)
+    t = Table('fund_factor_specific_return', MetaData(bind=db), autoload=True)
     database.batch(db, t, df_sret, pd.DataFrame())
 
 
 if __name__ == '__main__':
 
-    #df1 = load_fund_factor_return()
-    #df2 = load_fund_factor_specific_return()
-    #set_trace()
-    #update_exposure(fundFactor.SizefundFactor(factor_id = 'ff.000001'))
+    # df1 = load_fund_factor_return()
+    # df2 = load_fund_factor_specific_return()
+    # set_trace()
+    # update_exposure(fundFactor.SizefundFactor(factor_id = 'ff.000001'))
     set_trace()
-
-
-
-
-
-
-
-
 
