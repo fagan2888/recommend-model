@@ -652,21 +652,36 @@ def all_feature(ctx):
         return v
 
 
-    def user_feature(x):
+    def user_feature(uids, x):
+
         uid = x[0]
+
+        if int(uid) not in ts_order_uids:
+            return pd.DataFrame()
+
         vs = x[1]
         data = {}
+        #记录用户持有组合的日期
+
+        holding_dates = []
+
         for item in list(vs):
+
             item_date = item['feature_date']
             item_data = data.setdefault(item_date, {})
             for k in item.keys():
+                if k == 'ts_date':
+                    holding_dates.append(item[k])
+
                 if (k == 'feature_date') or (k == 'ts_order_uid') or (k == 'ts_holding_uid') or (k == 'feature_uid') or (k == 'uid') \
                         or (k == 'date') or (k == 'ts_trade_date') or (k == 'ts_date'):
                     pass
                 else:
                     item_data[k] = item[k]
+
         v = pd.DataFrame(data).T
         v.index.name = 'date'
+        v = v[v.index.isin(holding_dates)]
         v['uid'] = uid
         v = v.reset_index()
         #print(v)
@@ -675,14 +690,13 @@ def all_feature(ctx):
 
         try:
             v.ts_risk = v.ts_risk.fillna(method = 'pad')
+            v.ts_profit = v.ts_profit.fillna(method = 'pad')
+            v.ts_asset = v.ts_asset.fillna(method = 'pad')
+            v.ts_nav = v.ts_nav.fillna(method = 'pad')
         except:
-            print(uid, v.columns)
-        #v.ts_profit = v.ts_profit.fillna(method = 'pad')
-        #v.ts_asset = v.ts_asset.fillna(method = 'pad')
-        #v.ts_nav = v.ts_nav.fillna(method = 'pad')
+            return pd.DataFrame()
 
 
-        '''
         v.ts_trade_type_status = v.ts_trade_type_status.astype(float)
         if len(v.ts_nav.dropna()) == 0:
             return pd.DataFrame()
@@ -694,19 +708,31 @@ def all_feature(ctx):
         if v.ts_trade_type_status.dropna().iloc[-1] == 46.0:
             max_date = v.ts_trade_type_status.dropna().index[-1][1]
             v = v[v.index.get_level_values(1) <= max_date]
-        nav = v.ts_nav
         #v = v[['36', '46', '56', '66', 'ts_asset', 'ts_nav', 'ts_placed_amount', 'ts_placed_percent', 'ts_processing_asset', 'ts_profit', 'ts_risk']]
-        '''
+
+        #过滤掉用户购买之前的log日志
+        #v.ts_nav = v.ts_nav.fillna(method = 'pad')
+        #v = v[pd.isnull(v.ts_nav)]
+        #if len(v) >= 1:
+        #    print(v)
+        #print(v.ts_nav.notnull())
         return v
 
 
-
-
     #features = feature_rdd.map(combine_rdd).groupBy(lambda x : x['ts_holding_uid']).map(user_feature).collect()
-    features = feature_rdd.map(combine_rdd).groupBy(lambda x : x['feature_uid']).map(user_feature).collect()
+    ts_order_df = pd.read_csv('tmp/ts_order.csv', index_col = ['ts_order_uid'])
+    ts_holding_df = pd.read_csv('tmp/ts_holding_nav.csv', index_col = ['ts_holding_uid'])
+    ts_order_uids = set(ts_order_df.index)
+    ts_holding_uids = set(ts_holding_df.index)
+    order_holding_uids = ts_order_uids & ts_holding_uids
+    #print(ts_order_df.tail())
+
+    features = feature_rdd.map(combine_rdd).groupBy(lambda x : x['feature_uid']).map(functools.partial(user_feature, order_holding_uids)).collect()
     feature_df = pd.concat(features, axis = 0)
 
+    feature_df.to_csv('tmp/feature_log.csv')
 
+    set_trace()
 
 
     #feature_df.to_csv('tmp/feature.csv')
