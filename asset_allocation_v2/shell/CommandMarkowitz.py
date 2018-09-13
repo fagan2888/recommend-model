@@ -1146,7 +1146,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
-        return;
+        return
 
     if 'return' in df.columns:
         df_sharpe = df[['return', 'risk', 'sharpe']].copy()
@@ -1174,11 +1174,11 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 20]
+    no_rolling_algos = [1, 18]
     if algo in no_rolling_algos:
         pass
     else:
-        df = df.rolling(window = 4, min_periods = 1).mean()
+        df = df.rolling(window=4, min_periods=1).mean()
 
     if optappend:
         df = df.iloc[3:,:]

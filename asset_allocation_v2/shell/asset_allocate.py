@@ -587,9 +587,7 @@ class MzLayer2FixRiskBootBlAllocate(MzBlAllocate):
         self.__bootstrap_count = bootstrap_count
         self.risk = risk
 
-
     def allocate_algo(self, day, df_inc, bound):
-
 
         layer_assets_1 = ['120000058', 'MZ.FA0010', 'MZ.FA0070']
         layer_assets_2 = ['MZ.FA1010', '120000018', '120000073', '120000079']
@@ -655,9 +653,20 @@ class FundAllocate(Allocate):
         fund_cluster = fund_cluster.fillna(0.0)
         fund_cluster = fund_cluster.div(fund_cluster.sum(1), axis=0)
 
+        # fund_count = fund_cluster.rolling(180).sum().dropna()
+        # fund_threshold = fund_count.quantile(1 - 10 / fund_count.shape[1])
+        # fund_count[fund_count < fund_threshold] = 0.0
+        # fund_count[fund_count >= fund_threshold] = 1.0
+        # fund_cluster = fund_count.div(fund_count.sum(1), axis=0)
+        # fund_cluster = fund_cluster.resample('m').last()
+
         fund_globalid = base_ra_fund.load(codes=fund_cluster.columns)
         fund_cluster = fund_cluster[fund_globalid.ra_code]
         fund_cluster.columns = fund_globalid.globalid
+
+        # fund_cluster = fund_cluster.rolling(90).mean().dropna()
+        # fund_cluster[fund_cluster < 0.01] = 0.0
+        # fund_cluster = fund_cluster.div(fund_cluster.sum(1), 0)
 
         return fund_cluster
 

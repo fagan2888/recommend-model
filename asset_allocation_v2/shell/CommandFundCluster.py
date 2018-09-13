@@ -124,14 +124,21 @@ def fuc_ind_concentration(ctx, optid):
 @click.pass_context
 def fuc_cluster_corr(ctx, optid):
 
-    start_date = '2011-12-01'
+    start_date = '2010-12-01'
+    # start_date = '2013-09-30'
+    # start_date = '2017-12-01'
     # end_date = '2010-01-05'
     end_date = '2018-09-01'
-    lookback = 30
-    layer_num = 10
+    lookback = 180
+    layer_num = 5
+    preference = 0.80
     # valid_funds = asset_fund.load_type_fund(l2codes=['200209']).index
     # valid_funds = asset_fund.load_type_fund(l2codes=['200202']).index
-    valid_funds = asset_fund.load_type_fund(l2codes=['200101']).index
+    # valid_funds = asset_fund.load_type_fund(l2codes=['200101']).index
+    # 股票型基金加混合型基金
+    # valid_funds = asset_fund.load_type_fund(l1codes=['2001', '2002']).index
+    # 普通股票型基金加混合偏股型基金
+    valid_funds = asset_fund.load_type_fund(l2codes=['200101', '200201']).index
     df_nav_fund = base_ra_fund_nav.load_daily(start_date, end_date, codes=valid_funds)
 
     fn = base_ra_fund.load(codes=valid_funds)
@@ -140,10 +147,11 @@ def fuc_cluster_corr(ctx, optid):
     # fn.to_csv('fund_name_strategy.csv', encoding='gbk')
 
     dates = pd.date_range(start_date, end_date)
-    df_cluster_ret = pd.DataFrame(columns=['cluster%02d' % i for i in range(1, 11)])
+    df_cluster_ret = pd.DataFrame(columns=['cluster%02d' % i for i in range(layer_num)])
     df_cluster = pd.DataFrame(columns=['trade_date', 'cluster_id', 'fund_id'])
     pre_asset_cluster = None
     pre_clusters = None
+    pre_funds = None
     for ldate, date in zip(dates[:-lookback], dates[lookback:]):
 
         print(date)
@@ -152,11 +160,13 @@ def fuc_cluster_corr(ctx, optid):
         tnav = tnav.pct_change().dropna()
         df_dist = tnav.corr()
         df_dist = df_dist.fillna(0.0)
-        # asset_cluster = clusterSimple(df_dist, 0.95)
-        asset_cluster = cluster_ap(df_dist)
+        asset_cluster = cluster_ap(df_dist, preference)
 
         if pre_asset_cluster is not None:
-            tmp_clusters = sorted(asset_cluster, key=lambda x: len(asset_cluster[x]), reverse=True)[:layer_num]
+            tmp_clusters = sorted(asset_cluster, key=lambda x: len(asset_cluster[x]), reverse=True)
+            cluster_fund_num = np.array([len(asset_cluster[x]) for x in tmp_clusters])
+            cluster_fund_num = max(len(cluster_fund_num[cluster_fund_num >= 5]), layer_num)
+            tmp_clusters = tmp_clusters[:cluster_fund_num]
             clusters = []
             cluster_nav = {}
             for k in tmp_clusters:
@@ -174,6 +184,7 @@ def fuc_cluster_corr(ctx, optid):
                         new_funds = asset_cluster[k]
                         tmp_overlap = len(np.intersect1d(pre_funds, new_funds)) / len(pre_funds)
                         tmp_dist = abs(new_nav - pre_nav) / (tmp_overlap + 0.01)
+                        # tmp_dist = 1 - tmp_overlap
                         if tmp_dist < min_dist:
                             min_dist = tmp_dist
                             max_layer = k
@@ -205,8 +216,13 @@ def fuc_cluster_corr(ctx, optid):
             cluster_funds_day = pd.concat([cluster_funds_day, cluster_funds_layer_day])
             cluster_ret = tnav.loc[:, funds].iloc[-1].mean()
             cluster_rets.append(cluster_ret)
-            if cluster_id == 0:
+            if cluster_id == layer_num - 1:
+                # if cluster_id == 0:
                 print(fn.loc[funds])
+                if pre_funds is not None:
+                    tr = 1 - len(np.intersect1d(pre_funds, funds)) / len(pre_funds)
+                    print("turnover ratio: %.2f" % tr)
+                pre_funds = funds
         trade_date = tnav.index[-1]
         df_cluster_ret.loc[trade_date] = cluster_rets
         df_cluster = pd.concat([df_cluster, cluster_funds_day])
@@ -223,7 +239,7 @@ def fuc_cluster_corr(ctx, optid):
 @click.pass_context
 def fuc_cluster_analysis(ctx, optid):
 
-    alloc_ids = ['MZ.FC0%02d0' % i for i in range(1, 11)]
+    alloc_ids = ['MZ.FC0%02d0' % i for i in range(1, 6)]
     df_nav_cluster = {}
     for alloc_id in alloc_ids:
         alloc_nav = Asset.load_nav_series(alloc_id)
@@ -231,7 +247,32 @@ def fuc_cluster_analysis(ctx, optid):
     df_nav_cluster = pd.DataFrame(df_nav_cluster)
     df_ret_cluster = df_nav_cluster.pct_change().dropna()
     df_corr = df_ret_cluster.corr()
-    print(df_corr)
+
+    cluster_ids = range(5)
+    for cluster_id in cluster_ids:
+        fund_cluster = asset_fund_factor.load_fc_fund_cluster(cluster_ids=[cluster_id])
+        fund_cluster['valid'] = 1.0
+        fund_count = fund_cluster.groupby(fund_cluster.fund_id).sum()
+
+    set_trace()
+
+
+@fuc.command()
+@click.option('--id', 'optid', help='specify cluster id')
+@click.pass_context
+def fuc_pool_analysis(ctx, optid):
+
+    pool_ids = ['11130100', '11130500', '11130700', '11140100', '11150900', '11151200', '11151800', '11151900']
+    df = {}
+    for pool_id in pool_ids:
+        pool_fund = asset_ra_pool_fund.load(pool_id)
+        df[pool_id] = pool_fund.loc['2018-08-31'].ra_fund_code.values
+    df = pd.DataFrame(df)
+    for i in range(len(pool_ids) - 1):
+        for j in range(i+1, len(pool_ids)):
+            pool_1 = df[pool_ids[i]]
+            pool_2 = df[pool_ids[j]]
+            print(i, j, len(np.intersect1d(pool_1, pool_2)))
     set_trace()
 
 
@@ -245,7 +286,6 @@ def index_cluster_corr(ctx, optid):
     df = df.unstack()
     df.columns = df.columns.get_level_values(1)
     df = df.T
-    set_trace()
     start_date = '2010-01-01'
     end_date = '2018-08-01'
     estclass = ['中证策略指数', '上证策略指数', '国证策略指数', '深证策略指数', '申万量化策略指数']
