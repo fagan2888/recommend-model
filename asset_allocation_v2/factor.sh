@@ -78,3 +78,6 @@
 /home/finance/anaconda3/bin/python shell/roboadvisor.py composite nav --asset MZ.FA1070
 /home/finance/anaconda3/bin/python shell/roboadvisor.py composite nav --asset MZ.FA1080
 /home/finance/anaconda3/bin/python shell/roboadvisor.py composite nav --asset MZ.FA1090
+
+# update valid factor
+/home/finance/anaconda3/bin/python shell/roboadvisor.py markowitz --id MZ.MF0010 --new

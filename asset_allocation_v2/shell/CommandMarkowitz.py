@@ -1121,7 +1121,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         lookback = int(argv.get('lookback', '26'))
         alloc_num = int(argv.get('alloc_num', '5'))
-        trade_date = ATradeDate.trade_date(begin_date = sdate, lookback=lookback)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = SingleValidFactorAllocate('ALC.000001', assets, trade_date, lookback, alloc_num, bound = bounds)
         df = allocate.allocate()
