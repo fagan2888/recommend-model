@@ -972,11 +972,15 @@ class TradeNav(object):
         # 持有日期
         ndays = (dt - buy_date).days
 
-        sr = df.loc[df['ff_max_value'] >= ndays].iloc[0]
-        if sr['ff_fee_type'] == 2: # 固定费用模式，一般是0元，持有期足够长，赎回免费
-            fee = sr['ff_fee']
+        df_tmp = df.loc[df['ff_max_value'] >= ndays]
+        if df_tmp.empty:
+            fee = 0.0
         else:
-            fee = amount * sr['ff_fee']  # 标准费率计算方式
+            sr = df_tmp.iloc[0]
+            if sr['ff_fee_type'] == 2: # 固定费用模式，一般是0元，持有期足够长，赎回免费
+                fee = sr['ff_fee']
+            else:
+                fee = amount * sr['ff_fee']  # 标准费率计算方式
 
         return fee
 
