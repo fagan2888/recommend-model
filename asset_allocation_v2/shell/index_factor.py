@@ -58,8 +58,8 @@ class IndexFactor(Factor):
 
     def cal_factor_exposure(self):
 
-        sf_ids = ['SF.0000%02d'%i for i in range(1,10)]+['SF.1000%02d'%i for i in range(1,28)]
-        if_ids = ['IF.0000%02d'%i for i in range(1,10)]+['IF.1000%02d'%i for i in range(1,28)]
+        sf_ids = ['SF.0000%02d' % i for i in range(1, 10)]+['SF.1000%02d' % i for i in range(1, 28)]
+        if_ids = ['IF.0000%02d' % i for i in range(1, 10)]+['IF.1000%02d' % i for i in range(1, 28)]
         if_sf = dict(zip(if_ids, sf_ids))
         sfe = StockFactor.load_factor_exposure(if_sf[self.factor_id])
         index_pos = IndexAsset.all_index_pos()

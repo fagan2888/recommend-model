@@ -52,6 +52,7 @@ def cal_deviation(user_weight, best_weight, V):
 
     return deviation
 
+
 if __name__ == '__main__':
 
     asset_ids_1 = ['120000010', '120000011', '120000014', '120000039', '120000053', '120000056', '120000058', '120000073', '120000081', '120000082']
@@ -60,10 +61,12 @@ if __name__ == '__main__':
     df_ret = load_asset_ret(asset_ids)
     V = df_ret.cov()
     user_weight = np.array([1.0 / len(asset_ids)] * len(asset_ids))  # 0.0625 for all factor
+    print(user_weight)
 
     best_weight = user_weight.copy()
     best_weight[0] = 0.2
     best_weight = best_weight / best_weight.sum()
+    print(best_weight)
     deviation = cal_deviation(user_weight, best_weight, V)
     print(deviation)
 
