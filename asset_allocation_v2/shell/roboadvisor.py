@@ -35,6 +35,7 @@ import CommandFactorCluster
 import CommandView
 import CommandFundFactor
 import CommandFundCluster
+import CommandFundDecomp
 import CommandIndexCluster
 import CommandIndexFactor
 
@@ -278,6 +279,7 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandView.view)
     roboadvisor.add_command(CommandFundFactor.ff)
     roboadvisor.add_command(CommandFundCluster.fuc)
+    roboadvisor.add_command(CommandFundDecomp.fd)
     roboadvisor.add_command(CommandIndexFactor.indexfactor)
     roboadvisor.add_command(CommandIndexCluster.ic)
     roboadvisor(obj={})
