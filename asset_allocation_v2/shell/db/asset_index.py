@@ -71,7 +71,7 @@ def load_caihui_index(secodes=None, start_date=None, end_date=None):
     return df_nav
 
 
-def load_type_index(estclass=None):
+def load_type_index(estclass=None, estclasstype=None):
 
     engine = database.connection('caihui')
     Session = sessionmaker(bind=engine)
@@ -79,6 +79,8 @@ def load_type_index(estclass=None):
     sql = session.query(tq_ix_basicinfo.secode, tq_ix_basicinfo.symbol, tq_ix_basicinfo.indexname)
     if estclass is not None:
         sql = sql.filter(tq_ix_basicinfo.estclass.in_(estclass))
+    elif estclasstype is not None:
+        sql = sql.filter(tq_ix_basicinfo.estclass.like(estclasstype))
     index_info = pd.read_sql(sql.statement, session.bind, index_col=['secode'])
     session.commit()
     session.close()
