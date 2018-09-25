@@ -159,14 +159,14 @@ def ts_holding(ctx):
 @click.pass_context
 def user_question_answer(ctx):
 
-    engine = database.connection('recommend')
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    sql = session.query(recommend.user_questionnaire_answers.uq_uid, recommend.user_questionnaire_answers.uq_questionnaire_id, recommend.user_questionnaire_answers.uq_question_id, recommend.user_questionnaire_answers.uq_answer, recommend.user_questionnaire_answers.uq_question_type, recommend.user_questionnaire_answers.uq_start_time, recommend.user_questionnaire_answers.uq_end_time).statement
-    user_question_answer_df = pd.read_sql(sql, session.bind, index_col = ['uq_uid','uq_questionnaire_id'], parse_dates = ['uq_start_time', 'uq_end_time'])
-    session.commit()
-    session.close()
-    user_question_answer_df.to_csv('tmp/user_question_answer.csv')
+    #engine = database.connection('recommend')
+    #Session = sessionmaker(bind=engine)
+    #session = Session()
+    #sql = session.query(recommend.user_questionnaire_answers.uq_uid, recommend.user_questionnaire_answers.uq_questionnaire_id, recommend.user_questionnaire_answers.uq_question_id, recommend.user_questionnaire_answers.uq_answer, recommend.user_questionnaire_answers.uq_question_type, recommend.user_questionnaire_answers.uq_start_time, recommend.user_questionnaire_answers.uq_end_time).statement
+    #user_question_answer_df = pd.read_sql(sql, session.bind, index_col = ['uq_uid','uq_questionnaire_id'], parse_dates = ['uq_start_time', 'uq_end_time'])
+    #session.commit()
+    #session.close()
+    #user_question_answer_df.to_csv('tmp/user_question_answer.csv')
 
     spark_conf = (SparkConf().setAppName('order holding').setMaster('local[24]')
             .set("spark.executor.memory", "50G")
@@ -181,6 +181,8 @@ def user_question_answer(ctx):
     def question_answer_feature(v):
         try:
             k = v[0]
+            if not k.startswith('100'):
+                return pd.DataFrame()
             vs = v[1]
             datas = [v.asDict() for v in vs]
             v = pd.DataFrame(datas).dropna()
@@ -201,9 +203,11 @@ def user_question_answer(ctx):
         return v
 
 
-    user_question_answer_df = user_question_answer_rdd.groupBy(lambda row : row.uq_uid).map(question_answer_feature).reduce(lambda a, b : pd.concat([a,b], axis = 0, sort=True).fillna(0.0))
+    user_question_answer_df = pd.concat(user_question_answer_rdd.groupBy(lambda row : row.uq_uid).map(question_answer_feature).collect())
     print(user_question_answer_df.tail())
     user_question_answer_df.to_csv('tmp/user_question_answer_feature.csv')
+
+    set_trace()
 
 
 
@@ -630,7 +634,8 @@ def all_feature(ctx):
     ts_order_df = spark.read.csv("tmp/ts_order.csv", header = True)
     ts_holding_df = spark.read.csv("tmp/ts_holding_nav.csv", header = True)
     log_df = spark.read.csv('tmp/log_feature.csv', header = True)
-
+    #user_question_answer = pd.read_csv('data/user_question_answer_feature.csv', index_col = ['uq_uid'])
+    #user_question_answer = user_question_answer.astype(np.float32)
 
     feature_rdd = ts_holding_df.rdd
     feature_rdd = feature_rdd.union(log_df.rdd)
@@ -649,55 +654,77 @@ def all_feature(ctx):
         elif 'ts_order_uid' in v:
             v['feature_uid'] = v['ts_order_uid']
             v['feature_date'] = v['ts_trade_date']
+
         return v
 
+
+    '''
+    def xirr(transactions):
+        years = [(ta[0] - transactions[0][0]) / 365.0 for ta in transactions]
+        residual = 1
+        step = 0.05
+        guess = 0.05
+        epsilon = 0.0001
+        limit = 10000
+        while abs(residual) > epsilon and limit > 0:
+            limit -= 1
+            residual = 0.0
+            for i, ta in enumerate(transactions):
+                residual += ta[1] / pow(guess, years[i])
+            if abs(residual) > epsilon:
+                if residual > 0:
+                    guess += step
+                else:
+                    guess -= step
+                    step /= 2.0
+        #print(transactions, guess - 1)
+        return guess-1
+    '''
 
     def user_feature(uids, x):
 
         uid = x[0]
 
-        if int(uid) not in ts_order_uids:
+        if int(uid) not in uids:
             return pd.DataFrame()
 
         vs = x[1]
+
+
         data = {}
-        #记录用户持有组合的日期
-
-        holding_dates = []
-
         for item in list(vs):
-
             item_date = item['feature_date']
+            if item_date == '2018-08-02':
+                continue
             item_data = data.setdefault(item_date, {})
             for k in item.keys():
-                if k == 'ts_date':
-                    holding_dates.append(item[k])
-
-                if (k == 'feature_date') or (k == 'ts_order_uid') or (k == 'ts_holding_uid') or (k == 'feature_uid') or (k == 'uid') \
-                        or (k == 'date') or (k == 'ts_trade_date') or (k == 'ts_date'):
-                    pass
-                else:
-                    item_data[k] = item[k]
+                item_data[k] = item[k]
 
         v = pd.DataFrame(data).T
-        v.index.name = 'date'
-        v = v[v.index.isin(holding_dates)]
-        v['uid'] = uid
-        v = v.reset_index()
-        #print(v)
-        v = v.set_index(['uid','date'])
         v = v.sort_index()
 
-        try:
-            v.ts_risk = v.ts_risk.fillna(method = 'pad')
-            v.ts_profit = v.ts_profit.fillna(method = 'pad')
-            v.ts_asset = v.ts_asset.fillna(method = 'pad')
-            v.ts_nav = v.ts_nav.fillna(method = 'pad')
-        except:
-            return pd.DataFrame()
+        ts_dates = v.ts_date.dropna().tolist() + v.ts_trade_date.dropna().tolist()
 
 
-        v.ts_trade_type_status = v.ts_trade_type_status.astype(float)
+        v.index = pd.to_datetime(v.index.ravel())
+        v = v.reindex(pd.date_range(min(ts_dates), max(ts_dates)))
+
+        v.ts_risk = v.ts_risk.astype(np.float32)
+        v.ts_profit = v.ts_profit.astype(np.float32)
+        v.ts_asset = v.ts_asset.astype(np.float32)
+        v.ts_nav = v.ts_nav.astype(np.float32)
+        v.ts_placed_percent = v.ts_placed_percent.astype(np.float32)
+        v.ts_placed_amount = v.ts_placed_amount.astype(np.float32)
+        v.ts_processing_asset = v.ts_processing_asset.astype(np.float32)
+        v['ts_total_asset'] = v.ts_asset + v.ts_processing_asset
+
+        v.ts_risk = v.ts_risk.fillna(method = 'pad')
+        v.ts_profit = v.ts_profit.fillna(method = 'pad')
+        v.ts_asset = v.ts_asset.fillna(method = 'pad')
+        v.ts_nav = v.ts_nav.fillna(method = 'pad')
+
+        v.index.name = 'date'
+        v.ts_trade_type_status = v.ts_trade_type_status.astype(np.float32)
         if len(v.ts_nav.dropna()) == 0:
             return pd.DataFrame()
         #有的数据第一条记录为nan
@@ -706,16 +733,62 @@ def all_feature(ctx):
             return pd.DataFrame()
         #把最后一次赎回以后的净值数据去掉
         if v.ts_trade_type_status.dropna().iloc[-1] == 46.0:
-            max_date = v.ts_trade_type_status.dropna().index[-1][1]
-            v = v[v.index.get_level_values(1) <= max_date]
+            #print(v.ts_trade_type_status.dropna().index[-1])
+            max_date = v.ts_trade_type_status.dropna().index[-1]
+            v = v[v.index <= max_date]
         #v = v[['36', '46', '56', '66', 'ts_asset', 'ts_nav', 'ts_placed_amount', 'ts_placed_percent', 'ts_processing_asset', 'ts_profit', 'ts_risk']]
 
+        try:
+            #有的用户没有Log日志,就没有'uid'和'date'类,分类时过滤掉这些用户
+            v = v.drop(['feature_date', 'ts_order_uid', 'ts_holding_uid', 'feature_uid', 'uid', 'date', 'ts_trade_date', 'ts_date'], axis = 1)
+            #v = v.drop(['feature_date', 'ts_order_uid', 'ts_holding_uid', 'feature_uid', 'ts_trade_date', 'ts_date'], axis = 1)
+        except:
+            #print(v.columns)
+            #pass
+            return pd.DataFrame()
+
+        v['uid'] = uid
+        v = v.reset_index()
+        v = v.set_index(['uid', 'date'])
+        v = v.sort_index()
+        #v = v.iloc[0:-1]
+
+        #print(v.columns)
+        trans = v[['ts_trade_type_status', 'ts_placed_amount', 'ts_total_asset', 'ts_placed_percent']]
+        trans.index = trans.index.get_level_values(1)
+        xirrs = []
+        for d in trans.index:
+            current_trans = trans[trans.index <= d]
+            data = []
+            for i in range(0, len(current_trans)):
+                date = current_trans.index[i]
+                if current_trans.loc[date, 'ts_trade_type_status'] == 36.0:
+                    data.append([i, -1.0 * current_trans.loc[date, 'ts_placed_amount']])
+                elif current_trans.loc[date, 'ts_trade_type_status'] == 56.0:
+                    data.append([i, -1.0 * current_trans.loc[date, 'ts_placed_amount']])
+                elif current_trans.loc[date, 'ts_trade_type_status'] == 46.0:
+                    data.append([i, current_trans.loc[date, 'ts_placed_percent'] * current_trans.iloc[i - 1].ts_total_asset])
+            data.append([len(current_trans) - 1 , current_trans.iloc[-1].ts_total_asset])
+            #if data[0][0] > 0:
+            #    print(uid, current_trans)
+            _xirr = xirr(data)
+            #if _xirr == -1.0:
+            #    print(uid, data)
+            xirrs.append(_xirr)
+            #print(xirrs)
+            #current_trans_df = pd.DataFrame(np.array(data).T)
+            #print(current_trans_df)
+        v['xirrs'] = xirrs
+        #print(v[v.ts_trade_type_status.isin([46.0, 36.0, 56.0])][['ts_trade_type_status', 'ts_placed_amount']])
+        #print(v.tail())
         #过滤掉用户购买之前的log日志
         #v.ts_nav = v.ts_nav.fillna(method = 'pad')
         #v = v[pd.isnull(v.ts_nav)]
         #if len(v) >= 1:
         #    print(v)
         #print(v.ts_nav.notnull())
+
+
         return v
 
 
@@ -727,6 +800,7 @@ def all_feature(ctx):
     order_holding_uids = ts_order_uids & ts_holding_uids
     #print(ts_order_df.tail())
 
+    #features = feature_rdd.map(combine_rdd).reduce(lambda a, b : a + b)
     features = feature_rdd.map(combine_rdd).groupBy(lambda x : x['feature_uid']).map(functools.partial(user_feature, order_holding_uids)).collect()
     feature_df = pd.concat(features, axis = 0)
 
