@@ -130,8 +130,6 @@ class FundFactor(Factor):
         return df_ret, df_sret
 
 
-
-
 if __name__ == '__main__':
 
     ff = FundFactor('FF.000001')

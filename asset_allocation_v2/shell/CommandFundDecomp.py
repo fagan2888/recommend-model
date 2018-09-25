@@ -120,6 +120,7 @@ def fd_cluster(ctx, optid):
     df_ret_fund = df_nav_fund.dropna(1).pct_change().dropna()
     df_nav_fund = df_nav_fund / df_nav_fund.iloc[0]
     df_dist = df_ret_fund.corr()
+    df_dist = cal_mic_dist(df_ret_fund)
     # asset_cluster = cluster_ap(df_dist, 0.9)
     asset_cluster = clusterSimple(df_dist, 0.9)
     clusters = sorted(asset_cluster, key=lambda x: len(asset_cluster[x]), reverse=True)
@@ -468,5 +469,13 @@ def clusterSimple(dist, threshold):
             asset_cluster[new_layer] = [factor_id]
 
     return asset_cluster
+
+
+df cal_mic_dist(df_nav_fund):
+    set_trace()
+    pass
+
+
+
 
 
