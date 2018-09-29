@@ -23,7 +23,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, base_ra_index_nav
 from util import xdict
 from trade_date import ATradeDate
 
@@ -700,7 +700,6 @@ def cal_online_indic(risk):
     return ret, std, mdd, calmar, sharpe
 
 
-
 #线上风险10资产配置比例
 @analysis.command()
 @click.pass_context
@@ -732,6 +731,26 @@ def online_sharpe(ctx):
     set_trace()
 
     return
+
+
+#线上风险10资产配置比例
+@analysis.command()
+@click.pass_context
+def month_win_ratio(ctx):
+
+    stock = base_ra_index_nav.load_series('120000016', begin_date='2016-01-01').pct_change().fillna(0.0)
+    bond = base_ra_index_nav.load_series('120000010', begin_date='2016-01-01').pct_change().fillna(0.0)
+
+    for risk in range(1, 11):
+        df_base = stock*(risk-1)/9 + bond*(10-risk)/9
+        online_id = str(800000 + risk % 10)
+        df = asset_on_online_nav.load_series(online_id, xtype=8, begin_date='2016-01-01').pct_change().fillna(0.0)
+        df_base = df_base.resample('m').sum()
+        df = df.resample('m').sum()
+        df_compare = df - df_base
+        win_num = len(df[df>=0])
+        lose_num = len(df[df<0])
+        print(risk, win_num, lose_num)
 
 def cal_online_indic(risk):
 
