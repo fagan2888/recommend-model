@@ -752,6 +752,28 @@ def month_win_ratio(ctx):
         lose_num = len(df[df<0])
         print(risk, win_num, lose_num)
 
+
+#线上风险10资产配置比例
+@analysis.command()
+@click.pass_context
+def find_dup_fund(ctx):
+
+    date = '2018-09-28'
+    pool_ids = ['11110103', '11110105', '11110107', '11110109', '11110111', '11110113', '11110115', '11110203']
+    pool_ids_online = ['11110104', '11110106', '11110108', '11110110', '11110112', '11110114', '11110116', '11110204']
+    pool_funds = []
+    for pool_id in pool_ids:
+        df_pool = asset_ra_pool_fund.load(pool_id)
+        df_pool = df_pool.loc[date]
+        df_pool.index = df_pool.index.get_level_values(1)
+        tmp_funds = df_pool.index
+        tmp_funds = np.setdiff1d(tmp_funds, pool_funds)
+        pool_funds = np.union1d(pool_funds, tmp_funds)
+
+        df_new = df_pool.loc[tmp_funds]
+        print(pool_id, len(df_new))
+
+
 def cal_online_indic(risk):
 
     df = pd.read_csv('data/on_online_nav.csv', index_col = ['on_date'], parse_dates = ['on_date'])

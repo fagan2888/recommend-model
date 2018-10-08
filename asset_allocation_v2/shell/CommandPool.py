@@ -26,7 +26,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_stock_factor, asset_fund_factor
+from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_stock_factor, asset_fund_factor, asset_ra_pool_fund
 from asset import StockFundAsset
 from trade_date import ATradeDate
 from ipdb import set_trace
@@ -244,6 +244,38 @@ def fund_update_factor_pool(pool, adjust_points, optlimit, optcalc):
         fund_df = fund_df.set_index(['ra_pool', 'ra_date', 'ra_fund_id'])
 
         df_new = fund_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        db = database.connection('asset')
+        ra_pool_fund_t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+        s = s.where(ra_pool_fund_t.c.ra_pool.in_(df_new.index.get_level_values(0).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, ra_pool_fund_t, df_new, df_old)
+
+
+@pool.command()
+@click.pass_context
+def find_dup_fund(ctx):
+
+    date = '2018-09-28'
+    pool_ids = ['11110103', '11110105', '11110107', '11110109', '11110111', '11110113', '11110115', '11110203']
+    pool_ids_online = ['11110104', '11110106', '11110108', '11110110', '11110112', '11110114', '11110116', '11110204']
+    pool_funds = []
+    for pool_id, pool_id_online in zip(pool_ids, pool_ids_online):
+        df_pool = asset_ra_pool_fund.load(pool_id)
+        df_pool = df_pool.loc[date]
+        df_pool.index = df_pool.index.get_level_values(1)
+        tmp_funds = df_pool.index
+        tmp_funds = np.setdiff1d(tmp_funds, pool_funds)
+        pool_funds = np.union1d(pool_funds, tmp_funds)
+
+        df_new = df_pool.loc[tmp_funds]
+        df_new = df_new.reset_index()
+        df_new = df_new.loc[:, ['ra_fund_id', 'ra_fund_code']]
+        df_new['ra_date'] = pd.to_datetime(date)
+        df_new['ra_pool'] = pool_id_online
+        df_new = df_new.set_index(['ra_pool', 'ra_date', 'ra_fund_id'])
+
         columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
         s = select(columns)
         db = database.connection('asset')
