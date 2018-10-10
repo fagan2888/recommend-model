@@ -16,6 +16,7 @@ import DFUtil
 import DBData
 import util_numpy as npu
 import Portfolio as PF
+import Financial as fin
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
@@ -585,7 +586,55 @@ class SingleValidFactorAllocate(Allocate):
         return ws
 
 
+
+class MonetaryAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(MonetaryAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+
+    def allocate_algo(self, day, df_inc, bound):
+        #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
+        #ws = dict(zip(df_inc.columns.ravel(), ws))
+        zz_money_nav = Asset('120000039').nav()
+        zz_money_nav = zz_money_nav.loc[df_inc.index]
+        jensens = {}
+        for fund_globalid in df_inc.columns:
+            fund_nav = df_inc[fund_globalid]
+            if fund_nav.std() == 0.0:
+                continue
+            #jensens[fund_globalid] =  fin.jensen(fund_nav, zz_money_nav,0)
+            jensens[fund_globalid] = fund_nav.mean()/fund_nav.std()
+        #print(jensens)
+        jensen_items = sorted(jensens.items(), key = lambda x: x[1], reverse = True)
+        #print(jensen_items)
+        ws = {}
+        num = 3
+        rs = df_inc.mean()
+        rs = rs.sort_values(ascending = False)
+        for i in range(0, num):
+            fund_globalid = rs.index[i]
+            ws[fund_globalid] = 1.0 / num
+        #for i in range(0, num):
+        #    fund_globalid = jensen_items[i][0]
+            #print(fund_globalid, jensen_items[i][1])
+            #print(df_inc[fund_globalid])
+        #    ws[fund_globalid] = 1.0 / num
+        #print(ws)
+        return ws
+
+    @staticmethod
+    def all_monetary_fund_globalid():
+        all_monetary_fund_df = base_ra_fund.find_type_fund(3)
+        all_monetary_fund_df = all_monetary_fund_df.set_index(['globalid'])
+        return all_monetary_fund_df.index.astype(str).tolist()
+
+
 if __name__ == '__main__':
+
+
+    print(MonetaryAllocate.all_monetary_fund_globalid())
 
     asset = Asset('120000001')
 

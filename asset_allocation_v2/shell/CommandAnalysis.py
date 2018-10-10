@@ -23,9 +23,10 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav
 from util import xdict
 from trade_date import ATradeDate
+from asset import Asset
 
 import traceback, code
 
@@ -754,3 +755,32 @@ def cal_online_indic(risk):
 
     return ret, std, mdd, calmar, sharpe
 
+
+#货币基金组合与所有货币基金排名
+@analysis.command()
+@click.pass_context
+def monetary_fund_rank(ctx):
+
+    allocate_nav = asset_mz_markowitz_nav.load_series('MZ.MONE00')
+    allocate_inc = allocate_nav.pct_change()
+    all_monetary_fund_df = base_ra_fund.find_type_fund(3)
+    all_monetary_fund_df = all_monetary_fund_df.set_index(['globalid'])
+    datas = {}
+    for fund_globalid in all_monetary_fund_df.index:
+        datas[fund_globalid] = Asset(str(fund_globalid)).nav()
+    df_nav = pd.DataFrame(datas)
+    df_nav = df_nav.loc[allocate_nav.index]
+    df_inc = df_nav.pct_change()
+    fund_month_inc = df_inc.groupby(df_inc.index.strftime('%Y-%m')).sum()
+    allocate_month_inc = allocate_inc.groupby(allocate_inc.index.strftime('%Y-%m')).sum()
+
+    ranks = []
+    for date in allocate_month_inc.index:
+        allocate_r = allocate_month_inc.loc[date]
+        fund_month_r = fund_month_inc.loc[date].ravel()
+        fund_month_r = list(fund_month_r[fund_month_r > 0.0])
+        fund_month_r.append(allocate_r)
+        fund_month_r.sort(reverse = True)
+        print(fund_month_r.index(allocate_r), len(fund_month_r), 1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
+        ranks.append(1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
+    print(np.mean(ranks))
