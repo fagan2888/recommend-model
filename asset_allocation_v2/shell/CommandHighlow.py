@@ -631,7 +631,6 @@ def pos_update(highlow, alloc):
     df.index.name = 'mz_date'
     df.columns.name='mz_asset_id'
 
-
     # index
     df['mz_highlow_id'] = highlow_id
     df = df.reset_index().set_index(['mz_highlow_id', 'mz_date'])
@@ -643,7 +642,7 @@ def pos_update(highlow, alloc):
     for k, v in df_tosave.groupby(df_tosave.index):
         riskmgr_date = k[1]
         asset_id = k[2]
-        if asset_id == '11310100' or asset_id == '11310101':
+        if asset_id == '11310100' or asset_id == '11310101' or asset_id == '120000039':
             riskmgr_signal = 1.0
         elif asset_id in df_high_riskmgr.columns:
             riskmgr_signal = df_high_riskmgr.loc[riskmgr_date, asset_id]
@@ -654,7 +653,7 @@ def pos_update(highlow, alloc):
         df_tosave.loc[k, 'mz_riskmgr_pos'] = riskmgr_signal
         #print(riskmgr_date, asset_id, v)
     #df_tosave = df_tosave.loc[(df_tosave['mz_ratio'] > 0)]
-    
+
     #print alloc
     #print df_tosave[df_tosave.index.duplicated()]
     #if alloc['mz_risk'] == 0.9:
@@ -996,6 +995,8 @@ def yao(highlow, alloc):
     # 天的持仓100%， 如果因为风控空仓，需要用货币补足。
     #
     sr = 1.0 - df_h.sum(axis=1)
+    if '120000039' not in df_h.columns.tolist():
+        df_h['120000039'] = 0.0
     if (sr > 0.000099).any():
         df_h['120000039'] = df_h['120000039'] + sr
 
