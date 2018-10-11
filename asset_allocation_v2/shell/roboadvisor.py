@@ -32,6 +32,7 @@ import CommandImport
 import CommandStockFactor
 import CommandMacroTiming
 import CommandFactorCluster
+import CommandAShareView
 import CommandView
 import CommandFundFactor
 
@@ -274,4 +275,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandFactorCluster.fc)
     roboadvisor.add_command(CommandView.view)
     roboadvisor.add_command(CommandFundFactor.ff)
+    roboadvisor.add_command(CommandAShareView.asv)
     roboadvisor(obj={})
