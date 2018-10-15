@@ -20,6 +20,7 @@ import Financial as fin
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
+from multiprocessing import Pool
 from ipdb import set_trace
 
 from datetime import datetime, timedelta
@@ -41,7 +42,7 @@ from trade_date import ATradeDate
 from view import View
 import RiskParity
 import util_optimize
-from multiprocessing import Pool
+from monetary_fund_filter import MonetaryFundFilter
 
 import PureFactor
 import IndexFactor
@@ -49,7 +50,6 @@ import traceback, code
 
 
 logger = logging.getLogger(__name__)
-
 
 
 class AvgAllocate(Allocate):
@@ -592,8 +592,11 @@ class MonetaryAllocate(Allocate):
 
     def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
         super(MonetaryAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        mnf = MonetaryFundFilter()
+        mnf.handle()
+        self.mnf = mnf
 
-
+    '''
     def allocate_algo(self, day, df_inc, bound):
         #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
         #ws = dict(zip(df_inc.columns.ravel(), ws))
@@ -622,6 +625,47 @@ class MonetaryAllocate(Allocate):
             #print(df_inc[fund_globalid])
         #    ws[fund_globalid] = 1.0 / num
         #print(ws)
+        return ws
+    '''
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        fund_status = self.mnf.fund_status
+        fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
+        fund_status = fund_status[fund_status.fi_yingmi_subscribe_status == 0.0]
+        valid_ids = fund_status.index
+
+        tmp_scale = self.mnf.fund_scale.loc[day]
+        tmp_scale = tmp_scale.sort_values(ascending=False)
+        scale_filter_codes = tmp_scale[tmp_scale > 1e10].index
+        # scale_filter_codes = tmp_scale.index[:int(0.20*len(tmp_scale))]
+        scale_filter_ids = [str(self.mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
+
+        # filter by bank
+        # bank_filter_codes = self.mnf.bank_funds.fsymbol.values
+        # bank_filter_ids = [self.mnf.fund_id_dict.get(fund_code, '0') for fund_code in bank_filter_codes]
+
+        # filter by std
+        # df_std = df_inc.std()
+        # df_std = df_std.replace(0.0, np.nan).dropna()
+        # df_std = df_std.sort_values(ascending=True)
+        # std_filter_ids = df_std.index[:int(0.50*len(df_std))]
+
+        final_filter_ids = np.intersect1d(scale_filter_ids, valid_ids)
+        # final_filter_ids = np.intersect1d(final_filter_ids, bank_filter_ids)
+
+        tmp_df_inc = df_inc.copy()
+        tmp_df_inc = tmp_df_inc[final_filter_ids]
+
+        ws = {}
+        num = 3
+        rs = tmp_df_inc.mean()
+        rs = rs.sort_values(ascending=False)
+        num = min(num, len(rs))
+        for i in range(0, num):
+            fund_globalid = rs.index[i]
+            ws[fund_globalid] = 1.0 / num
+
         return ws
 
     @staticmethod

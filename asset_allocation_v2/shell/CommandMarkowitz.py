@@ -1128,13 +1128,16 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 17:
 
-        #monetary allocate
+        # monetary allocate
 
         lookback = int(argv.get('lookback', '26'))
         lookback = 52
-        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
-        assets = dict([(asset_id , Asset(asset_id)) for asset_id in MonetaryAllocate.all_monetary_fund_globalid()])
-        allocate = MonetaryAllocate('ALC.000001', assets, trade_date, lookback, period = 13)
+        adjust_period = 1
+        # lookback = 26
+        # adjust_period = 13
+        trade_date = ATradeDate.week_trade_date(begin_date=sdate, lookback=lookback)
+        assets = dict([(asset_id, Asset(asset_id)) for asset_id in MonetaryAllocate.all_monetary_fund_globalid()])
+        allocate = MonetaryAllocate('ALC.000001', assets, trade_date, lookback, period=adjust_period)
         df = allocate.allocate()
 
 
@@ -1150,11 +1153,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     #if optappend:
     #    df = pd.concat([df_pos_old, df]).fillna(0.0)
 
-
     db = database.connection('asset')
     metadata = MetaData(bind=db)
-    mz_markowitz_pos    = Table('mz_markowitz_pos', metadata, autoload=True)
-    mz_markowitz_nav    = Table('mz_markowitz_nav', metadata, autoload=True)
+    mz_markowitz_pos = Table('mz_markowitz_pos', metadata, autoload=True)
+    mz_markowitz_nav = Table('mz_markowitz_nav', metadata, autoload=True)
 
     #
     # 处理替换
@@ -1168,7 +1170,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 16]
+    no_rolling_algos = [1, 16, 17]
     if algo in no_rolling_algos:
         pass
     else:
