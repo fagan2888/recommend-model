@@ -638,7 +638,8 @@ class MonetaryAllocate(Allocate):
         tmp_scale = self.mnf.fund_scale.loc[day]
         tmp_scale = tmp_scale.sort_values(ascending=False)
         scale_filter_codes = tmp_scale[tmp_scale > 1e10].index
-        # scale_filter_codes = tmp_scale.index[:int(0.20*len(tmp_scale))]
+        # scale_filter_codes = tmp_scale[tmp_scale > 1e10].index
+        # scale_filter_codes = tmp_scale.index[:int(0.30*len(tmp_scale))]
         scale_filter_ids = [str(self.mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
 
         # filter by bank

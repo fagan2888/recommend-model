@@ -168,6 +168,20 @@ def load_fund_secode_dict():
     return secode_dict
 
 
+def load_fund_code_dict():
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(ra_fund.globalid, ra_fund.ra_code)
+    df = pd.read_sql(sql.statement, session.bind)
+    session.commit()
+    session.close()
+
+    secode_dict = dict(zip(df.ra_code.values, df.globalid.values))
+    return secode_dict
+
+
 def load_all_fund_pos():
 
     engine = database.connection('caihui')

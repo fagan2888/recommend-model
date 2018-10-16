@@ -25,10 +25,12 @@ from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
 from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, asset_mz_markowitz_pos
+from db import base_fund_infos, base_company_infos, asset_fund, base_ra_fund_nav
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
 from monetary_fund_filter import MonetaryFundFilter
+from analysis_utils import *
 
 import traceback, code
 
@@ -725,6 +727,36 @@ def online_asset_ratio(ctx):
 #线上风险10权益类资产被动管理型基金占比
 @analysis.command()
 @click.pass_context
+def fund_company(ctx):
+
+    # db_base = database.connection('base')
+    db_asset = database.connection('asset')
+    pool_ids = pd.read_sql('select id from ra_pool where ra_type=9', db_asset).id.values
+    df_fund = asset_ra_pool_fund.load_funds(pool_ids, '2016-08-01')
+    df_fund = df_fund.set_index(['ra_pool', 'ra_date'])
+    fund_ids = []
+    for pool_id in pool_ids:
+        if pool_id in ('11120501', '11120600', '11121200', '11210400', '11400400', '11400500'):
+            continue
+        tmp_fund = df_fund.loc[pool_id]
+        last_date = tmp_fund.index.max()
+        tmp_fund = tmp_fund.loc[last_date]
+        tmp_fund_ids = np.array(tmp_fund.ra_fund_id)
+        fund_ids = np.append(fund_ids, tmp_fund_ids)
+
+    fund_ids = np.unique(fund_ids)
+    # fund_ids = np.unique(df_fund.ra_fund_id.values)
+    fund_company = base_fund_infos.load_company(fund_ids)
+    fund_company_ids = np.unique(fund_company.fi_company_id.values)
+    company_names = base_company_infos.load_company_names(fund_company_ids)
+    company_names.to_csv('company_names.csv', encoding='gbk')
+
+    return
+
+
+#线上风险10权益类资产被动管理型基金占比
+@analysis.command()
+@click.pass_context
 def online_sharpe(ctx):
 
     df_ret = pd.DataFrame(columns = ['ret', 'std', 'mdd', 'calmar', 'sharpe'])
@@ -775,8 +807,15 @@ def monetary_fund_rank(ctx, optid):
     all_monetary_fund_df = all_monetary_fund_df.set_index(['globalid'])
     mnf = MonetaryFundFilter()
     mnf.handle()
+
+    fund_scale = mnf.fund_scale
+    fund_code_dict = asset_fund.load_fund_code_dict()
+    fund_scale = fund_scale.rename(columns=fund_code_dict)
+    fund_scale = fund_scale.resample('m').last()
+
     fund_status = mnf.fund_status
-    fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
+    fund_status = fund_status[fund_status.fi_yingmi_amount < 5e6]
+    # fund_status = fund_status[fund_status.fi_yingmi_subscribe_status == 0.0]
     all_monetary_fund_df = all_monetary_fund_df.loc[np.intersect1d(fund_status.index.astype('int'), all_monetary_fund_df.index)]
 
     datas = {}
@@ -787,18 +826,32 @@ def monetary_fund_rank(ctx, optid):
     df_inc = df_nav.pct_change()
 
     print("month data")
-    df_month_wr = cal_month_wr(allocate_inc, df_inc)
+    # df_month_wr = cal_month_wr(allocate_inc, df_inc)
+    df_month_wr = cal_month_money_wr(allocate_inc, df_inc, fund_scale)
+    # df_month_wr = df_month_wr[df_month_wr.index > '2012-12-31']
     print("percentile of beat 80% funds", len(df_month_wr[df_month_wr < 0.2].dropna()) / len(df_month_wr))
     print()
 
     print("quarter data")
-    df_quarter_wr = cal_quarter_wr(allocate_inc, df_inc)
+    # df_quarter_wr = cal_quarter_wr(allocate_inc, df_inc)
+    df_quarter_wr = cal_quarter_money_wr(allocate_inc, df_inc, fund_scale)
+    # df_quarter_wr = df_quarter_wr[df_quarter_wr.index > '2012-12-31']
     print("percentile of beat 80% funds", len(df_quarter_wr[df_quarter_wr < 0.2].dropna()) / len(df_quarter_wr))
     print()
 
+    print("half year data")
+    # df_halfyear_wr = cal_halfyear_wr(allocate_inc, df_inc)
+    df_halfyear_wr = cal_halfyear_money_wr(allocate_inc, df_inc, fund_scale)
+    # df_halfyear_wr = df_halfyear_wr[df_halfyear_wr.index > '2012-12-31']
+    print("percentile of beat 80% funds", len(df_halfyear_wr[df_halfyear_wr < 0.2].dropna()) / len(df_halfyear_wr))
+    print()
+
     print("year data")
-    df_year_wr = cal_year_wr(allocate_inc, df_inc)
+    # df_year_wr = cal_year_wr(allocate_inc, df_inc)
+    df_year_wr = cal_year_money_wr(allocate_inc, df_inc, fund_scale)
+    # df_year_wr = df_year_wr[df_year_wr.index > '2012-12-31']
     print(df_year_wr)
+    set_trace()
 
 
 @analysis.command()
@@ -818,74 +871,41 @@ def monetary_fund_display(ctx, optid):
     set_trace()
 
 
-def cal_month_wr(allocate_inc, df_inc):
+@analysis.command()
+@click.option('--id', 'optid', default='MZ.MONE10', help='markowitz_id')
+@click.pass_context
+def return_week_annualized(ctx, optid):
 
-    # fund_month_inc = df_inc.groupby(df_inc.index.strftime('%Y-%m')).sum()
-    # allocate_month_inc = allocate_inc.groupby(allocate_inc.index.strftime('%Y-%m')).sum()
-
-    fund_month_inc = df_inc.resample('m').sum()
-    allocate_month_inc = allocate_inc.resample('m').sum()
-
-    ranks = []
-    for date in allocate_month_inc.index:
-        allocate_r = allocate_month_inc.loc[date]
-        fund_month_r = fund_month_inc.loc[date].ravel()
-        fund_month_r = list(fund_month_r[fund_month_r > 0.0])
-        fund_month_r.append(allocate_r)
-        fund_month_r.sort(reverse=True)
-        # print(fund_month_r.index(allocate_r), len(fund_month_r), 1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
-        ranks.append(1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
-    print(np.mean(ranks))
-    df_month_wr = pd.Series(data=ranks, index=allocate_month_inc.index)
-    df_month_wr = df_month_wr.to_frame('wr')
-    df_month_wr.to_csv('data/df_month_wr.csv', index_label='date')
-
-    return df_month_wr
+    allocate_pos = asset_mz_markowitz_pos.load(optid)
+    rwa = base_ra_fund_nav.load_return_week_annualized(allocate_pos.columns)
+    allocate_pos = allocate_pos.reindex(rwa.index).fillna(method='pad')
+    allocate_pos = allocate_pos.dropna()
+    rwa = rwa.reindex(allocate_pos.index)
+    rwa = rwa.fillna(0.0)
+    rwa.columns = rwa.columns.astype('str')
+    df_rwa = allocate_pos * rwa
+    df_rwa = df_rwa.sum(1)
+    df_rwa = df_rwa.replace(0.0, np.nan).dropna()
+    df_rwa.to_csv('data/rwa/rwa.csv', index_label='date')
 
 
-def cal_quarter_wr(allocate_inc, df_inc):
+@analysis.command()
+@click.option('--id', 'optid', default='MZ.MONE10', help='markowitz_id')
+@click.pass_context
+def allocate_scale(ctx, optid):
 
-    fund_month_inc = df_inc.resample('Q').sum()
-    allocate_month_inc = allocate_inc.resample('Q').sum()
+    allocate_pos = asset_mz_markowitz_pos.load(optid)
+    mnf = MonetaryFundFilter()
+    mnf.handle()
+    fund_scale = mnf.fund_scale
+    fund_code_dict = asset_fund.load_fund_code_dict()
+    fund_scale = fund_scale.rename(columns=fund_code_dict)
 
-    ranks = []
-    for date in allocate_month_inc.index:
-        allocate_r = allocate_month_inc.loc[date]
-        fund_month_r = fund_month_inc.loc[date].ravel()
-        fund_month_r = list(fund_month_r[fund_month_r > 0.0])
-        fund_month_r.append(allocate_r)
-        fund_month_r.sort(reverse=True)
-        # print(fund_month_r.index(allocate_r), len(fund_month_r), 1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
-        ranks.append(1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
-    print(np.mean(ranks))
-    df_month_wr = pd.Series(data=ranks, index=allocate_month_inc.index)
-    df_month_wr = df_month_wr.to_frame('wr')
-    df_month_wr.to_csv('data/df_season_wr.csv', index_label='date')
-
-    return df_month_wr
-
-
-def cal_year_wr(allocate_inc, df_inc):
-
-    # fund_month_inc = df_inc.groupby(df_inc.index.strftime('%Y')).sum()
-    # allocate_month_inc = allocate_inc.groupby(allocate_inc.index.strftime('%Y')).sum()
-
-    fund_month_inc = df_inc.resample('y').sum()
-    allocate_month_inc = allocate_inc.resample('y').sum()
-
-    ranks = []
-    for date in allocate_month_inc.index:
-        allocate_r = allocate_month_inc.loc[date]
-        fund_month_r = fund_month_inc.loc[date].ravel()
-        fund_month_r = list(fund_month_r[fund_month_r > 0.0])
-        fund_month_r.append(allocate_r)
-        fund_month_r.sort(reverse = True)
-        # print(fund_month_r.index(allocate_r), len(fund_month_r), 1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
-        ranks.append(1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
-    print(np.mean(ranks))
-    df_year_wr = pd.Series(data=ranks, index=allocate_month_inc.index)
-    df_year_wr = df_year_wr.to_frame('wr')
-    df_year_wr.to_csv('data/df_year_wr.csv', index_label='date')
-
-    return df_year_wr
+    allocate_pos = allocate_pos.resample('d').fillna(method='pad')
+    allocate_pos = np.sign(allocate_pos)
+    fund_scale.columns = fund_scale.columns.astype('str')
+    fund_scale = fund_scale.loc[allocate_pos.index, allocate_pos.columns]
+    df_scale = allocate_pos * fund_scale
+    df_scale = df_scale.sum(1)
+    df_scale.to_csv('data/scale/scale.csv')
 

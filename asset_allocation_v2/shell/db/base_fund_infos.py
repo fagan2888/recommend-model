@@ -65,3 +65,19 @@ def load_status(status=None):
 
     return df
 
+def load_company(fund_ids):
+    db = database.connection('base')
+    metadata = MetaData(bind=db)
+    t = Table('fund_infos', metadata, autoload=True)
+
+    columns = [
+        t.c.fi_globalid,
+        t.c.fi_company_id,
+    ]
+
+    s = select(columns).where(t.c.fi_globalid.in_(fund_ids))
+
+    df = pd.read_sql(s, db, index_col=['fi_globalid'])
+
+    return df
+
