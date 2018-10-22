@@ -46,6 +46,7 @@ from multiprocessing import Pool
 import PureFactor
 import IndexFactor
 import traceback, code
+from monetary_fund_filter import MonetaryFundFilter
 
 
 logger = logging.getLogger(__name__)
@@ -590,38 +591,39 @@ class SingleValidFactorAllocate(Allocate):
 class MonetaryAllocate(Allocate):
 
 
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, alloc_num=2):
         super(MonetaryAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-
+        mnf = MonetaryFundFilter()
+        mnf.handle()
+        self.mnf = mnf
+        self.alloc_num = alloc_num
 
     def allocate_algo(self, day, df_inc, bound):
-        #risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
-        #ws = dict(zip(df_inc.columns.ravel(), ws))
-        zz_money_nav = Asset('120000039').nav()
-        zz_money_nav = zz_money_nav.loc[df_inc.index]
-        jensens = {}
-        for fund_globalid in df_inc.columns:
-            fund_nav = df_inc[fund_globalid]
-            if fund_nav.std() == 0.0:
-                continue
-            #jensens[fund_globalid] =  fin.jensen(fund_nav, zz_money_nav,0)
-            jensens[fund_globalid] = fund_nav.mean()/fund_nav.std()
-        #print(jensens)
-        jensen_items = sorted(jensens.items(), key = lambda x: x[1], reverse = True)
-        #print(jensen_items)
+
+        fund_status = self.mnf.fund_status
+        fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
+        fund_status = fund_status[fund_status.fi_yingmi_subscribe_status == 0.0]
+        valid_ids = fund_status.index
+
+        tmp_scale = self.mnf.fund_scale.loc[day]
+        tmp_scale = tmp_scale.sort_values(ascending=False)
+        scale_filter_codes = tmp_scale[tmp_scale > 1e10].index
+        scale_filter_ids = [str(self.mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
+
+
+        final_filter_ids = np.intersect1d(scale_filter_ids, valid_ids)
+        tmp_df_inc = df_inc.copy()
+        tmp_df_inc = tmp_df_inc[final_filter_ids]
+
         ws = {}
-        num = 3
-        rs = df_inc.mean()
-        rs = rs.sort_values(ascending = False)
+        num = self.alloc_num
+        rs = tmp_df_inc.mean()
+        rs = rs.sort_values(ascending=False)
+        num = min(num, len(rs))
         for i in range(0, num):
             fund_globalid = rs.index[i]
             ws[fund_globalid] = 1.0 / num
-        #for i in range(0, num):
-        #    fund_globalid = jensen_items[i][0]
-            #print(fund_globalid, jensen_items[i][1])
-            #print(df_inc[fund_globalid])
-        #    ws[fund_globalid] = 1.0 / num
-        #print(ws)
+
         return ws
 
     @staticmethod

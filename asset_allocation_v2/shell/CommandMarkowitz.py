@@ -1134,7 +1134,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         lookback = 52
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in MonetaryAllocate.all_monetary_fund_globalid()])
-        allocate = MonetaryAllocate('ALC.000001', assets, trade_date, lookback, period = 13)
+        allocate = MonetaryAllocate('ALC.000001', assets, trade_date, lookback, period=1)
         df = allocate.allocate()
 
 
