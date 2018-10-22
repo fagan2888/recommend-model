@@ -26,6 +26,7 @@ from sqlalchemy import *
 from tabulate import tabulate
 from db import *
 from util.xdebug import dd
+import datetime
 
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ def cny(ctx, optfull, optid):
     exchange_rate_index_nav_t = Table('exchange_rate_index_nav', metadata, autoload=True)
     ra_index_nav_t = Table('ra_index_nav', metadata, autoload=True)
     caihui_exchange_rate_t = Table('caihui_exchange_rate', metadata, autoload=True)
+    ra_index_nav_tmp_t = Table('ra_index_nav_tmp', metadata, autoload=True)
 
 
     exchange_rate_index_columns = [
@@ -79,6 +81,19 @@ def cny(ctx, optfull, optid):
         ra_index_nav_t.c.ra_amount,
         ra_index_nav_t.c.ra_nav_date,
         ra_index_nav_t.c.ra_mask,
+    ]
+
+    ra_index_nav_tmp_columns = [
+
+        ra_index_nav_tmp_t.c.ra_date,
+        ra_index_nav_tmp_t.c.ra_open,
+        ra_index_nav_tmp_t.c.ra_high,
+        ra_index_nav_tmp_t.c.ra_low,
+        ra_index_nav_tmp_t.c.ra_nav,
+        ra_index_nav_tmp_t.c.ra_volume,
+        ra_index_nav_tmp_t.c.ra_amount,
+        ra_index_nav_tmp_t.c.ra_nav_date,
+        ra_index_nav_tmp_t.c.ra_mask,
     ]
 
 
@@ -123,7 +138,24 @@ def cny(ctx, optfull, optid):
                 s = select(ra_index_nav_columns)
                 s = s.where(ra_index_nav_t.c.ra_index_id == record[5])
                 ra_index_nav_df = pd.read_sql(s, db, index_col = ['ra_date'])
+                ra_index_nav_df = ra_index_nav_df.sort_index()
 
+                index_id = record[5]
+                last_date = ra_index_nav_df.index[-1]
+                if index_id == '120000013': #更新标普500
+                    s = select(ra_index_nav_tmp_columns)
+                    s = s.where(ra_index_nav_tmp_t.c.ra_index_id == index_id)
+                    ra_index_nav_tmp_df = pd.read_sql(s, db, index_col = ['ra_date'])
+                    vacant_dates = ra_index_nav_tmp_df.index[ra_index_nav_tmp_df.index > last_date]
+                    for vacant_date in vacant_dates:
+                        ra_index_nav_df.loc[vacant_date] = ra_index_nav_tmp_df.loc[vacant_date]
+                elif index_id == '120000020': #更新纳斯达克
+                    s = select(ra_index_nav_tmp_columns)
+                    s = s.where(ra_index_nav_tmp_t.c.ra_index_id == index_id)
+                    ra_index_nav_tmp_df = pd.read_sql(s, db, index_col = ['ra_date'])
+                    vacant_dates = ra_index_nav_tmp_df.index[ra_index_nav_tmp_df.index > last_date]
+                    for vacant_date in vacant_dates:
+                        ra_index_nav_df.loc[vacant_date] = ra_index_nav_tmp_df.loc[vacant_date]
 
                 caihui_exchange_rate_df = caihui_exchange_rate_df.reindex(ra_index_nav_df.index)
                 caihui_exchange_rate_df = caihui_exchange_rate_df.fillna(method = 'pad')
