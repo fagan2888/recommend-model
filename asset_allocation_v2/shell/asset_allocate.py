@@ -41,6 +41,7 @@ from view import View
 import RiskParity
 import util_optimize
 from multiprocessing import Pool
+from fund_indicator import FundIndicator
 
 import PureFactor
 import IndexFactor
@@ -536,14 +537,12 @@ class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
         self.__bootstrap_count = bootstrap_count
         self.risk = risk
 
-
     def allocate_algo(self, day, df_inc, bound):
-
 
         # layer_assets_1 = ['120000002', '120000058', '120000073', '120000079']
         # layer_assets_2 = ['MZ.FA0010', 'MZ.FA0070']
-        layer_assets_1 = ['120000053', '120000056','120000058','120000073']
-        layer_assets_2 = ['MZ.FA0010', 'MZ.FA0050','MZ.FA0070']
+        layer_assets_1 = ['120000053', '120000056', '120000058', '120000073']
+        layer_assets_2 = ['MZ.FA0010', 'MZ.FA0050', 'MZ.FA0070', 'MZ.FI2010']
         layer_assets = layer_assets_1 + layer_assets_2
 
         layer_assets = dict([(asset_id , Asset(asset_id)) for asset_id in layer_assets])
@@ -565,7 +564,7 @@ class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
                 bound.append(asset_bound)
                 allocate_asset_ids.append(asset_id)
 
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count=self.__cpu_count, bootstrap_count=self.__bootstrap_count)
         ws = dict(zip(df_inc_layer.columns.ravel(), ws))
         for asset in layer_ws.index:
             ws[asset] = ws['ALayer'] * layer_ws.loc[asset]
@@ -671,28 +670,49 @@ class FundAllocate(Allocate):
         return fund_cluster
 
 
+class FundIndicAllocate(Allocate):
+
+    def __init__(self, globalid, reindex, lookback, fi_name, assets=None):
+        super(FundIndicAllocate, self).__init__(globalid, assets, reindex, lookback, period=None, bound=None)
+        self.fi_name = fi_name
+
+    def allocate(self):
+
+        fi = FundIndicator('2010-01-01', '2018-09-01')
+        df_pos = fi.cal_indicator_index_pos(self.fi_name, 20)
+
+        fund_globalid = base_ra_fund.load(codes=df_pos.columns)
+        df_pos = df_pos[fund_globalid.ra_code]
+        df_pos.columns = fund_globalid.globalid
+
+        df_pos = df_pos.replace(0.0, np.nan).dropna(1, how='all')
+        df_pos = df_pos.fillna(0.0)
+
+        return df_pos
+
+
 if __name__ == '__main__':
 
     asset = Asset('120000001')
 
     asset = WaveletAsset('120000013', 2)
 
-    trade_date = ATradeDate.week_trade_date(begin_date = '2012-01-01')
+    trade_date = ATradeDate.week_trade_date(begin_date='2012-01-01')
 
     asset_globalids = ['120000001', '120000002', '120000013', '120000014', '120000015']
     assets = {}
     for asset_id in asset_globalids:
         assets[asset_id] = Asset(asset_id)
-        #assets[asset_id] = WaveletAsset(asset_id, 2)
+        # assets[asset_id] = WaveletAsset(asset_id, 2)
 
     allocate = AvgAllocate('ALC.000001', assets, trade_date, 14)
-    #print allocate.allocate().tail()
+    # print allocate.allocate().tail()
 
     allocate = MzAllocate('ALC.000002', assets, trade_date, 14)
-    #print allocate.allocate().tail()
+    # print allocate.allocate().tail()
 
     allocate = MzBootAllocate('ALC.000002', assets, trade_date, 14)
-    #print allocate.allocate().tail()
+    # print allocate.allocate().tail()
 
 
     view_df = View.load_view('BL.000001')
@@ -704,6 +724,6 @@ if __name__ == '__main__':
 
     views = {}
     for asset_id in asset_globalids:
-        views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
+        views[asset_id] = View(None, asset_id, view_sr=view_df[asset_id], confidence=0.5) if asset_id in view_df.columns else View(None, asset_id, confidence=0.5)
 
     allocate = MzBootBlAllocate('ALC.000002', assets, views, trade_date, 26)

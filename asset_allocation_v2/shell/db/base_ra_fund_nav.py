@@ -32,7 +32,7 @@ def load_weekly(begin_date, end_date, fund_ids=None, codes=None):
         .select_from(t1.join(t2, t1.c.ra_date == t2.c.td_date)) \
         .where(t1.c.ra_date.between(begin_date, end_date)) \
         .where(t2.c.td_date.between(begin_date, end_date) & (t2.c.td_type.op('&')(0x02) | (t2.c.td_date == end_date)))
-    
+
     if fund_ids is not None:
         s = s.where(t1.c.ra_fund_id.in_(fund_ids))
 
@@ -46,7 +46,7 @@ def load_weekly(begin_date, end_date, fund_ids=None, codes=None):
 
     return df
 
-def load_daily(begin_date, end_date, fund_ids=None, codes=None):
+def load_daily(begin_date, end_date, fund_ids=None, codes=None, fillna_limit=None):
     db = database.connection('base')
     metadata = MetaData(bind=db)
     t1 = Table('ra_fund_nav', metadata, autoload=True)
@@ -62,7 +62,7 @@ def load_daily(begin_date, end_date, fund_ids=None, codes=None):
         .select_from(t1.join(t2, t1.c.ra_date == t2.c.td_date)) \
         .where(t1.c.ra_date.between(begin_date, end_date)) \
         .where(t2.c.td_date.between(begin_date, end_date))
-    
+
     if fund_ids is not None:
         s = s.where(t1.c.ra_fund_id.in_(fund_ids))
 
@@ -71,7 +71,10 @@ def load_daily(begin_date, end_date, fund_ids=None, codes=None):
 
     df = pd.read_sql(s, db, index_col = ['date', 'code'], parse_dates=['date'])
 
-    df = df.unstack().fillna(method='pad')
+    if fillna_limit is not None:
+        df = df.unstack().fillna(method='pad', limit=fillna_limit)
+    else:
+        df = df.unstack().fillna(method='pad')
     df.columns = df.columns.droplevel(0)
 
     return df
@@ -94,7 +97,7 @@ def load_series(code, reindex=None, begin_date=None, end_date=None):
         s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
         s = s.where(t1.c.ra_date <= end_date)
-        
+
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
 
     if reindex is not None:
@@ -103,4 +106,4 @@ def load_series(code, reindex=None, begin_date=None, end_date=None):
     return df['nav']
 
 
-    
+

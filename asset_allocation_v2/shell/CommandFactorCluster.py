@@ -12,7 +12,7 @@ sys.path.append('shell/')
 from sklearn.linear_model import LinearRegression
 from scipy.stats import rankdata, spearmanr, pearsonr
 from scipy.spatial import distance_matrix
-from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.cluster import AgglomerativeClustering, KMeans, SpectralClustering, AffinityPropagation
 from sklearn.metrics import silhouette_score, silhouette_samples
 from sklearn.cluster import SpectralClustering
 from scipy.spatial import distance_matrix
@@ -107,9 +107,8 @@ def fc_high(ctx, optid):
     years = 5
     lookback_days = 365 * years
     factor_ids_1 = ['120000013', '120000015', '120000020', '120000014', '120000028']
-    factor_ids_2 = ['120000073', 'MZ.FA0010', 'MZ.FA0070', 'MZ.FA1010']
-    factor_ids_3 = ['120000018', '120000079', '120000002']
-    factor_ids = factor_ids_1 + factor_ids_2 + factor_ids_3
+    factor_ids_2 = ['120000016', '120000051', '120000056', '120000073', 'MZ.FA0010', 'MZ.FA0050', 'MZ.FA0070', 'MZ.FA1010', 'MZ.FI0050', 'MZ.FI2010']
+    factor_ids = factor_ids_1 + factor_ids_2
     trade_dates = ATradeDate.month_trade_date(begin_date = '2017-01-01')
     for date in trade_dates:
         start_date = (date - datetime.timedelta(lookback_days)).strftime('%Y-%m-%d')
@@ -118,7 +117,7 @@ def fc_high(ctx, optid):
         corr0 = load_corr(factor_ids, start_date, end_date)
         std0 = load_std(factor_ids, start_date, end_date)
         dist = corr0 * (std0)**3
-        asset_cluster = clusterSimple(dist, 0.5)
+        asset_cluster = clusterSimple(dist, 0.6)
         asset_cluster = dict(list(zip(sorted(asset_cluster), sorted(asset_cluster.values()))))
 
         for k,v in asset_cluster.items():
@@ -308,6 +307,27 @@ def load_mv(factor_ids, start_date, end_date):
     df_dist = pd.DataFrame(data = mv_dist, columns = df_asset_navs.columns, index = df_asset_navs.columns)
 
     return df_dist
+
+
+def cluster_ap(df_dist, preference=None):
+
+    if preference is not None:
+        ap_model = AffinityPropagation(affinity='precomputed', preference=preference)
+    else:
+        ap_model = AffinityPropagation(affinity='precomputed')
+
+    try:
+        ap_res = ap_model.fit(df_dist)
+    except Exception as e:
+        print(e)
+        set_trace()
+
+    silh = silhouette_score(-df_dist, ap_model.labels_)
+    asset_cluster = defaultdict(list)
+    for label, fund_id in zip(ap_res.labels_, df_dist.index):
+        asset_cluster[label].append(fund_id)
+
+    return asset_cluster, silh, ap_model
 
 
 

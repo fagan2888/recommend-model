@@ -25,7 +25,7 @@ from sqlalchemy import distinct
 from tabulate import tabulate
 import statsmodels.api as sm
 import statsmodels
-from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_fund
+from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_fund, asset_mz_markowitz_pos
 from factor import Factor
 from asset import StockAsset, StockFundAsset
 from db import asset_trade_dates
@@ -50,7 +50,7 @@ class FundIndicator(object):
 
         self.start_date = start_date
         self.end_date = end_date
-        self.lookbacks = [1, 3, 6, 12]
+        self.lookbacks = [1, 3, 6, 12, 18, 24, 30]
         self.algos = {
             'return': self.cal_return_indicator,
             'std': self.cal_std_indicator,
@@ -60,12 +60,18 @@ class FundIndicator(object):
             'sortino': self.cal_sortino_indicator,
             'jensen': self.cal_jensen_indicator,
         }
+
+        # self.lookbacks = [12]
+        # self.algos = {
+            # 'std': self.cal_std_indicator,
+        # }
+
         self.indicator_pool = {}
 
     def load_fund_nav(self, start_date, end_date):
 
         valid_funds = asset_fund.load_type_fund(l1codes=['2001']).index
-        df_nav_fund = base_ra_fund_nav.load_daily(start_date, end_date, codes=valid_funds)
+        df_nav_fund = base_ra_fund_nav.load_daily(start_date, end_date, codes=valid_funds, fillna_limit=10)
         # df_nav_fund = df_nav_fund.resample('m').last()
 
         return df_nav_fund
@@ -81,7 +87,7 @@ class FundIndicator(object):
     def cal_return_indicator(self, fund_nav, lookback, name):
 
         fund_nav = fund_nav.resample('m').last()
-        fund_return = fund_nav.pct_change(lookback)
+        fund_return = fund_nav.pct_change(lookback, limit=1)
         fund_return = fund_return.sub(fund_return.mean(1), 0).div(fund_return.std(1), 0)
         fund_return = fund_return.stack()
         fund_return.columns = [name]
@@ -90,29 +96,29 @@ class FundIndicator(object):
 
     def cal_std_indicator(self, fund_nav, lookback, name):
 
-        fund_ret = fund_nav.pct_change()
+        fund_ret = fund_nav.pct_change(limit=1)
         fund_std = fund_ret.rolling(lookback*21).std()
         fund_std = fund_std.resample('m').last()
         fund_std = fund_std.sub(fund_std.mean(1), 0).div(fund_std.std(1), 0)
         fund_std = fund_std.stack()
         fund_std.columns = [name]
 
-        return fund_std
+        return -fund_std
 
     def cal_downstd_indicator(self, fund_nav, lookback, name):
 
-        fund_ret = fund_nav.pct_change()
+        fund_ret = fund_nav.pct_change(limit=1)
         fund_downstd = fund_ret.rolling(lookback*21).apply(downstd, raw=True)
         fund_downstd = fund_downstd.resample('m').last()
         fund_downstd = fund_downstd.sub(fund_downstd.mean(1), 0).div(fund_downstd.std(1), 0)
         fund_downstd = fund_downstd.stack()
         fund_downstd.columns = [name]
 
-        return fund_downstd
+        return -fund_downstd
 
     def cal_beta_indicator(self, fund_nav, lookback, name):
 
-        fund_ret = fund_nav.pct_change()
+        fund_ret = fund_nav.pct_change(limit=1)
         fund_ret_month = fund_ret.resample('m').last()
         dates = fund_ret_month.index
         fund_beta = pd.DataFrame()
@@ -125,8 +131,8 @@ class FundIndicator(object):
                 if any(y.isna()):
                     data[fund][ndate] = np.nan
                 else:
-                    y = y.pct_change().dropna()
-                    x = x.pct_change().dropna()
+                    y = y.pct_change(limit=1).dropna()
+                    x = x.pct_change(limit=1).dropna()
                     x = x.reindex(y.index)
                     x = sm.add_constant(x, 1)
                     mod = sm.OLS(y, x).fit()
@@ -136,13 +142,14 @@ class FundIndicator(object):
         fund_beta = fund_beta.stack()
         fund_beta.columns = [name]
 
-        return fund_beta
+        return -fund_beta
 
     def cal_sharpe_indicator(self, fund_nav, lookback, name):
 
-        fund_return = fund_nav.pct_change(lookback)
+        fund_return = fund_nav.pct_change(lookback, limit=1)
+        fund_return = fund_return.resample('m').last()
 
-        fund_ret = fund_nav.pct_change()
+        fund_ret = fund_nav.pct_change(limit=1)
         fund_std = fund_ret.rolling(lookback*21).std() * np.sqrt(21)
         fund_std = fund_std.resample('m').last()
 
@@ -155,9 +162,10 @@ class FundIndicator(object):
 
     def cal_sortino_indicator(self, fund_nav, lookback, name):
 
-        fund_return = fund_nav.pct_change(lookback)
+        fund_return = fund_nav.pct_change(lookback, limit=1)
+        fund_return = fund_return.resample('m').last()
 
-        fund_ret = fund_nav.pct_change()
+        fund_ret = fund_nav.pct_change(limit=1)
         fund_downstd = fund_ret.rolling(lookback*21).apply(downstd, raw=True) * np.sqrt(21)
         fund_downstd = fund_downstd.resample('m').last()
 
@@ -170,7 +178,7 @@ class FundIndicator(object):
 
     def cal_jensen_indicator(self, fund_nav, lookback, name):
 
-        fund_ret = fund_nav.pct_change()
+        fund_ret = fund_nav.pct_change(limit=1)
         fund_ret_month = fund_ret.resample('m').last()
         dates = fund_ret_month.index
         fund_jensen = pd.DataFrame()
@@ -183,8 +191,8 @@ class FundIndicator(object):
                 if any(y.isna()):
                     data[fund][ndate] = np.nan
                 else:
-                    y = y.pct_change().dropna()
-                    x = x.pct_change().dropna()
+                    y = y.pct_change(limit=1).dropna()
+                    x = x.pct_change(limit=1).dropna()
                     x = x.reindex(y.index)
                     x = sm.add_constant(x, 1)
                     mod = sm.OLS(y, x).fit()
@@ -203,13 +211,67 @@ class FundIndicator(object):
         for algo_name, algo in self.algos.items():
             for lookback in self.lookbacks:
                 name = '%s_%d' % (algo_name, lookback)
-                self.indicator_pool[name] = algo(fund_nav, lookback, name)
+                tmp_indicator = algo(fund_nav, lookback, name)
+                self.indicator_pool[name] = tmp_indicator
         self.indicator_df = pd.DataFrame(self.indicator_pool)
-        set_trace()
         self.indicator_df.to_csv('data/fund_indicator/fund_indicator.csv', index_label=['date', 'fund_id'])
 
-    def cal_indicator_return(self):
-        pass
+    def cal_indicator_index_pos(self, indicator, fund_num):
+
+        indicator_df = pd.read_csv('data/fund_indicator/fund_indicator.csv', dtype={'fund_id': object}, index_col=['date'], parse_dates=['date'])
+        indicator_df = indicator_df.set_index('fund_id', append=True)
+        # indicators = indicator_df.columns
+
+        tmp_indicator = indicator_df[[indicator]]
+        tmp_indicator = tmp_indicator.unstack()
+        tmp_indicator.columns = tmp_indicator.columns.get_level_values(1)
+        tmp_indicator = tmp_indicator.dropna(how='all')
+
+        dates = tmp_indicator.index
+        fund_ids = indicator_df.index.levels[1]
+        df_pos = pd.DataFrame(data=np.zeros((len(dates), len(fund_ids))), columns=fund_ids, index=dates)
+
+        for date in tmp_indicator.index:
+            tmp_funds = tmp_indicator.loc[date]
+            tmp_funds = tmp_funds.sort_values(ascending=False)
+            tmp_funds = tmp_funds.dropna()
+            pool_funds = tmp_funds.index[:fund_num]
+            df_pos.loc[date, pool_funds] = 1.0
+
+        df_pos = df_pos.div(df_pos.sum(1), 0)
+        return df_pos
+
+    def valid_test(self):
+
+        indicator_df = pd.read_csv('data/fund_indicator/fund_indicator.csv', dtype={'fund_id': object}, index_col=['date'], parse_dates=['date'])
+        indicator_df = indicator_df.set_index('fund_id', append=True)
+        fund_nav = self.load_fund_nav(self.start_date, self.end_date)
+        fund_nav = fund_nav.resample('m').last()
+        fund_ret = fund_nav.pct_change(limit=1)
+
+        df_res = {}
+        dates = indicator_df.index.levels[0]
+        for date, ndate in zip(dates[:-1], dates[1:]):
+            ret = fund_ret.loc[ndate].dropna()
+            df_res[ndate] = {}
+            for indicator in indicator_df.columns:
+                fi = indicator_df.loc[date, indicator].dropna()
+                common_funds = np.intersect1d(ret.index, fi.index)
+                ic = np.corrcoef(ret.loc[common_funds], fi.loc[common_funds])[1, 0]
+                df_res[ndate][indicator] = ic
+        df_res = pd.DataFrame.from_dict(df_res, orient='index')
+        set_trace()
+        return df_res
+
+    def load_fund_pos(self, mz_id, date):
+
+        df_pos = asset_mz_markowitz_pos.load('MZ.FI0050')
+        fund_codes = base_ra_fund.load(globalids=df_pos.columns)
+        fund_codes_dict = dict(zip(fund_codes.globalid.astype('str'), fund_codes.ra_code))
+        df_pos = df_pos.rename(lambda x: fund_codes_dict[x], axis='columns')
+        df_pos_new = df_pos.loc[date]
+        df_pos_new = df_pos_new[df_pos_new > 0.0]
+        set_trace()
 
 
 def downstd(arr):
@@ -221,7 +283,9 @@ def downstd(arr):
 if __name__ == '__main__':
 
     fi = FundIndicator('2010-01-01', '2018-09-01')
-    fi.cal_indicator()
-
+    fi.valid_test()
+    # fi.cal_indicator()
+    # fi.cal_indicator_index_pos('jensen_12')
+    # fund_pos = fi.load_fund_pos(mz_id='MZ.FI0050', date='2018-08-31')
 
 

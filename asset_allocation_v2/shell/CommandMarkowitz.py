@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, MzLayer2FixRiskBootBlAllocate, FundAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, MzLayer2FixRiskBootBlAllocate, FundAllocate, FundIndicAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -117,7 +117,7 @@ def import_command(ctx, csv, optid, optname, opttype, optreplace):
                 click.echo(click.style("%s, will replace!" % s, fg="yellow"))
             else:
                 click.echo(click.style("%s, import aborted!" % s, fg="red"))
-            return -1;
+            return -1
     else:
         #
         # 自动生成id
@@ -1144,6 +1144,13 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = FundAllocate('ALC.000001', trade_date, lookback, layer)
         df = allocate.allocate()
 
+    elif algo == 19:
+
+        fi_name = argv.get('fi_name', 'jensen_12')
+        trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback)
+        allocate = FundIndicAllocate('ALC.000001', trade_date, lookback, fi_name)
+        df = allocate.allocate()
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return
@@ -1174,7 +1181,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 18]
+    no_rolling_algos = [1, 18, 19]
     if algo in no_rolling_algos:
         pass
     else:

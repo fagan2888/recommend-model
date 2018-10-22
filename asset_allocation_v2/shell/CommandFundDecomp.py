@@ -12,6 +12,7 @@ sys.path.append('shell/')
 from sklearn.linear_model import LinearRegression
 from scipy.stats import rankdata, spearmanr, pearsonr, linregress
 from scipy.spatial import distance_matrix
+from scipy.spatial.distance import pdist, squareform
 from sklearn.cluster import AgglomerativeClustering, KMeans, SpectralClustering, AffinityPropagation
 from sklearn.metrics import silhouette_score, silhouette_samples
 from sklearn.decomposition import PCA
@@ -115,20 +116,72 @@ def fd_cluster(ctx, optid):
     df_valid_fund = pd.read_csv('data/fund_decomp/valid_fund.csv', index_col=['fund_id'])
     valid_fund_ids = df_valid_fund.index
     valid_fund_ids = ['%06d' % i for i in valid_fund_ids]
-    df_nav_fund = df_nav_fund.loc[:, valid_fund_ids]
+    # df_nav_fund = df_nav_fund.loc[:, valid_fund_ids]
 
     df_ret_fund = df_nav_fund.dropna(1).pct_change().dropna()
-    df_nav_fund = df_nav_fund / df_nav_fund.iloc[0]
+    # df_nav_fund = df_nav_fund / df_nav_fund.iloc[0]
     df_dist = df_ret_fund.corr()
-    df_dist = cal_mic_dist(df_ret_fund)
-    # asset_cluster = cluster_ap(df_dist, 0.9)
-    asset_cluster = clusterSimple(df_dist, 0.9)
+    df_dist = cal_dcor_dist(df_ret_fund)
+    asset_cluster = cluster_ap(df_dist, 0.9)
+    # asset_cluster = clusterSimple(df_dist, 0.9)
     clusters = sorted(asset_cluster, key=lambda x: len(asset_cluster[x]), reverse=True)
     for cluster in clusters:
         tmp_funds = asset_cluster[cluster]
         if len(tmp_funds) > 1:
             print(tmp_funds)
     set_trace()
+
+
+@fd.command()
+@click.option('--id', 'optid', help='specify cluster id')
+@click.pass_context
+def index_cluster(ctx, optid):
+
+    index_ids = ['120000001', '120000002', '120000013', '120000015', '120000014', '120000020']
+    df_nav_index = {}
+    for index_id in index_ids:
+        tmp_nav = Asset.load_nav_series(index_id)
+        df_nav_index[index_id] = tmp_nav
+    df_nav_index = pd.DataFrame(df_nav_index)
+    df_ret_index = df_nav_index.pct_change().dropna()
+    df_ret_index = df_ret_index.replace(0.0, np.nan).dropna()
+    df_ret_index = df_ret_index.loc['2015']
+    # df_dist = df_ret_fund.corr()
+    df_dist = cal_dcor_dist(df_ret_index)
+    asset_cluster = cluster_ap(df_dist, 0.9)
+    # asset_cluster = clusterSimple(df_dist, 0.9)
+    clusters = sorted(asset_cluster, key=lambda x: len(asset_cluster[x]), reverse=True)
+    for cluster in clusters:
+        tmp_funds = asset_cluster[cluster]
+        if len(tmp_funds) > 1:
+            print(tmp_funds)
+    set_trace()
+
+
+@fd.command()
+@click.option('--id', 'optid', help='specify cluster id')
+@click.pass_context
+def fd_decomposition(ctx, optid):
+
+    start_date = '2012-01-01'
+    end_date = '2018-09-01'
+    lookback = 360 * 4
+    layer_num = 10
+
+    # valid_funds = asset_fund.load_type_fund(l2codes=['200101', '200201']).index
+    # df_nav_fund = pd.read_csv('data/df_nav_fund.csv', index_col=['date'], parse_dates=['date'])
+
+    # valid_funds = asset_fund.load_type_fund(l1codes=['2001', '2002']).index
+    # df_nav_fund = base_ra_fund_nav.load_daily(start_date, end_date, codes=valid_funds)
+    # df_nav_fund.to_csv('data/df_nav_fund_all.csv', index_label='date')
+
+    df_nav_fund = pd.read_csv('data/df_nav_fund_all.csv', index_col=['date'], parse_dates=['date'])
+    df_valid_fund = pd.read_csv('data/fund_decomp/valid_fund.csv', index_col=['fund_id'])
+    valid_fund_ids = df_valid_fund.index
+    valid_fund_ids = ['%06d' % i for i in valid_fund_ids]
+    df_nav_fund = df_nav_fund.loc[:, valid_fund_ids]
+
+    fd_decomposition_days(df_nav_fund, lookback, layer_num)
 
 
 @fd.command()
@@ -471,11 +524,44 @@ def clusterSimple(dist, threshold):
     return asset_cluster
 
 
-df cal_mic_dist(df_nav_fund):
+def distcorr(X, Y):
+    X = np.atleast_1d(X)
+    Y = np.atleast_1d(Y)
+    if np.prod(X.shape) == len(X):
+        X = X[:, None]
+    if np.prod(Y.shape) == len(Y):
+        Y = Y[:, None]
+    X = np.atleast_2d(X)
+    Y = np.atleast_2d(Y)
+    n = X.shape[0]
+    if Y.shape[0] != X.shape[0]:
+        raise ValueError('Number of samples must match')
+    a = squareform(pdist(X))
+    b = squareform(pdist(Y))
+    A = a - a.mean(axis=0)[None, :] - a.mean(axis=1)[:, None] + a.mean()
+    B = b - b.mean(axis=0)[None, :] - b.mean(axis=1)[:, None] + b.mean()
+
+    dcov2_xy = (A * B).sum()/float(n * n)
+    dcov2_xx = (A * A).sum()/float(n * n)
+    dcov2_yy = (B * B).sum()/float(n * n)
+    dcor = np.sqrt(dcov2_xy)/np.sqrt(np.sqrt(dcov2_xx) * np.sqrt(dcov2_yy))
+    return dcor
+
+
+def cal_dcor_dist(df_ret_fund):
+    fund_ids = df_ret_fund.columns
+    fund_num = len(fund_ids)
+    data = np.zeros((fund_num, fund_num))
+    for i in range(fund_num):
+        for j in range(fund_num):
+            tmp_dcor = distcorr(df_ret_fund.iloc[:, i].values, df_ret_fund.iloc[:, j].values)
+            data[i, j] = tmp_dcor
+    df_dist = pd.DataFrame(data=data, columns=fund_ids, index=fund_ids)
+    return df_dist
+
+
+def cal_mic_dist(df_ret_fund):
     set_trace()
-    pass
-
-
 
 
 
