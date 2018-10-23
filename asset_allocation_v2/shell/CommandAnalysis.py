@@ -403,6 +403,12 @@ def online_portfolio_fund(ctx):
 
     asset_name = {
             '11110100':'大盘',
+            '11110106':'高盈利',
+            '11110108':'高财务质量',
+            '11110110':'食品饮料',
+            '11110112':'医药生物',
+            '11110114':'银行',
+            '11110116':'非银金融',
             '11110200':'小盘',
             '11120200':'美股',
             '11120201':'美股',
@@ -413,6 +419,7 @@ def online_portfolio_fund(ctx):
             '11310100':'货币',
             '11310101':'货币',
             '11400100':'沪金',
+            '11400300':'原油',
         }
 
     writer = pd.ExcelWriter('10个风险等级月末仓位.xlsx')
@@ -439,11 +446,14 @@ def online_portfolio_fund(ctx):
         v = v.T
         #print(v['大盘']+ v['小盘'])
         #print(v.columns)
+        v[''] = ''
+        v[''] = ''
         v['股基'] = v['大盘'] + v['小盘'] + v['美股'] + v['恒生']
         v['债基'] = v['信用债'] + v['利率债']
-        v['海外'] = v['美股'] + v['恒生']
+        v['海外'] = v['美股'] + v['恒生'] + v['原油']
         v['国内'] = v['大盘'] + v['小盘'] + v['信用债'] + v['利率债'] + v['货币'] + v['沪金']
 
+        v = v[v.index <= '2018-09-30']
         v.to_excel(writer, '风险等级' + str(k)[-1])
     writer.save()
 
@@ -784,3 +794,30 @@ def monetary_fund_rank(ctx):
         print(fund_month_r.index(allocate_r), len(fund_month_r), 1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
         ranks.append(1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
     print(np.mean(ranks))
+
+
+#调仓频率与次数
+@analysis.command()
+@click.pass_context
+def online_turnover_freq(ctx):
+    datas = []
+    risks = []
+    for i in range(0, 10):
+        gid = 800000 + i
+        df = asset_on_online_fund.load_fund_pos(gid)
+        df = df.unstack().fillna(0.0)
+        df = df[df.index <= '2018-09-30']
+        day_num = len(pd.date_range(df.index[0], df.index[-1]))
+        turnover = df.diff().abs().sum().sum() / len(df) / 2
+        last_five_year_df = df[df.index >= '2013-09-30']
+        last_five_year_turnover = last_five_year_df.diff().abs().sum().sum() / 2
+        from_2017_df = df[df.index >= '2016-12-30']
+        from_2017_turnover = from_2017_df.diff().abs().sum().sum() / 2
+        print(day_num/len(df), turnover, len(last_five_year_df), last_five_year_turnover, len(from_2017_df), from_2017_turnover + 0.5)
+        datas.append([day_num/len(df), turnover, len(last_five_year_df), last_five_year_turnover, len(from_2017_df), from_2017_turnover + 0.5]) 
+        risks.append('等级' + str(i)) 
+
+    df = pd.DataFrame(datas, index = risks, columns = ['多久调仓一次（单位：天）', '平均每次调仓比例', '过去5年调仓次数', '过去5年整体换手率', '2017年以来调仓次数',  '2017年以来整体换手率'])
+    df.index.name = '风险等级'
+    print(df)
+    df.to_csv('每个风险等级调仓频率与次数.csv',encoding='gbk')
