@@ -136,7 +136,7 @@ def batch(db, table, df_new, df_old, timestamp=True):
         if len(index_update):
             df1 = df_new.loc[index_update].copy()
             df2 = df_old.loc[index_update].copy()
-
+            #set_trace()
             masks = (df1 != df2)
             df_update = df1.loc[masks.any(axis=1)].copy()
         else:
@@ -212,7 +212,6 @@ def batch(db, table, df_new, df_old, timestamp=True):
     finally:
         transaction.commit()
 
-
 def asset_tc_timing_scratch_load_signal(timings):
     db = connection('asset')
     metadata = MetaData(bind=db)
@@ -221,7 +220,7 @@ def asset_tc_timing_scratch_load_signal(timings):
     columns = [
         t1.c.tc_timing_id,
         t1.c.tc_date,
-        t1.c.tc_signal,
+    t1.c.tc_signal,
     ]
 
     s = select(columns)

@@ -17,7 +17,7 @@ import re
 import Const
 import DFUtil
 from TimingGFTD import TimingGFTD
-from TimingHmm import TimingHmm
+# from TimingHmm import TimingHmm
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -102,7 +102,7 @@ def signal_update_hmm(timing):
 
     # risk_mgr = RiskManagement.RiskManagement()
     trade_dates = base_trade_dates.load_trade_dates()
-    df_new = TimingHmm(ori_data = df_nav, timing = timing, trade_dates = trade_dates, start_date = df_nav.index[252 * 5] if df_nav.index[252 * 5] > datetime(2012,5,1) else '2012-05-01').timing()
+    # df_new = TimingHmm(ori_data = df_nav, timing = timing, trade_dates = trade_dates, start_date = df_nav.index[252 * 5] if df_nav.index[252 * 5] > datetime(2012,5,1) else '2012-05-01').timing()
     df_new = df_new[['tc_signal']]
 
     df_new['tc_timing_id'] = timing_id
