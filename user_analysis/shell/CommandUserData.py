@@ -658,28 +658,26 @@ def all_feature(ctx):
         return v
 
 
-    '''
-    def xirr(transactions):
-        years = [(ta[0] - transactions[0][0]) / 365.0 for ta in transactions]
-        residual = 1
-        step = 0.05
-        guess = 0.05
-        epsilon = 0.0001
-        limit = 10000
-        while abs(residual) > epsilon and limit > 0:
-            limit -= 1
-            residual = 0.0
-            for i, ta in enumerate(transactions):
-                residual += ta[1] / pow(guess, years[i])
-            if abs(residual) > epsilon:
-                if residual > 0:
-                    guess += step
-                else:
-                    guess -= step
-                    step /= 2.0
-        #print(transactions, guess - 1)
-        return guess-1
-    '''
+    #def xirr(transactions):
+    #    years = [(ta[0] - transactions[0][0]) / 365.0 for ta in transactions]
+    #    residual = 1
+    #    step = 0.05
+    #    guess = 0.05
+    #    epsilon = 0.0001
+    #    limit = 10000
+    #    while abs(residual) > epsilon and limit > 0:
+    #        limit -= 1
+    #        residual = 0.0
+    #        for i, ta in enumerate(transactions):
+    #            residual += ta[1] / pow(guess, years[i])
+    #        if abs(residual) > epsilon:
+    #            if residual > 0:
+    #                guess += step
+    #            else:
+    #                guess -= step
+    #                step /= 2.0
+    #    #print(transactions, guess - 1)
+    #    return guess-1
 
     def user_feature(uids, x):
 
@@ -694,8 +692,8 @@ def all_feature(ctx):
         data = {}
         for item in list(vs):
             item_date = item['feature_date']
-            if item_date == '2018-08-02':
-                continue
+            #if item_date == '2018-08-02':
+            #    continue
             item_data = data.setdefault(item_date, {})
             for k in item.keys():
                 item_data[k] = item[k]
@@ -754,31 +752,31 @@ def all_feature(ctx):
         #v = v.iloc[0:-1]
 
         #print(v.columns)
-        trans = v[['ts_trade_type_status', 'ts_placed_amount', 'ts_total_asset', 'ts_placed_percent']]
-        trans.index = trans.index.get_level_values(1)
-        xirrs = []
-        for d in trans.index:
-            current_trans = trans[trans.index <= d]
-            data = []
-            for i in range(0, len(current_trans)):
-                date = current_trans.index[i]
-                if current_trans.loc[date, 'ts_trade_type_status'] == 36.0:
-                    data.append([i, -1.0 * current_trans.loc[date, 'ts_placed_amount']])
-                elif current_trans.loc[date, 'ts_trade_type_status'] == 56.0:
-                    data.append([i, -1.0 * current_trans.loc[date, 'ts_placed_amount']])
-                elif current_trans.loc[date, 'ts_trade_type_status'] == 46.0:
-                    data.append([i, current_trans.loc[date, 'ts_placed_percent'] * current_trans.iloc[i - 1].ts_total_asset])
-            data.append([len(current_trans) - 1 , current_trans.iloc[-1].ts_total_asset])
-            #if data[0][0] > 0:
-            #    print(uid, current_trans)
-            _xirr = xirr(data)
-            #if _xirr == -1.0:
-            #    print(uid, data)
-            xirrs.append(_xirr)
-            #print(xirrs)
-            #current_trans_df = pd.DataFrame(np.array(data).T)
-            #print(current_trans_df)
-        v['xirrs'] = xirrs
+        #trans = v[['ts_trade_type_status', 'ts_placed_amount', 'ts_total_asset', 'ts_placed_percent']]
+        #trans.index = trans.index.get_level_values(1)
+        #xirrs = []
+        #for d in trans.index:
+        #    current_trans = trans[trans.index <= d]
+        #    data = []
+        #    for i in range(0, len(current_trans)):
+        #        date = current_trans.index[i]
+        #        if current_trans.loc[date, 'ts_trade_type_status'] == 36.0:
+        #            data.append([i, -1.0 * current_trans.loc[date, 'ts_placed_amount']])
+        #        elif current_trans.loc[date, 'ts_trade_type_status'] == 56.0:
+        #            data.append([i, -1.0 * current_trans.loc[date, 'ts_placed_amount']])
+        #        elif current_trans.loc[date, 'ts_trade_type_status'] == 46.0:
+        #            data.append([i, current_trans.loc[date, 'ts_placed_percent'] * current_trans.iloc[i - 1].ts_total_asset])
+        #    data.append([len(current_trans) - 1 , current_trans.iloc[-1].ts_total_asset])
+        #    #if data[0][0] > 0:
+        #    #    print(uid, current_trans)
+        #    _xirr = xirr(data)
+        #    #if _xirr == -1.0:
+        #    #    print(uid, data)
+        #    xirrs.append(_xirr)
+        #    #print(xirrs)
+        #    #current_trans_df = pd.DataFrame(np.array(data).T)
+        #    #print(current_trans_df)
+        #v['xirrs'] = xirrs
         #print(v[v.ts_trade_type_status.isin([46.0, 36.0, 56.0])][['ts_trade_type_status', 'ts_placed_amount']])
         #print(v.tail())
         #过滤掉用户购买之前的log日志
@@ -805,8 +803,6 @@ def all_feature(ctx):
     feature_df = pd.concat(features, axis = 0)
 
     feature_df.to_csv('tmp/feature_log.csv')
-
-    set_trace()
 
 
     #feature_df.to_csv('tmp/feature.csv')
