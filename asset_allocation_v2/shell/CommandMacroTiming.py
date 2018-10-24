@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from ipdb import set_trace
 logger = logging.getLogger(__name__)
 from sklearn import linear_model
-from GoldTiming_Tool import *
+import GoldTiming_Tool
 
 @click.group(invoke_without_command=True)
 @click.pass_context
@@ -205,11 +205,11 @@ def sp_view_update(ctx, startdate, enddate, viewid):
 @mt.command()
 @click.option('--start-date','startdate',default='2003-01-01',help=u'start date to calc')
 @click.option('--end-date','enddate',default=datetime.today().strftime('%Y-%m-%d'),help=u'startdate to calc')
-@click.option('--viewid','viewid',default='BL.000009',help=u'macro timing view id')
+@click.option('--viewid','viewid',default='BL.000001',help=u'macro timing view id')
 @click.pass_context
 def gold_view_update(ctx,startdate,enddate,viewid):
     #function:"更新结果"
-    mv = cal_gold_view()
+    mv = GoldTiming_Tool.cal_gold_view()
     today = datetime.now().strftime('%Y-%m-%d')
     df = {}
     df['globalid'] = np.repeat(viewid,len(mv))
@@ -230,11 +230,12 @@ def gold_view_update(ctx,startdate,enddate,viewid):
         t.c.created_at,
         t.c.updated_at,
     ]
-    s = select(columns,(t.c.globalid==viewid))
+    s = select(columns).where(t.c.globalid==viewid).where(t.c.bl_index_id=='120000014')
     df_old = pd.read_sql(s,db,index_col=['globalid','bl_date'],parse_dates=['bl_date'])
     df_new = df_new[df_old.columns]#保持跟df_old列名同步
+    df_new = df_new.fillna(0.0)
     database.batch(db,t,df_new,df_old,timestamp=False)
-    print('########### id=BL.000009 #######保存到表格：asset/ra_bl_view  ####')
+    print('########### id=BL.000001 #######保存到表格：asset/ra_bl_view  ####')
     print('########### gold view date:',mv.index[-1].strftime('%Y-%m-%d'),'#####value:',mv.view_01.values[-1])
 ################################################################################################
 

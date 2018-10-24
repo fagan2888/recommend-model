@@ -278,7 +278,7 @@ def cal_gold_view(obs1=7,cot_win=30,ema_win=12):
 @gt.command()
 @click.option('--start-date','startdate',default='2003-01-01',help=u'start date to calc')
 @click.option('--end-date','enddate',default=datetime.today().strftime('%Y-%m-%d'),help=u'start date to calc')
-@click.option('--viewid','viewid',default='BL.000009',help=u'macro timing view id')
+@click.option('--viewid','viewid',default='BL.000001',help=u'macro timing view id')
 @click.pass_context
 def gold_view_update(ctx,startdate,enddate,viewid):
     #function:"更新结果"
