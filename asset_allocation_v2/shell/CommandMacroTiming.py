@@ -18,7 +18,8 @@ from calendar import monthrange
 from datetime import datetime, timedelta
 from ipdb import set_trace
 logger = logging.getLogger(__name__)
-
+from sklearn import linear_model
+from GoldTiming_Tool import *
 
 @click.group(invoke_without_command=True)
 @click.pass_context
@@ -30,7 +31,7 @@ def mt(ctx):
         ctx.invoke(macro_view_update)
         #ctx.invoke(bond_view_update)
         ctx.invoke(sp_view_update)
-        #ctx.invoke(gold_view_update)
+        ctx.invoke(gold_view_update)
     else:
         pass
 
@@ -200,15 +201,51 @@ def sp_view_update(ctx, startdate, enddate, viewid):
 
         print(df_new.tail())
 
+### by liu
+@mt.command()
+@click.option('--start-date','startdate',default='2003-01-01',help=u'start date to calc')
+@click.option('--end-date','enddate',default=datetime.today().strftime('%Y-%m-%d'),help=u'startdate to calc')
+@click.option('--viewid','viewid',default='BL.000009',help=u'macro timing view id')
+@click.pass_context
+def gold_view_update(ctx,startdate,enddate,viewid):
+    #function:"更新结果"
+    mv = cal_gold_view()
+    today = datetime.now().strftime('%Y-%m-%d')
+    df = {}
+    df['globalid'] = np.repeat(viewid,len(mv))
+    df['bl_date'] = mv.index
+    df['bl_view'] = mv.view_01.values
+    df['bl_index_id'] = np.repeat('120000014',len(mv))
+    df['created_at'] = np.repeat(today,len(mv))
+    df['updated_at'] = np.repeat(today,len(mv))
+    df_new = pd.DataFrame(df).set_index(['globalid','bl_date'])
+    db = database.connection('asset')
+    metadata = MetaData(bind=db)
+    t = Table('ra_bl_view',metadata,autoload = True)
+    columns = [
+        t.c.globalid,
+        t.c.bl_date,
+        t.c.bl_view,
+        t.c.bl_index_id,
+        t.c.created_at,
+        t.c.updated_at,
+    ]
+    s = select(columns,(t.c.globalid==viewid))
+    df_old = pd.read_sql(s,db,index_col=['globalid','bl_date'],parse_dates=['bl_date'])
+    df_new = df_new[df_old.columns]#保持跟df_old列名同步
+    database.batch(db,t,df_new,df_old,timestamp=False)
+    print('########### id=BL.000009 #######保存到表格：asset/ra_bl_view  ####')
+    print('########### gold view date:',mv.index[-1].strftime('%Y-%m-%d'),'#####value:',mv.view_01.values[-1])
+################################################################################################
 
 @mt.command()
 @click.option('--start-date', 'startdate', default='2003-01-01', help='start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help='start date to calc')
 @click.option('--viewid', 'viewid', default='MC.VW0006', help='macro timing view id')
 @click.pass_context
-def gold_view_update(ctx, startdate, enddate, viewid):
+def gold_view_update2(ctx, startdate, enddate, viewid):
     #backtest_interval = pd.date_range(startdate, enddate)
-    mv = cal_gold_view()
+    mv = cal_gold_view2()
     mv = mv.resample('d').last().fillna(method = 'pad')
     mv['view'] = mv['view'].shift(15)
 
@@ -693,7 +730,7 @@ def load_us_indicator():
 
     return usi
 
-def load_gold_indicator():
+def load_gold_indicator2():
     feature_names = {
         'MC.GD0001':'uslrr',
         'MC.GD0002':'usrei',
@@ -788,8 +825,8 @@ def cal_sp_view():
     return data
 
 
-def cal_gold_view():
-    data = load_gold_indicator()
+def cal_gold_view2():
+    data = load_gold_indicator2()
     data.loc[:, ['uscpi', 'eucpi', 'ukcpi']] = data.loc[:, ['uscpi', 'eucpi', 'ukcpi']].pct_change(12)*100
     data['eulrr'] = data['eulnr'] - data['eucpi']
     data['uklrr'] = data['uklnr'] - data['ukcpi']
