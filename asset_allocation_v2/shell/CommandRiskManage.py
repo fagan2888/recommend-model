@@ -397,7 +397,7 @@ def vars_update(riskmgr):
         codes = [row['rm_asset_id'] for _, row in tmp_df_riskmgrs.iterrows()]
 
 
-    # VaR = RiskMgrVaRs.RiskMgrVaRs()
+    VaR = RiskMgrVaRs.RiskMgrVaRs()
     #Load datas from DB
     tdates = {_id: base_trade_dates.load_origin_index_trade_date(_id) for _id in codes}
     vars_ = {_id: asset_rm_riskmgr_vars.load_series(_id) for _id in codes}
@@ -429,7 +429,7 @@ def vars_update(riskmgr):
 
 
 def mgarch_update(riskmgr, target, _tdates):
-    # Joint = RiskMgrVaRs.RiskMgrJoint()
+    Joint = RiskMgrVaRs.RiskMgrJoint()
     codes = {row['globalid']:row['rm_asset_id'] for _, row in riskmgr.iterrows()}
     tdates = {global_id: _tdates[asset_id] for global_id, asset_id in list(codes.items())}
     #filter tradedays by target asset
@@ -580,12 +580,11 @@ def signal_update_garch(riskmgr):
     vars_ = {k: asset_rm_riskmgr_vars.load_series(v['id']) for k,v in list(codes.items())}
 
     if riskmgr['rm_algo'] == 4:
-        pass
-        # risk_mgr = RiskMgrGARCH.RiskMgrGARCH(codes, target, tdates, df_nav, timing, vars_)
+        risk_mgr = RiskMgrGARCH.RiskMgrGARCH(codes, target, tdates, df_nav, timing, vars_)
     elif riskmgr['rm_algo'] == 5:
         others = [k for k in codes if k != target]
         joint = asset_rm_riskmgr_mgarch_signal.load_series(riskmgr_id).loc[:, others]
-        # risk_mgr = RiskMgrGARCH.RiskMgrMGARCH(codes, target, tdates, df_nav, timing, vars_, joint)
+        risk_mgr = RiskMgrGARCH.RiskMgrMGARCH(codes, target, tdates, df_nav, timing, vars_, joint)
 
     df_result = risk_mgr.perform()
     df_result = df_result.drop(['rm_status'], axis=1)
