@@ -17,8 +17,8 @@ import time
 import Const
 import RiskMgrSimple
 import RiskMgrLow
-# import RiskMgrGARCH
-# import RiskMgrVaRs
+import RiskMgrGARCH
+import RiskMgrVaRs
 import DFUtil
 
 from datetime import datetime, timedelta
