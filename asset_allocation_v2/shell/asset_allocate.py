@@ -525,7 +525,7 @@ class SingleValidFactorAllocate(Allocate):
 
     def allocate(self):
 
-        df_valid, _ = cal_valid_factor(lookback = 70)
+        df_valid, _ = cal_valid_factor(lookback = 200)
         # df_valid, _ = cal_valid_factor(lookback = 1)
         # df_valid = df_valid.shift(-1).dropna()
         pos_df = df_valid / 5

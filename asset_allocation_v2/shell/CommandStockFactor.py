@@ -165,12 +165,12 @@ def factor_return_update(ctx):
     #sfs = ['SF.0000%02d'%i for i in range(1, 10)] + ['SF.1000%02d'%i for i in range(1, 29)]
     sfs = ['SF.0000%02d'%i for i in range(1, 10)]
     sf = StockFactor()
-    df_ret, df_t_sta, df_sret = sf.cal_factor_return(sfs)
-    # df_ic = sf.cal_factor_ic(sfs)
+    # df_ret, df_t_sta, df_sret = sf.cal_factor_return(sfs)
+    df_ic = sf.cal_factor_ic(sfs)
 
-    asset_stock_factor.update_stock_factor_return(df_ret)
+    # asset_stock_factor.update_stock_factor_return(df_ret)
     # asset_stock_factor.update_stock_factor_t_sta(df_t_sta)
-    # asset_stock_factor.update_stock_factor_ic(df_ic)
+    asset_stock_factor.update_stock_factor_ic(df_ic)
     # asset_stock_factor.update_stock_factor_specific_return(df_sret)
 
 

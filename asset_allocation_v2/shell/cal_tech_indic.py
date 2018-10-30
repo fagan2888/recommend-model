@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import talib
+#import talib
 
 class CalTechIndic(object):
     def __init__(self, data_df):

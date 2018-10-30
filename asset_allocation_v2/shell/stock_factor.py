@@ -35,6 +35,7 @@ from db import asset_trade_dates
 from db.asset_stock_factor import *
 import math
 import scipy.stats as stats
+from scipy.stats import spearmanr
 import json
 from asset import Asset
 from functools import reduce
@@ -172,8 +173,8 @@ class StockFactor(Factor):
             tmp_exposure_df = tmp_exposure_df.loc[StockAsset.all_stock_info().index]
             x = tmp_exposure_df.values
             x = sm.add_constant(x)
-            mod = sm.OLS(tmp_ret, tmp_exposure_df.values, missing = 'drop').fit()
-            # mod = sm.WLS(tmp_ret, tmp_exposure_df.values, weights = tmp_amount, missing = 'drop').fit()
+            # mod = sm.OLS(tmp_ret, tmp_exposure_df.values, missing = 'drop').fit()
+            mod = sm.RLM(tmp_ret, tmp_exposure_df.values, M = sm.robust.norms.HuberT(), missing = 'drop').fit()
             # print(mod.summary())
 
             df_ret.loc[next_date] = mod.params
@@ -219,7 +220,8 @@ class StockFactor(Factor):
                 joint_stocks = tmp_ret.dropna().index.intersection(tmp_factor_exposure.dropna().index)
                 tmp_factor_exposure = tmp_factor_exposure.loc[joint_stocks]
                 tmp_stock_ret = tmp_ret.loc[joint_stocks]
-                tmp_ic = np.corrcoef(tmp_factor_exposure, tmp_stock_ret)[1,0]
+                # tmp_ic = np.corrcoef(tmp_factor_exposure, tmp_stock_ret)[1,0]
+                tmp_ic = spearmanr(tmp_factor_exposure, tmp_stock_ret)[0]
                 factor_ic.append(tmp_ic)
 
             df_ic.loc[next_date] = factor_ic

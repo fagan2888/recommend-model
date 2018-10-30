@@ -50,12 +50,15 @@ def valid_factor_update(ctx):
     '''valid stock factor update
     '''
 
-    for lookback in range(1, 100):
+    for lookback in range(100, 200):
+    # for lookback in [30]:
     # for lookback in [1] + list(range(10, 110, 10)):
         # df_valid, df_asset_inc = cal_valid_factor_t_sta(lookback)
-        df_valid, df_asset_inc = cal_valid_factor_return(lookback)
-        df_wr = valid_factor_rank(df_valid, df_asset_inc)
-        print(lookback, df_wr.mean())
+        df_valid, df_asset_inc = cal_valid_factor(lookback)
+        # df_wr = valid_factor_rank(df_valid, df_asset_inc)
+        # print(lookback, df_wr.mean())
+        turnover, nav = valid_factor_return(df_valid, df_asset_inc)
+        print("%d, %.2f, %.2f"%(lookback, turnover, nav))
 
     # start_date = '2010-02-01'
     # end_date = datetime.now().strftime('%Y-%m-%d')
@@ -96,19 +99,35 @@ def valid_factor_compare(ctx):
 def cal_valid_factor(lookback):
     '''calculate valid stock factor
     '''
-    start_date = '2010-02-01'
-    end_date = datetime.now().strftime('%Y-%m-%d')
-    # end_date = '2018-08-01'
+    algo = 0
+    start_date = '2010-01-01'
+    # end_date = datetime.now().strftime('%Y-%m-%d')
+    end_date = '2018-09-07'
     factor_ids = ['MZ.FA00%d0'%i for i in range(1, 10)] + ['MZ.FA10%d0'%i for i in range(1, 10)]
     blacklist = ['MZ.FA1050', 'MZ.FA1060', 'MZ.FA1070', 'MZ.FA1090']
     factor_ids = np.setdiff1d(factor_ids, blacklist)
     df_asset_nav = load_stock_factor_nav(factor_ids, start_date, end_date)
-    df_asset_inc = df_asset_nav.pct_change(lookback).dropna()
-    df_valid = df_asset_inc.apply(lambda x: x.nlargest(5), 1)
-    df_valid = df_valid.fillna(0.0)
-    df_valid[df_valid != 0.0] = 1.0
 
-    return df_valid, df_asset_inc
+    if algo == 0:
+        df_asset_inc = df_asset_nav.pct_change(lookback).dropna()
+        df_asset_inc_day = df_asset_nav.pct_change().dropna()
+        df_valid = df_asset_inc.apply(lambda x: x.nlargest(5), 1)
+        df_valid = df_valid.fillna(0.0)
+        df_valid[df_valid != 0.0] = 1.0
+    elif algo == 1:
+        df_asset_inc = df_asset_nav.pct_change(30).dropna()
+        df_base = df_asset_inc.mean(1)
+        df_base = pd.concat([df_base]*len(df_asset_inc.columns), 1)
+        df_base.columns = df_asset_inc.columns
+        df_relative = (np.sign(df_asset_inc - df_base) + 1) / 2
+        df_relative = df_relative.rolling(lookback).mean().dropna()
+        df_valid = df_relative.apply(lambda x: x.nlargest(5), 1)
+        df_valid = df_valid.fillna(0.0)
+        df_valid[df_valid != 0.0] = 1.0
+
+    df_asset_inc_day = df_asset_inc_day.reindex(df_valid.index)
+
+    return df_valid, df_asset_inc_day
 
 
 def cal_valid_factor_xgboost(lookback):
@@ -128,6 +147,7 @@ def cal_valid_factor_xgboost(lookback):
     # test_dates = df_asset_inc.index[df_asset_inc.index >= '2018-05-01']
     df_valid = pd.DataFrame(columns = df_asset_inc.columns)
     for date, next_date in zip(test_dates[:-forcast_period], test_dates[forcast_period:]):
+        print(next_date)
         # print(date)
 
         rank_pred = []
@@ -139,13 +159,13 @@ def cal_valid_factor_xgboost(lookback):
             test_x = df_asset_inc.loc[[next_date]]
             test_dmatrix = DMatrix(test_x)
 
-            # params = {'objective': 'rank:pairwise', 'eta': 0.1, 'gamma': 1.0, 'min_child_weight': 1, 'max_depth': 6, 'silent': True}
-            params = {'objective': 'rank:pairwise', 'silent': True}
+            params = {'objective': 'rank:pairwise', 'silent': True, 'lambda': 1e3, 'alpha': 0, 'max_depth': 3, 'eval_metric': 'logloss'}
             # xgb_model = xgb.train(params, train_dmatrix, num_boost_round=4, evals=[(valid_dmatrix, 'validation')])
-            xgb_model = xgb.train(params, train_dmatrix, num_boost_round=4)
+            xgb_model = xgb.train(params, train_dmatrix, num_boost_round=5000, early_stopping_rounds = 200, verbose_eval = False, evals = [(train_dmatrix, 'train')])
             pred = xgb_model.predict(test_dmatrix)[0]
             rank_pred.append(pred)
         df_valid.loc[next_date] = rank_pred
+        print(rank_pred)
 
     df_valid = df_valid.apply(lambda x: x.nlargest(5), 1)
     df_valid = df_valid.fillna(0.0)
@@ -233,7 +253,8 @@ def cal_valid_factor_return(lookback):
 def cal_valid_factor_t_sta(lookback):
     '''calculate valid stock factor
     '''
-    start_date = '2010-02-01'
+    algo = 1
+    start_date = '2010-01-01'
     end_date = datetime.now().strftime('%Y-%m-%d')
     # end_date = '2018-08-01'
     trade_dates = ATradeDate.week_trade_date(start_date, end_date)
@@ -253,7 +274,14 @@ def cal_valid_factor_t_sta(lookback):
     df_asset_ic = pd.concat([df_factor_ic, df_factor_ic_negative], 1)
     df_asset_ic = df_asset_ic.loc[:, factor_ids_valid]
     df_asset_ic = df_asset_ic.reindex(trade_dates)
-    df_asset_ic = df_asset_ic.rolling(lookback).mean().abs().dropna()
+
+    if algo == 1:
+        df_asset_ic = df_asset_ic.abs()
+        df_asset_ic = np.sign(df_asset_ic[df_asset_ic > 2])
+        df_asset_ic = df_asset_ic.fillna(0.0)
+        df_asset_ic = df_asset_ic.rolling(lookback).mean()
+    elif algo == 0:
+        df_asset_ic = df_asset_ic.rolling(lookback).mean().abs().dropna()
 
     df_valid = df_asset_ic.apply(lambda x: x.nlargest(5), 1)
     df_valid = df_valid.fillna(0.0)
@@ -277,6 +305,7 @@ def cal_valid_factor_wavelet(lookback):
     factor_ids = np.setdiff1d(factor_ids, blacklist)
     df_asset_nav = load_stock_factor_wavelet_nav(factor_ids, start_date, end_date)
     df_asset_inc = df_asset_nav.pct_change(lookback).dropna()
+
     df_valid = df_asset_inc.apply(lambda x: x.nlargest(5), 1)
     df_valid = df_valid.fillna(0.0)
     df_valid[df_valid != 0.0] = 1.0
@@ -316,10 +345,26 @@ def valid_factor_rank(df_valid, df_asset_inc):
     return df_wr
 
 
+def valid_factor_return(df_valid, df_asset_inc):
+
+    df_valid = df_valid[df_valid.index >= '2012-07-27']
+    df_asset_inc = df_asset_inc[df_asset_inc.index >= '2012-07-27']
+    df_valid = df_valid.shift(1)
+    df_valid_pos = df_valid / 5
+    df_valid_ret = (df_valid_pos * df_asset_inc).dropna(how = 'all')
+    df_valid_ret = df_valid_ret.sum(1)
+    df_valid_nav = (1 + df_valid_ret).cumprod()
+
+    to = df_valid_pos.diff().abs().sum().sum()
+    nav = df_valid_nav.iloc[-1]
+
+    return to, nav
+
+
 def load_stock_factor_nav(factor_ids, start_date, end_date):
 
+    # trade_dates = ATradeDate.week_trade_date(start_date, end_date)
     trade_dates = ATradeDate.week_trade_date(start_date, end_date)
-    # trade_dates = ATradeDate.trade_date(start_date, end_date)
     asset_navs = {}
     for factor_id in factor_ids:
         asset_navs[factor_id] = Asset.load_nav_series(factor_id, reindex = trade_dates)
@@ -353,7 +398,5 @@ def load_stock_factor_wavelet_nav(factor_ids, start_date, end_date):
     df_asset_navs = pd.DataFrame(asset_navs)
 
     return df_asset_navs
-
-
 
 
