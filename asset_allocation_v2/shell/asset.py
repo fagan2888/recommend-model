@@ -216,6 +216,41 @@ class WaveletAsset(Asset):
         return wavelet_nav_sr
 
 
+class LLTAsset(Asset):
+
+
+    def __init__(self, globalid, d, name = None, nav_sr = None):
+        super(LLTAsset, self).__init__(globalid, name = name, nav_sr = nav_sr)
+        self.__alpha = 2/(d+1)
+
+
+    def nav(self, begin_date = None, end_date = None, reindex = None):
+
+        nav_sr = super(LLTAsset, self).nav()
+
+        if nav_sr[-1] == nav_sr[-2]:
+            nav_sr = nav_sr[:-1]
+        alpha = self.__alpha
+
+        LLT = []
+        LLT.append(nav_sr[0])
+        LLT.append((1-alpha)*nav_sr[1] + alpha*LLT[0])
+        for i in range(2, len(nav_sr)):
+            LLT.append((alpha - alpha**2 / 4) * nav_sr[i] + (alpha**2 / 2) * nav_sr[i-1] - (alpha - 3 * alpha**2 / 4) * nav_sr[i-2] + 2 * (1 - alpha) * LLT[i-1] - (1 - alpha)**2 * LLT[i-2])
+        sr_LLT = pd.Series(LLT, index=nav_sr.index)
+
+
+        if begin_date is not None:
+            sr_LLT= sr_LLT[sr_LLT.index >= begin_date]
+        if end_date is not None:
+            sr_LLT = sr_LLT[sr_LLT.index <= end_date]
+        if reindex is not None:
+            sr_LLT = sr_LLT.reindex(reindex).fillna(method = 'pad')
+            sr_LLT = sr_LLT.loc[reindex]
+
+        return sr_LLT
+
+
 class StockAsset(Asset):
 
     __all_stock_info = None
