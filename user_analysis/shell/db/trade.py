@@ -44,6 +44,32 @@ class ts_order(Base):
     created_at = Column(DateTime)
 
 
+
+class ts_order_fund(Base):
+
+    __tablename__ = 'ts_order_fund'
+
+    id = Column(Integer, primary_key = True)
+    ts_uid = Column(String)
+    ts_portfolio_id = Column(String)
+    ts_txn_id = Column(String)
+    ts_portfolio_id = Column(String)
+    ts_trade_type = Column(Integer)
+    ts_trade_status = Column(Integer)
+    ts_trade_date = Column(Date)
+    ts_placed_date = Column(Date)
+    ts_placed_time = Column(DateTime)
+    ts_placed_amount = Column(Float)
+    ts_acked_amount = Column(Float)
+    ts_risk = Column(Float)
+
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+
+
 class ts_holding_nav(Base):
 
     __tablename__ = 'ts_holding_nav'

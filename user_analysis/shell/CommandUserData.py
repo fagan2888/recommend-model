@@ -157,6 +157,36 @@ def ts_holding(ctx):
 
 @data.command()
 @click.pass_context
+def ts_order_fund(ctx):
+
+    engine = database.connection('trade')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = session.query(trade.ts_order_fund.ts_trade_date, trade.ts_order_fund.ts_trade_type, trade.ts_order_fund.ts_trade_status, trade.ts_order_fund.ts_acked_amount).statement
+    ts_order_fund = pd.read_sql(sql, session.bind)
+    ts_order_fund = ts_order_fund.set_index(['ts_trade_date'])
+    session.commit()
+    session.close()
+
+    ts_order_fund.to_csv('tmp/ts_order_fund.csv')
+
+
+@data.command()
+@click.pass_context
+def ts_order_fund_analysis(ctx):
+
+    ts_order_fund = pd.read_csv('tmp/ts_order_fund.csv').dropna()
+    ts_order_fund = ts_order_fund.set_index('ts_trade_date')
+    #print(((ts_order_fund.ts_trade_type == 62) & (ts_order_fund.ts_trade_status == 6)))
+    ts_order_fund = ts_order_fund[((ts_order_fund.ts_trade_type == 62) & (ts_order_fund.ts_trade_status == 6)) | ((ts_order_fund.ts_trade_type == 64) & (ts_order_fund.ts_trade_status == 6))]
+
+    ts_acked_amount = ts_order_fund.ts_acked_amount
+    day_ts_acked_amount = ts_acked_amount.groupby(level = [0]).sum()
+    print(day_ts_acked_amount)
+    day_ts_acked_amount.to_csv('tmp/day_ts_acked_amount.csv')
+
+@data.command()
+@click.pass_context
 def user_question_answer(ctx):
 
     #engine = database.connection('recommend')
