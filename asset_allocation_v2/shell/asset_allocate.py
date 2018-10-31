@@ -468,7 +468,7 @@ class FactorIndexAllocate(Allocate):
             self.target = target
 
 
-        self.sfe = load_stock_factor_exposure(sf_ids = sf_ids, begin_date = '2007-10-01')
+        self.sfe = load_stock_factor_exposure(sf_ids=sf_ids, begin_date='2007-10-01')
 
     def allocate(self):
 
@@ -587,7 +587,6 @@ class SingleValidFactorAllocate(Allocate):
         return ws
 
 
-
 class MonetaryAllocate(Allocate):
 
 
@@ -610,7 +609,6 @@ class MonetaryAllocate(Allocate):
         scale_filter_codes = tmp_scale[tmp_scale > 1e10].index
         scale_filter_ids = [str(self.mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
 
-
         final_filter_ids = np.intersect1d(scale_filter_ids, valid_ids)
         tmp_df_inc = df_inc.copy()
         tmp_df_inc = tmp_df_inc[final_filter_ids]
@@ -631,6 +629,65 @@ class MonetaryAllocate(Allocate):
         all_monetary_fund_df = base_ra_fund.find_type_fund(3)
         all_monetary_fund_df = all_monetary_fund_df.set_index(['globalid'])
         return all_monetary_fund_df.index.astype(str).tolist()
+
+
+class LowRiskAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, alloc_num=2):
+        super(LowRiskAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        asset_ids = list(self.assets.keys())
+        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
+
+        s = 'perform %-12s' % self.__class__.__name__
+
+        with click.progressbar(
+                adjust_days, label=s.ljust(30),
+                item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+
+            pre_ws = {}
+            bond_holding_period = 0
+            for day in bar:
+
+                logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+                df_inc, bound = self.load_allocate_data(day, asset_ids)
+
+                ws = self.allocate_algo(day, df_inc, bound)
+                if (len(pre_ws) > 0) and (bond_holding_period < 4) and (bond_holding_period > 0) and (ws['120000039'] > 0):
+                    ws = pre_ws
+
+                pre_ws = ws
+                if ws['120000010'] > 0:
+                    bond_holding_period += 1
+                else:
+                    bond_holding_period = 0
+
+                for asset_id in list(ws.keys()):
+                    pos_df.loc[day, asset_id] = ws[asset_id]
+
+        return pos_df
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        ws = {}
+        df_inc = df_inc.iloc[-4:]
+        df_inc = df_inc.mean()
+        df_inc['bond'] = df_inc['120000010']+df_inc['120000011']
+        if df_inc['bond'] > df_inc['120000039']:
+            ws['120000010'] = 0.5
+            ws['120000011'] = 0.5
+            ws['120000039'] = 0.0
+        else:
+            ws['120000010'] = 0.0
+            ws['120000011'] = 0.0
+            ws['120000039'] = 1.0
+
+
+        return ws
 
 
 if __name__ == '__main__':

@@ -29,7 +29,8 @@ def load_A_feature():
 
     # Economy and Monetary Indicator
     df = pd.read_excel('data/ashare_macro_data.xls', index_col=0, parse_dates=True)
-    df.columns = ['GDP', 'EGDP', 'CPI', 'ECPI', 'SR', 'HLR', 'RR']
+    # df.columns = ['GDP', 'EGDP', 'CPI', 'ECPI', 'SR', 'HLR', 'RR']
+    df.columns = ['GDP', 'EGDP', 'CPI', 'ECPI', 'SR', 'HLR', 'RR', 'BY', 'SF', 'M2', 'EM2', 'OPMI', 'PMI']
     df = df.resample('m').last()
     df = df.fillna(method='pad')
     df = df.shift(1)
@@ -47,9 +48,13 @@ def load_A_feature():
     # Adjust Direction
     df['UEGDP'] = df['GDP'] - df['EGDP']
     df['UECPI'] = -(df['CPI'] - df['ECPI'])
+    df['UEM2'] = df['M2'] - df['EM2']
+
     df['SR'] = -df['SR']
     df['HLR'] = -df['HLR']
     df['RR'] = -df['RR']
+    df['BY'] = -df['BY']
+
     df['R1y'] = -df['R1y']
     df['R2y'] = -df['R2y']
 
@@ -111,7 +116,7 @@ def load_HK_feature():
     df_A_feature, _ = load_A_feature()
     df_SP_feature, _ = load_SP_feature()
 
-    df_A_feature = df_A_feature[['GDP', 'EGDP', 'CPI', 'ECPI', 'UEGDP', 'UECPI']]
+    df_A_feature = df_A_feature[['GDP', 'EGDP', 'CPI', 'ECPI', 'UEGDP', 'UECPI', 'SF', 'M2', 'UEM2', 'OPMI', 'PMI']]
     df_SP_feature = df_SP_feature[['FFTR', 'CPI', 'CCPI']]
     df = pd.merge(df_A_feature, df_SP_feature, left_index=True, right_index=True, how='inner')
 

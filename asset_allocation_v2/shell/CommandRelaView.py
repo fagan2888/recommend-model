@@ -51,7 +51,7 @@ def rela_view_update(ctx):
 
 @rv.command()
 @click.pass_context
-@click.option('--market', 'market', default='China', help='China/US/HK')
+@click.option('--market', 'market', default='CN', help='China/US/HK')
 @click.option('--start-date', 'start_date', default='2000-01-01', help='View start date')
 @click.option('--viewid', 'viewid', default='BL.000003', help='BL View id')
 def feature_thresh_update(ctx, market, start_date, viewid):
@@ -65,7 +65,7 @@ def feature_thresh_update(ctx, market, start_date, viewid):
         'HK': ['120000015']
     }
 
-    if market == 'China':
+    if market == 'CN':
         df_feature, df_nav = load_A_feature()
     elif market == 'US':
         df_feature, df_nav = load_SP_feature()

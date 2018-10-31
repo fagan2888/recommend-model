@@ -37,7 +37,7 @@ def load(gid, reindex=None):
         t1.c.ra_jensen,
     ]
     index_col = ['ra_date', 'ra_fund_id']
-    
+
     s = select(columns)
 
     if gid is not None:
@@ -46,7 +46,7 @@ def load(gid, reindex=None):
         return None
     # if xtypes is not None:
     #     s = s.where(t1.c.mz_type.in_(xtypes))
-    
+
     df = pd.read_sql(s, db, index_col=index_col, parse_dates=['ra_date'])
 
     if reindex is not None:
@@ -67,13 +67,13 @@ def tlsFundType(gid, default=0):
         '11210115' : 11102, # 下跌
         '11210116' : 11102, # 成长
         '11210117' : 11101, # 价值
-        
+
         '11220121' : 12101, # 利率债
         '11220122' : 12102, # 信用债
         '11220123' : 12103, # 可转债
-        
+
         '11230131' : 13101, # 货币
-        
+
         '11240141' : 11202, # 标普
         '11240142' : 14001, # 黄金
         '11240143' : 11205, # 恒生
@@ -85,14 +85,14 @@ def tlsFundType(gid, default=0):
         '19210115' : 11102, # 下跌
         '19210116' : 11102, # 成长
         '19210117' : 11101, # 价值
-        
+
         '19220121' : 12101, # 利率债
         '19220122' : 12102, # 信用债
         '19220123' : 12103, # 可转债
-        
+
         '19230131' : 13101, # 货币
         '11310100' : 13101, # 货币
-        
+
         '19240141' : 11202, # 标普
         '19240142' : 14001, # 黄金
         '19240143' : 11205, # 恒生

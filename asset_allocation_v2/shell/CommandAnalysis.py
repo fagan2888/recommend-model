@@ -784,3 +784,52 @@ def monetary_fund_rank(ctx):
         print(fund_month_r.index(allocate_r), len(fund_month_r), 1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
         ranks.append(1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
     print(np.mean(ranks))
+
+
+@analysis.command()
+@click.pass_context
+def fund_pool_dropdup(ctx):
+
+    pools_old = ['11110100', '11110106', '11110108', '11110110', '11110112', '11110114', '11110116', '11110200']
+    pools_new = ['11110103', '11110105', '11110107', '11110109', '11110111', '11110113', '11110115', '11110203']
+    pool_funds_all = []
+    pool_funds_origin = {}
+    pool_funds_new = {}
+    pool_funds_final = {}
+
+    for pool_loc in range(len(pools_old)):
+
+        pool_old = pools_old[pool_loc]
+        pool_new = pools_new[pool_loc]
+        df_old = asset_ra_pool_fund.load(pool_old)
+        df_new = asset_ra_pool_fund.load(pool_new)
+        df_old = df_old.loc[df_old.index.levels[0].max()]
+        df_new = df_new.loc[df_new.index.levels[0].max()]
+        funds_old = df_old.index.values
+        funds_new = df_new.index.values
+        tmp_origin = np.intersect1d(funds_old, funds_new)
+        tmp_new = np.setdiff1d(funds_new, funds_old)
+
+        pool_funds_all = np.union1d(tmp_origin, pool_funds_all)
+        pool_funds_origin[pool_old] = tmp_origin
+        pool_funds_new[pool_new] = tmp_new
+
+    for (pool_old, pool_new) in zip(pools_old, pools_new):
+
+        funds_new = pool_funds_new[pool_new]
+        funds_new = np.setdiff1d(funds_new, pool_funds_all)
+        funds_origin = pool_funds_origin[pool_old]
+        pool_funds_all = np.union1d(funds_new, pool_funds_all)
+        funds_final = np.union1d(funds_origin, funds_new)
+        pool_funds_final[pool_old] = funds_final
+
+    set_trace()
+
+
+
+
+
+
+
+
+

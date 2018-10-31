@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, LowRiskAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -1136,6 +1136,15 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MonetaryAllocate('ALC.000001', assets, trade_date, lookback, period=1)
         df = allocate.allocate()
 
+    elif algo == 18:
+
+        lookback = 4
+        # trade_date = ATradeDate.month_trade_date(begin_date=sdate, lookback=lookback)
+        trade_date = ATradeDate.week_trade_date(begin_date=sdate, lookback=lookback)
+        assets = dict([(asset_id, Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = LowRiskAllocate('ALC.000001', assets, trade_date, lookback, bound=bounds, period=1)
+        df = allocate.allocate()
+
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
@@ -1167,7 +1176,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 16, 17]
+    no_rolling_algos = [1, 16, 17, 18]
     if algo in no_rolling_algos:
         pass
     else:
