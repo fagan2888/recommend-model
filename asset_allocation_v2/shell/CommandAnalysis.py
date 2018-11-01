@@ -790,9 +790,13 @@ def monetary_fund_rank(ctx):
 @click.pass_context
 def fund_pool_dropdup(ctx):
 
+    df_fund = base_ra_fund.load()
+    df_fund = df_fund.set_index('globalid')
+
     pools_old = ['11110100', '11110106', '11110108', '11110110', '11110112', '11110114', '11110116', '11110200']
     pools_new = ['11110103', '11110105', '11110107', '11110109', '11110111', '11110113', '11110115', '11110203']
     pool_funds_all = []
+    pool_funds_old = {}
     pool_funds_origin = {}
     pool_funds_new = {}
     pool_funds_final = {}
@@ -807,6 +811,7 @@ def fund_pool_dropdup(ctx):
         df_new = df_new.loc[df_new.index.levels[0].max()]
         funds_old = df_old.index.values
         funds_new = df_new.index.values
+        pool_funds_old[pool_old] = funds_old
         tmp_origin = np.intersect1d(funds_old, funds_new)
         tmp_new = np.setdiff1d(funds_new, funds_old)
 
@@ -823,7 +828,19 @@ def fund_pool_dropdup(ctx):
         funds_final = np.union1d(funds_origin, funds_new)
         pool_funds_final[pool_old] = funds_final
 
-    set_trace()
+    for pool_old in pools_old:
+
+        funds_old = pool_funds_old[pool_old]
+        funds_new = pool_funds_final[pool_old]
+        funds_out = np.setdiff1d(funds_old, funds_new)
+        tr = 1 - len(np.intersect1d(funds_old, funds_new)) / len(funds_old)
+        tmp_fund = df_fund.loc[funds_new]
+        tmp_fund_out = df_fund.loc[funds_out]
+        print(pool_old, tr)
+        # print(df_fund.loc[funds_new])
+        print(tmp_fund_out)
+        tmp_fund.to_csv('fund_pool_online/pool_%s.csv' % pool_old, encoding='gbk')
+        print()
 
 
 

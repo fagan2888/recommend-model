@@ -9,6 +9,7 @@ from sqlalchemy import *
 
 from db import database, Nav
 from util.xdebug import dd
+from ipdb import set_trace
 
 
 def get_date_df(df, start_date, end_date):

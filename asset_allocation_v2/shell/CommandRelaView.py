@@ -34,7 +34,7 @@ def rv(ctx):
     macro timing
     '''
     if ctx.invoked_subcommand is None:
-        ctx.invoke(feature_thresh_update, market='China')
+        ctx.invoke(feature_thresh_update, market='CN')
         ctx.invoke(feature_thresh_update, market='US')
         ctx.invoke(feature_thresh_update, market='HK')
         # ctx.invoke(rela_view_update)
@@ -59,8 +59,11 @@ def feature_thresh_update(ctx, market, start_date, viewid):
     # market = 'China'
     # market = 'US'
     # market = 'HK'
+    print()
+    print(market)
+
     market_assets = {
-        'China': ['120000001', '120000002', '120000016', '120000053', '120000056', '120000058', '120000073', 'MZ.FA0010', 'MZ.FA0050', 'MZ.FA0070', 'MZ.FA1010', 'ALayer'],
+        'CN': ['120000001', '120000002', '120000016', '120000053', '120000056', '120000058', '120000073', 'MZ.FA0010', 'MZ.FA0050', 'MZ.FA0070', 'MZ.FA1010', 'ALayer'],
         'US': ['120000013', '120000020'],
         'HK': ['120000015']
     }
@@ -72,13 +75,13 @@ def feature_thresh_update(ctx, market, start_date, viewid):
     elif market == 'HK':
         df_feature, df_nav = load_HK_feature()
 
-    forcast_horizon = 3
+    forcast_horizon = 12
     df_label = cal_label(df_nav, forcast_horizon)
     ser_feature_thresh = cal_feature_thresh(df_feature, df_nav, df_label)
     ser_feature_thresh = test_feature(df_feature, df_label, ser_feature_thresh)
     df_view = cal_view(df_feature, ser_feature_thresh)
     df_view = df_view[df_view.index >= start_date]
-    df_view = df_view * 10
+    df_view = df_view * len(ser_feature_thresh)
 
     df_view = df_view.reset_index()
     df_view.columns = ['bl_date', 'bl_view']
@@ -108,7 +111,7 @@ def feature_thresh_update(ctx, market, start_date, viewid):
         df_old = pd.read_sql(s, db, index_col=['globalid', 'bl_date', 'bl_index_id'], parse_dates=['bl_date'])
         database.batch(db, t, df_new, df_old, timestamp=False)
 
-        print(df_new.tail())
+        # print(df_new.tail())
 
 
 def cal_label(df_nav, forcast_horizon):
@@ -141,7 +144,7 @@ def cal_feature_thresh(df_feature, df_nav, df_label):
 
         dfr1 = dfr[df_fea < fea_thresh]
         wr = len(dfr1[dfr1 < 0]) / len(dfr1)
-        print(feature, fea_thresh, wr, len(dfr1))
+        # print(feature, fea_thresh, wr, len(dfr1))
 
         if wr > 0.5:
             feature_thresh[feature] = fea_thresh
@@ -196,6 +199,7 @@ def cal_view(df_feature, ser_feature_thresh):
         df_view[indicator] = ser_indicator
 
     df_view = pd.DataFrame(df_view)
+    print(df_view.tail())
     df_view = df_view.sum(1) / df_view.count(1)
     df_view = 1 - 2*df_view
 
@@ -219,12 +223,13 @@ def test_feature(df_feature, df_label, ser_feature_thresh):
         FP = anovat.loc['Variety', 'PR(>F)']
         if FP < 0.1:
             ser_feature_thresh_new[indicator] = t
+            print(indicator, t)
 
-        print()
-        print('##########################################################################################')
-        print(indicator)
-        print(anovat)
-        print('##########################################################################################')
+            # print()
+            # print('##########################################################################################')
+            # print(indicator)
+            # print(anovat)
+            # print('##########################################################################################')
 
     ser_feature_thresh_new = pd.Series(ser_feature_thresh_new)
     return ser_feature_thresh_new

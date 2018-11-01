@@ -39,8 +39,10 @@ def load_A_feature():
     # Market Indicator
     YDs = 365
     df_nav = base_ra_index_nav.load_series('120000016')
-    df_ret_1y = df_nav.pct_change(YDs).reindex(df.index).to_frame('R1y')
-    df_ret_2y = df_nav.pct_change(2*YDs).reindex(df.index).to_frame('R2y')
+    df_ret_1y = df_nav.pct_change(YDs).resample('m').last()
+    df_ret_1y = df_ret_1y.reindex(df.index).to_frame('R1y')
+    df_ret_2y = df_nav.pct_change(2*YDs).resample('m').last()
+    df_ret_2y = df_ret_2y.reindex(df.index).to_frame('R2y')
 
     # Concat
     df = pd.concat([df, df_ret_1y, df_ret_2y], 1)
@@ -57,6 +59,11 @@ def load_A_feature():
 
     df['R1y'] = -df['R1y']
     df['R2y'] = -df['R2y']
+
+    # Delete Meaningless Feature
+    del df['EGDP']
+    del df['ECPI']
+    del df['EM2']
 
     return df, df_nav
 
@@ -78,7 +85,8 @@ def load_SP_feature():
 
     df = df.shift(1)
     df = df[df.index < now]
-    df = df[df.index > start]
+    if start is not None:
+        df = df[df.index > start]
 
     # Market Indicator
     YDs = 365
@@ -105,6 +113,10 @@ def load_SP_feature():
     df['GDP'] = -df['GDP']
     df['UE'] = -df['UE']
 
+    # Delete Meaningless Feature
+    del df['VIX']
+    del df['DVIX']
+
     return df, df_nav
 
 
@@ -116,7 +128,7 @@ def load_HK_feature():
     df_A_feature, _ = load_A_feature()
     df_SP_feature, _ = load_SP_feature()
 
-    df_A_feature = df_A_feature[['GDP', 'EGDP', 'CPI', 'ECPI', 'UEGDP', 'UECPI', 'SF', 'M2', 'UEM2', 'OPMI', 'PMI']]
+    df_A_feature = df_A_feature[['GDP', 'CPI', 'UEGDP', 'UECPI', 'SF', 'M2', 'UEM2', 'OPMI', 'PMI']]
     df_SP_feature = df_SP_feature[['FFTR', 'CPI', 'CCPI']]
     df = pd.merge(df_A_feature, df_SP_feature, left_index=True, right_index=True, how='inner')
 
@@ -126,8 +138,10 @@ def load_HK_feature():
     # Market Indicator
     YDs = 365
     df_nav = base_ra_index_nav.load_series('120000015')
-    df_ret_1y = df_nav.pct_change(YDs).reindex(df.index).to_frame('R1y')
-    df_ret_2y = df_nav.pct_change(2*YDs).reindex(df.index).to_frame('R2y')
+    df_ret_1y = df_nav.pct_change(YDs).resample('m').last()
+    df_ret_1y = df_ret_1y.reindex(df.index).to_frame('R1y')
+    df_ret_2y = df_nav.pct_change(2*YDs).resample('m').last()
+    df_ret_2y = df_ret_2y.reindex(df.index).to_frame('R2y')
 
     # Concat
     df = pd.concat([df, df_ret_1y, df_ret_2y], 1)
@@ -137,6 +151,5 @@ def load_HK_feature():
     # Adjust Direction
 
     return df, df_nav
-
 
 

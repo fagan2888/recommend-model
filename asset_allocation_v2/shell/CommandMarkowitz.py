@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, LowRiskAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, LowRiskAllocate, LowMddAllocate
 from trade_date import ATradeDate
 from view import View
 
@@ -66,15 +66,16 @@ logger = logging.getLogger(__name__)
 @click.option('--wavelet-filter-num', 'optwaveletfilternum', default=2, help=u'use wavelet filter num')
 @click.option('--short-cut', type=click.Choice(['high', 'low', 'default']))
 @click.option('--assets', multiple=True, help=u'assets')
+@click.option('--risk', 'optrisk', default='10,1,2,3,4,5,6,7,8,9', help=u'which risk to calc, [1-10]')
 @click.pass_context
-def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets):
+def markowitz(ctx, optnew, optappend, optfull, optid, optname, opttype, optreplace, startdate, enddate, lookback, adjust_period, optturnover, optbootstrap, optbootcount, optwavelet, optwaveletfilternum, optcpu, short_cut, assets, optrisk):
 
     '''markowitz group
     '''
     if ctx.invoked_subcommand is None:
         # click.echo('I was invoked without subcommand')
         if optnew:
-            ctx.invoke(pos, optid=optid, optappend=optappend, sdate = startdate, edate = enddate)
+            ctx.invoke(pos, optid=optid, optappend=optappend, sdate=startdate, edate=enddate, optrisk=optrisk)
             ctx.invoke(nav, optid=optid)
             ctx.invoke(turnover, optid=optid)
         else:
@@ -1030,7 +1031,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 10:
 
-        #固定波动率BL配置
+        # 固定波动率BL配置
         upper_risk = float(argv.get('upper_risk'))
         view_df = View.load_view(argv.get('bl_view_id'))
         confidence = float(argv.get('bl_confidence'))
@@ -1046,7 +1047,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 11:
 
-        #固定波动率滤波配置
+        # 固定波动率滤波配置
         upper_risk = float(argv.get('upper_risk', 0.018))
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
@@ -1058,7 +1059,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 12:
 
-        #固定波动率滤波Bl配置
+        # 固定波动率滤波Bl配置
         upper_risk = float(argv.get('upper_risk', 0.018))
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
@@ -1075,7 +1076,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 13:
 
-        #multifactor index
+        # multifactor index
         trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
         bound = AssetBound('asset_bound_default', [asset_id for asset_id in assets.keys()], upper = 0.1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
@@ -1085,7 +1086,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 14:
 
-        #single factor index
+        # single factor index
         lookback = int(argv.get('lookback'))
         period = int(argv.get('period'))
         factor_num = int(argv.get('factor_num'))
@@ -1117,7 +1118,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.allocate()
 
     elif algo == 16:
-        #use momentum algo to select valid factor
+        # use momentum algo to select valid factor
 
         lookback = int(argv.get('lookback', '26'))
         alloc_num = int(argv.get('alloc_num', '5'))
@@ -1128,7 +1129,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 17:
 
-        #monetary allocate
+        # monetary allocate
 
         lookback = int(argv.get('lookback', '52'))
         trade_date = ATradeDate.week_trade_date(begin_date=sdate, lookback=lookback)
@@ -1145,10 +1146,18 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = LowRiskAllocate('ALC.000001', assets, trade_date, lookback, bound=bounds, period=1)
         df = allocate.allocate()
 
+    elif algo == 19:
+
+        lookback = 365
+        trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback)
+        assets = dict([(asset_id, Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = LowMddAllocate('ALC.000001', assets, trade_date, lookback, bound=bounds, period=1)
+        df = allocate.allocate()
+
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
-        return;
+        return
 
     if 'return' in df.columns:
         df_sharpe = df[['return', 'risk', 'sharpe']].copy()
@@ -1176,7 +1185,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 16, 17, 18]
+    no_rolling_algos = [1, 16, 17, 18, 19]
     if algo in no_rolling_algos:
         pass
     else:
@@ -1282,7 +1291,7 @@ def nav_update(markowitz, alloc):
     for asset_id in df_pos.columns:
         data[asset_id] = Asset.load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
     df_nav = pd.DataFrame(data).fillna(method='pad')
-    df_inc  = df_nav.pct_change().fillna(0.0)
+    df_inc = df_nav.pct_change().fillna(0.0)
 
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')

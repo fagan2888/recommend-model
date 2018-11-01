@@ -690,6 +690,74 @@ class LowRiskAllocate(Allocate):
         return ws
 
 
+class LowMddAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, alloc_num=2):
+        super(LowMddAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+    def allocate(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        asset_ids = list(self.assets.keys())
+        # pos_df = pd.DataFrame(0, index=adjust_days, columns=asset_ids)
+        pos_df = pd.DataFrame(columns=asset_ids)
+
+        s = 'perform %-12s' % self.__class__.__name__
+
+        with click.progressbar(
+                adjust_days, label=s.ljust(30),
+                item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+
+            self.pos_df = None
+            for day in bar:
+
+                logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+                df_inc, bound = self.load_allocate_data(day, asset_ids)
+
+                ws = self.allocate_algo(day, df_inc, bound)
+
+                for asset_id in list(ws.keys()):
+                    pos_df.loc[day, asset_id] = ws[asset_id]
+                self.pos_df = pos_df
+
+        return pos_df
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        if self.pos_df is not None:
+            df_pos = self.pos_df.copy()
+            df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
+            df_nav = df_nav_portfolio.portfolio
+            # df_dd = 1 - df_nav / df_nav.cummax()
+            # today_dd = df_dd.iloc[-1]
+            today_dd = 1 - df_nav.iloc[-1] / df_nav.max()
+            print(day, today_dd)
+            if (today_dd > 0.007) or (df_pos.iloc[-1].loc['120000039'] > 0.0 and today_dd > 0):
+                ws = LowMddAllocate.money_alloc()
+            else:
+                ws = LowMddAllocate.bond_alloc()
+        else:
+            ws = LowMddAllocate.bond_alloc()
+
+        return ws
+
+    @staticmethod
+    def bond_alloc():
+        ws = {}
+        ws['120000010'] = 0.5
+        ws['120000011'] = 0.5
+        ws['120000039'] = 0.0
+        return ws
+
+    @staticmethod
+    def money_alloc():
+        ws = {}
+        ws['120000010'] = 0.0
+        ws['120000011'] = 0.0
+        ws['120000039'] = 1.0
+        return ws
+
+
 if __name__ == '__main__':
 
 
