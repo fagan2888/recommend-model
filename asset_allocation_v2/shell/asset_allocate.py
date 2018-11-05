@@ -933,6 +933,95 @@ class CppiAllocate(Allocate):
         return var
 
 
+class CppiAllocate2(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, forcast_days=90, var_percent=10):
+        super(CppiAllocate2, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        self.benchmark = base_ra_fund_nav.load_series('000198')
+
+    def allocate_cppi(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+
+        sdate = adjust_days[0].date()
+        # edate = sdate + timedelta(91)
+        # edate = datetime(edate.year, edate.month, edate.day)
+        # adjust_days = adjust_days[adjust_days <= edate]
+
+        asset_ids = list(self.assets.keys())
+
+        # pos_df = pd.DataFrame(0, index=adjust_days, columns=asset_ids)
+        pos_df = pd.DataFrame(columns=asset_ids)
+
+        # allocate monetary fund for first 3 years
+        edate_3m = sdate + timedelta(90)
+        edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
+        pre_3m = adjust_days[adjust_days <= edate_3m]
+        adjust_days = adjust_days[adjust_days > edate_3m]
+        pos_df = pd.DataFrame(columns=asset_ids, index=pre_3m)
+        pos_df = pos_df.fillna(0.0)
+        pos_df['11310102'] = 1.0
+
+        self.pos_df = pos_df
+        for day in adjust_days:
+
+            df_inc, bound = self.load_allocate_data(day, asset_ids)
+            ws = self.allocate_algo(day, df_inc, bound)
+
+            for asset_id in list(ws.keys()):
+                pos_df.loc[day, asset_id] = ws[asset_id]
+            self.pos_df = pos_df
+
+        return pos_df
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        df_pos = self.pos_df.copy()
+        df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
+        df_nav = df_nav_portfolio.portfolio
+
+        df_benchmark_nav = self.benchmark.reindex(df_nav.index).fillna(method='pad')
+        tmp_ret = df_nav.iloc[-1] / df_nav.iloc[0]
+        tmp_benchmark_ret = df_benchmark_nav.iloc[-1] / df_benchmark_nav.iloc[0]
+        tmp_overret = tmp_ret - tmp_benchmark_ret
+        print(tmp_ret, tmp_benchmark_ret)
+        if tmp_overret <= 0:
+            ws = CppiAllocate2.money_alloc()
+        else:
+            ws = CppiAllocate2.cppi_alloc(tmp_overret, tmp_ret, 100)
+        print(day, ws)
+
+        return ws
+
+    @staticmethod
+    def money_alloc():
+
+        ws = {}
+        ws['11210100'] = 0.0
+        ws['11210200'] = 0.0
+        ws['11310102'] = 1.0
+
+        return ws
+
+    @staticmethod
+    def cppi_alloc(overret, tnav, lr):
+
+        ws = {}
+        ws_b = overret / tnav / 2 * lr
+        ws_m = 1 - ws_b * 2
+        if ws_m > 0:
+            ws['11210100'] = ws_b
+            ws['11210200'] = ws_b
+            ws['11310102'] = ws_m
+        else:
+            ws['11210100'] = 0.5
+            ws['11210200'] = 0.5
+            ws['11310102'] = 0.0
+
+        return ws
+
+
+
 if __name__ == '__main__':
 
 
