@@ -938,13 +938,17 @@ class CppiAllocate2(Allocate):
     def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, forcast_days=90, var_percent=10):
         super(CppiAllocate2, self).__init__(globalid, assets, reindex, lookback, period, bound)
         self.benchmark = base_ra_fund_nav.load_series('000198')
+        self.forcast_days = forcast_days
+        self.var_percent = var_percent
 
     def allocate_cppi(self):
 
         adjust_days = self.index[self.lookback - 1::self.period]
 
         sdate = adjust_days[0].date()
-        # edate = sdate + timedelta(91)
+
+        # allocate period
+        # edate = sdate + timedelta(365)
         # edate = datetime(edate.year, edate.month, edate.day)
         # adjust_days = adjust_days[adjust_days <= edate]
 
@@ -976,6 +980,9 @@ class CppiAllocate2(Allocate):
 
     def allocate_algo(self, day, df_inc, bound):
 
+        bond_var = CppiAllocate2.bond_var(self.forcast_days, self.var_percent, day)
+        monetary_ret = 1.04**(self.forcast_days / 365) - 1
+
         df_pos = self.pos_df.copy()
         df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
         df_nav = df_nav_portfolio.portfolio
@@ -984,12 +991,21 @@ class CppiAllocate2(Allocate):
         tmp_ret = df_nav.iloc[-1] / df_nav.iloc[0]
         tmp_benchmark_ret = df_benchmark_nav.iloc[-1] / df_benchmark_nav.iloc[0]
         tmp_overret = tmp_ret - tmp_benchmark_ret
-        print(tmp_ret, tmp_benchmark_ret)
-        if tmp_overret <= 0:
+        # print(tmp_ret, tmp_benchmark_ret)
+
+        tmp_dd = 1 - df_nav.iloc[-1] / df_nav.max()
+        money_pos = df_pos.iloc[-1].loc['11310102']
+        print(tmp_dd)
+
+        if (tmp_dd > 0.005) or (money_pos == 1.0 and tmp_dd > 0):
+            ws = CppiAllocate2.money_alloc()
+        elif tmp_overret <= 0:
             ws = CppiAllocate2.money_alloc()
         else:
-            ws = CppiAllocate2.cppi_alloc(tmp_overret, tmp_ret, 100)
-        print(day, ws)
+            # 未来3个月有90%的概率战胜净值不跌到余额宝之下
+            lr = 1 / (monetary_ret - bond_var)
+            ws = CppiAllocate2.cppi_alloc(tmp_overret, tmp_ret, lr)
+        # print(day, ws)
 
         return ws
 
@@ -1009,17 +1025,26 @@ class CppiAllocate2(Allocate):
         ws = {}
         ws_b = overret / tnav / 2 * lr
         ws_m = 1 - ws_b * 2
-        if ws_m > 0:
+        if ws_m > 0.25:
             ws['11210100'] = ws_b
             ws['11210200'] = ws_b
             ws['11310102'] = ws_m
         else:
-            ws['11210100'] = 0.5
-            ws['11210200'] = 0.5
-            ws['11310102'] = 0.0
+            ws['11210100'] = 0.375
+            ws['11210200'] = 0.375
+            ws['11310102'] = 0.25
 
         return ws
 
+    @staticmethod
+    def bond_var(period, percent, day):
+        df_nav = base_ra_index_nav.load_series('120000010')
+        df_inc = df_nav.pct_change(period)
+        df_inc = df_inc.dropna()
+        df_inc = df_inc[df_inc.index < day]
+        df_inc = df_inc.iloc[-365:]
+        var = np.percentile(df_inc, percent)
+        return var
 
 
 if __name__ == '__main__':

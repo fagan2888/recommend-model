@@ -23,11 +23,11 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, base_ra_fund_nav, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
-from asset_allocate import CppiAllocate
+from asset_allocate import CppiAllocate, CppiAllocate2
 import DFUtil
 
 import traceback, code
@@ -873,11 +873,13 @@ def fund_pool_diff(ctx):
 @analysis.command()
 @click.pass_context
 def return_dist_cppi(ctx):
-    dates = pd.date_range('2012-3-1', '2018-3-1', freq='m')
+    dates = pd.date_range('2013-7-1', '2017-6-1', freq='m')
+    # dates = pd.date_range('2012-3-1', '2018-3-1', freq='m')
     # dates = pd.date_range('2012-3-1', '2017-6-1', freq='w')
     for forcast_days in [30, 60, 90, 180, 365]:
         for var_percent in [5, 10, 15, 20]:
-            df_dist = pd.Series(index=dates)
+            # df_dist = pd.Series(index=dates)
+            df_dist = pd.DataFrame(index=dates, columns=['6m', '7m', '8m', '9m', '10m', '11m', '12m'])
             for sdate in dates:
 
                 # sdate = datetime(2012, 3, 1)
@@ -893,22 +895,49 @@ def return_dist_cppi(ctx):
 
                 trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback)
                 assets = dict([(asset_id, Asset(asset_id)) for asset_id in pool_ids])
-                allocate = CppiAllocate('ALC.000001', assets, trade_date, lookback, bound=None, period=1, forcast_days=forcast_days, var_percent=var_percent)
+                allocate = CppiAllocate2('ALC.000001', assets, trade_date, lookback, bound=None, period=22, forcast_days=forcast_days, var_percent=var_percent)
                 # df_pos = allocate.allocate_money_cppi()
                 df_pos = allocate.allocate_cppi()
                 df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos.copy(), result_col='portfolio')
                 df_nav = df_nav_portfolio.portfolio
 
-                edate = sdate + timedelta(91)
-                edate = datetime(edate.year, edate.month, edate.day)
+                edates = []
+                tmp_rets = []
+                for months in range(6, 13):
+                    edate = sdate + timedelta(30*months+1)
+                    edate = datetime(edate.year, edate.month, edate.day)
+                    edates.append(edate)
+                    tmp_nav = df_nav[df_nav.index <= edate]
+                    tmp_rets.append(tmp_nav.iloc[-1]-1)
 
-                df_nav = df_nav[df_nav.index <= edate]
-                tmp_ret = df_nav.iloc[-1]-1
-                df_dist.loc[sdate] = tmp_ret
-                print(sdate, tmp_ret)
-            df_dist = df_dist.to_frame('ret3m')
+                # df_nav = df_nav[df_nav.index <= edate]
+                # tmp_ret = df_nav.iloc[-1]-1
+                # df_dist.loc[sdate] = tmp_ret
+                tmp_rets = np.round(tmp_rets, 4)
+                df_dist.loc[sdate] = tmp_rets
+
+                print(sdate, tmp_rets)
+            # df_dist = df_dist.to_frame('ret3m')
             # df_dist.to_csv('data/df_dist_money.csv', index_label='date')
             # df_dist.to_csv('data/df_dist_cppi.csv', index_label='date')
             df_dist.to_csv('data/cppi/df_dist_cppi_%d_%d.csv' % (forcast_days, var_percent), index_label='date')
 
+
+@analysis.command()
+@click.pass_context
+def return_wr(ctx):
+
+    df_nav = asset_mz_markowitz_nav.load_series('MZ.MO0020')
+    df_benchmark_nav = base_ra_fund_nav.load_series('000198')
+    df_nav = df_nav[df_nav.index >= '2014']
+    df_benchmark_nav = df_benchmark_nav[df_benchmark_nav.index >= '2014']
+
+    for days in [90, 180, 365]:
+        tr1 = df_benchmark_nav.pct_change(days).dropna()
+        tr2 = df_nav.pct_change(days).dropna()
+        tr2 = tr2 - 0.0015 * days / 365
+        trd = tr2 - tr1
+        wr = len(trd[trd > 0]) / len(trd)
+        set_trace()
+        print(days, wr, trd.mean())
 

@@ -1170,7 +1170,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         lookback = 365 * 10
         trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback)
         assets = dict([(asset_id, Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = CppiAllocate2('ALC.000001', assets, trade_date, lookback, bound=bounds, period=1)
+        allocate = CppiAllocate2('ALC.000001', assets, trade_date, lookback, bound=bounds, period=22)
         df = allocate.allocate_cppi()
 
 
