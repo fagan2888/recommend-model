@@ -1136,7 +1136,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MonetaryAllocate('ALC.000001', assets, trade_date, lookback, period=1)
         df = allocate.allocate()
 
-
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;

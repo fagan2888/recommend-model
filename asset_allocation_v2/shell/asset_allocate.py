@@ -292,12 +292,44 @@ class MzFixRiskBootWaveletAllocate(Allocate):
 
 
     def allocate_algo(self, day, df_inc, bound):
-        wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, list(self.assets.keys()))
-        df_inc = df_inc + wavelet_df_inc * 2
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
-        ws = dict(zip(df_inc.columns.ravel(), ws))
-        return ws
+        wavelet_asset_ids = ['120000001','120000002', '120000016', '120000080', '120000081', '120000082', 'ERI000001', 'ERI000002']
+        wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, wavelet_asset_ids)
+        wavelet_df_inc[wavelet_df_inc > 0] = 0.0
+        risk, returns, ws, sharpe = PF.markowitz_r_spe(wavelet_df_inc, wavelet_bound)
+        wavelet_ws = dict(zip(wavelet_df_inc.columns.ravel(), ws))
+        cols = []
+        for asset_id in df_inc.columns:
+            if asset_id in set(['120000039']):
+                cols.append(asset_id)
+        if len(cols) == 0:
+            return wavelet_ws
 
+        wavelet_inc = pd.Series(np.zeros(len(df_inc)), index = df_inc.index)
+        for asset_id in wavelet_ws:
+            pos = wavelet_ws[asset_id]
+            wavelet_inc = wavelet_inc + df_inc[asset_id] * pos
+
+        fix_risk_asset_inc = df_inc[cols]
+        fix_risk_asset_inc['wavelet_inc'] = wavelet_inc
+        fix_risk_asset_bound = []
+        for i in range(0, len(fix_risk_asset_inc.columns)):
+            asset_bound = bound[i]
+            asset_bound['upper'] = 1.0
+            fix_risk_asset_bound.append(asset_bound)
+
+        risk, returns, fix_risk_asset_ws, sharpe = PF.markowitz_bootstrape_fixrisk(fix_risk_asset_inc, fix_risk_asset_bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        fix_risk_asset_ws = dict(zip(fix_risk_asset_inc.columns.ravel(), fix_risk_asset_ws))
+        if fix_risk_asset_ws['120000039'] < 0.25:
+            fix_risk_asset_ws['wavelet_inc'] = fix_risk_asset_ws['wavelet_inc'] + fix_risk_asset_ws['120000039']
+            fix_risk_asset_ws['120000039'] = 0
+        final_ws = {}
+        for key in fix_risk_asset_ws.keys():
+            if key == 'wavelet_inc':
+                for wavelet_asset_id in wavelet_ws.keys():
+                    final_ws[wavelet_asset_id] = wavelet_ws[wavelet_asset_id] * fix_risk_asset_ws[key]
+            else:
+                final_ws[key] = fix_risk_asset_ws[key]
+        return final_ws
 
     def load_wavelet_allocate_data(self, day ,asset_ids):
 
