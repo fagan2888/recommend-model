@@ -55,10 +55,8 @@ logger = logging.getLogger(__name__)
 
 class AvgAllocate(Allocate):
 
-
     def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
         super(AvgAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-
 
     def allocate_algo(self, day, df_inc, bound):
         ws = [1.0 / len(df_inc.columns)] * len(df_inc.columns)
@@ -756,6 +754,180 @@ class LowMddAllocate(Allocate):
         ws['120000011'] = 0.0
         ws['120000039'] = 1.0
         return ws
+
+
+class CppiAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, forcast_days=90, var_percent=10):
+        super(CppiAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        self.forcast_days = forcast_days
+        self.var_percent = var_percent
+        self.money_return = 0.0001
+        self.maxdd_limit = -0.01
+
+    def allocate_cppi(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+
+        sdate = adjust_days[0].date()
+        edate = sdate + timedelta(91)
+        edate = datetime(edate.year, edate.month, edate.day)
+        adjust_days = adjust_days[adjust_days <= edate]
+        asset_ids = list(self.assets.keys())
+
+        # pos_df = pd.DataFrame(0, index=adjust_days, columns=asset_ids)
+        pos_df = pd.DataFrame(columns=asset_ids)
+
+        s = 'perform %-12s' % self.__class__.__name__
+
+        # with click.progressbar(
+                # adjust_days, label=s.ljust(30),
+                # item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+
+            # self.pos_df = None
+            # bond_var = CppiAllocate.bond_var(self.forcast_days, self.var_percent)
+            # for day in bar:
+
+                # logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+                # df_inc, bound = self.load_allocate_data(day, asset_ids)
+
+                # ws = self.allocate_algo(day, df_inc, bound, bond_var)
+
+                # for asset_id in list(ws.keys()):
+                    # pos_df.loc[day, asset_id] = ws[asset_id]
+                # self.pos_df = pos_df
+
+        self.pos_df = None
+        bond_var = CppiAllocate.bond_var(self.forcast_days, self.var_percent)
+        for day in adjust_days:
+            # print(day)
+
+            df_inc, bound = self.load_allocate_data(day, asset_ids)
+            ws = self.allocate_algo(day, df_inc, bound, bond_var)
+
+            for asset_id in list(ws.keys()):
+                pos_df.loc[day, asset_id] = ws[asset_id]
+            self.pos_df = pos_df
+
+        return pos_df
+
+    def allocate_money_cppi(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+
+        sdate = adjust_days[0].date()
+        edate = sdate + timedelta(365)
+        edate = datetime(edate.year, edate.month, edate.day)
+        adjust_days = adjust_days[adjust_days <= edate]
+        asset_ids = list(self.assets.keys())
+
+        # pos_df = pd.DataFrame(0, index=adjust_days, columns=asset_ids)
+        pos_df = pd.DataFrame(columns=asset_ids)
+
+        s = 'perform %-12s' % self.__class__.__name__
+
+        # with click.progressbar(
+                # adjust_days, label=s.ljust(30),
+                # item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+
+            # self.pos_df = None
+            # bond_var = CppiAllocate.bond_var(self.forcast_days, self.var_percent)
+            # for day in bar:
+
+                # logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+                # df_inc, bound = self.load_allocate_data(day, asset_ids)
+
+                # ws = self.allocate_algo(day, df_inc, bound, bond_var)
+
+                # for asset_id in list(ws.keys()):
+                    # pos_df.loc[day, asset_id] = ws[asset_id]
+                # self.pos_df = pos_df
+
+        edate_3m = sdate + timedelta(90)
+        edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
+        pre_3m = adjust_days[adjust_days <= edate_3m]
+        adjust_days = adjust_days[adjust_days > edate_3m]
+        pos_df = pd.DataFrame(columns=asset_ids, index=pre_3m)
+        pos_df = pos_df.fillna(0.0)
+        pos_df['11310102'] = 1.0
+
+        self.pos_df = None
+        bond_var = CppiAllocate.bond_var(self.forcast_days, self.var_percent)
+        for day in adjust_days:
+            # print(day)
+
+            df_inc, bound = self.load_allocate_data(day, asset_ids)
+            ws = self.allocate_algo(day, df_inc, bound, bond_var)
+
+            for asset_id in list(ws.keys()):
+                pos_df.loc[day, asset_id] = ws[asset_id]
+            self.pos_df = pos_df
+
+        return pos_df
+
+    def allocate_algo(self, day, df_inc, bound, bond_var):
+
+        money_return = self.money_return * self.forcast_days
+        if self.pos_df is not None:
+            df_pos = self.pos_df.copy()
+            df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
+            df_nav = df_nav_portfolio.portfolio
+            tmp_return = df_nav.iloc[-1] - 1
+            tmp_dd = 1 - df_nav.iloc[-1] / df_nav.max()
+            # money_pos = df_pos.iloc[-1].loc['MZ.MO0020']
+            money_pos = df_pos.iloc[-1].loc['11310102']
+            if tmp_return > 0.03 and ((tmp_dd > 0.008) or (money_pos == 1.0 and tmp_dd > 0)):
+                ws = CppiAllocate.money_alloc()
+            else:
+                ws = CppiAllocate.cppi_alloc(bond_var, money_return, tmp_return, self.maxdd_limit)
+        else:
+            # ws = CppiAllocate.money_alloc()
+            ws = CppiAllocate.cppi_alloc(bond_var, money_return, 0.0, self.maxdd_limit)
+
+        # print()
+        # print(ws)
+
+        return ws
+
+    @staticmethod
+    def bond_alloc():
+        ws = {}
+        ws['11210100'] = 0.5
+        ws['11210200'] = 0.5
+        # ws['MZ.MO0020'] = 0.0
+        ws['11310202'] = 0.0
+        return ws
+
+    @staticmethod
+    def money_alloc():
+        ws = {}
+        ws['11210100'] = 0.0
+        ws['11210200'] = 0.0
+        # ws['MZ.MO0020'] = 1.0
+        ws['11310102'] = 1.0
+        return ws
+
+    @staticmethod
+    def cppi_alloc(bond_var, money_return, tmp_return, maxdd_limit):
+        # tmp_return = min(-maxdd_limit, tmp_return)
+        tmp_return = min(-bond_var, tmp_return)
+        ws_m = (-tmp_return - bond_var) / (money_return - bond_var)
+        ws_b = 1 - ws_m
+        ws = {}
+        ws['11210100'] = ws_b / 2
+        ws['11210200'] = ws_b / 2
+        # ws['MZ.MO0020'] = ws_m
+        ws['11310102'] = ws_m
+
+        return ws
+
+    @staticmethod
+    def bond_var(period, percent):
+        df_nav = base_ra_index_nav.load_series('120000010')
+        df_inc = df_nav.pct_change(period)
+        df_inc = df_inc.dropna()
+        var = np.percentile(df_inc, percent)
+        return var
 
 
 if __name__ == '__main__':

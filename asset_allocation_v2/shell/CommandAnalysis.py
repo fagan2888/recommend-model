@@ -27,6 +27,8 @@ from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
+from asset_allocate import CppiAllocate
+import DFUtil
 
 import traceback, code
 
@@ -843,10 +845,70 @@ def fund_pool_dropdup(ctx):
         print()
 
 
+@analysis.command()
+@click.pass_context
+def fund_pool_diff(ctx):
+
+    df_fund = base_ra_fund.load()
+    df_fund = df_fund.set_index('globalid')
+
+    pools_id = ['11110103', '11110105', '11110107', '11110109', '11110111', '11110113', '11110115', '11110203']
+    pools_old = ['11110100', '11110106', '11110108', '11110110', '11110112', '11110114', '11110116', '11110200']
+    for (pool_id, online_id) in zip(pools_id, pools_old):
+
+        df = asset_ra_pool_fund.load(pool_id)
+        last_date = df.index.levels[0][-2]
+        this_date = df.index.levels[0][-1]
+        funds_old = df.loc[last_date].index
+        funds_new = df.loc[this_date].index
+        funds_out = np.setdiff1d(funds_old, funds_new)
+        funds_in = np.setdiff1d(funds_new, funds_old)
+        print(online_id)
+        # print(df_fund.loc[funds_out])
+        print(df_fund.loc[funds_in])
+        print()
+        # print(df_fund.loc[funds_in])
 
 
+@analysis.command()
+@click.pass_context
+def return_dist_cppi(ctx):
+    dates = pd.date_range('2012-3-1', '2018-3-1', freq='m')
+    # dates = pd.date_range('2012-3-1', '2017-6-1', freq='w')
+    for forcast_days in [30, 60, 90, 180, 365]:
+        for var_percent in [5, 10, 15, 20]:
+            df_dist = pd.Series(index=dates)
+            for sdate in dates:
 
+                # sdate = datetime(2012, 3, 1)
+                sdate = datetime(sdate.year, sdate.month, sdate.day)
+                lookback = 365
+                pool_ids = ['11210100', '11210200', '11310102']
+                dict_nav = {}
+                for pool_id in pool_ids:
+                    dict_nav[pool_id] = Asset.load_nav_series(pool_id)
+                df_nav = pd.DataFrame(dict_nav)
+                df_inc = df_nav.pct_change()
+                df_inc = df_inc.dropna()
 
+                trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback)
+                assets = dict([(asset_id, Asset(asset_id)) for asset_id in pool_ids])
+                allocate = CppiAllocate('ALC.000001', assets, trade_date, lookback, bound=None, period=1, forcast_days=forcast_days, var_percent=var_percent)
+                # df_pos = allocate.allocate_money_cppi()
+                df_pos = allocate.allocate_cppi()
+                df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos.copy(), result_col='portfolio')
+                df_nav = df_nav_portfolio.portfolio
 
+                edate = sdate + timedelta(91)
+                edate = datetime(edate.year, edate.month, edate.day)
+
+                df_nav = df_nav[df_nav.index <= edate]
+                tmp_ret = df_nav.iloc[-1]-1
+                df_dist.loc[sdate] = tmp_ret
+                print(sdate, tmp_ret)
+            df_dist = df_dist.to_frame('ret3m')
+            # df_dist.to_csv('data/df_dist_money.csv', index_label='date')
+            # df_dist.to_csv('data/df_dist_cppi.csv', index_label='date')
+            df_dist.to_csv('data/cppi/df_dist_cppi_%d_%d.csv' % (forcast_days, var_percent), index_label='date')
 
 

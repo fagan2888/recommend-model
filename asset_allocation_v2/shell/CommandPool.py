@@ -20,6 +20,7 @@ import Const
 import DFUtil
 import LabelAsset
 import Financial as fin
+from ipdb import set_trace
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -27,9 +28,10 @@ from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
 from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_stock_factor, asset_fund_factor
-from asset import StockFundAsset
+from asset import StockFundAsset, Asset
+from asset_allocate import MonetaryAllocate
 from trade_date import ATradeDate
-from ipdb import set_trace
+from monetary_fund_filter import MonetaryFundFilter
 
 import traceback, code
 
@@ -240,6 +242,103 @@ def fund_update_factor_pool(pool, adjust_points, optlimit, optcalc):
                 for code in ra_fund.index:
                     ra_fund_id = ra_fund.loc[code, 'globalid']
                     data.append([ra_pool, day, ra_fund_id, code])
+        fund_df = pd.DataFrame(data, columns = ['ra_pool', 'ra_date', 'ra_fund_id', 'ra_fund_code'])
+        fund_df = fund_df.set_index(['ra_pool', 'ra_date', 'ra_fund_id'])
+
+        df_new = fund_df
+        columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
+        s = select(columns)
+        db = database.connection('asset')
+        ra_pool_fund_t = Table('ra_pool_fund', MetaData(bind=db), autoload=True)
+        s = s.where(ra_pool_fund_t.c.ra_pool.in_(df_new.index.get_level_values(0).tolist()))
+        df_old = pd.read_sql(s, db, index_col = df_new.index.names)
+        database.batch(db, ra_pool_fund_t, df_new, df_old)
+
+
+@pool.command()
+@click.option('--datadir', '-d', type=click.Path(exists=True), help='dir used to store tmp data')
+@click.option('--start-date', 'startdate', default='2011-02-01', help='start date to calc')
+@click.option('--end-date', 'enddate', help='end date to calc')
+@click.option('--period', 'optperiod', type=int, default=1, help='adjust period by week')
+@click.option('--id', 'optid', help='fund pool id to update')
+@click.option('--list/--no-list', 'optlist', default=False, help='list pool to update')
+@click.option('--calc/--no-calc', 'optcalc', default=True, help='re calc label')
+@click.option('--limit', 'optlimit', type=int, default=2, help='how many fund selected for each category')
+@click.option('--points', 'optpoints', help='Adjust points')
+@click.pass_context
+def fund_monetary_pool(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
+    '''run constant risk model
+    '''
+    if datadir is None:
+        datadir = "./tmp"
+    Const.datadir = datadir
+
+    if not enddate:
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
+    if optid is not None:
+        pools = [s.strip() for s in optid.split(',')]
+    else:
+        pools = None
+    df_pool = load_pools(pools)
+
+    if optlist:
+        #print df_pool
+        #df_pool.reindex_axis(['ra_type','ra_date_type', 'ra_fund_type', 'ra_lookback', 'ra_name'], axis=1)
+        df_pool['ra_name'] = df_pool['ra_name'].map(lambda e: e.decode('utf-8'))
+        print(tabulate(df_pool, headers='keys', tablefmt='psql'))
+        return 0
+
+    if optpoints is not None:
+        adjust_points = pd.DatetimeIndex(optpoints.split(','))
+    else:
+        adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate, enddate=enddate)
+
+    print("adjust point:")
+    for date in adjust_points:
+        print(date.strftime("%Y-%m-%d"))
+
+    for _, pool in df_pool.iterrows():
+        fund_update_monetary_pool(pool, adjust_points, optlimit, optcalc)
+
+
+def fund_update_monetary_pool(pool, adjust_points, optlimit, optcalc):
+    ''' re calc fund for single fund pool
+    '''
+    lookback = pool.ra_lookback
+    limit = optlimit
+
+    if optcalc:
+        #
+        # 计算每个调仓点的最新配置
+        #
+        data = []
+
+        with click.progressbar(length=len(adjust_points), label='calc pool %s' % (pool.id)) as bar:
+            for day in adjust_points:
+                bar.update(1)
+                mnf = MonetaryFundFilter()
+                mnf.handle()
+                asset_ids = MonetaryAllocate.all_monetary_fund_globalid()
+                trade_dates = ATradeDate.week_trade_date()
+                dict_nav = {}
+                for asset_id in asset_ids:
+                    dict_nav[asset_id] = Asset.load_nav_series(asset_id, reindex=trade_dates)
+                df_nav = pd.DataFrame(dict_nav).fillna(method='pad')
+                df_inc = df_nav.pct_change().fillna(0.0)
+
+                codes = pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc)
+
+                print(day, len(codes), codes)
+                if codes is None or len(codes) == 0:
+                    continue
+                ra_fund = base_ra_fund.load(globalids=codes)
+                ra_fund = ra_fund.set_index(['ra_code'])
+                ra_pool = pool['id']
+                for code in ra_fund.index:
+                    ra_fund_id = ra_fund.loc[code, 'globalid']
+                    data.append([ra_pool, day, ra_fund_id, code])
+
         fund_df = pd.DataFrame(data, columns = ['ra_pool', 'ra_date', 'ra_fund_id', 'ra_fund_code'])
         fund_df = fund_df.set_index(['ra_pool', 'ra_date', 'ra_fund_id'])
 
@@ -1021,5 +1120,39 @@ def pool_by_single_factor(pool, day, lookback, limit, ffr, ffe):
     final_codes_large = df_score.index[:5*limit]
 
     return final_codes, final_codes_large
+
+
+def pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc):
+
+    fund_status = mnf.fund_status
+    fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
+    fund_status = fund_status[fund_status.fi_yingmi_subscribe_status == 0.0]
+    valid_ids = fund_status.index
+
+    tmp_scale = mnf.fund_scale.loc[day]
+    tmp_scale = tmp_scale.sort_values(ascending=False)
+    scale_filter_codes = tmp_scale[tmp_scale > 1e10].index
+    scale_filter_ids = [str(mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
+
+    final_filter_ids = np.intersect1d(scale_filter_ids, valid_ids)
+    tmp_df_inc = df_inc.copy()
+    tmp_df_inc = tmp_df_inc[final_filter_ids]
+    tmp_df_inc = tmp_df_inc[tmp_df_inc.index < day]
+    tmp_df_inc = tmp_df_inc.iloc[-lookback:]
+
+    pool_codes = []
+    num = limit
+    rs = tmp_df_inc.mean()
+    rs = rs.sort_values(ascending=False)
+    num = min(num, len(rs))
+    for i in range(0, num):
+        fund_globalid = rs.index[i]
+        pool_codes.append(fund_globalid)
+
+    return pool_codes
+
+
+
+
 
 
