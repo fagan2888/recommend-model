@@ -769,10 +769,10 @@ class CppiAllocate(Allocate):
 
         adjust_days = self.index[self.lookback - 1::self.period]
 
-        sdate = adjust_days[0].date()
-        edate = sdate + timedelta(91)
-        edate = datetime(edate.year, edate.month, edate.day)
-        adjust_days = adjust_days[adjust_days <= edate]
+        # sdate = adjust_days[0].date()
+        # edate = sdate + timedelta(91)
+        # edate = datetime(edate.year, edate.month, edate.day)
+        # adjust_days = adjust_days[adjust_days <= edate]
         asset_ids = list(self.assets.keys())
 
         # pos_df = pd.DataFrame(0, index=adjust_days, columns=asset_ids)
@@ -884,8 +884,7 @@ class CppiAllocate(Allocate):
             # ws = CppiAllocate.money_alloc()
             ws = CppiAllocate.cppi_alloc(bond_var, money_return, 0.0, self.maxdd_limit)
 
-        # print()
-        # print(ws)
+        print(day, ws)
 
         return ws
 
@@ -914,10 +913,14 @@ class CppiAllocate(Allocate):
         ws_m = (-tmp_return - bond_var) / (money_return - bond_var)
         ws_b = 1 - ws_m
         ws = {}
-        ws['11210100'] = ws_b / 2
-        ws['11210200'] = ws_b / 2
-        # ws['MZ.MO0020'] = ws_m
-        ws['11310102'] = ws_m
+        if ws_m < 0.25:
+            ws['11210100'] = 0.375
+            ws['11210200'] = 0.375
+            ws['11310102'] = 0.25
+        else:
+            ws['11210100'] = ws_b / 2
+            ws['11210200'] = ws_b / 2
+            ws['11310102'] = ws_m
 
         return ws
 
