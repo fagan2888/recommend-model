@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, LowRiskAllocate, LowMddAllocate, CppiAllocate, CppiAllocate2
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, LowRiskAllocate, LowMddAllocate, CppiAllocate, CppiAllocate2, RpAllocate, CppiAllocate3
 from trade_date import ATradeDate
 from view import View
 
@@ -1174,6 +1174,24 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.allocate_cppi()
 
 
+    elif algo == 22:
+
+        lookback = 365
+        trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback)
+        assets = dict([(asset_id, Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = RpAllocate('ALC.000001', assets, trade_date, lookback, bound=bounds, period=1)
+        df = allocate.allocate()
+
+
+    elif algo == 23:
+
+        lookback = 365
+        trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback)
+        assets = dict([(asset_id, Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = CppiAllocate3('ALC.000001', assets, trade_date, lookback, bound=bounds, period=22)
+        df = allocate.allocate_cppi()
+
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return
@@ -1204,7 +1222,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df = df.round(4)             # 四舍五入到万分位
 
     #每四周做平滑
-    no_rolling_algos = [1, 16, 17, 18, 19, 20, 21]
+    no_rolling_algos = [1, 16, 17, 18, 19, 20, 21, 23]
     if algo in no_rolling_algos:
         pass
     else:

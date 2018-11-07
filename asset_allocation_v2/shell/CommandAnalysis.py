@@ -23,11 +23,12 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, base_ra_fund_nav, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav
+from db import database, base_ra_index_nav, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, base_ra_fund_nav, asset_ra_pool, asset_ra_pool_nav, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
-from asset_allocate import CppiAllocate, CppiAllocate2
+from asset_allocate import CppiAllocate, CppiAllocate2, CppiAllocate3
+from view import View
 import DFUtil
 
 import traceback, code
@@ -873,11 +874,15 @@ def fund_pool_diff(ctx):
 @analysis.command()
 @click.pass_context
 def return_dist_cppi(ctx):
-    dates = pd.date_range('2013-7-1', '2017-6-1', freq='m')
+    dates = pd.date_range('2013-7-1', '2017-11-1', freq='m')
     # dates = pd.date_range('2012-3-1', '2018-3-1', freq='m')
     # dates = pd.date_range('2012-3-1', '2017-6-1', freq='w')
-    for forcast_days in [30, 60, 90, 180, 365]:
-        for var_percent in [5, 10, 15, 20]:
+
+    # for forcast_days in [30, 60, 90, 180, 365]:
+        # for var_percent in [5, 10, 15, 20]:
+
+    for forcast_days in [90]:
+        for var_percent in [10]:
             # df_dist = pd.Series(index=dates)
             df_dist = pd.DataFrame(index=dates, columns=['6m', '7m', '8m', '9m', '10m', '11m', '12m'])
             for sdate in dates:
@@ -895,7 +900,7 @@ def return_dist_cppi(ctx):
 
                 trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback)
                 assets = dict([(asset_id, Asset(asset_id)) for asset_id in pool_ids])
-                allocate = CppiAllocate2('ALC.000001', assets, trade_date, lookback, bound=None, period=22, forcast_days=forcast_days, var_percent=var_percent)
+                allocate = CppiAllocate3('ALC.000001', assets, trade_date, lookback, bound=None, period=22, forcast_days=forcast_days, var_percent=var_percent)
                 # df_pos = allocate.allocate_money_cppi()
                 df_pos = allocate.allocate_cppi()
                 df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos.copy(), result_col='portfolio')
@@ -941,3 +946,81 @@ def return_wr(ctx):
         set_trace()
         print(days, wr, trd.mean())
 
+
+@analysis.command()
+@click.pass_context
+def bond_wr(ctx):
+
+    df_nav_bond_1 = asset_ra_pool_nav.load_series('11210100', 0, 9)
+    df_nav_bond_2 = asset_ra_pool_nav.load_series('11210200', 0, 9)
+    df_ret_bond_1 = df_nav_bond_1.pct_change().dropna()
+    df_ret_bond_2 = df_nav_bond_2.pct_change().dropna()
+    df_nav_bond = (1 + df_ret_bond_1*0.5 + df_ret_bond_2*0.5).cumprod()
+    df_nav_money = asset_ra_pool_nav.load_series('11310102', 0, 9)
+    common_dates = df_nav_bond.index.intersection(df_nav_money.index)
+    df_nav_bond = df_nav_bond.reindex(common_dates)
+    df_nav_money = df_nav_money.reindex(common_dates)
+
+    df_ret_bond = df_nav_bond.pct_change().dropna()
+    df_ret_money = df_nav_money.pct_change().dropna()
+    df_ret_bond = df_ret_bond.resample('m').sum()
+    df_ret_money = df_ret_money.resample('m').sum()
+    dfd = df_ret_bond - df_ret_money
+    dfd_future = dfd.shift(-1)
+    dfd = dfd.iloc[:-1]
+    dfd_future = dfd_future.iloc[:-1]
+    dfd_right = dfd * dfd_future
+    wr = (dfd_right > 0).sum() / len(dfd_right)
+    print(wr)
+
+    dfd_up = dfd_future[dfd > 0]
+    dfd_down = dfd_future[dfd < 0]
+    print(dfd_up.mean(), dfd_up.std())
+    print(dfd_down.mean(), dfd_down.std())
+
+
+@analysis.command()
+@click.pass_context
+def bond_view_wr(ctx):
+
+    df_nav_bond_1 = asset_ra_pool_nav.load_series('11210100', 0, 9)
+    df_nav_bond_2 = asset_ra_pool_nav.load_series('11210200', 0, 9)
+    df_ret_bond_1 = df_nav_bond_1.pct_change().dropna()
+    df_ret_bond_2 = df_nav_bond_2.pct_change().dropna()
+    df_nav_bond = (1 + df_ret_bond_1*0.5 + df_ret_bond_2*0.5).cumprod()
+    df_nav_money = asset_ra_pool_nav.load_series('11310102', 0, 9)
+    common_dates = df_nav_bond.index.intersection(df_nav_money.index)
+    df_nav_bond = df_nav_bond.reindex(common_dates)
+    df_nav_money = df_nav_money.reindex(common_dates)
+
+    df_ret_bond = df_nav_bond.pct_change().dropna()
+    df_ret_money = df_nav_money.pct_change().dropna()
+    df_ret_bond = df_ret_bond.resample('m').sum()
+    df_ret_money = df_ret_money.resample('m').sum()
+    dfd = df_ret_bond - df_ret_money
+
+    bond_view = View.load_view('BL.000001')
+    bond_view = bond_view['120000010'].dropna()
+    bond_view = bond_view.resample('m').last()
+    bond_view = bond_view.reindex(dfd.index).dropna()
+    dfd = dfd.reindex(bond_view.index)
+
+    dfd_right = dfd * bond_view
+    wr = (dfd_right > 0).sum() / len(dfd_right)
+    print(wr)
+
+    dfd_up = dfd[bond_view > 0]
+    dfd_down = dfd[bond_view < 0]
+    print(dfd_up.mean(), dfd_up.std())
+    print(dfd_down.mean(), dfd_down.std())
+
+
+@analysis.command()
+@click.pass_context
+def load_money_return(ctx):
+    df = Asset.load_nav_series('120000039')
+    df = df.resample('m').last()
+    df = df.pct_change(12)
+    df = df.shift(-12).dropna()
+    df.to_csv('df12m.csv')
+    set_trace()

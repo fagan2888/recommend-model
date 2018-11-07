@@ -148,7 +148,6 @@ def bond_view_update(ctx, startdate, enddate, viewid):
         print(df_new.tail())
 
 
-
 @mt.command()
 @click.option('--start-date', 'startdate', default='2012-07-27', help='start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help='start date to calc')
