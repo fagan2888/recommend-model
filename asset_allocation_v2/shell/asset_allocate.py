@@ -603,13 +603,16 @@ class MonetaryAllocate(Allocate):
         fund_status = self.mnf.fund_status
         fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
         fund_status = fund_status[fund_status.fi_yingmi_subscribe_status == 0.0]
-        valid_ids = fund_status.index
+        valid_ids_1 = fund_status.index
+        fund_fee = self.mnf.fund_fee.ff_fee
+        valid_ids_2 = fund_fee[fund_fee >= 0.2].index
+        valid_ids_2 = [str(fund_code) for fund_code in valid_ids_2]
+        valid_ids = np.intersect1d(valid_ids_1, valid_ids_2)
 
         tmp_scale = self.mnf.fund_scale.loc[day]
         tmp_scale = tmp_scale.sort_values(ascending=False)
         scale_filter_codes = tmp_scale[tmp_scale > 1e10].index
         scale_filter_ids = [str(self.mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
-
 
         final_filter_ids = np.intersect1d(scale_filter_ids, valid_ids)
         tmp_df_inc = df_inc.copy()
@@ -623,7 +626,9 @@ class MonetaryAllocate(Allocate):
         for i in range(0, num):
             fund_globalid = rs.index[i]
             ws[fund_globalid] = 1.0 / num
+            print(fund_globalid, fund_fee.loc[int(fund_globalid)])
 
+        # print(ws)
         return ws
 
     @staticmethod

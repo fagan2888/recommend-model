@@ -9,7 +9,7 @@ from datetime import datetime
 import sys
 sys.path.append('shell/')
 from db import base_ra_fund, base_fund_infos
-from db import asset_fund
+from db import asset_fund, base_fund_fee
 
 
 class MonetaryFundFilter:
@@ -83,6 +83,12 @@ class MonetaryFundFilter:
 
         return fund_nav_df
 
+    def load_fund_fee(self, fund_codes):
+
+        df_fund_fee = base_fund_fee.load(codes=fund_codes, xtype=1)
+
+        return df_fund_fee
+
     def handle(self):
 
         self.fund_info = self.load_fund_info()
@@ -90,6 +96,7 @@ class MonetaryFundFilter:
         self.fund_scale = self.load_scale(self.fund_info.ra_code.values)
         self.fund_id_dict = dict(zip(self.fund_info.ra_code, self.fund_info.globalid))
         self.bank_funds = asset_fund.load_fund_by_shholdercodes(self.shholdercodes)
+        self.fund_fee = self.load_fund_fee(self.fund_info.ra_code.values)
 
 
 if __name__ == '__main__':
