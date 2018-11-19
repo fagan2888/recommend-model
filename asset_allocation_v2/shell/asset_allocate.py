@@ -622,7 +622,6 @@ class SingleValidFactorAllocate(Allocate):
         return ws
 
 
-
 class MonetaryAllocate(Allocate):
 
 
@@ -661,7 +660,7 @@ class MonetaryAllocate(Allocate):
         for i in range(0, num):
             fund_globalid = rs.index[i]
             ws[fund_globalid] = 1.0 / num
-            print(fund_globalid, fund_fee.loc[int(fund_globalid)])
+            # print(fund_globalid, fund_fee.loc[int(fund_globalid)])
 
         # print(ws)
         return ws
@@ -671,6 +670,111 @@ class MonetaryAllocate(Allocate):
         all_monetary_fund_df = base_ra_fund.find_type_fund(3)
         all_monetary_fund_df = all_monetary_fund_df.set_index(['globalid'])
         return all_monetary_fund_df.index.astype(str).tolist()
+
+
+class CppiAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, forcast_days=90, var_percent=10):
+        super(CppiAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        self.forcast_days = forcast_days
+        self.var_percent = var_percent
+
+    def allocate_cppi(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        sdate = adjust_days[0].date()
+
+        asset_ids = list(self.assets.keys())
+        pos_df = pd.DataFrame(columns=asset_ids)
+
+        # allocate monetary fund for first 3 years
+        edate_3m = sdate + timedelta(90)
+        edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
+        pre_3m = adjust_days[adjust_days <= edate_3m]
+        adjust_days = adjust_days[adjust_days > edate_3m]
+        pos_df = pd.DataFrame(columns=asset_ids, index=pre_3m)
+        pos_df = pos_df.fillna(0.0)
+        pos_df['120000039'] = 1.0
+
+        self.pos_df = pos_df
+        for day in adjust_days:
+
+            df_inc, bound = self.load_allocate_data(day, asset_ids)
+            ws = self.allocate_algo(day, df_inc, bound)
+
+            for asset_id in list(ws.keys()):
+                pos_df.loc[day, asset_id] = ws[asset_id]
+            self.pos_df = pos_df
+
+        return pos_df
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        bond_var = CppiAllocate.bond_var(self.forcast_days, self.var_percent, day)
+        monetary_ret = 1.04**(self.forcast_days / 365) - 1
+
+        df_pos = self.pos_df.copy()
+        df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
+        df_nav = df_nav_portfolio.portfolio
+
+        tmp_ret = df_nav.iloc[-1] / df_nav.iloc[0]
+        tmp_benchmark_ret = 0
+        tmp_overret = tmp_ret - tmp_benchmark_ret
+
+        tmp_dd = 1 - df_nav.iloc[-1] / df_nav.max()
+        money_pos = df_pos.iloc[-1].loc['120000039']
+        # print(tmp_dd)
+
+        if (tmp_dd > 0.005) or (money_pos == 1.0 and tmp_dd > 0):
+            ws = CppiAllocate.money_alloc()
+        elif tmp_overret <= 0:
+            ws = CppiAllocate.money_alloc()
+        else:
+            # 未来3个月有90%的概率战胜净值不跌到余额宝之下
+            lr = 1 / (monetary_ret - bond_var)
+            ws = CppiAllocate.cppi_alloc(tmp_overret, tmp_ret, lr)
+        # print(day, ws)
+        print(day, tmp_overret, tmp_ret)
+
+        return ws
+
+    @staticmethod
+    def money_alloc():
+
+        ws = {}
+        ws['120000010'] = 0.0
+        ws['120000011'] = 0.0
+        ws['120000039'] = 1.0
+
+        return ws
+
+    @staticmethod
+    def cppi_alloc(overret, tnav, lr):
+
+        ws = {}
+        ws_b = overret / tnav / 2 * lr
+        ws_m = 1 - ws_b * 2
+        if ws_m > 0.25:
+            ws['120000010'] = ws_b
+            ws['120000011'] = ws_b
+            ws['120000039'] = ws_m
+        else:
+            ws['120000010'] = 0.375
+            ws['120000011'] = 0.375
+            ws['120000039'] = 0.25
+
+        return ws
+
+    @staticmethod
+    def bond_var(period, percent, day):
+        df_nav = base_ra_index_nav.load_series('120000010')
+        df_inc = df_nav.pct_change(period)
+        df_inc = df_inc.dropna()
+        df_inc = df_inc[df_inc.index < day]
+        df_inc = df_inc.iloc[-365*5:]
+        var = np.percentile(df_inc, percent)
+        return var
+
 
 
 if __name__ == '__main__':
