@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 #         s = s.where(t1.c.globalid.in_(gids))
 #     if xtypes is not None:
 #         s = s.where(t1.c.ra_type.in_(xtypes))
-    
+
 #     df = pd.read_sql(s, db)
 
 #     return df
@@ -58,7 +58,7 @@ def load_series(gid, xtype, reindex=None, begin_date=None, end_date=None):
         s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:
         s = s.where(t1.c.ra_date <= end_date)
-    
+
     df = pd.read_sql(s, db, index_col = ['ra_date'], parse_dates=['ra_date'])
 
     if reindex is not None:

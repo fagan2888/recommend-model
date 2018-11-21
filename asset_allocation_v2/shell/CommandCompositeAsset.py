@@ -25,7 +25,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database, asset_mz_markowitz_nav
+from db import database, asset_mz_markowitz_nav, asset_ra_portfolio_nav
 from ipdb import set_trace
 
 import traceback, code
@@ -73,7 +73,7 @@ def nav(ctx, optasset, optlist):
     db_base = create_engine(config.db_base_uri)
     db = {'asset':db_asset, 'base':db_base}
 
-    df_asset = load_asset_by_type(db['asset'], [2, 3, 4], optasset)
+    df_asset = load_asset_by_type(db['asset'], [2, 3, 4, 5], optasset)
 
     if optlist:
         #print df_asset
@@ -90,6 +90,8 @@ def nav(ctx, optasset, optlist):
                 nav_update_fund(db, asset)
             elif asset['ra_calc_type'] == 4:
                 nav_update_factor_index(db, asset)
+            elif asset['ra_calc_type'] == 5:
+                nav_update_cppi_benchmark(db, asset)
             else:
                 pass
             bar.update(1)
@@ -219,6 +221,35 @@ def nav_update_factor_index(db, asset):
 
     # 更新数据库
     database.batch(db['asset'], t2, df_new, df_old, timestamp=False)
+
+
+def nav_update_cppi_benchmark(db, asset):
+
+    df = asset_ra_portfolio_nav.load_series(asset.globalid, xtype=8)
+    df = df.to_frame()
+    df = df.reset_index()
+    df['ra_asset_id'] = asset.globalid
+    df['ra_inc'] = df['ra_nav'].pct_change().fillna(0.0)
+    df.columns = ['ra_date', 'ra_nav', 'ra_asset_id', 'ra_inc']
+    df = df.set_index(['ra_asset_id', 'ra_date'])
+    df_new = df
+
+    # 加载旧数据
+    t2 = Table('ra_composite_asset_nav', MetaData(bind=db['asset']), autoload=True)
+    columns2 = [
+        t2.c.ra_asset_id,
+        t2.c.ra_date,
+        t2.c.ra_nav,
+        t2.c.ra_inc,
+    ]
+    stmt_select = select(columns2, (t2.c.ra_asset_id == asset['globalid']))
+    df_old = pd.read_sql(stmt_select, db['asset'], index_col=['ra_asset_id', 'ra_date'], parse_dates=['ra_date'])
+    if not df_old.empty:
+        df_old = df_old.apply(format_nav_and_inc)
+
+    # 更新数据库
+    database.batch(db['asset'], t2, df_new, df_old, timestamp=False)
+
 
 def format_nav_and_inc(x):
     if x.name == "ra_nav":
