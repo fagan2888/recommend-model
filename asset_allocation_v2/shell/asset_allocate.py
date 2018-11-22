@@ -690,7 +690,7 @@ class CppiAllocate(Allocate):
         money_pos = df_pos.iloc[-1].loc['120000039']
         # print(tmp_dd)
 
-        if (tmp_dd > 0.005) or (money_pos == 1.0 and tmp_dd > 0):
+        if (tmp_dd > 0.01) or (money_pos == 1.0 and tmp_dd > 0):
             ws = CppiAllocate.money_alloc()
         elif tmp_overret <= 0:
             ws = CppiAllocate.money_alloc()
