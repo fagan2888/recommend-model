@@ -183,10 +183,9 @@ print(res.summary())
 #
 
 #Step II: Calibrate the parameters
-
 ARIMA_calibra_paras_Summary=pd.DataFrame()
-for i in range(Corr_ret_TS_Co_Inte.shape[1]):
-#    
+for i in range(Corr_ret_TS_Co_Inte.shape[1]-20):
+    
     y=Corr_ret_TS_Co_Inte.iloc[:,i]
     # Define the p, d and q parameters to take any value between 0 and 2
     p = d = q = range(0, 2)
@@ -196,13 +195,13 @@ for i in range(Corr_ret_TS_Co_Inte.shape[1]):
     
     ARIMA_calibra_paras=[]
     ARIMA_calibra_paras_AIC=[]
-    for j in range(60):
+    for j in range(6):
         
         # Generate all different combinations of seasonal p, q and q triplets
-        seasonal_pdq = [(x[0], x[1], x[2], j+1) for x in list(itertools.product(p, d, q))]
+        seasonal_pdq = [(x[0], x[1], x[2], j) for x in list(itertools.product(p, d, q))]
         
         warnings.filterwarnings("ignore") # specify to ignore warning messages
-    
+
         for param in pdq:
             for param_seasonal in seasonal_pdq:
                 try:
@@ -223,8 +222,7 @@ for i in range(Corr_ret_TS_Co_Inte.shape[1]):
     ARIMA_calibra_paras_Summary1=pd.DataFrame(data=ARIMA_calibra_paras_AIC,index=ARIMA_calibra_paras)
     ARIMA_calibra_paras_Summary=pd.merge(ARIMA_calibra_paras_Summary,ARIMA_calibra_paras_Summary1,right_index=True,left_index=True,how='outer')
 
-ARIMA_calibra_paras_Summary.columns=Corr_ret_names
-ARIMA_calibra_paras_Summary.to_csv('ARIMA_calibra_paras_Summary.csv')
+
 '''
 Finally, params calibrated as ARIMA(0, 1, 0)x(0, 1, 0, 1)
 '''

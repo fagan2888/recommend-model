@@ -31,7 +31,7 @@ def z_score_normalization(A):
     AB = (A - np.mean(A)) / np.std(A)
     return AB
 
-
+    
 def inverse_z_score_normalization(input_A, original_data):
     result = input_A * np.std(original_data) + np.mean(original_data)
     return result
@@ -184,14 +184,17 @@ def Algo_summary(input_dataframe):
 ##########################################################################
 
 
-Index_data = pd.read_csv(
-    r"C:\Users\yshlm\Desktop\licaimofang\data\ra_index_nav_CN_US_HK.csv")
-columns_name = ['Index_Code', 'Trd_dt', 'Index_Cls']
+#Index_data = pd.read_csv(
+#    r"C:\Users\yshlm\Desktop\licaimofang\data\ra_index_nav_CN_US_HK.csv")
+Index_data = pd.read_csv(r"C:\Users\yshlm\Desktop\licaimofang\data\Multi_Mkt_Indices.csv")
+columns_name = ['Trd_dt', '000001.SH', '399001.SZ','HSI.HI','SP500.SPI','NDX.GI']
 Index_data.columns = columns_name
+Index_data.index=Index_data['Trd_dt']
+del Index_data['Trd_dt']
 Index_data.index = Index_data.index.map(lambda x: pd.Timestamp(x))
+Index_data=Index_data.dropna()
 
-
-# USDCNY = pd.read_csv(
+#USDCNY = pd.read_csv(
 #    r"C:\Users\yshlm\Desktop\licaimofang\data\USDCNY.csv")
 #USDCNY.columns = ['Trad_dt', 'PCUR', 'EXCUR', 'Cls']
 #USDCNY.Trad_dt = USDCNY.Trad_dt.map(lambda x: pd.Timestamp(x))
@@ -200,24 +203,24 @@ Index_data.index = Index_data.index.map(lambda x: pd.Timestamp(x))
 'Expand the ret data to [0,1]'
 
 
-def Clean_data(input_data):
-
-    Index_Code_unique = Index_data[
-        ~Index_data.Index_Code.duplicated()].Index_Code.tolist()
-    Data = pd.DataFrame()
-    for i in range(len(Index_Code_unique)):
-        Index_1 = Index_data[Index_data.Index_Code == Index_Code_unique[i]]
-        Index_1 = pd.DataFrame(data=Index_1.Index_Cls.values, columns=[
-                               Index_Code_unique[i]], index=Index_1.Trd_dt)
-        Data = pd.merge(Data, Index_1, right_index=True,
-                        left_index=True, how='outer')
-
-    return Data
-
-Index_data = Clean_data(Index_data)
-Index_data.index = Index_data.index.map(lambda x: pd.Timestamp(x))
-Index_data = Index_data.fillna(method='bfill')
-del Index_data['399006']
+#def Clean_data(input_data):
+#
+#    Index_Code_unique = Index_data[
+#        ~Index_data.Index_Code.duplicated()].Index_Code.tolist()
+#    Data = pd.DataFrame()
+#    for i in range(len(Index_Code_unique)):
+#        Index_1 = Index_data[Index_data.Index_Code == Index_Code_unique[i]]
+#        Index_1 = pd.DataFrame(data=Index_1.Index_Cls.values, columns=[
+#                               Index_Code_unique[i]], index=Index_1.Trd_dt)
+#        Data = pd.merge(Data, Index_1, right_index=True,
+#                        left_index=True, how='outer')
+#
+#    return Data
+#
+#Index_data = Clean_data(Index_data)
+#Index_data.index = Index_data.index.map(lambda x: pd.Timestamp(x))
+#Index_data = Index_data.fillna(method='bfill')
+#del Index_data['399006']
 
 Index_data_Chg = Index_data.pct_change()
 Index_data_Chg_Acc = Index_data_Chg.cumsum()
@@ -271,11 +274,12 @@ plt.show()
 ##########################################################################
 'Rolling or '
 
+'''
 Windows_size = 1000
-Windows_length = Index_data.shape[0] - Windows_size - 1
+Windows_length = Index_data.shape[0] - Windows_size - 1 - 6000
 
 Timeseries_MC = [Gaussian_Copula(Index_data.iloc[
-                                 :Windows_size + i, :], 0.1, 1e+5, 0.99)for i in range(Windows_length)]
+                                 :Windows_size + i, :], 0.1, 1e+4, 0.99)for i in range(Windows_length)]
 
 Timeseries_VaR_Summary = np.stack(
     [Timeseries_MC[i].quantile(q).T for i in range(len(Timeseries_MC))])
@@ -294,18 +298,4 @@ Index_backtesting_Indicator_1D = pd.DataFrame(
 Index_data_Chg_Triggered = Index_data_Chg[
     Index_backtesting_Indicator_1D].fillna(value=0)
 Index_data_Chg_Triggered1 = Index_data_Chg_Triggered.cumsum()
-
-'Stress testing for shock in different correlation area and in unexpected loss'
-
-##########################################################################
-
-
-MC_Index_data = pd.read_csv(r"C:\Users\yshlm\Desktop\licaimofang\data\MC_result1.csv", parse_dates=[0], index_col=0)
-
-
-##########################################################################
-
-
-
-
-
+'''

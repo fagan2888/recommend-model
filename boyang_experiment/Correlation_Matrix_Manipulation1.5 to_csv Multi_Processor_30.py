@@ -91,7 +91,7 @@ def ARIMA_CALI_PARAMS(Corr_ret_TS_Co_Inte,i):
     
     ARIMA_calibra_paras=[]
     ARIMA_calibra_paras_AIC=[]
-    for j in range(3):
+    for j in range(30):
         
         # Generate all different combinations of seasonal p, q and q triplets
         seasonal_pdq = [(x[0], x[1], x[2], j+1) for x in list(itertools.product(p, d, q))]
@@ -124,8 +124,8 @@ def ARIMA_CALI_PARAMS(Corr_ret_TS_Co_Inte,i):
     
 if __name__ == '__main__':
     
-    Index_data = pd.read_csv(r"C:\Users\yshlm\Desktop\licaimofang\data\Multi_Mkt_Indices.csv")
-#    Index_data = pd.read_csv(r"Multi_Mkt_Indices.csv")
+    # Index_data = pd.read_csv(r"C:\Users\yshlm\Desktop\licaimofang\data\Multi_Mkt_Indices.csv")
+    Index_data = pd.read_csv(r"Multi_Mkt_Indices.csv")
 
     columns_name = ['Trd_dt', '000001.SH', '399001.SZ','HSI.HI','SP500.SPI','NDX.GI']
     Index_data.columns = columns_name

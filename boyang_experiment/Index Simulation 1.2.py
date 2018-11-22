@@ -190,12 +190,11 @@ columns_name = ['Index_Code', 'Trd_dt', 'Index_Cls']
 Index_data.columns = columns_name
 Index_data.index = Index_data.index.map(lambda x: pd.Timestamp(x))
 
-
-# USDCNY = pd.read_csv(
-#    r"C:\Users\yshlm\Desktop\licaimofang\data\USDCNY.csv")
-#USDCNY.columns = ['Trad_dt', 'PCUR', 'EXCUR', 'Cls']
-#USDCNY.Trad_dt = USDCNY.Trad_dt.map(lambda x: pd.Timestamp(x))
-#USDCNY.index = USDCNY.Trad_dt.map(lambda x: pd.Timestamp(x))
+USDCNY = pd.read_csv(
+    r"C:\Users\yshlm\Desktop\licaimofang\data\USDCNY.csv")
+USDCNY.columns = ['Trad_dt', 'PCUR', 'EXCUR', 'Cls']
+USDCNY.Trad_dt = USDCNY.Trad_dt.map(lambda x: pd.Timestamp(x))
+USDCNY.index = USDCNY.Trad_dt.map(lambda x: pd.Timestamp(x))
 
 'Expand the ret data to [0,1]'
 
@@ -217,8 +216,6 @@ def Clean_data(input_data):
 Index_data = Clean_data(Index_data)
 Index_data.index = Index_data.index.map(lambda x: pd.Timestamp(x))
 Index_data = Index_data.fillna(method='bfill')
-del Index_data['399006']
-
 Index_data_Chg = Index_data.pct_change()
 Index_data_Chg_Acc = Index_data_Chg.cumsum()
 Index_data_Chg_Acc = Index_data_Chg_Acc[
@@ -226,14 +223,38 @@ Index_data_Chg_Acc = Index_data_Chg_Acc[
 
 
 Copula = Gaussian_Copula(
-    data=Index_data, suspension_tolerance_filtered_level=0.1, Nb_MC=1e+5, Confidence_level=0.99)
+    data=Index_data, suspension_tolerance_filtered_level=0.1, Nb_MC=1e+5, Confidence_level=0.95)
 
-q = 0.01
+q = 0.025
 Copula1 = Copula.quantile(q)
 
 ##########################################################################
+
+Shortfall = Index_data_Chg[Index_data_Chg.iloc[:, 0] <= Copula1[0]]
+Shortfall.index = Shortfall.index.map(lambda x: pd.Timestamp(x))
+Shortfall_shift_1d = Index_data_Chg[
+    Index_data_Chg.index.isin(Shortfall.index + timedelta(days=1))]
+
+Shortfall_shift_1d_Desp = Shortfall_shift_1d.describe()
+Shortfall_shift_1d_Acc = Shortfall_shift_1d.cumsum()
+
+Shortfall_shift_1d_Acc.plot(title='Accu Ret of shift 1-D trgger in %f' % (q))
+# Shortfall_shift_1d.plot()
+plt.show()
+print(Shortfall_shift_1d_Desp)
+
+##########################################################################
 'What is the length of backtesting'
-'''
+
+A = [Index_data_Chg[Copula1.index[3]].values < Copula1[3]]
+ShortFall_Date = Index_data_Chg[Copula1.index[3]][
+    Index_data_Chg[Copula1.index[3]].values <= Copula1[3]]
+ShortFall_Date1 = [Index_data_Chg.index[i]
+                   in ShortFall_Date for i in range(Index_data_Chg.shape[0])]
+AA = pd.DataFrame(data=ShortFall_Date1,
+                  index=Index_data_Chg.index, columns=[Copula1.index[3]])
+
+
 ShortFall_Date_Summary = pd.DataFrame()
 for i in range(Copula1.shape[0]):
 
@@ -255,57 +276,3 @@ ShortFall_Date_Summary_1D.index = ShortFall_Date_Summary.index + \
 
 ShortFall_Date_Summary_summary = Index_data_Chg[ShortFall_Date_Summary]
 ShortFall_Date_Summary_1D_summary = Index_data_Chg[ShortFall_Date_Summary_1D]
-
-
-print(ShortFall_Date_Summary_1D_summary.describe())
-
-
-ShortFall_Date_Summary_1D_summary_Acc = ShortFall_Date_Summary_1D_summary.fillna(
-    value=0)
-ShortFall_Date_Summary_1D_summary_Acc = ShortFall_Date_Summary_1D_summary_Acc.cumsum()
-ShortFall_Date_Summary_1D_summary_Acc.plot(
-    title='Accu Ret of shift 1-D trgger in %f' % (q))
-
-plt.show()
-'''
-##########################################################################
-'Rolling or '
-
-Windows_size = 1000
-Windows_length = Index_data.shape[0] - Windows_size - 1
-
-Timeseries_MC = [Gaussian_Copula(Index_data.iloc[
-                                 :Windows_size + i, :], 0.1, 1e+5, 0.99)for i in range(Windows_length)]
-
-Timeseries_VaR_Summary = np.stack(
-    [Timeseries_MC[i].quantile(q).T for i in range(len(Timeseries_MC))])
-
-#Timeseries_VaR=[Gaussian_Copula(Index_data.iloc[:Windows_size+i,:],0.1,1e+4,0.99).quantile(q) for i in range(Windows_length)]
-
-Timeseries_VaR_Summary = pd.DataFrame(data=Timeseries_VaR_Summary, columns=Copula.columns, index=Index_data.index[
-                                      Windows_size:Windows_size + Windows_length])
-
-Index_backtesting = Index_data_Chg[
-    Index_data_Chg.index.isin(Timeseries_VaR_Summary.index)]
-Index_backtesting_Indicator = Index_backtesting <= Timeseries_VaR_Summary
-Index_backtesting_Indicator_1D = pd.DataFrame(
-    data=Index_backtesting_Indicator.values, columns=Index_backtesting_Indicator.columns, index=Index_backtesting_Indicator.index + timedelta(days=1))
-
-Index_data_Chg_Triggered = Index_data_Chg[
-    Index_backtesting_Indicator_1D].fillna(value=0)
-Index_data_Chg_Triggered1 = Index_data_Chg_Triggered.cumsum()
-
-'Stress testing for shock in different correlation area and in unexpected loss'
-
-##########################################################################
-
-
-MC_Index_data = pd.read_csv(r"C:\Users\yshlm\Desktop\licaimofang\data\MC_result1.csv", parse_dates=[0], index_col=0)
-
-
-##########################################################################
-
-
-
-
-

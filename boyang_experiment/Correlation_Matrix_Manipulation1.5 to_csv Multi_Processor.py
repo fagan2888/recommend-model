@@ -76,13 +76,13 @@ from multiprocess import Pool
 #        
 #    return ARIMA_calibra_paras_Summary
 
-def ARIMA_CALI_PARAMS(Corr_ret_TS_Co_Inte,i):
+def ARIMA_CALI_PARAMS(Corr_ret_TS_Co_Inte):
     
     
 #    for i in range(Corr_ret_TS_Co_Inte.shape[1]):
     #    
 #    y=Corr_ret_TS_Co_Inte.iloc[:,i]
-    y=Corr_ret_TS_Co_Inte.iloc[:,i]
+    y=Corr_ret_TS_Co_Inte
     # Define the p, d and q parameters to take any value between 0 and 2
     p = d = q = range(0, 2)
     
@@ -125,8 +125,6 @@ def ARIMA_CALI_PARAMS(Corr_ret_TS_Co_Inte,i):
 if __name__ == '__main__':
     
     Index_data = pd.read_csv(r"C:\Users\yshlm\Desktop\licaimofang\data\Multi_Mkt_Indices.csv")
-#    Index_data = pd.read_csv(r"Multi_Mkt_Indices.csv")
-
     columns_name = ['Trd_dt', '000001.SH', '399001.SZ','HSI.HI','SP500.SPI','NDX.GI']
     Index_data.columns = columns_name
     Index_data.index=Index_data['Trd_dt']
@@ -197,11 +195,7 @@ if __name__ == '__main__':
     '''
     Co-integration
     '''
-#    Corr_ret_TS_Co_Inte = np.log(Corr_ret_TS.shift(1) / Corr_ret_TS)
-    Corr_ret_TS_Co_Inte = np.log(Corr_ret_TS / Corr_ret_TS.shift(1))
-
-    Corr_ret_TS_Co_Inte=Corr_ret_TS_Co_Inte.iloc[1:]
-    Corr_ret_TS_Co_Inte=Corr_ret_TS_Co_Inte.fillna(method='bfill')
+    Corr_ret_TS_Co_Inte = np.log(Corr_ret_TS / Corr_ret_TS.shift(1)).dropna()
     Corr_ret_TS_Co_Inte=Corr_ret_TS_Co_Inte.drop(columns=[Corr_ret_TS_Co_Inte.columns[i*6] for i in range(int(np.sqrt(Corr_ret_TS.shape[1])))])
     Corr_ret_names_Na_0=Corr_ret_names
     Corr_ret_names_Na_01=[Corr_ret_names[6*i] for i in range(int(np.sqrt(len(Corr_ret_names))))]
@@ -291,17 +285,15 @@ if __name__ == '__main__':
     #Step II: Calibrate the parameters
 #    ARIMA_calibra_paras_Summary=pd.DataFrame()
     
-#    ARIMA_calibra_paras_Summary=ARIMA_CALI_PARAMS(Corr_ret_TS_Co_Inte)
-#    A=[ARIMA_CALI_PARAMS]
+    ARIMA_calibra_paras_Summary=ARIMA_CALI_PARAMS(Corr_ret_TS_Co_Inte)
     
-    func=partial(ARIMA_CALI_PARAMS,Corr_ret_TS_Co_Inte,)
-    pool=Pool(32)
+    func=partial(ARIMA_calibra_paras_Summary,Corr_ret_TS_Co_Inte)
+    pool=Pool(4)
     ARIMA_calibra_paras_Summary=pool.map(func,range(Corr_ret_TS_Co_Inte.shape[1]))
     pool.close()
     pool.join()
     
     ARIMA_calibra_paras_Summary=np.hstack(ARIMA_calibra_paras_Summary)
-    ARIMA_calibra_paras_Summary=pd.DataFrame(ARIMA_calibra_paras_Summary)
     ARIMA_calibra_paras_Summary.to_csv('ARIMA_calibra_paras_Summary0.csv')
 #    ARIMA_calibra_paras_Summary.columns=Corr_ret_names_Na_0
 #    ARIMA_calibra_paras_Summary.index

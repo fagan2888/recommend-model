@@ -24,6 +24,9 @@ from statsmodels.stats.diagnostic import unitroot_adf
 from statsmodels.multivariate import pca
 from sklearn import decomposition
 
+from functools import partial
+
+
 ##########################################################################
 
 
@@ -31,7 +34,7 @@ def z_score_normalization(A):
     AB = (A - np.mean(A)) / np.std(A)
     return AB
 
-
+    
 def inverse_z_score_normalization(input_A, original_data):
     result = input_A * np.std(original_data) + np.mean(original_data)
     return result
@@ -119,7 +122,7 @@ def Tranfer_simu2orig_data(log_ret, input_data):
 ##########################################################################
 
 
-def Gaussian_Copula(data, suspension_tolerance_filtered_level, Nb_MC, Confidence_level):
+def Gaussian_Copula(data, data_corr, suspension_tolerance_filtered_level, Nb_MC, Confidence_level):
 
     data_tolerance_filtered = filter_data_by_nan(
         data, suspension_tolerance_filtered_level)
@@ -131,11 +134,16 @@ def Gaussian_Copula(data, suspension_tolerance_filtered_level, Nb_MC, Confidence
     log_ret = log_ret.iloc[1:, :]
     log_ret = log_ret.fillna(value=0)
 
+    
     'Generate values from a multivariate normal distribution with specified mean vector and covariance matrix and the time is the same in histroy'
+    data_corr=data_corr[data_corr.index==data_corr.index[-1]]
+    data_corr=data_corr.values.reshape(5,5)
+    cholesky_deco_corr_log_ret = np.linalg.cholesky(data_corr)
+#    cholesky_deco_corr_log_ret = np.linalg.cholesky(log_ret.corr())
 
-    cholesky_deco_corr_log_ret = np.linalg.cholesky(log_ret.corr())
     Gaussian_Copula_Simulation = [(np.mean(log_ret) + np.dot(cholesky_deco_corr_log_ret, [
                                    np.random.normal() for i in range(log_ret.shape[1])])).values.T for i in range(int(Nb_MC))]
+   
     Gaussian_Copula_Simulation = pd.DataFrame(data=np.stack(
         Gaussian_Copula_Simulation), columns=log_ret.columns)
     Gaussian_Copula_Simulation_cdf = pd.DataFrame(data=sp.stats.norm.cdf(
@@ -184,101 +192,47 @@ def Algo_summary(input_dataframe):
 ##########################################################################
 
 
-Index_data = pd.read_csv(
-    r"C:\Users\yshlm\Desktop\licaimofang\data\ra_index_nav_CN_US_HK.csv")
-columns_name = ['Index_Code', 'Trd_dt', 'Index_Cls']
+#Index_data = pd.read_csv(
+#    r"C:\Users\yshlm\Desktop\licaimofang\data\ra_index_nav_CN_US_HK.csv")
+Index_data = pd.read_csv(r"C:\Users\yshlm\Desktop\licaimofang\data\Multi_Mkt_Indices.csv",index_col=[0])
+columns_name = [ '000001.SH', '399001.SZ','HSI.HI','SP500.SPI','NDX.GI']
 Index_data.columns = columns_name
+
 Index_data.index = Index_data.index.map(lambda x: pd.Timestamp(x))
+Index_data=Index_data.dropna()
 
+Index_data_corr=pd.read_csv(r"C:\Users\yshlm\Desktop\licaimofang\data\Multi_Mkt_Indices_corr_matrix.csv",index_col=[0])
 
-# USDCNY = pd.read_csv(
-#    r"C:\Users\yshlm\Desktop\licaimofang\data\USDCNY.csv")
-#USDCNY.columns = ['Trad_dt', 'PCUR', 'EXCUR', 'Cls']
-#USDCNY.Trad_dt = USDCNY.Trad_dt.map(lambda x: pd.Timestamp(x))
-#USDCNY.index = USDCNY.Trad_dt.map(lambda x: pd.Timestamp(x))
+Index_data=Index_data[Index_data.index.isin(Index_data_corr.index)]
 
-'Expand the ret data to [0,1]'
+#data_corr=Index_data_corr*1
+#data_corr=data_corr[data_corr.index==data_corr.index[-80]]
+#data_corr=data_corr.values.reshape(5,5)
+#data_corr=np.linalg.cholesky(data_corr)
 
-
-def Clean_data(input_data):
-
-    Index_Code_unique = Index_data[
-        ~Index_data.Index_Code.duplicated()].Index_Code.tolist()
-    Data = pd.DataFrame()
-    for i in range(len(Index_Code_unique)):
-        Index_1 = Index_data[Index_data.Index_Code == Index_Code_unique[i]]
-        Index_1 = pd.DataFrame(data=Index_1.Index_Cls.values, columns=[
-                               Index_Code_unique[i]], index=Index_1.Trd_dt)
-        Data = pd.merge(Data, Index_1, right_index=True,
-                        left_index=True, how='outer')
-
-    return Data
-
-Index_data = Clean_data(Index_data)
-Index_data.index = Index_data.index.map(lambda x: pd.Timestamp(x))
-Index_data = Index_data.fillna(method='bfill')
-del Index_data['399006']
 
 Index_data_Chg = Index_data.pct_change()
-Index_data_Chg_Acc = Index_data_Chg.cumsum()
-Index_data_Chg_Acc = Index_data_Chg_Acc[
-    Index_data_Chg_Acc.index > '2000-01-01']
-
+#Index_data_Chg_Acc = Index_data_Chg.cumsum()
 
 Copula = Gaussian_Copula(
-    data=Index_data, suspension_tolerance_filtered_level=0.1, Nb_MC=1e+5, Confidence_level=0.99)
+    data=Index_data,data_corr=Index_data_corr, suspension_tolerance_filtered_level=0.1, Nb_MC=1e+5, Confidence_level=0.99)
 
 q = 0.01
 Copula1 = Copula.quantile(q)
 
 ##########################################################################
 'What is the length of backtesting'
-'''
-ShortFall_Date_Summary = pd.DataFrame()
-for i in range(Copula1.shape[0]):
 
-    ShortFall_Date = Index_data_Chg[Copula1.index[i]][
-        Index_data_Chg[Copula1.index[i]].values <= Copula1[i]]
-    ShortFall_Date1 = [Index_data_Chg.index[
-        i] in ShortFall_Date for i in range(Index_data_Chg.shape[0])]
-    ShortFall_Date1 = pd.DataFrame(data=ShortFall_Date1, columns=[
-                                   Copula1.index[i]], index=Index_data_Chg.index)
-    ShortFall_Date_Summary = pd.merge(
-        ShortFall_Date_Summary, ShortFall_Date1, left_index=True, right_index=True, how='outer')
-
-
-ShortFall_Date_Summary_1D = pd.DataFrame(
-    ShortFall_Date_Summary.values, columns=ShortFall_Date_Summary.columns)
-ShortFall_Date_Summary_1D.index = ShortFall_Date_Summary.index + \
-    timedelta(days=1)
-
-
-ShortFall_Date_Summary_summary = Index_data_Chg[ShortFall_Date_Summary]
-ShortFall_Date_Summary_1D_summary = Index_data_Chg[ShortFall_Date_Summary_1D]
-
-
-print(ShortFall_Date_Summary_1D_summary.describe())
-
-
-ShortFall_Date_Summary_1D_summary_Acc = ShortFall_Date_Summary_1D_summary.fillna(
-    value=0)
-ShortFall_Date_Summary_1D_summary_Acc = ShortFall_Date_Summary_1D_summary_Acc.cumsum()
-ShortFall_Date_Summary_1D_summary_Acc.plot(
-    title='Accu Ret of shift 1-D trgger in %f' % (q))
-
-plt.show()
-'''
 ##########################################################################
 'Rolling or '
 
+
 Windows_size = 1000
-Windows_length = Index_data.shape[0] - Windows_size - 1
+Windows_length = Index_data.shape[0] - Windows_size - 1 - 4000
 
-Timeseries_MC = [Gaussian_Copula(Index_data.iloc[
-                                 :Windows_size + i, :], 0.1, 1e+5, 0.99)for i in range(Windows_length)]
+Timeseries_MC = [Gaussian_Copula(data=Index_data.iloc[:Windows_size + i, :], data_corr=Index_data_corr.iloc[:Windows_size + i, :], suspension_tolerance_filtered_level=0.1, Nb_MC=1e+5, Confidence_level=0.99) for i in range(Windows_length)]
 
-Timeseries_VaR_Summary = np.stack(
-    [Timeseries_MC[i].quantile(q).T for i in range(len(Timeseries_MC))])
+Timeseries_VaR_Summary = np.stack([Timeseries_MC[i].quantile(q).T for i in range(len(Timeseries_MC))])
 
 #Timeseries_VaR=[Gaussian_Copula(Index_data.iloc[:Windows_size+i,:],0.1,1e+4,0.99).quantile(q) for i in range(Windows_length)]
 
@@ -294,18 +248,4 @@ Index_backtesting_Indicator_1D = pd.DataFrame(
 Index_data_Chg_Triggered = Index_data_Chg[
     Index_backtesting_Indicator_1D].fillna(value=0)
 Index_data_Chg_Triggered1 = Index_data_Chg_Triggered.cumsum()
-
-'Stress testing for shock in different correlation area and in unexpected loss'
-
-##########################################################################
-
-
-MC_Index_data = pd.read_csv(r"C:\Users\yshlm\Desktop\licaimofang\data\MC_result1.csv", parse_dates=[0], index_col=0)
-
-
-##########################################################################
-
-
-
-
 

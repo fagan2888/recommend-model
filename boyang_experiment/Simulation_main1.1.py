@@ -44,8 +44,10 @@ def Gaussian_Copula(data, Windows_size, suspension_tolerance_filtered_level, Nb_
     log_ret = log_ret.fillna(value=0)
 
     'Generate values from a multivariate normal distribution with specified mean vector and covariance matrix and the time is the same in histroy'
-
-    cholesky_deco_corr_log_ret = np.linalg.cholesky(log_ret.corr())
+    data_corr=data_corr[data_corr.index==data_corr.index[-1]]
+    data_corr=data_corr.values.reshape(5,5)
+    cholesky_deco_corr_log_ret = np.linalg.cholesky(data_corr)
+#    cholesky_deco_corr_log_ret = np.linalg.cholesky(log_ret.corr())
     # Gaussian_Copula_Simulation = [(np.mean(log_ret) + np.dot(cholesky_deco_corr_log_ret, [
                                    # np.random.normal() for i in range(log_ret.shape[1])])).values.T for i in range(int(Nb_MC))]
     log_ret_mean = np.mean(log_ret)
@@ -168,6 +170,7 @@ if __name__ == '__main__':
     Index_data_Chg_Triggered = Index_data_Chg[
         Index_backtesting_Indicator_1D].fillna(value=0)
     Index_data_Chg_Triggered.to_csv('MC_result.csv')
+    
 # Index_data_Chg_Triggered1 = Index_data_Chg_Triggered.cumsum()
 
     'Stress testing for shock in different correlation area and in unexpected loss'
