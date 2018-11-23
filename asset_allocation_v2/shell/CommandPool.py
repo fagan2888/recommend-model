@@ -1127,7 +1127,12 @@ def pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc):
     fund_status = mnf.fund_status
     fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
     fund_status = fund_status[fund_status.fi_yingmi_subscribe_status == 0.0]
-    valid_ids = fund_status.index
+    valid_ids_1 = fund_status.index
+
+    fund_fee = mnf.fund_fee.ff_fee
+    valid_ids_2 = fund_fee[fund_fee >= 0.2].index
+    valid_ids_2 = [str(fund_code) for fund_code in valid_ids_2]
+    valid_ids = np.intersect1d(valid_ids_1, valid_ids_2)
 
     tmp_scale = mnf.fund_scale.loc[day]
     tmp_scale = tmp_scale.sort_values(ascending=False)
@@ -1150,5 +1155,4 @@ def pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc):
         pool_codes.append(fund_globalid)
 
     return pool_codes
-
 
