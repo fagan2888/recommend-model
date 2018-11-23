@@ -225,7 +225,11 @@ def nav_update_factor_index(db, asset):
 
 def nav_update_cppi_benchmark(db, asset):
 
-    df = asset_ra_portfolio_nav.load_series(asset.globalid, xtype=8)
+    df = load_index_for_asset(db['asset'], asset['globalid'])
+    df = df.reset_index()
+    globalid = df.loc[0, 'ra_fund_code']
+
+    df = asset_ra_portfolio_nav.load_series(globalid, xtype=8)
     df = df.to_frame()
     df = df.reset_index()
     df['ra_asset_id'] = asset.globalid
