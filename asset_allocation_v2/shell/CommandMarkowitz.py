@@ -879,7 +879,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     argv = df_argv['mz_value'].to_dict()
 
     lookback = int(argv.get('allocate_lookback', '26'))
-    adjust_period = int(argv.get('allocate_adjust_position_period', 1))
+    adjust_period = int(argv.get('adjust_period', 1))
     wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
     turnover = float(argv.get('allocate_turnover_filter', 0))
     bound_id = argv.get('asset_bound', None)
@@ -1052,7 +1052,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
         wavelet_assets = dict([(asset_id , WaveletAsset(asset_id, wavelet_filter_num)) for asset_id in list(assets.keys())])
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = MzFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, trade_date, lookback, upper_risk, bound = bounds)
+        allocate = MzFixRiskBootWaveletAllocate('ALC.000001', assets, wavelet_assets, trade_date, lookback, upper_risk, bound = bounds, period = adjust_period)
         df = allocate.allocate()
 
 
@@ -1172,6 +1172,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     else:
         df = df.rolling(window = 4, min_periods = 1).mean()
 
+    print(df.tail())
     if optappend:
         df = df.iloc[3:,:]
 

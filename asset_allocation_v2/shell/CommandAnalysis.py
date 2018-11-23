@@ -605,6 +605,7 @@ def online_nav(ctx, optsdate, optedate):
         data[risk] = asset_on_online_nav.load_series(gid, 8)
 
     online_nav_df = pd.DataFrame(data)
+    online_nav_df.to_csv('online_nav.csv')
     print(online_nav_df)
 
 
