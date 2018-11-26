@@ -603,6 +603,7 @@ class MonetaryAllocate(Allocate):
         fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
         fund_status = fund_status[fund_status.fi_yingmi_subscribe_status == 0.0]
         valid_ids_1 = fund_status.index
+
         fund_fee = self.mnf.fund_fee.ff_fee
         valid_ids_2 = fund_fee[fund_fee >= 0.2].index
         valid_ids_2 = [str(fund_code) for fund_code in valid_ids_2]
