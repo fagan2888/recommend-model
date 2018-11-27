@@ -21,7 +21,7 @@ python shell/roboadvisor.py markowitz --id MZ.CB0040 --new --start-date $history
 python shell/roboadvisor.py highlow --id HL.CB0040 --new
 python shell/roboadvisor.py portfolio --id PO.CB0040 --new
 
-python shell/roboadvisor.py composite nav --asset 20301
-python shell/roboadvisor.py composite nav --asset 20302
-python shell/roboadvisor.py composite nav --asset 20303
-python shell/roboadvisor.py composite nav --asset 20304
+#python shell/roboadvisor.py composite nav --asset 20301
+#python shell/roboadvisor.py composite nav --asset 20302
+#python shell/roboadvisor.py composite nav --asset 20303
+#python shell/roboadvisor.py composite nav --asset 20304

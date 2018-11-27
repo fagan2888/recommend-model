@@ -299,7 +299,10 @@ def fund_monetary_pool(ctx, datadir, startdate, enddate, optid, optlist, optlimi
         print(date.strftime("%Y-%m-%d"))
 
     for _, pool in df_pool.iterrows():
-        fund_update_monetary_pool(pool, adjust_points, optlimit, optcalc)
+        if pool['ra_type'] == 1:
+            fund_update_monetary_pool(pool, adjust_points, optlimit, optcalc)
+        else:
+            print('manual pool')
 
 
 def fund_update_monetary_pool(pool, adjust_points, optlimit, optcalc):

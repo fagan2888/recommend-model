@@ -146,7 +146,7 @@ class MzBootAllocate(Allocate):
     def allocate_algo(self, day, df_inc, bound):
         risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc.columns.ravel(), ws))
-        print(ws)
+        #print(ws)
         return ws
 
 
@@ -734,7 +734,7 @@ class CppiAllocate(Allocate):
             lr = 1 / (monetary_ret - bond_var)
             ws = CppiAllocate.cppi_alloc(tmp_overret, tmp_ret, lr)
         # print(day, ws)
-        print(day, tmp_overret, tmp_ret)
+        # print(day, tmp_overret, tmp_ret)
 
         return ws
 
@@ -752,7 +752,7 @@ class CppiAllocate(Allocate):
     def cppi_alloc(overret, tnav, lr):
 
         ws = {}
-        ws_b = overret / tnav / 2 * lr
+        ws_b = (overret - 1) / tnav / 2 * lr
         ws_m = 1 - ws_b * 2
         if ws_m > 0.25:
             ws['120000010'] = ws_b
