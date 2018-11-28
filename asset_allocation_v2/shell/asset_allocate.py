@@ -334,6 +334,35 @@ class MzFixRiskBootWaveletAllocate(Allocate):
 
         return final_ws
 
+
+    def allocate(self):
+
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        asset_ids = list(self.assets.keys())
+        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
+
+        s = 'perform %-12s' % self.__class__.__name__
+
+        with click.progressbar(
+                adjust_days, label=s.ljust(30),
+                item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+
+            for day in bar:
+
+                logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+                df_inc, bound = self.load_allocate_data(day, asset_ids)
+
+                ws = self.allocate_algo(day, df_inc, bound)
+
+                for asset_id in list(ws.keys()):
+                    pos_df.loc[day, asset_id] = ws[asset_id]
+
+        print(pos_df)
+        return pos_df
+
+
+
     def load_wavelet_allocate_data(self, day ,asset_ids):
 
         reindex = self.index[self.index <= day][-1 * self.lookback:]

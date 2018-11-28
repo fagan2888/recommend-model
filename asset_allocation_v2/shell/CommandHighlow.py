@@ -968,6 +968,7 @@ def yao(highlow, alloc):
 
     high = alloc['mz_markowitz_id']
     risk = int(alloc['mz_risk'] * 10)
+
     df_asset = asset_mz_highlow_asset.load([alloc['globalid']])
     df_asset.set_index(['mz_asset_id'], inplace=True)
 
@@ -979,6 +980,18 @@ def yao(highlow, alloc):
     df_high = asset_mz_markowitz_pos.load_raw(high)
     df_high_riskmgr = load_riskmgr2(df_high.columns, df_asset['mz_riskmgr_id'], df_high.index, True)
     index = df_high.index.union(df_high_riskmgr.index)
+
+    if risk > 1.0 and high.startswith('MZ.00007'):
+        df_high_riskmgr.loc['2018-11-23', 'ERI000001'] = 0.0
+        df_high_riskmgr.loc['2018-11-23', '120000053'] = 1.0
+        df_high_riskmgr.loc['2018-11-23', '120000056'] = 1.0
+        df_high_riskmgr.loc['2018-11-23', '120000058'] = 1.0
+        df_high_riskmgr.loc['2018-11-23', '120000073'] = 1.0
+
+        df_high_riskmgr.loc['2018-11-23', 'MZ.FA0010'] = 1.0
+        df_high_riskmgr.loc['2018-11-23', 'MZ.FA0050'] = 1.0
+        df_high_riskmgr.loc['2018-11-23', 'MZ.FA0070'] = 1.0
+    print(df_high_riskmgr.tail())
 
     data_h = {}
     if not df_high.empty:
