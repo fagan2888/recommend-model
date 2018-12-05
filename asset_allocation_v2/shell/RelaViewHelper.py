@@ -74,8 +74,8 @@ def load_SP_feature():
     start = '2000-01-01'
 
     # Economy and Monetary Indicator
-    df = pd.read_excel('data/sp_macro_data.xls', index_col=0, parse_dates=True)
-    df.columns = ['PE', 'FFTR', 'VIX', 'CPI', 'CCPI', 'GDP', 'UE', 'YS', 'CCI', 'ICI', 'EOI']
+    df = pd.read_excel('data/sp_macro_data_2018_11_07.xls', index_col=0, parse_dates=True)
+    df.columns = ['PE', 'FFTR', 'VIX', 'CPI', 'CCPI', 'GDP', 'UE', 'YS', 'CCI', 'ICI', 'EOI', 'BY1', 'BY10']
     df = df.resample('m').last()
     df = df.fillna(method='pad')
 
@@ -109,9 +109,11 @@ def load_SP_feature():
     df['R2y'] = -df['R2y']
     df['DVIX'] = -df['DVIX']
     df['RO20'] = -df['RO20']
+    df['BY1'] = -df['BY1']
+    df['BY10'] = -df['BY10']
 
-    df['GDP'] = -df['GDP']
-    df['UE'] = -df['UE']
+    # df['GDP'] = -df['GDP']
+    # df['UE'] = -df['UE']
 
     # Delete Meaningless Feature
     del df['VIX']

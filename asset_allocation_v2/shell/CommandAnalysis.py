@@ -27,7 +27,7 @@ from db import database, base_ra_index_nav, base_exchange_rate_index, base_ra_in
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
-from asset_allocate import CppiAllocate, CppiAllocate2, CppiAllocate3
+from asset_allocate import CppiAllocate, CppiAllocate2, CppiAllocate3, asset_mz_markowitz_pos
 from view import View
 import DFUtil
 
@@ -1024,3 +1024,48 @@ def load_money_return(ctx):
     df = df.shift(-12).dropna()
     df.to_csv('df12m.csv')
     set_trace()
+
+
+@analysis.command()
+@click.pass_context
+def fee_estimate(ctx):
+    df_pos = asset_mz_markowitz_pos.load('MZ.CP3010')
+    now = datetime.now()
+    today = datetime(now.year, now.month, now.day)
+    df_pos.loc[today] = np.nan
+    df_pos = df_pos.fillna(method='pad')
+    alloc_range = df_pos.index[1:] - df_pos.index[:-1]
+    alloc_days = [i.days for i in alloc_range]
+    money_ratio = df_pos['11310102'].values[:-1]
+    money_alloc_days = [i*j for (i,j) in zip(alloc_days, money_ratio)]
+    money_alloc_days = sum(money_alloc_days)
+    money_fee = money_alloc_days / 365 * 0.0015
+    bond_fee = 0.75 * 0.0005 + 6 * 0.0002
+    all_fee = money_fee + bond_fee
+    set_trace()
+
+
+@analysis.command()
+@click.pass_context
+def export_data(ctx):
+
+    trade_dates = ATradeDate.week_trade_date()
+    trade_dates = trade_dates[trade_dates>='2016-08']
+    df_sz = Asset.load_nav_series('120000016')
+    df_sz = df_sz.reindex(trade_dates)
+
+    df_pos = []
+    on_ids = ['800001','800002','800003','800004','800005','800006','800007','800008','800009','800000']
+    for on_id in on_ids:
+        df_po = asset_on_online_nav.load_series(on_id, 8)
+        df_po = df_po.reindex(trade_dates)
+        df_pos.append(df_po)
+    df_po_all = pd.concat(df_pos, 1)
+
+    df = pd.concat([df_sz, df_po_all], 1)
+    df = df / df.iloc[0]
+    df.to_csv('tmp_df.csv')
+
+
+
+

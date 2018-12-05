@@ -1021,7 +1021,8 @@ class CppiAllocate2(Allocate):
             # 未来3个月有90%的概率战胜净值不跌到余额宝之下
             lr = 1 / (monetary_ret - bond_var)
             ws = CppiAllocate2.cppi_alloc(tmp_overret, tmp_ret, lr)
-        print(day, ws)
+        # print(day, ws)
+        print(day, tmp_overret, tmp_ret)
 
         return ws
 
@@ -1077,9 +1078,9 @@ class CppiAllocate3(Allocate):
         sdate = adjust_days[0].date()
 
         # allocate period
-        edate = sdate + timedelta(365)
-        edate = datetime(edate.year, edate.month, edate.day)
-        adjust_days = adjust_days[adjust_days <= edate]
+        # edate = sdate + timedelta(365)
+        # edate = datetime(edate.year, edate.month, edate.day)
+        # adjust_days = adjust_days[adjust_days <= edate]
 
         asset_ids = list(self.assets.keys())
 
@@ -1135,6 +1136,7 @@ class CppiAllocate3(Allocate):
             lr = 1 / (monetary_ret - bond_var)
             ws = CppiAllocate3.cppi_alloc(tmp_overret, tmp_ret, lr)
         # print(day, ws)
+        print(day, tmp_overret, tmp_ret)
 
         return ws
 
@@ -1171,7 +1173,7 @@ class CppiAllocate3(Allocate):
         df_inc = df_nav.pct_change(period)
         df_inc = df_inc.dropna()
         df_inc = df_inc[df_inc.index < day]
-        df_inc = df_inc.iloc[-365:]
+        df_inc = df_inc.iloc[-365*5:]
         var = np.percentile(df_inc, percent)
         return var
 

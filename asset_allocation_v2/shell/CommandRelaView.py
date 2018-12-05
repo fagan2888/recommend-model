@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 @click.pass_context
 def rv(ctx):
     '''
-    macro timing
+    Generate Relative View
     '''
     if ctx.invoked_subcommand is None:
         ctx.invoke(feature_thresh_update, market='CN')
@@ -51,7 +51,7 @@ def rela_view_update(ctx):
 
 @rv.command()
 @click.pass_context
-@click.option('--market', 'market', default='CN', help='China/US/HK')
+@click.option('--market', 'market', default='CN', help='CN/US/HK')
 @click.option('--start-date', 'start_date', default='2000-01-01', help='View start date')
 @click.option('--viewid', 'viewid', default='BL.000003', help='BL View id')
 def feature_thresh_update(ctx, market, start_date, viewid):
