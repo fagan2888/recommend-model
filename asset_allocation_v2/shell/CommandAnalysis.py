@@ -23,7 +23,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
@@ -797,6 +797,7 @@ def monetary_fund_rank(ctx):
     print(np.mean(ranks))
 
 
+
 #调仓频率与次数
 @analysis.command()
 @click.pass_context
@@ -822,3 +823,47 @@ def online_turnover_freq(ctx):
     df.index.name = '风险等级'
     print(df)
     df.to_csv('每个风险等级调仓频率与次数.csv',encoding='gbk')
+
+
+#调仓频率与次数
+@analysis.command()
+@click.pass_context
+def index_nav(ctx):
+
+    index_ids = ['120000001', '120000002', '120000010', '120000011', '120000013','120000015' ,'120000020', '120000028', '120000044']
+    data = {}
+    for _id in index_ids:
+        data[_id] = base_ra_index_nav.load_series(_id)
+    df = pd.DataFrame(data)
+    #df = df[df.index>='2018-01-01']
+    #df = df/df.iloc[0]
+
+    df.to_csv('tmp/index_nav.csv')
+
+
+#标杆组合
+@analysis.command()
+@click.pass_context
+def benchmark(ctx):
+
+    index_ids = ['120000016', '120000010']
+    data = {}
+    for _id in index_ids:
+        data[_id] = base_ra_index_nav.load_series(_id)
+    df = pd.DataFrame(data)
+
+    composite_asset_ids = ['20201','20202', '20203', '20204', '20205', '20206', '20207', '20208']
+
+    data = {}
+
+    for _id in composite_asset_ids:
+        nav = asset_ra_composite_asset_nav.load_nav(_id)
+        nav = nav.reset_index()
+        nav = nav[['ra_date', 'ra_nav']]
+        nav = nav.set_index(['ra_date'])
+        data[_id] = nav.ra_nav
+
+    bench_df = pd.DataFrame(data)
+    df = pd.concat([bench_df,df],axis = 1, join_axes = [bench_df.index])
+    print(df.tail())
+    df.to_csv('benchmark.csv')
