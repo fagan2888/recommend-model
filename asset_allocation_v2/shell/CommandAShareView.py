@@ -24,7 +24,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import GradientBoostingClassifier
 from scipy.stats import rankdata, spearmanr
 import matplotlib.pyplot as plt
+
 from xgboostextension import XGBRanker
+from xgboostextension.scorer import RankingScorer
+from xgboostextension.scorer.metrics import ndcg
+from sklearn.model_selection import GridSearchCV, GroupKFold
+
 logger = logging.getLogger(__name__)
 import warnings
 warnings.filterwarnings('ignore')
@@ -193,13 +198,14 @@ class AssetRankView:
         self.split_year = '2012'
         self.forcast_month = 1
         self.asset_ids = ['120000016', '120000013', '120000015', '120000010', '120000039', '120000080', '120000028']
+        self.indicators = ['gdp', 'house', 'bond', 'm2', 'cpi', 'sf', 'us_ip', 'us_ur', 'us_cpi', 'us_bond']
 
     def preprocess(self):
 
         # original data
         data = pd.read_excel(data_path)
         data = data.iloc[1:-2]
-        data.columns = ['date', 'gdp', 'house', 'bond', 'm2', 'cpi', 'sf']
+        data.columns = np.append(['date'], [self.indicators])
         data = data.set_index('date')
         data.index = pd.to_datetime(data.index, format='%Y-%m-%d')
         data = data.shift(1)
@@ -228,7 +234,8 @@ class AssetRankView:
             tmp_label = df_rank[asset_id]
             df_feature = pd.concat([df_feature, tmp_feature])
             df_label = pd.concat([df_label, tmp_label])
-        df_feature = df_feature[['group', 'gdp', 'house', 'bond', 'm2', 'cpi', 'sf', 'ret']]
+        c = np.append(['group', 'ret'], self.indicators)
+        df_feature = df_feature[c]
 
         self.train_x = df_feature[df_feature.index < self.split_year]
         self.test_x = df_feature[df_feature.index >= self.split_year]
@@ -248,11 +255,25 @@ class AssetRankView:
 
     def train(self, x, y):
 
-        ranker = XGBRanker(max_depth=4, learning_rate=0.1, n_estimators=150, subsample=1.0, random_state=0)
-        # ranker = XGBRanker(max_depth=7, learning_rate=0.01, n_estimators=5000, subsample=1.0, random_state=0)
-        ranker.fit(x, y, eval_metric=['ndcg', 'map@5-'])
+        # ranker = XGBRanker(max_depth=4, learning_rate=0.1, n_estimators=150, subsample=1.0, random_state=0)
+        # ranker = XGBRanker(max_depth=7, learning_rate=0.01, n_estimators=300, subsample=0.8, random_state=0)
+        # ranker.fit(x, y, eval_metric=['ndcg', 'map@5-'])
+        # ranker.fit(x, y, eval_metric=['auc'])
+        ranker = XGBRanker(n_estimators=1, max_depth=3, learning_rate=0.01)
+        grid_search = GridSearchCV(
+            ranker,
+            {
+                'n_estimators': [100, 500, 1000],
+                'max_depth': [3, 5, 7]
+            },
+            cv=GroupKFold(3),
+            scoring=RankingScorer(ndcg(3)),
+            verbose=100,
+            n_jobs=3,
+        )
+        grid_search.fit(x.values, y.values, groups=x.group.values)
 
-        return ranker
+        return grid_search
 
     def predict(self, model, x):
 
@@ -278,8 +299,8 @@ class AssetRankView:
             df_rankcorr.loc[dates[i]] = spearmanr(tmp_pr, tmp_rr)[0]
         print("Rank corr:", df_rankcorr.mean())
 
-        rank = real_rank[pre_rank > 6].mean(1).mean()
-        print("Rank percentile:", (rank-1)/6)
+        rank = real_rank[pre_rank > len(self.asset_ids) - 1].mean(1).mean()
+        print("Rank percentile:", (rank-1)/(len(self.asset_ids)-1))
 
     def timing(self, df_pre_rank, df_ret):
 
@@ -305,13 +326,13 @@ class AssetRankView:
         self.preprocess()
         model = self.train(self.train_x, self.train_y)
 
-        train_rank = self.predict(model, self.train_x)
-        self.cal_indicator(train_rank, self.train_y)
-        self.timing(train_rank, self.train_ret)
+        # train_rank = self.predict(model, self.train_x)
+        # self.cal_indicator(train_rank, self.train_y)
+        # self.timing(train_rank, self.train_ret)
 
-        # test_rank = self.predict(model, self.test_x)
-        # self.cal_indicator(test_rank, self.test_y)
-        # self.timing(test_rank, self.test_ret)
+        test_rank = self.predict(model, self.test_x)
+        self.cal_indicator(test_rank, self.test_y)
+        self.timing(test_rank, self.test_ret)
 
         # test_rank.to_csv('test_rank.csv', index_label='date')
 
