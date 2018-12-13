@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
+from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import *
 from util.xdebug import dd
@@ -118,3 +119,40 @@ def fp_da_question(ctx, optlist, optid, question, option):
 
         df.to_sql(t2.name, db, index=True, if_exists='append', chunksize=500)
 
+
+@import_command.command()
+@click.pass_context
+def import_riskmgr(ctx):
+
+    riskmgr_id = {}
+    riskmgr_id['000001.SH_tight'] = 61110106
+    riskmgr_id['000001.SH_loose'] = 61110107
+    riskmgr_id['399001.SZ_tight'] = 61110209
+    riskmgr_id['399001.SZ_loose'] = 61110210
+    riskmgr_id['HSI.HI_tight']    = 61110706
+    riskmgr_id['HSI.HI_loose']    = 61110707
+    riskmgr_id['SP500.SPI_tight'] = 61120206
+    riskmgr_id['SP500.SPI_loose'] = 61120207
+    riskmgr_id['NDX.GI_tight']    = 61120208
+    riskmgr_id['NDX.GI_loose']    = 61120209
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    df = pd.read_csv('data/QRM_DATA.csv', index_col = ['date'])
+    for col in df.columns:
+        rm_id = riskmgr_id[col]
+        pos = df[col]
+        records = []
+        for date in pos.index:
+            p = pos.loc[date]
+            signal = asset_allocate.rm_riskmgr_signal()
+            signal.rm_riskmgr_id = rm_id
+            signal.rm_date = date
+            signal.rm_pos = p
+            records.append(signal)
+
+        session.add_all(records)
+        session.commit()
+    session.close()
