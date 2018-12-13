@@ -135,6 +135,9 @@ def import_riskmgr(ctx):
     riskmgr_id['SP500.SPI_loose'] = 61120207
     riskmgr_id['NDX.GI_tight']    = 61120208
     riskmgr_id['NDX.GI_loose']    = 61120209
+    riskmgr_id['000001.SH_ma'] = 61110108
+    riskmgr_id['399001.SZ_ma'] = 61110211
+
 
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
@@ -143,7 +146,10 @@ def import_riskmgr(ctx):
     df = pd.read_csv('data/QRM_DATA.csv', index_col = ['date'])
     for col in df.columns:
         rm_id = riskmgr_id[col]
+        if not (col in ['000001.SH_ma', '399001.SZ_ma']):
+            continue
         pos = df[col]
+        print(pos.tail())
         records = []
         for date in pos.index:
             p = pos.loc[date]
