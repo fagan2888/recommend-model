@@ -44,6 +44,18 @@ class mz_markowitz_bounds(Base):
     created_at = Column(DateTime)
 
 
+class rm_riskmgr_signal(Base):
+
+    __tablename__ = 'rm_riskmgr_signal'
+
+    rm_riskmgr_id = Column(String, primary_key = True)
+    rm_date = Column(Date)
+    rm_pos = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
 def load_mz_markowitz_bounds(globalid):
 
     engine = database.connection('asset')
