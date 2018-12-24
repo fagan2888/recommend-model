@@ -19,6 +19,7 @@ import RiskMgrSimple
 import RiskMgrLow
 import RiskMgrGARCH
 import RiskMgrVaRs
+import RiskMgrGaussianCopula
 import DFUtil
 
 from datetime import datetime, timedelta
@@ -532,6 +533,8 @@ def signal_update(riskmgr):
         risk_mgr = RiskMgrSimple.RiskMgrSimple(empty=argv['e'])
     elif riskmgr['rm_algo'] == 3:
         risk_mgr = RiskMgrLow.RiskMgrLow()
+    elif riskmgr['rm_algo'] == 6:
+        risk_mgr = RiskMgrGaussianCopula.RiskMgrGaussianCopula()
     else:
         click.echo(click.style("\nunsupported riskmgr algo (%s, %s)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
         return False
