@@ -293,7 +293,7 @@ class MzFixRiskBootWaveletAllocate(Allocate):
 
 
     def allocate_algo(self, day, df_inc, bound):
-        wavelet_asset_ids = ['120000001','120000002', '120000016', '120000080', '120000081', '120000082', 'ERI000001', 'ERI000002']
+        wavelet_asset_ids = ['120000001','120000002', '120000010', '120000011' ,'120000016', '120000080', '120000081', '120000082', 'ERI000001', 'ERI000002']
         wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, wavelet_asset_ids)
         wavelet_df_inc[wavelet_df_inc > 0] = 0.0
         risk, returns, ws, sharpe = PF.markowitz_r_spe(wavelet_df_inc, wavelet_bound)
@@ -358,7 +358,6 @@ class MzFixRiskBootWaveletAllocate(Allocate):
                 for asset_id in list(ws.keys()):
                     pos_df.loc[day, asset_id] = ws[asset_id]
 
-        print(pos_df)
         return pos_df
 
 
@@ -380,6 +379,7 @@ class MzFixRiskBootWaveletAllocate(Allocate):
             data[asset_id] = self.wavelet_assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
         df_inc  = df_nav.pct_change().fillna(0.0)
+        #df_inc  = np.log(df_nav).diff().fillna(0.0)
 
         return df_inc, bound
 

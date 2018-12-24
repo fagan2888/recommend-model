@@ -982,15 +982,17 @@ def yao(highlow, alloc):
     index = df_high.index.union(df_high_riskmgr.index)
 
     if risk > 1.0 and high.startswith('MZ.00007'):
-        df_high_riskmgr.loc['2018-11-23', 'ERI000001'] = 0.0
-        df_high_riskmgr.loc['2018-11-23', '120000053'] = 1.0
-        df_high_riskmgr.loc['2018-11-23', '120000056'] = 1.0
-        df_high_riskmgr.loc['2018-11-23', '120000058'] = 1.0
-        df_high_riskmgr.loc['2018-11-23', '120000073'] = 1.0
+        df_high_riskmgr.loc['2018-12-21', 'ERI000001'] = 0.0
+        df_high_riskmgr.loc['2018-12-21', 'ERI000002'] = 1.0
+        df_high_riskmgr.loc['2018-12-21', '120000053'] = 1.0
+        df_high_riskmgr.loc['2018-12-21', '120000056'] = 1.0
+        df_high_riskmgr.loc['2018-12-21', '120000058'] = 1.0
+        df_high_riskmgr.loc['2018-12-21', '120000073'] = 1.0
+        df_high_riskmgr.loc['2018-12-21', '120000081'] = 0.0
 
-        df_high_riskmgr.loc['2018-11-23', 'MZ.FA0010'] = 1.0
-        df_high_riskmgr.loc['2018-11-23', 'MZ.FA0050'] = 1.0
-        df_high_riskmgr.loc['2018-11-23', 'MZ.FA0070'] = 1.0
+        df_high_riskmgr.loc['2018-12-21', 'MZ.FA0010'] = 1.0
+        df_high_riskmgr.loc['2018-12-21', 'MZ.FA0050'] = 1.0
+        df_high_riskmgr.loc['2018-12-21', 'MZ.FA0070'] = 1.0
     print(df_high_riskmgr.tail())
 
     data_h = {}

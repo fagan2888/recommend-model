@@ -312,6 +312,22 @@ def update_stock_factor_specific_return(df_sret, last_date = None):
     database.batch(db, t, df_sret, pd.DataFrame())
 
 
+def delete_exposure(stock_ids):
+
+    db = database.connection('asset')
+    Session = sessionmaker(bind = db)
+    session = Session()
+    for stock_id in stock_ids:
+        stock_id = stock_id[0]
+        for sf_id in ['SF.100009']:
+            print(stock_id, sf_id)
+            records = session.query(stock_factor_exposure).filter(and_(stock_factor_exposure.stock_id == stock_id,stock_factor_exposure.sf_id == sf_id)).delete()
+            print(records)
+            session.commit()
+    session.commit()
+    session.close()
+
+
 if __name__ == '__main__':
 
     #df1 = load_stock_factor_return()
@@ -319,12 +335,5 @@ if __name__ == '__main__':
     #set_trace()
     #update_exposure(StockFactor.SizeStockFactor(factor_id = 'SF.000001'))
     set_trace()
-
-
-
-
-
-
-
 
 

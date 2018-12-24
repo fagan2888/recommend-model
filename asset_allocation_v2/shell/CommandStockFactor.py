@@ -172,7 +172,11 @@ def factor_return_update(ctx):
 
 
 
-
+@sf.command()
+@click.pass_context
+def factor_exposure_delete(ctx):
+    stock_ids = pd.read_csv('valid_stock_factor.csv').values
+    asset_stock_factor.delete_exposure(stock_ids)
 
 
 

@@ -321,7 +321,7 @@ def fund_online_portfolio(ctx):
         dfs.append(df)
 
     df = pd.concat(dfs, axis = 1)
-    df = df[df.index >= '2013-07-03']
+    df = df[df.index >= '2013-12-23']
     df = df / df.iloc[0]
     df.to_csv('./online_nav.csv')
 
@@ -830,7 +830,7 @@ def online_turnover_freq(ctx):
 @click.pass_context
 def index_nav(ctx):
 
-    index_ids = ['120000001', '120000002', '120000010', '120000011', '120000013','120000015' ,'120000020', '120000028', '120000044']
+    index_ids = ['120000016', '120000017','120000001', '120000002', '120000009' ,'120000010', '120000011', '120000013','120000015' ,'120000020', '120000028', '120000044']
     data = {}
     for _id in index_ids:
         data[_id] = base_ra_index_nav.load_series(_id)
@@ -864,6 +864,34 @@ def benchmark(ctx):
         data[_id] = nav.ra_nav
 
     bench_df = pd.DataFrame(data)
-    df = pd.concat([bench_df,df],axis = 1, join_axes = [bench_df.index])
-    print(df.tail())
-    df.to_csv('benchmark.csv')
+    benchmark_df = pd.concat([bench_df,df],axis = 1, join_axes = [bench_df.index])
+
+    benchmark_df = benchmark_df[benchmark_df.index >= '2013-01-01']
+    benchmark_df = benchmark_df / benchmark_df.iloc[0]
+    #print(df.tail())
+    #df.to_csv('benchmark.csv')
+
+
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+
+    dfs = []
+    for i in range(0, 10):
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
+        df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
+        df.columns = ['risk_' + str(i)]
+        dfs.append(df)
+
+    df = pd.concat(dfs, axis = 1)
+    df = df[df.index >= '2013-01-04']
+    online_df = df / df.iloc[0]
+    #df.to_csv('./online_nav.csv')
+
+    online_df.head()
+    conn.close()
+
+
+    df = pd.concat([online_df, benchmark_df], axis = 1, join_axes = [benchmark_df.index])
+    print(df.head())
+
+    df.to_csv('./online_benchmark.csv')
