@@ -23,7 +23,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
@@ -830,10 +830,12 @@ def online_turnover_freq(ctx):
 @click.pass_context
 def index_nav(ctx):
 
-    index_ids = ['120000016', '120000017','120000001', '120000002', '120000009' ,'120000010', '120000011', '120000013','120000015' ,'120000020', '120000028', '120000044']
+    index_ids = ['120000001', '120000002', '120000009' , '120000010', '120000011', '120000017' ,'120000039', '120000080', '120000081','120000082' ,'ERI000001', 'ERI000002']
     data = {}
-    for _id in index_ids:
+    for _id in index_ids[0:-2]:
         data[_id] = base_ra_index_nav.load_series(_id)
+    for _id in index_ids[-2:]:
+        data[_id] = base_exchange_rate_index_nav.load_series(_id)
     df = pd.DataFrame(data)
     #df = df[df.index>='2018-01-01']
     #df = df/df.iloc[0]
