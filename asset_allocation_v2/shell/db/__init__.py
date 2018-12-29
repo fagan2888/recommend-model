@@ -62,3 +62,7 @@ from . import base_fund_split
 from . import mapi_fp_da_question
 from . import asset_fund
 from . import asset_fund_factor
+from . import caihui_tq_fd_basicinfo
+from . import caihui_tq_fd_skdetail
+from . import caihui_tq_qt_index
+from . import caihui_tq_sk_dquoteindic
