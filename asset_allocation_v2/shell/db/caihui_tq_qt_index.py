@@ -1,12 +1,22 @@
-#coding=utf8
+#coding=utf-8
+'''
+Edited at Dec. 28, 2018
+Editor: Shixun Su
+Contact: sushixun@licaimofang.com
+'''
 
+import sys
+import logging
+sys.path.append('shell')
 from sqlalchemy import MetaData, Table, select, func
 import pandas as pd
-import logging
-from . import database
 from dateutil.parser import parse
-import sys
+from . import database
+
+
 logger = logging.getLogger(__name__)
+
+
 def load_index_daily_data(secode, start_date=None, end_date=None):
     db = database.connection('caihui')
     metadata = MetaData(bind=db)
@@ -29,12 +39,36 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
     df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
     return df
 
+
+def load_index_nav(index_ids=None, reindex=None, begin_date=None, end_date=None):
+
+    db = database.connection('caihui')
+    metadata = MetaData(bind=db)
+    t = Table('tq_qt_index', metadata, autoload=True)
+
+    columns = [
+            t.c.TRADEDATE.label('date'),
+            t.c.SECODE.label('index_id'),
+            t.c.TCLOSE.label('nav')
+    ]
+
+    s = select(columns)
+    if begin_date is not None:
+        s = s.where(t.c.TRADEDATE>=begin_date)
+    if end_date is not None:
+        s = s.where(t.c.TRADEDATE<=end_date)
+    if index_ids is not None:
+        s = s.where(t.c.SECODE.in_(index_ids))
+
+    df = pd.read_sql(s, db, parse_dates=['date'])
+
+    df = df.pivot('date', 'index_id', 'nav')
+    if reindex is not None:
+        df = df.reindex(reindex, method='pad')
+
+    return df
+
+
 if __name__ == "__main__":
     load_index_daily_data('2070006540', '20170101', '20170331')
-
-
-
-
-
-
-
+    load_index_nav(index_ids=['2070000005', '2070000014', '2070000553', '2070000060', '2070000187'])
