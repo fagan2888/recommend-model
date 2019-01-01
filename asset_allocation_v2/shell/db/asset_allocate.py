@@ -56,6 +56,33 @@ class rm_riskmgr_signal(Base):
     created_at = Column(DateTime)
 
 
+class rm_riskmgr_ecdf_vars(Base):
+
+    __tablename__ = 'rm_riskmgr_ecdf_vars'
+
+    index_id = Column(String, primary_key = True)
+    ix_date = Column(Date, primary_key = True)
+    ecdf_var = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+class rm_riskmgr_index_best_start_end(Base):
+
+    __tablename__ = 'rm_riskmgr_index_best_start_end'
+
+    index_id = Column(String, primary_key = True)
+    ix_date = Column(Date, primary_key = True)
+    start = Column(Integer)
+    end = Column(Integer)
+
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+
 def load_mz_markowitz_bounds(globalid):
 
     engine = database.connection('asset')

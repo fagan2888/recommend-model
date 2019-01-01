@@ -20,17 +20,21 @@ import random
 import scipy as sp
 import functools
 from multiprocess import Pool
+from sqlalchemy.orm import sessionmaker
+from db import asset_allocate, database
+from sqlalchemy import *
 
 
 
 class RiskMgrGaussianCopula(object):
 
-    def __init__(self, empty=5, maxdd=-0.075, mindd=-0.05, period=252):
+    def __init__(self, index_id, empty=5, maxdd=-0.075, mindd=-0.05, period=252):
         self.maxdd = maxdd
         self.mindd = mindd
         self.empty = empty
         self.period = period
         self.confidence_level = 0.99
+        self.index_id = index_id
 
     def perform(self, asset, df_input):
         #
@@ -61,14 +65,51 @@ class RiskMgrGaussianCopula(object):
             return pd.Series(_ret).quantile( 1.0 - self.confidence_level)
 
 
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        start_date = session.query(asset_allocate.rm_riskmgr_ecdf_vars.ix_date).filter(asset_allocate.rm_riskmgr_ecdf_vars.index_id == self.index_id).order_by(desc(asset_allocate.rm_riskmgr_ecdf_vars.ix_date)).first()
+        session.commit()
+        session.close()
+
+        if start_date is None:
+            days = sr_log_inc.index[888:]
+        else:
+            days = sr_log_inc[sr_log_inc.index > start_date[0].strftime('%Y-%m-%d')].index
+
         pool = Pool(32)
-        start_days = 888
-        log_vars = pool.map(functools.partial(log_ret_var, sr_log_inc, self.confidence_level), sr_log_inc.index[start_days:])
+        log_vars = pool.map(functools.partial(log_ret_var, sr_log_inc, self.confidence_level), days)
         pool.close()
         pool.join()
 
+        log_ret_var_ser = pd.Series(log_vars, index = days)
 
-        log_ret_var_ser = pd.Series(log_vars, index = sr_log_inc.index[start_days:])
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        records = []
+        for day in log_ret_var_ser.index:
+            ecdf_vars = asset_allocate.rm_riskmgr_ecdf_vars()
+            ecdf_vars.index_id = self.index_id
+            ecdf_vars.ix_date = day
+            ecdf_vars.ecdf_var = log_ret_var_ser.loc[day]
+            ecdf_vars.created_at = datetime.datetime.now()
+            ecdf_vars.updated_at = datetime.datetime.now()
+            records.append(ecdf_vars)
+        session.add_all(records)
+        session.commit()
+        session.close()
+
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        sql = session.query(asset_allocate.rm_riskmgr_ecdf_vars.ix_date, asset_allocate.rm_riskmgr_ecdf_vars.ecdf_var).filter(asset_allocate.rm_riskmgr_ecdf_vars.index_id == self.index_id).statement
+        df = pd.read_sql(sql, session.bind, index_col = ['ix_date'], parse_dates = ['ix_date'])
+        log_ret_var_ser = df['ecdf_var']
+        log_ret_var_ser = log_ret_var_ser.sort_index()
+        session.commit()
+        session.close()
+
 
         _sr_log_inc = sr_log_inc.loc[log_ret_var_ser.index]
         signal = _sr_log_inc < log_ret_var_ser
@@ -101,12 +142,59 @@ class RiskMgrGaussianCopula(object):
             return (df.iloc[0:threshold].start.mode().values[0], df.iloc[0:threshold].end.mode().values[0])
 
 
+
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        start_date = session.query(asset_allocate.rm_riskmgr_index_best_start_end.ix_date).filter(asset_allocate.rm_riskmgr_index_best_start_end.index_id == self.index_id).order_by(desc(asset_allocate.rm_riskmgr_index_best_start_end.ix_date)).first()
+        session.commit()
+        session.close()
+
+
+        if start_date is None:
+            days = signal[signal].index
+        else:
+            _signal = signal[signal]
+            days = _signal[_signal.index > start_date[0].strftime('%Y-%m-%d')].index
+
+
         ret = sr_inc.loc[signal.index]
         pool = Pool(32)
-        index_best_start_ends = pool.map(functools.partial(best_start_end, signal, ret), signal[signal].index)
+        index_best_start_ends = pool.map(functools.partial(best_start_end, signal, ret), days)
         pool.close()
         pool.join()
-        index_best_start_end_ser = pd.Series(index_best_start_ends, index = signal[signal].index)
+        index_best_start_end_ser = pd.Series(index_best_start_ends, index = days)
+
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        records = []
+        for day in index_best_start_end_ser.index:
+            index_best_start_end = asset_allocate.rm_riskmgr_index_best_start_end()
+            index_best_start_end.index_id = self.index_id
+            index_best_start_end.ix_date = day
+            index_best_start_end.start = index_best_start_end_ser.loc[day][0]
+            index_best_start_end.end = index_best_start_end_ser.loc[day][1]
+            index_best_start_end.created_at = datetime.datetime.now()
+            index_best_start_end.updated_at = datetime.datetime.now()
+            records.append(index_best_start_end)
+        session.add_all(records)
+        session.commit()
+        session.close()
+
+        engine = database.connection('asset')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        sql = session.query(asset_allocate.rm_riskmgr_index_best_start_end.ix_date, asset_allocate.rm_riskmgr_index_best_start_end.start, asset_allocate.rm_riskmgr_index_best_start_end.end).filter(asset_allocate.rm_riskmgr_index_best_start_end.index_id == self.index_id).statement
+        df = pd.read_sql(sql, session.bind, index_col = ['ix_date'], parse_dates = ['ix_date'])
+        data = {}
+        for day in df.index:
+            data[day] = (df['start'].loc[day], df['end'].loc[day])
+        index_best_start_end_ser = pd.Series(data)
+        index_best_start_end_ser = index_best_start_end_ser.sort_index()
+        session.commit()
+        session.close()
+
 
         riskmgr_signal_num = pd.Series([0] * len(signal), index = signal.index)
         for i in range(len(signal)):

@@ -534,7 +534,7 @@ def signal_update(riskmgr):
     elif riskmgr['rm_algo'] == 3:
         risk_mgr = RiskMgrLow.RiskMgrLow()
     elif riskmgr['rm_algo'] == 6:
-        risk_mgr = RiskMgrGaussianCopula.RiskMgrGaussianCopula()
+        risk_mgr = RiskMgrGaussianCopula.RiskMgrGaussianCopula(riskmgr['rm_asset_id'])
     else:
         click.echo(click.style("\nunsupported riskmgr algo (%s, %s)\n" % (riskmgr_id, riskmgr['rm_algo']), fg="red"))
         return False
