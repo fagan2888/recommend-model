@@ -43,5 +43,5 @@ def load_stock_nav(begin_date=None, end_date=None, reindex=None, stock_ids=None)
     return df
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     load_stock_nav(begin_date='20181201', end_date='20181227')
