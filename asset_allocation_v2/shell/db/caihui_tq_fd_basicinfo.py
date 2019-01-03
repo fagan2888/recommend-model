@@ -5,12 +5,9 @@ Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
 
-import sys
 import logging
-sys.path.append('shell')
 from sqlalchemy import MetaData, Table, select, func
 import pandas as pd
-from dateutil.parser import parse
 from . import database
 
 

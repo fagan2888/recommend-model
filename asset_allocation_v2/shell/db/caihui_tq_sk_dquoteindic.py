@@ -5,19 +5,16 @@ Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
 
-import sys
 import logging
-sys.path.append('shell')
 from sqlalchemy import MetaData, Table, select, func
 import pandas as pd
-from dateutil.parser import parse
 from . import database
 
 
 logger = logging.getLogger(__name__)
 
 
-def load_stock_nav(stock_ids=None, reindex=None, begin_date=None, end_date=None):
+def load_stock_nav(begin_date=None, end_date=None, reindex=None, stock_ids=None):
 
     db = database.connection('caihui')
     metadata = MetaData(bind=db)
