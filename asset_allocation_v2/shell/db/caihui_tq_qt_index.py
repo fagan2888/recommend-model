@@ -66,6 +66,6 @@ def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None)
     return df
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     load_index_daily_data('2070006540', '20170101', '20170331')
     load_index_nav(index_ids=['2070000005', '2070000014', '2070000553', '2070000060', '2070000187'])

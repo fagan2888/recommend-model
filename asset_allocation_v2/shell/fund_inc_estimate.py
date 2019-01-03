@@ -18,7 +18,7 @@ from ipdb import set_trace
 import time
 sys.path.append('shell')
 from db import database, base_ra_fund_nav
-from db import caihui_tq_fd_basicinfo, caihui_tq_fd_skdetail, caihui_tq_sk_dquoteindic, caihui_tq_qt_index
+from db import caihui_tq_fd_basicinfo, caihui_tq_fd_skdetail, caihui_tq_sk_dquoteindic, caihui_tq_ix_basicinfo, caihui_tq_qt_index
 from trade_date import ATradeDate
 from util_timestamp import *
 
@@ -30,7 +30,7 @@ Base = declarative_base()
 
 class FundIncEstimate(object):
 
-    def __init__(self, fund_ids=None, fund_codes=None, begin_date=None, end_date=None):
+    def __init__(self, begin_date=None, end_date=None, fund_ids=None, fund_codes=None):
 
         if end_date is None:
             self._end_date = pd.Period.now(freq="D").start_time
@@ -44,10 +44,10 @@ class FundIncEstimate(object):
         else:
             self._begin_date = pd.Timestamp(begin_date)
 
-        if fund_codes is not None or fund_ids is not None:
-            self._fund_pool = caihui_tq_fd_basicinfo.load_fund_basic_info(fund_codes=fund_codes, fund_ids=fund_ids)
-        else:
+        if fund_codes is None and fund_ids is None:
             self._fund_pool = self.load_fund_pool(self._end_date)
+        else:
+            self._fund_pool = caihui_tq_fd_basicinfo.load_fund_basic_info(fund_codes=fund_codes, fund_ids=fund_ids)
 
         if self._fund_pool.empty:
             print('The pool is EMPTY!')
@@ -105,8 +105,9 @@ class FundIncEstSkPos(FundIncEstimate):
 
     # __df_stock_ret = None
 
-    def __init__(self, fund_ids=None, fund_codes=None, begin_date=None, end_date=None):
-        super(FundIncEstSkPos, self).__init__(fund_ids, fund_codes, begin_date, end_date)
+    def __init__(self, begin_date=None, end_date=None, fund_ids=None, fund_codes=None):
+
+        super(FundIncEstSkPos, self).__init__(begin_date, end_date, fund_ids, fund_codes)
 
     @staticmethod
     def cal_sk_pos(fund_stock_pos, fund_stock_pos_ten):
@@ -238,7 +239,7 @@ class FundIncEstSkPos(FundIncEstimate):
 
         return df_fund_inc_est
 
-if 1==1:
+if 2==1:
     start=time.perf_counter()
     yy= FundIncEstSkPos(fund_codes=['000001', '000011'], begin_date='20171111', end_date='20181228')
     yy.estimate_fund_inc()
@@ -249,44 +250,22 @@ if 1==1:
 set_trace()
 
 
-class ra_index(Base):
-
-    __tablename__ = 'ra_index'
-
-    globalid = Column(Integer, primary_key = True)
-    ra_caihui_code = Column(String)
-
-
-
-def load_index_ids(index_mapi_ids):
-
-    engine = database.connection('base')
-    Session = sessionmaker(bind = engine)
-    session = Session()
-
-    sql = session.query(
-            ra_index.globalid,
-            ra_index.ra_caihui_code
-    ).filter(
-            ra_index.globalid.in_(index_mapi_ids)
-    )
-
-    df = pd.read_sql(sql.statement, session.bind, index_col=['globalid'])
-    df.columns = ['index_id']
-
-    session.commit()
-    session.close()
-
-    return df.index_id
-
-
-class FundIncEstIndxPos(FundIncEstimate):
+class FundIncEstIxPos(FundIncEstimate):
 
     # __df_stock_ret = None
 
-    def __init__(self, index_ids, fund_ids=None, fund_codes=None, begin_date=None, end_date=None):
-        super(FundIncEstIndxPos, self).__init__(fund_ids, fund_codes, begin_date, end_date)
-        self._index_ids = index_ids
+    def __init__(self, begin_date=None, end_date=None, fund_ids=None, fund_codes=None, index_ids=None):
+
+        super(FundIncEstIxPos, self).__init__(begin_date, end_date, fund_ids, fund_codes)
+
+        if index_ids is None:
+            self._index_ids = caihui_tq_ix_basicinfo.load_index_basic_info(est_class='申万一级行业指数').index
+        else:
+            self._index_ids = index_ids
+
+    @property
+    def index_ids(self):
+        return self._index_ids
 
     @staticmethod
     def fund_inc_objective(x, pars):
@@ -299,7 +278,7 @@ class FundIncEstIndxPos(FundIncEstimate):
         return loss
 
     @staticmethod
-    def cal_indx_pos(index_inc, fund_inc):
+    def cal_ix_pos(index_inc, fund_inc):
 
         index_num = index_inc.shape[1]
 
@@ -313,7 +292,7 @@ class FundIncEstIndxPos(FundIncEstimate):
         bnds = tuple([(0.0, 1.0) for i in range(index_num)])
 
         res = minimize(
-                FundIncEstIndxPos.fund_inc_objective,
+                FundIncEstIxPos.fund_inc_objective,
                 w0,
                 args=[index_inc, fund_inc],
                 method='SLSQP',
@@ -324,7 +303,7 @@ class FundIncEstIndxPos(FundIncEstimate):
 
         return res.x
 
-    def cal_indx_pos_days(self):
+    def cal_ix_pos_days(self):
 
         begin_date_cal = month_start(last_quarter(self._begin_date))
 
@@ -357,7 +336,7 @@ class FundIncEstIndxPos(FundIncEstimate):
             fund_index_pos = pd.DataFrame(columns=self._index_ids)
             fund_index_pos.index.name = 'fund_code'
             for fund_code in fund_inc.columns:
-                fund_index_pos.loc[fund_code] = FundIncEstIndxPos.cal_indx_pos(index_inc, fund_inc[fund_code])
+                fund_index_pos.loc[fund_code] = FundIncEstIxPos.cal_ix_pos(index_inc, fund_inc[fund_code])
             fund_index_pos['date'] = pdate + pd.Timedelta('1d')
             fund_index_pos = fund_index_pos.reset_index().set_index(['date', 'fund_code'])
 
@@ -374,7 +353,7 @@ class FundIncEstIndxPos(FundIncEstimate):
         )
         df_index_inc = df_index_nav.pct_change().iloc[1:]
 
-        df_fund_index_pos = self.cal_indx_pos_days()
+        df_fund_index_pos = self.cal_ix_pos_days()
 
         dates = []
         date = self._begin_date
@@ -397,11 +376,24 @@ class FundIncEstIndxPos(FundIncEstimate):
         return df_fund_inc_est
 
 if 1==1:
-    ind_index_mapi_ids = list(range(120000052, 120000080))
-    ind_index_ids = load_index_ids(ind_index_mapi_ids)
-    ww= FundIncEstIndxPos(index_ids=ind_index_ids, fund_codes=['000001', '000011'], begin_date='20171111', end_date='20181228')
+    ww = FundIncEstIxPos(fund_codes=['000001', '000011'], begin_date='20171111', end_date='20181228')
     ww.estimate_fund_inc()
 set_trace()
 
 
+class FundIncEstMix(FundIncEstimate):
 
+    # __df_stock_ret = None
+
+    def __init__(self, begin_date=None, end_date=None, fund_ids=None, fund_codes=None):
+        super(FundIncEstMix, self).__init__(begin_date, end_date, fund_ids, fund_codes)
+
+
+
+
+
+
+
+
+    def estimate_fund_inc(self):
+        pass

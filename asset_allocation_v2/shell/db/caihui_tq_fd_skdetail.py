@@ -61,6 +61,7 @@ def load_fd_skdetail_ten(end_date, publish_date, fund_ids=None):
     return df
 
 
-if __name__ == "__main__":
-    load_fd_skdetail_all()
-    load_fd_skdetail_ten()
+if __name__ == '__main__':
+    load_fd_skdetail_all('20180630')
+    load_fd_skdetail_ten('20180630', '20180801')
+
