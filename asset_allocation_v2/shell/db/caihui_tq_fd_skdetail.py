@@ -5,24 +5,20 @@ Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
 
-import sys
 import logging
-sys.path.append('shell')
-sys.path.append('..')
-from sqlalchemy import MetaData, Table, select, func
+from sqlalchemy import MetaData, Table, select, func, and_
 import pandas as pd
-from dateutil.parser import parse
 from . import database
 
 
 logger = logging.getLogger(__name__)
 
 
-def load_fd_skdetail_all(fund_ids=None, end_date=None):
+def load_fd_skdetail_all(end_date, fund_ids=None):
 
     db = database.connection('caihui')
     metadata = MetaData(bind=db)
-    t = Table('tq_fd_basicinfo', metadata, autoload=True)
+    t = Table('tq_fd_skdetail', metadata, autoload=True)
 
     columns = [
             t.c.SECODE.label('fund_id'),
@@ -31,8 +27,6 @@ def load_fd_skdetail_all(fund_ids=None, end_date=None):
     ]
 
     s = select(columns)
-    # if end_date is None:
-        # end_date = last_end_date_fund_skdetail_all_published(pd.Timestamp.now())
     s = s.where(t.c.ENDDATE==end_date)
     if fund_ids is not None:
         s = s.where(t.c.SECODE.in_(fund_ids))
@@ -42,11 +36,11 @@ def load_fd_skdetail_all(fund_ids=None, end_date=None):
     return df
 
 
-def load_fd_skdetail_ten(fund_ids=None, end_date=None):
+def load_fd_skdetail_ten(end_date, publish_date, fund_ids=None):
 
     db = database.connection('caihui')
     metadata = MetaData(bind=db)
-    t = Table('tq_fd_basicinfo', metadata, autoload=True)
+    t = Table('tq_fd_skdetail', metadata, autoload=True)
 
     columns = [
             t.c.SECODE.label('fund_id'),
@@ -55,13 +49,10 @@ def load_fd_skdetail_ten(fund_ids=None, end_date=None):
     ]
 
     s = select(columns)
-    # if end_date is None:
-        # end_date = last_end_date_fund_skdetail_ten_published(pd.Timestamp.now())
-    # publish_date = next_month(date_as_timestamp(end_date))
-    s = s.where(
-            t.c.ENDDATE==end_date
-            # t.c.PUBLISHDATE<=date_as_str(publish_date)
-    )
+    s = s.where(and_(
+            t.c.ENDDATE==end_date,
+            t.c.PUBLISHDATE<publish_date
+    ))
     if fund_ids is not None:
         s = s.where(t.c.SECODE.in_(fund_ids))
 

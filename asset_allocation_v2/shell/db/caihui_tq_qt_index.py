@@ -5,12 +5,9 @@ Editor: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
 
-import sys
 import logging
-sys.path.append('shell')
 from sqlalchemy import MetaData, Table, select, func
 import pandas as pd
-from dateutil.parser import parse
 from . import database
 
 
@@ -40,7 +37,7 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
     return df
 
 
-def load_index_nav(index_ids=None, reindex=None, begin_date=None, end_date=None):
+def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None):
 
     db = database.connection('caihui')
     metadata = MetaData(bind=db)

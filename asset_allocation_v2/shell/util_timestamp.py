@@ -10,6 +10,7 @@ import logging
 sys.path.append('shell')
 import numpy as np
 import pandas as pd
+from ipdb import set_trace
 from trade_date import ATradeDate
 
 
@@ -39,6 +40,15 @@ def last_year(date):
     days_in_month = pd.Timestamp(date.year-1, date.month, 1).days_in_month
     return pd.Timestamp(date.year-1, date.month, min(date.day, days_in_month))
 
+def last_quarter(date):
+
+    if date.month < 4:
+        days_in_month = pd.pd.Timestamp(date.year-1, date.month+9, 1).days_in_month
+        return pd.Timestamp(date.year-1, date.month+9, min(date.day, days_in_month))
+    else:
+        days_in_month = pd.Timestamp(date.year, date.month-3, 1).days_in_month
+        return pd.Timestamp(date.year, date.month-3, min(date.day, days_in_month))
+
 def next_month(date):
 
     if date.month < 12:
@@ -48,7 +58,7 @@ def next_month(date):
         days_in_month = pd.Timestamp(date.year+1, 1, 1).days_in_month
         return pd.Timestamp(date.year+1, 1, min(date.day, days_in_month))
 
-def start_of_month(date):
+def month_start(date):
 
     return pd.Timestamp(date.year, date.month, 1)
 
@@ -82,6 +92,9 @@ def trade_date_before(date):
 
     trade_dates = ATradeDate.trade_date()
 
+    if date <= trade_dates[0]:
+        raise ValueError('There is not trading day before the day.')
+
     lo = 0
     hi = trade_dates.shape[0]
     while lo + 1 < hi:
@@ -90,9 +103,6 @@ def trade_date_before(date):
             hi = mi
         else:
             lo = mi
-
-    if date <= trade_dates[lo]:
-        raise ValueError('There is not trading day before the day.')
 
     if date == trade_dates[lo]:
         return trade_dates[lo-1]
@@ -103,6 +113,9 @@ def trade_date_not_later_than(date):
 
     trade_dates = ATradeDate.trade_date()
 
+    if date < trade_dates[0]:
+        raise ValueError('It is before the first day of trading.')
+
     lo = 0
     hi = trade_dates.shape[0]
     while lo + 1 < hi:
@@ -111,8 +124,5 @@ def trade_date_not_later_than(date):
             hi = mi
         else:
             lo = mi
-
-    if date < trade_dates[lo]:
-        raise ValueError('It is before the first day of trading.')
 
     return trade_dates[lo]
