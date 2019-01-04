@@ -8,6 +8,7 @@ Contact: sushixun@licaimofang.com
 import sys
 import logging
 from sqlalchemy import MetaData, Table, select, func, and_, not_
+from abc import ABCMeta, abstractmethod
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -23,7 +24,7 @@ from util_timestamp import *
 logger = logging.getLogger(__name__)
 
 
-class FundIncEstimate(object):
+class FundIncEstimate(object, metaclass = ABCMeta):
 
     def __init__(self, begin_date=None, end_date=None, fund_ids=None, fund_codes=None):
 
@@ -99,11 +100,13 @@ class FundIncEstimate(object):
 
         return dates
 
+    @abstractmethod
     def estimate_fund_inc(self):
 
-        raise NotImplementedError()
+        pass
+        # raise NotImplementedError()
 
-xx = FundIncEstimate(fund_codes=['000001', '000011'], end_date='20181228')
+# xx = FundIncEstimate(fund_codes=['000001', '000011'], end_date='20181228')
 # xx.estimate_fund_inc()
 # set_trace()
 
@@ -122,12 +125,10 @@ class FundIncEstSkPos(FundIncEstimate):
         for fund_id in fund_stock_pos.index.levels[0]:
 
             stock_pos = fund_stock_pos.loc[fund_id]
-            # stock_pos.index.name = 'stock_id'
 
             if fund_id in fund_stock_pos_ten.index.levels[0]:
 
                 stock_pos_ten = fund_stock_pos_ten.loc[fund_id]
-                # stock_pos_ten.index.name = 'stock_id'
 
                 min_navrto = stock_pos_ten.navrto.min()
                 stock_pos[stock_pos.navrto > min_navrto] = min_navrto
@@ -142,7 +143,6 @@ class FundIncEstSkPos(FundIncEstimate):
         for fund_id in fund_stock_pos_ten.index.levels[0].difference(fund_stock_pos.index.levels[0]):
 
             stock_pos_ten = fund_stock_pos_ten.loc[fund_id]
-            # stock_pos_ten.index.name = 'stock_id'
             stock_pos_ten = stock_pos_ten.reset_index()
             stock_pos_ten['fund_id'] = fund_id
 
@@ -165,7 +165,9 @@ class FundIncEstSkPos(FundIncEstimate):
 
         df_fund_stock_pos = pd.DataFrame()
         for date in dates:
+
             print('cal_sk_pos_days', date)
+
             if date.month in [4, 9]:
                 lastest_end_date = last_end_date_fund_skdetail_all_published(date)
                 fund_stock_pos = caihui_tq_fd_skdetail.load_fd_skdetail_all(
@@ -219,8 +221,10 @@ class FundIncEstSkPos(FundIncEstimate):
 
         df_fund_inc_est = pd.DataFrame()
         for date, next_date in zip(dates[:-1], dates[1:]):
-            print('fund_inc_estimate_sk_pos', date, next_date)
+
             next_date -= pd.Timedelta('1d')
+
+            print('fund_inc_estimate_sk_pos', date, next_date)
 
             fund_stock_pos = df_fund_stock_pos.loc[month_start(date)]
             fund_stock_pos = fund_stock_pos.unstack(level=0).navrto.fillna(0.0)
@@ -231,25 +235,21 @@ class FundIncEstSkPos(FundIncEstimate):
                     index=stock_ret.index,
                     columns=fund_stock_pos.columns
             )
-            # fund_inc_est = fund_inc_est.rename(lambda x: self._fund_pool.fund_code.loc[x], axis='columns').sort_index(axis='columns')
-            # fund_inc_est = fund_inc_est.stack()
-            # set_trace()
             df_fund_inc_est = pd.concat([df_fund_inc_est, fund_inc_est])
 
-        df_fund_inc_est = df_fund_inc_est.rename(lambda x: self._fund_pool.fund_code.loc[x], axis='columns').sort_index(axis='columns')
-        df_fund_inc_est.columns.name = 'fund_code'
+        df_fund_inc_est1 = df_fund_inc_est.rename(self._fund_pool.fund_code, axis='columns').sort_index(axis='columns')
+        df_fund_inc_est1.columns.name = 'fund_code'
+
+        print('fund_inc_estimate_sk_pos done.')
 
         return df_fund_inc_est
 
-if 1==1:
+if 1==2:
     start=time.perf_counter()
     yy= FundIncEstSkPos(fund_codes=['000001', '000011'], begin_date='20171111', end_date='20181228')
     yy.estimate_fund_inc()
     print(time.perf_counter()-start)
-    # zz = FundIncEstSkPos(fund_codes=['000031'], begin_date='20180111', end_date='20180928')
-    # zz.estimate_fund_inc()
-    # print(time.perf_counter()-start)
-set_trace()
+    set_trace()
 
 
 class FundIncEstIxPos(FundIncEstimate):
@@ -315,7 +315,7 @@ class FundIncEstIxPos(FundIncEstimate):
                 trade_date_before(begin_date_cal).strftime('%Y%m%d'),
                 self._end_date.strftime('%Y%m%d'),
                 codes=self._fund_pool.fund_code
-            )
+        )
         df_fund_inc = df_fund_nav.pct_change().iloc[1:]
 
         df_index_nav = caihui_tq_qt_index.load_index_nav(
@@ -328,7 +328,9 @@ class FundIncEstIxPos(FundIncEstimate):
         lookback = 3
         df_fund_index_pos = pd.DataFrame()
         for date, next_date in zip(dates[:-lookback], dates[lookback:]):
-            print('cal_ix_pos_days', date, next_date)
+
+            print('cal_ix_pos_days', next_date)
+
             next_date -= pd.Timedelta('1d')
 
             fund_inc = df_fund_inc.loc[date:next_date].dropna(how='any', axis='columns')
@@ -350,9 +352,9 @@ class FundIncEstIxPos(FundIncEstimate):
         dates = self.dates_divided()
 
         df_index_nav = caihui_tq_qt_index.load_index_nav(
-                index_ids=self._index_ids,
                 begin_date=trade_date_before(self._begin_date).strftime('%Y%m%d'),
-                end_date=self._end_date.strftime('%Y%m%d')
+                end_date=self._end_date.strftime('%Y%m%d'),
+                index_ids=self._index_ids
         )
         df_index_inc = df_index_nav.pct_change().iloc[1:]
 
@@ -360,8 +362,10 @@ class FundIncEstIxPos(FundIncEstimate):
 
         df_fund_inc_est = pd.DataFrame()
         for date, next_date in zip(dates[:-1], dates[1:]):
-            print('fund_inc_estimate_ix_pos', date, next_date)
+
             next_date -= pd.Timedelta('1d')
+
+            print('fund_inc_estimate_ix_pos', date, next_date)
 
             fund_index_pos = df_fund_index_pos.loc[month_start(date)].T
             index_inc = df_index_inc.loc[date:next_date]
@@ -369,12 +373,14 @@ class FundIncEstIxPos(FundIncEstimate):
             fund_inc_est = pd.DataFrame(np.dot(index_inc, fund_index_pos), index=index_inc.index, columns=fund_index_pos.columns)
             df_fund_inc_est = pd.concat([df_fund_inc_est, fund_inc_est])
 
+        print('fund_inc_estimate_ix_pos done.')
+
         return df_fund_inc_est
 
-if 1==1:
+if 1==2:
     ww = FundIncEstIxPos(fund_codes=['000001', '000011'], begin_date='20171111', end_date='20181228')
     ww.estimate_fund_inc()
-set_trace()
+    set_trace()
 
 
 class FundIncEstMix(FundIncEstimate):
@@ -385,15 +391,20 @@ class FundIncEstMix(FundIncEstimate):
 
         super(FundIncEstMix, self).__init__(begin_date, end_date, fund_ids, fund_codes)
 
+    def cal_est_pos():
 
-
-
-
-
-
+         asset_fund_inc_estimate.load_fund_inc_estimate()
 
     def estimate_fund_inc(self):
 
         dates = self.dates_divided()
+
+        df_est = asset_fund_inc_estimate.load_fund_inc_estimate(
+                begin_date=self._begin_date.strftime('%Y%m%d'),
+                end_date=self._end_date.strftime('%Y%m%d'),
+                fund_codes=self._fund_pool.fund_code,
+                methods=['sk_pos', 'ix_pos'],
+        )
+
 
 

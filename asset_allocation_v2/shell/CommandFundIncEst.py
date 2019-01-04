@@ -24,7 +24,7 @@ from dateutil.parser import parse
 from Const import datapath
 from tabulate import tabulate
 sys.path.append('shell')
-from db import database, asset_fund_inc_estimate
+from db import asset_fund_inc_estimate
 from fund_inc_estimate import *
 
 
@@ -40,44 +40,39 @@ def fie(ctx):
     pass
 
 
-@fie.command()
-@click.pass_context
-def fund_inc_estimate_create(ctx):
+# @fie.command()
+# @click.pass_context
+def fund_inc_estimate_create():
     '''fund inc estimate create
     '''
 
-    begin_date = pd.Timestamp('20170101')
-    end_date = pd.Timeestamp(pd.Timestamp.now().strftime('%Y%m%d'))
-    dates = pd.Index([begin_date, end_date])
+    fiesp = FundIncEstSkPos(begin_date='20181201')
+    df_fiesp = fiesp.estimate_fund_inc()
+    df_fiesp = df_fiesp.stack().to_frame(name='sk_pos')
 
-    df_new = pd.DataFrame()
-    for date, next_date in zip(dates[1:], dates[:-1]):
+    fieip = FundIncEstIxPos(begin_date='20181201')
+    df_fieip = fieip.estimate_fund_inc()
+    df_fieip = df_fieip.stack().to_frame(name='ix_pos')
 
-        next_date -= pd.Timedelta('1d')
+    df_fie = df_fiesp.join(df_fieip, how='inner')
+    df_fie = df_fie.reindex(columns=['sk_pos', 'ix_pos'])
 
-        a = FundIncEstSkPos(begin_date=date, end_date=next_date)
-        aa = a.estimate_fund_inc()
-        aa = aa.stack().to_frame()
+    asset_fund_inc_estimate.update_fund_inc_estimate(df_fie)
 
-        b = FundIncIxPos(begin_date=date, end_date=next_date)
-        bb = b.estimate_fund_inc()
-        bb = bb.stack().to_frame()
+    set_trace()
 
-        cc = aa.join(bb, how='outer')
-
-        df_new = pd.concat([df_new, df])
+    fiem = FundIncEstMix()
+    df_mix = fiem.estimate_fund_inc()
+    df_mix.stack().to_frame()
 
     asset_fund_inc_estimate.update_fund_inc_estimate(df_new)
 
-
 if 1==1:
     fund_inc_estimate_create()
-# 写一个create
-# 逻辑
-# 先更新sk_pos indx_pos 空的mix
-# 然后更新
 
 # 再写一个update_all_methods
+
+set_trace()
 
 @fie.command()
 @click.pass_context

@@ -17,24 +17,6 @@ from trade_date import ATradeDate
 logger = logging.getLogger(__name__)
 
 
-def date_as_timestamp(date):
-
-    if date is None:
-        return None
-
-    if isinstance(date, (int, np.int64)) and 18000101 <= date and date <= 29991231:
-        date = str(date)
-
-    return pd.Timestamp(date)
-
-def date_as_caihui_str(date):
-
-    if date is None:
-        return None
-
-    return date_as_timestamp(date).strftime('%Y%m%d')
-
-
 def last_year(date):
 
     days_in_month = pd.Timestamp(date.year-1, date.month, 1).days_in_month
@@ -43,7 +25,7 @@ def last_year(date):
 def last_quarter(date):
 
     if date.month < 4:
-        days_in_month = pd.pd.Timestamp(date.year-1, date.month+9, 1).days_in_month
+        days_in_month = pd.Timestamp(date.year-1, date.month+9, 1).days_in_month
         return pd.Timestamp(date.year-1, date.month+9, min(date.day, days_in_month))
     else:
         days_in_month = pd.Timestamp(date.year, date.month-3, 1).days_in_month
@@ -55,16 +37,11 @@ def next_month(date):
         days_in_month = pd.Timestamp(date.year, date.month+1, 1).days_in_month
         return pd.Timestamp(date.year, date.month+1, min(date.day, days_in_month))
     else:
-        days_in_month = pd.Timestamp(date.year+1, 1, 1).days_in_month
-        return pd.Timestamp(date.year+1, 1, min(date.day, days_in_month))
+        return pd.Timestamp(date.year+1, 1, date.day)
 
 def month_start(date):
 
     return pd.Timestamp(date.year, date.month, 1)
-
-def end_of_last_half_year(date):
-
-    return 0
 
 def last_end_date_fund_skdetail_all_published(date):
 
