@@ -1023,6 +1023,8 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     elif algo == 9:
         #固定波动率配置
         upper_risk = float(argv.get('upper_risk', 0.015))
+        #upper_risk = 0.01
+        #print(upper_risk)
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MzFixRiskBootAllocate('ALC.000001', assets, trade_date, lookback, upper_risk, bound = bounds)

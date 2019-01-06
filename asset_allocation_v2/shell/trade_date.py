@@ -16,7 +16,6 @@ import Const
 import DFUtil
 import DBData
 import util_numpy as npu
-import Portfolio as PF
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager

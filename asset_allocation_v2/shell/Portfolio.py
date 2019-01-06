@@ -6,7 +6,7 @@ import string
 import os
 import sys
 import logging
-sys.path.append("windshell")
+sys.path.append("shell")
 import Financial as fin
 import Const
 from numpy import *
@@ -17,10 +17,12 @@ from multiprocessing import Manager
 import scipy
 import scipy.optimize
 from ipdb import set_trace
-
+from asset import Asset, WaveletAsset
+from trade_date import ATradeDate
 
 from Const import datapath
 from util.xdebug import dd
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -265,14 +267,25 @@ def riskparity_obj_func(w, cov):
     return risk_sum
 
 
-def markowitz_fixrisk(df_inc, bound, target_risk):
+def markowitz_fixrisk(df_inc, bound, target_risk, corr):
 
     w0 = [1/len(df_inc.columns)]*len(df_inc.columns)
 
 
     bnds = [(bound[i]['lower'], bound[i]['upper']) for i in range(len(bound))]
     ret = df_inc.mean().values
-    vol = df_inc.cov().values
+    vol = df_inc.corr().values * corr
+    #ret = corr.ravel()
+    #print(inc)
+    #print(df_inc.tail())
+    #ret = np.zeros(df_inc.shape[1])
+    #print(ret)
+    #std = df_inc.std().ravel()
+    #vol = np.outer(std, std)
+    #vol = vol * corr
+    #vol = df_inc.cov().values
+    #print(vol)
+    #print(df_inc.index[-1])
 
     asset_sum1_limit = 0.0
     sum1_limit_assets = []
@@ -307,11 +320,11 @@ def risk_budget_objective(x,pars):
     return -np.dot(ret, x)
 
 
-def m_markowitz_fixrisk(queue, random_index, df_inc, bound, target_risk):
+def m_markowitz_fixrisk(queue, random_index, df_inc, bound, target_risk, corr):
 
     for index in random_index:
         tmp_df_inc = df_inc.iloc[index]
-        risk, returns, ws, sharpe = markowitz_fixrisk(tmp_df_inc, bound, target_risk)
+        risk, returns, ws, sharpe = markowitz_fixrisk(tmp_df_inc, bound, target_risk, corr)
         queue.put((risk, returns, ws, sharpe))
 
 
@@ -343,6 +356,25 @@ def markowitz_bootstrape_fixrisk(df_inc, bound, target_risk, cpu_count = 0, boot
     #print day_indexs
     day_indexs = np.array(day_indexs)
 
+    df_nav = {}
+    for asset_id in df_inc.columns:
+        asset = Asset(asset_id)
+        df_nav[asset_id] = asset.nav(reindex = ATradeDate.trade_date())
+        #df_nav[asset_id] = asset.nav(reindex = ATradeDate.week_trade_date())
+    df_nav = pd.DataFrame(df_nav)
+    inc = df_nav.pct_change()
+    inc = inc[inc.index >= df_inc.index[-1]]
+    inc = inc.iloc[0:20]
+    std = inc.std()
+    corr = np.outer(std, std)
+    #corr = inc.cov().values
+    corr = corr * (7 ** 0.5)
+    #print(inc, df_inc)
+    #corr = inc.corr()
+    #if len(inc) == 1:
+    #    corr = inc.iloc[0]
+    #else:
+    #    corr = inc.iloc[1]
 
     day_indexs = day_indexs.reshape(len(day_indexs) // (look_back // 2), look_back // 2)
     for m in range(0, len(day_indexs)):
@@ -355,7 +387,7 @@ def markowitz_bootstrape_fixrisk(df_inc, bound, target_risk, cpu_count = 0, boot
     q = manager.Queue()
     processes = []
     for indexs in process_indexs:
-        p = multiprocessing.Process(target = m_markowitz_fixrisk, args = (q, indexs, df_inc, bound, target_risk))
+        p = multiprocessing.Process(target = m_markowitz_fixrisk, args = (q, indexs, df_inc, bound, target_risk, corr))
         processes.append(p)
         p.start()
 
