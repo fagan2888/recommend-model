@@ -14,7 +14,7 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_fd_skdetail_all(end_date, fund_ids=None):
+def load_fund_skdetail_all(end_date, fund_ids=None):
 
     db = database.connection('caihui')
     metadata = MetaData(bind=db)
@@ -36,7 +36,7 @@ def load_fd_skdetail_all(end_date, fund_ids=None):
     return df
 
 
-def load_fd_skdetail_ten(end_date, publish_date, fund_ids=None):
+def load_fund_skdetail_ten(end_date, publish_date, fund_ids=None):
 
     db = database.connection('caihui')
     metadata = MetaData(bind=db)
