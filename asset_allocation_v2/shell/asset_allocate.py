@@ -43,6 +43,7 @@ from view import View
 import RiskParity
 import util_optimize
 from monetary_fund_filter import MonetaryFundFilter
+from scipy.stats import rankdata
 
 import PureFactor
 import IndexFactor
@@ -590,11 +591,12 @@ class SingleValidFactorAllocate(Allocate):
 class MonetaryAllocate(Allocate):
 
 
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, alloc_num=3):
         super(MonetaryAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
         mnf = MonetaryFundFilter()
         mnf.handle()
         self.mnf = mnf
+        self.alloc_num = alloc_num
 
     '''
     def allocate_algo(self, day, df_inc, bound):
@@ -628,6 +630,34 @@ class MonetaryAllocate(Allocate):
         return ws
     '''
 
+    def allocate(self):
+
+        adjust_days = self.index[self.lookback - 1::self.period]
+        asset_ids = list(self.assets.keys())
+        pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
+
+        s = 'perform %-12s' % self.__class__.__name__
+
+        with click.progressbar(
+                adjust_days, label=s.ljust(30),
+                item_show_func=lambda x:  x.strftime("%Y-%m-%d") if x else None) as bar:
+
+            for day in bar:
+
+                logger.debug("%s : %s", s, day.strftime("%Y-%m-%d"))
+                df_inc, bound = self.load_allocate_data(day, asset_ids)
+
+                ws = self.allocate_algo(day, df_inc, bound)
+                # ws = self.allocate_algo_dynamic(day, df_inc, bound)
+                # ws = self.allocate_algo_pool(day, df_inc, bound)
+                # ws = self.allocate_algo_pool_yingmi(day, df_inc, bound)
+
+                for asset_id in list(ws.keys()):
+                    pos_df.loc[day, asset_id] = ws[asset_id]
+        # pos_df = pos_df.shift(-1).fillna(method='pad')
+
+        return pos_df
+
     def allocate_algo(self, day, df_inc, bound):
 
         fund_status = self.mnf.fund_status
@@ -659,12 +689,98 @@ class MonetaryAllocate(Allocate):
         tmp_df_inc = tmp_df_inc[final_filter_ids]
 
         ws = {}
-        num = 3
+        # num = 3
+        num = self.alloc_num
+
+        rs = tmp_df_inc.mean()
+
+        # rs_month = tmp_df_inc.tail(4).mean()
+        # rs_quarter = tmp_df_inc.tail(13).mean()
+        # rs_halfyear = tmp_df_inc.tail(26).mean()
+        # rs_year = tmp_df_inc.mean()
+
+        # rs_month = pd.Series(data=rankdata(rs_month), index=rs_month.index)
+        # rs_quarter = pd.Series(data=rankdata(rs_quarter), index=rs_quarter.index)
+        # rs_halfyear = pd.Series(data=rankdata(rs_halfyear), index=rs_halfyear.index)
+        # rs_year = pd.Series(data=rankdata(rs_year), index=rs_year.index)
+
+        # rs = rs_month + rs_quarter + rs_halfyear + rs_year
+
+        rs = rs.sort_values(ascending=False)
+        num = min(num, len(rs))
+        for i in range(0, num):
+            fund_globalid = rs.index[i]
+            ws[fund_globalid] = 1.0 / num
+
+        return ws
+
+    def allocate_algo_dynamic(self, day, df_inc, bound):
+
+        # alloc_ids = ['MZ.MO0010', 'MZ.MO0020', 'MZ.MO0030', 'MZ.MO0040', 'MZ.MO0050', 'MZ.MO0060', 'MZ.MO0070']
+        alloc_ids = ['MZ.MOl010', 'MZ.MO2010', 'MZ.MO3010', 'MZ.MO4010']
+        df_poses = []
+        df_rets = []
+        for alloc_id in alloc_ids:
+            tmp_pos = asset_mz_markowitz_pos.load(alloc_id)
+            tmp_pos = tmp_pos[tmp_pos.index <= day]
+            tmp_pos = tmp_pos.loc[tmp_pos.index[-1]]
+            df_poses.append(tmp_pos)
+            tmp_nav = asset_mz_markowitz_nav.load_series(alloc_id)
+            tmp_nav = tmp_nav[tmp_nav.index <= day]
+            tmp_nav = tmp_nav.tail(30)
+            tmp_ret = tmp_nav.iloc[-1] / tmp_nav.iloc[0] - 1
+            df_rets.append(tmp_ret)
+        best_num = np.argmax(df_rets)
+        best_pos = df_poses[best_num]
+        best_pos = best_pos.replace(0.0, np.nan).dropna()
+        ws = best_pos.to_dict()
+
+        return ws
+
+    def allocate_algo_pool(self, day, df_inc, bound):
+
+        fund_status = self.mnf.fund_status
+        fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
+        valid_ids = fund_status.index
+
+        tmp_scale = self.mnf.fund_scale.loc[day]
+        tmp_scale = tmp_scale.sort_values(ascending=False)
+        scale_filter_codes = tmp_scale[tmp_scale > 1e10].index
+        scale_filter_ids = [str(self.mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
+
+        final_filter_ids = np.intersect1d(scale_filter_ids, valid_ids)
+        tmp_df_inc = df_inc.copy()
+        tmp_df_inc = tmp_df_inc[final_filter_ids]
+
+        ws = {}
+        num = 200
+
         rs = tmp_df_inc.mean()
         rs = rs.sort_values(ascending=False)
         num = min(num, len(rs))
         for i in range(0, num):
             fund_globalid = rs.index[i]
+            ws[fund_globalid] = 1.0 / num
+
+        return ws
+
+    def allocate_algo_pool_yingmi(self, day, df_inc, bound):
+
+        fund_status = self.mnf.fund_status
+        fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
+        fund_status = fund_status[fund_status.fi_yingmi_subscribe_status == 0.0]
+        valid_ids = fund_status.index
+
+        tmp_df_inc = df_inc.copy()
+        tmp_df_inc = tmp_df_inc.sum()
+        tmp_df_inc = tmp_df_inc.replace(0.0, np.nan).dropna()
+        valid_ids = np.intersect1d(tmp_df_inc.index, valid_ids)
+
+        ws = {}
+        num = len(valid_ids)
+
+        for i in range(0, num):
+            fund_globalid = valid_ids[i]
             ws[fund_globalid] = 1.0 / num
 
         return ws

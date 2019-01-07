@@ -826,29 +826,29 @@ def monetary_fund_rank(ctx, optid):
     df_inc = df_nav.pct_change()
 
     print("month data")
-    # df_month_wr = cal_month_wr(allocate_inc, df_inc)
-    df_month_wr = cal_month_money_wr(allocate_inc, df_inc, fund_scale)
+    df_month_wr = cal_month_wr(allocate_inc, df_inc)
+    # df_month_wr = cal_month_money_wr(allocate_inc, df_inc, fund_scale)
     # df_month_wr = df_month_wr[df_month_wr.index > '2012-12-31']
     print("percentile of beat 80% funds", len(df_month_wr[df_month_wr < 0.2].dropna()) / len(df_month_wr))
     print()
 
     print("quarter data")
-    # df_quarter_wr = cal_quarter_wr(allocate_inc, df_inc)
-    df_quarter_wr = cal_quarter_money_wr(allocate_inc, df_inc, fund_scale)
+    df_quarter_wr = cal_quarter_wr(allocate_inc, df_inc)
+    # df_quarter_wr = cal_quarter_money_wr(allocate_inc, df_inc, fund_scale)
     # df_quarter_wr = df_quarter_wr[df_quarter_wr.index > '2012-12-31']
     print("percentile of beat 80% funds", len(df_quarter_wr[df_quarter_wr < 0.2].dropna()) / len(df_quarter_wr))
     print()
 
     print("half year data")
-    # df_halfyear_wr = cal_halfyear_wr(allocate_inc, df_inc)
-    df_halfyear_wr = cal_halfyear_money_wr(allocate_inc, df_inc, fund_scale)
+    df_halfyear_wr = cal_halfyear_wr(allocate_inc, df_inc)
+    # df_halfyear_wr = cal_halfyear_money_wr(allocate_inc, df_inc, fund_scale)
     # df_halfyear_wr = df_halfyear_wr[df_halfyear_wr.index > '2012-12-31']
     print("percentile of beat 80% funds", len(df_halfyear_wr[df_halfyear_wr < 0.2].dropna()) / len(df_halfyear_wr))
     print()
 
     print("year data")
-    # df_year_wr = cal_year_wr(allocate_inc, df_inc)
-    df_year_wr = cal_year_money_wr(allocate_inc, df_inc, fund_scale)
+    df_year_wr = cal_year_wr(allocate_inc, df_inc)
+    # df_year_wr = cal_year_money_wr(allocate_inc, df_inc, fund_scale)
     # df_year_wr = df_year_wr[df_year_wr.index > '2012-12-31']
     print(df_year_wr)
     set_trace()
@@ -871,7 +871,7 @@ def monetary_fund_display(ctx, optid):
     set_trace()
 
 
-@analysis.command()
+analysis.command()
 @click.option('--id', 'optid', default='MZ.MONE10', help='markowitz_id')
 @click.pass_context
 def return_week_annualized(ctx, optid):
@@ -908,4 +908,26 @@ def allocate_scale(ctx, optid):
     df_scale = allocate_pos * fund_scale
     df_scale = df_scale.sum(1)
     df_scale.to_csv('data/scale/scale.csv')
+
+@analysis.command()
+@click.pass_context
+def allocate_sta(ctx):
+
+    allocate_nav = asset_mz_markowitz_nav.load_series('MZ.MF0020')
+    mf_yeb = base_ra_fund_nav.load_series('000198')
+    mf_zs = base_ra_fund_nav.load_series('000607')
+    df = pd.concat([allocate_nav, mf_yeb, mf_zs], 1)
+    df = df[df.index >= '2014-06-30']
+    df_inc = df.pct_change().dropna()
+    df_inc.columns = ['model', 'yuebao', 'zhaozhaoying']
+    df_m = df_inc.resample('m').sum()
+    df_q = df_inc.resample('q').sum()
+    df_a = df_inc.resample('A').sum()
+
+    df_m.to_csv('data/sta/model_m.csv', index_label='date')
+    df_q.to_csv('data/sta/model_q.csv', index_label='date')
+    df_a.to_csv('data/sta/model_a.csv', index_label='date')
+    set_trace()
+
+
 

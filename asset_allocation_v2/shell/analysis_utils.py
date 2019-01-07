@@ -52,6 +52,8 @@ def cal_month_wr(allocate_inc, df_inc):
         fund_month_r.sort(reverse=True)
         # print(fund_month_r.index(allocate_r), len(fund_month_r), 1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
         ranks.append(1.0 * fund_month_r.index(allocate_r) / len(fund_month_r))
+        # if date == datetime(2016, 5, 31):
+            # set_trace()
     print(np.mean(ranks))
     df_month_wr = pd.Series(data=ranks, index=allocate_month_inc.index)
     df_month_wr = df_month_wr.to_frame('wr')
@@ -86,7 +88,7 @@ def cal_month_money_wr(allocate_inc, df_inc, fund_scale):
     df_month_wr = pd.Series(data=ranks, index=allocate_month_inc.index)
     df_month_wr = df_month_wr.to_frame('wr')
     df_month_wr = df_month_wr[df_month_wr.index > '2012-12-31']
-    df_month_wr.to_csv('data/df_month_wr.csv', index_label='date')
+    df_month_wr.to_csv('data/df_month_money_wr.csv', index_label='date')
 
     return df_month_wr
 
@@ -137,7 +139,7 @@ def cal_quarter_money_wr(allocate_inc, df_inc, fund_scale):
     df_month_wr = pd.Series(data=ranks, index=allocate_month_inc.index)
     df_month_wr = df_month_wr.to_frame('wr')
     df_month_wr = df_month_wr[df_month_wr.index > '2012-12-31']
-    df_month_wr.to_csv('data/df_quarter_wr.csv', index_label='date')
+    df_month_wr.to_csv('data/df_quarter_money_wr.csv', index_label='date')
 
     return df_month_wr
 
@@ -188,7 +190,7 @@ def cal_halfyear_money_wr(allocate_inc, df_inc, fund_scale):
     df_month_wr = pd.Series(data=ranks, index=allocate_month_inc.index)
     df_month_wr = df_month_wr.to_frame('wr')
     df_month_wr = df_month_wr[df_month_wr.index > '2012-12-31']
-    df_month_wr.to_csv('data/df_halfyear_wr.csv', index_label='date')
+    df_month_wr.to_csv('data/df_halfyear_money_wr.csv', index_label='date')
 
     return df_month_wr
 
@@ -239,6 +241,6 @@ def cal_year_money_wr(allocate_inc, df_inc, fund_scale):
     df_month_wr = pd.Series(data=ranks, index=allocate_month_inc.index)
     df_month_wr = df_month_wr.to_frame('wr')
     df_month_wr = df_month_wr[df_month_wr.index > '2012-12-31']
-    df_month_wr.to_csv('data/df_year_wr.csv', index_label='date')
+    df_month_wr.to_csv('data/df_year_money_wr.csv', index_label='date')
 
     return df_month_wr
