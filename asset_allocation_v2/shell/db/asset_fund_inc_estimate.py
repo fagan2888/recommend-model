@@ -42,6 +42,7 @@ def load_fund_inc_estimate(begin_date=None, end_date=None, fund_codes=None, meth
 
     if not to_update:
         df.index.names = ['date', 'fund_code']
+        df.columns.name = 'method'
         df = df.rename(lambda x: x[11:], axis='columns')
 
     return df
@@ -49,8 +50,6 @@ def load_fund_inc_estimate(begin_date=None, end_date=None, fund_codes=None, meth
 
 def update_fund_inc_estimate(df_new, begin_date=None, end_date=None, fund_codes=None):
 
-    df_new.index.names = ['fi_trade_date', 'fi_fund_code']
-    df_new = df_new.rename(lambda x: 'fi_inc_est_'+x, axis='columns')
     df_new.loc[:] = round(df_new, 8)
     df_old = load_fund_inc_estimate(
             begin_date=begin_date,
@@ -59,6 +58,8 @@ def update_fund_inc_estimate(df_new, begin_date=None, end_date=None, fund_codes=
             methods=df_new.columns,
             to_update=True
     )
+    df_new.index.names = ['fi_trade_date', 'fi_fund_code']
+    df_new = df_new.rename(lambda x: 'fi_inc_est_'+x, axis='columns')
 
     db = database.connection('asset')
     t = Table('fi_fund_inc_estimate', MetaData(bind=db), autoload=True)

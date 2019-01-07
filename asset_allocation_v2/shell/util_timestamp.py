@@ -31,6 +31,14 @@ def last_quarter(date):
         days_in_month = pd.Timestamp(date.year, date.month-3, 1).days_in_month
         return pd.Timestamp(date.year, date.month-3, min(date.day, days_in_month))
 
+def last_month(date):
+
+    if date.month < 2:
+        return pd.Timestamp(date.year-1, 12, date.day)
+    else:
+        days_in_month = pd.Timestamp(date.year, date.month-1, 1).days_in_month
+        return pd.Timestamp(date.year, date.month-1, min(date.day, days_in_month))
+
 def next_month(date):
 
     if date.month < 12:
@@ -63,7 +71,7 @@ def last_end_date_fund_skdetail_ten_published(date):
     elif date.month < 11:
         return pd.Timestamp(date.year, 6, 30)
     else:
-        return pd.Timestamp(date.year-1, 9, 30)
+        return pd.Timestamp(date.year, 9, 30)
 
 def trade_date_before(date):
 
