@@ -368,7 +368,7 @@ def markowitz_bootstrape_fixrisk(df_inc, bound, target_risk, cpu_count = 0, boot
     std = inc.std()
     corr = np.outer(std, std)
     #corr = inc.cov().values
-    corr = corr * (7 ** 0.5)
+    corr = corr * (5 ** 0.5)
     #print(inc, df_inc)
     #corr = inc.corr()
     #if len(inc) == 1:
