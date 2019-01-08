@@ -50,7 +50,6 @@ def load_fund_inc_estimate(begin_date=None, end_date=None, fund_codes=None, meth
 
 def update_fund_inc_estimate(df_new, begin_date=None, end_date=None, fund_codes=None):
 
-    df_new.loc[:] = round(df_new, 8)
     df_old = load_fund_inc_estimate(
             begin_date=begin_date,
             end_date=end_date,
@@ -58,6 +57,7 @@ def update_fund_inc_estimate(df_new, begin_date=None, end_date=None, fund_codes=
             methods=df_new.columns,
             to_update=True
     )
+    df_new.loc[:] = round(df_new, 8)
     df_new.index.names = ['fi_trade_date', 'fi_fund_code']
     df_new = df_new.rename(lambda x: 'fi_inc_est_'+x, axis='columns')
 
