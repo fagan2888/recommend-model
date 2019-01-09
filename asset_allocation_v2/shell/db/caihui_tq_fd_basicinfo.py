@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 def load_fund_basic_info(fund_ids=None, fund_codes=None):
 
-    db = database.connection('caihui')
-    metadata = MetaData(bind=db)
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
     t = Table('tq_fd_basicinfo', metadata, autoload=True)
 
     columns = [
@@ -31,12 +31,13 @@ def load_fund_basic_info(fund_ids=None, fund_codes=None):
     if fund_codes is not None:
         s = s.where(t.c.FSYMBOL.in_(fund_codes))
 
-    df = pd.read_sql(s, db, index_col=['fund_id'])
+    df = pd.read_sql(s, engine, index_col=['fund_id'])
 
     return df
 
 
 if __name__ == '__main__':
+
     load_fund_basic_info()
     load_fund_basic_info(fund_ids=['1030000001', '1030000002'])
     load_fund_basic_info(fund_codes=['000001', '000003'])

@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 def load_fund_inc_estimate(begin_date=None, end_date=None, fund_codes=None, methods=['sk_pos', 'ix_pos', 'mix'], to_update=False):
 
-    db = database.connection('asset')
-    metadata = MetaData(bind=db)
+    engine = database.connection('asset')
+    metadata = MetaData(bind=engine)
     t = Table('fi_fund_inc_estimate', metadata, autoload=True)
 
     columns = [
@@ -36,7 +36,7 @@ def load_fund_inc_estimate(begin_date=None, end_date=None, fund_codes=None, meth
     if fund_codes is not None:
         s = s.where(t.c.fi_fund_code.in_(fund_codes))
 
-    df = pd.read_sql(s, db, index_col=['fi_trade_date', 'fi_fund_code'], parse_dates=['fi_trade_date'])
+    df = pd.read_sql(s, engine, index_col=['fi_trade_date', 'fi_fund_code'], parse_dates=['fi_trade_date'])
 
     df = df[pd.Index(methods).map(lambda x: 'fi_inc_est_'+x)]
 
@@ -65,4 +65,20 @@ def update_fund_inc_estimate(df_new, begin_date=None, end_date=None, fund_codes=
     t = Table('fi_fund_inc_estimate', MetaData(bind=db), autoload=True)
     database.batch(db, t, df_new, df_old)
 
+
+def load_date_last_updated():
+
+    engine = database.connection('asset')
+    metadata = MetaData(bind=engine)
+    t = Table('fi_fund_inc_estimate', metadata, autoload=True)
+
+    columns = [
+            func.max(t.c.fi_trade_date).label('date')
+    ]
+
+    s = select(columns)
+
+    df = pd.read_sql(s, engine, index_col=['date'], parse_dates=['date'])
+
+    return df.index[0]
 

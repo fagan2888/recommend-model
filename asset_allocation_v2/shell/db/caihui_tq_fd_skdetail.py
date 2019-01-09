@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 def load_fund_skdetail_all(end_date, fund_ids=None):
 
-    db = database.connection('caihui')
-    metadata = MetaData(bind=db)
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
     t = Table('tq_fd_skdetail', metadata, autoload=True)
 
     columns = [
@@ -31,15 +31,15 @@ def load_fund_skdetail_all(end_date, fund_ids=None):
     if fund_ids is not None:
         s = s.where(t.c.SECODE.in_(fund_ids))
 
-    df = pd.read_sql(s, db, index_col=['fund_id', 'stock_id'])
+    df = pd.read_sql(s, engine, index_col=['fund_id', 'stock_id'])
 
     return df
 
 
 def load_fund_skdetail_ten(end_date, publish_date, fund_ids=None):
 
-    db = database.connection('caihui')
-    metadata = MetaData(bind=db)
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
     t = Table('tq_fd_skdetail', metadata, autoload=True)
 
     columns = [
@@ -56,12 +56,13 @@ def load_fund_skdetail_ten(end_date, publish_date, fund_ids=None):
     if fund_ids is not None:
         s = s.where(t.c.SECODE.in_(fund_ids))
 
-    df = pd.read_sql(s, db, index_col=['fund_id', 'stock_id'])
+    df = pd.read_sql(s, engine, index_col=['fund_id', 'stock_id'])
 
     return df
 
 
 if __name__ == '__main__':
+
     load_fd_skdetail_all('20180630')
     load_fd_skdetail_ten('20180630', '20180801')
 

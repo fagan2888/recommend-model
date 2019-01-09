@@ -15,8 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 def load_index_daily_data(secode, start_date=None, end_date=None):
-    db = database.connection('caihui')
-    metadata = MetaData(bind=db)
+
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
     t = Table('tq_qt_index', metadata, autoload=True)
 
     columns = [
@@ -27,20 +28,23 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
         t.c.VOL.label('volume'),
         t.c.TOPEN.label('open'),
     ]
+
     s = select(columns).where(t.c.SECODE == secode)
     if start_date:
         s = s.where(t.c.TRADEDATE >= start_date)
     if end_date:
         s = s.where(t.c.TRADEDATE <= end_date)
     s = s.where(t.c.ISVALID == 1).order_by(t.c.TRADEDATE.asc())
-    df = pd.read_sql(s, db, index_col = ['date'], parse_dates=['date'])
+
+    df = pd.read_sql(s, engine, index_col = ['date'], parse_dates=['date'])
+
     return df
 
 
 def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None):
 
-    db = database.connection('caihui')
-    metadata = MetaData(bind=db)
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
     t = Table('tq_qt_index', metadata, autoload=True)
 
     columns = [
@@ -57,7 +61,7 @@ def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None)
     if index_ids is not None:
         s = s.where(t.c.SECODE.in_(index_ids))
 
-    df = pd.read_sql(s, db, parse_dates=['date'])
+    df = pd.read_sql(s, engine, parse_dates=['date'])
 
     df = df.pivot('date', 'index_id', 'nav')
     if reindex is not None:
@@ -67,5 +71,6 @@ def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None)
 
 
 if __name__ == '__main__':
+
     load_index_daily_data('2070006540', '20170101', '20170331')
     load_index_nav(index_ids=['2070000005', '2070000014', '2070000553', '2070000060', '2070000187'])
