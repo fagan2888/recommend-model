@@ -52,7 +52,6 @@ def fund_inc_estimate_create(ctx):
 
     df_fie = df_fiesp.join(df_fieip, how='outer')
     df_fie['mix'] = df_fie.mean(axis='columns')
-    df_fie.to_csv('data/df_fie.csv')
 
     asset_fund_inc_estimate.update_fund_inc_estimate(copy.deepcopy(df_fie))
 
@@ -74,7 +73,7 @@ def fund_inc_estimate_update(ctx):
     '''fund inc estimate update
     '''
 
-    begin_date = asset_fund_inc_estimate.load_date_last_updated()
+    begin_date = asset_fund_inc_estimate.load_date_last_updated() + pd.Timedelta('1d')
 
     fiesp = FundIncEstSkPos(begin_date=begin_date)
     df_fiesp = fiesp.estimate_fund_inc()

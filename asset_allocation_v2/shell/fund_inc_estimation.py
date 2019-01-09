@@ -8,11 +8,12 @@ Contact: sushixun@licaimofang.com
 import sys
 import logging
 from sqlalchemy import MetaData, Table, select, func, and_, not_
+import click
+import warnings
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from ipdb import set_trace
-import warnings
 sys.path.append('shell')
 from db import database, base_ra_fund_nav
 from db import asset_fund_inc_estimate, caihui_tq_fd_basicinfo, caihui_tq_fd_skdetail, caihui_tq_sk_dquoteindic, caihui_tq_ix_basicinfo, caihui_tq_qt_index
@@ -163,7 +164,7 @@ class FundIncEstSkPos(FundIncEstimation):
         df_fund_stock_pos = pd.DataFrame()
         for date in dates:
 
-            print('cal_sk_pos_days', date)
+            # print('cal_sk_pos_days', date)
 
             if date.month in [4, 9]:
                 last_end_date = last_end_date_fund_skdetail_all_published(date)
@@ -204,7 +205,7 @@ class FundIncEstSkPos(FundIncEstimation):
         for date, next_date in zip(dates[:-1], dates[1:]):
 
             next_date -= pd.Timedelta('1d')
-            print('fund_inc_estimate_sk_pos', date, next_date)
+            # print('fund_inc_estimate_sk_pos', date, next_date)
 
             fund_stock_pos = df_fund_stock_pos.loc[month_start(date)]
             fund_stock_pos = fund_stock_pos.unstack(level=0).navrto.fillna(0.0)
@@ -220,7 +221,7 @@ class FundIncEstSkPos(FundIncEstimation):
         df_fund_inc_est = df_fund_inc_est.rename(self._fund_pool.fund_code, axis='columns').sort_index(axis='columns')
         df_fund_inc_est.columns.name = 'fund_code'
 
-        print('fund_inc_estimate_sk_pos done.')
+        # print('fund_inc_estimate_sk_pos done.')
 
         return df_fund_inc_est
 
@@ -299,7 +300,7 @@ class FundIncEstIxPos(FundIncEstimation):
         df_fund_index_pos = pd.DataFrame()
         for date, next_date in zip(dates[:-lookback], dates[lookback:]):
 
-            print('cal_ix_pos_days', next_date)
+            # print('cal_ix_pos_days', next_date)
             next_date -= pd.Timedelta('1d')
 
             fund_inc = df_fund_inc.loc[date:next_date].dropna(how='any', axis='columns')
@@ -333,7 +334,7 @@ class FundIncEstIxPos(FundIncEstimation):
         for date, next_date in zip(dates[:-1], dates[1:]):
 
             next_date -= pd.Timedelta('1d')
-            print('fund_inc_estimate_ix_pos', date, next_date)
+            # print('fund_inc_estimate_ix_pos', date, next_date)
 
             fund_index_pos = df_fund_index_pos.loc[month_start(date)].T
             index_inc = df_index_inc.loc[date:next_date]
@@ -341,7 +342,7 @@ class FundIncEstIxPos(FundIncEstimation):
             fund_inc_est = pd.DataFrame(np.dot(index_inc, fund_index_pos), index=index_inc.index, columns=fund_index_pos.columns)
             df_fund_inc_est = pd.concat([df_fund_inc_est, fund_inc_est])
 
-        print('fund_inc_estimate_ix_pos done.')
+        # print('fund_inc_estimate_ix_pos done.')
 
         return df_fund_inc_est
 
@@ -386,7 +387,7 @@ class FundIncEstMix(FundIncEstimation):
         df_fund_mix_pos = pd.DataFrame()
         for date, next_date in zip(dates[:-lookback], dates[lookback:]):
 
-            print('cal_mix_pos_days', next_date)
+            # print('cal_mix_pos_days', next_date)
             next_date -= pd.Timedelta('1d')
 
             fund_inc = df_fund_inc.loc[date:next_date]
@@ -424,7 +425,7 @@ class FundIncEstMix(FundIncEstimation):
         for date, next_date in zip(dates[:-1], dates[1:]):
 
             next_date -= pd.Timedelta('1d')
-            print('fund_inc_estimate_mix', date, next_date)
+            # print('fund_inc_estimate_mix', date, next_date)
 
             fund_mix_pos = df_fund_mix_pos.loc[month_start(date)]
 
@@ -433,7 +434,7 @@ class FundIncEstMix(FundIncEstimation):
 
         df_fund_inc_est = df_fund_inc_est.dropna(how='all', axis='columns')
 
-        print('fund_inc_estimate_mix done.')
+        # print('fund_inc_estimate_mix done.')
 
         return df_fund_inc_est
 
@@ -445,10 +446,7 @@ def fund_inc_estimate_cmp():
     ix_pos = df_fund_inc_est.ix_pos.unstack()
     mix = df_fund_inc_est.mix.unstack()
 
-    df_fund_nav = base_ra_fund_nav.load_daily(
-            trade_date_before(pd.Timestamp('20180101')).strftime('%Y%m%d'),
-            '20190107'
-    )
+    df_fund_nav = base_ra_fund_nav.load_daily()
     df_fund_inc = df_fund_nav.pct_change().iloc[1:]
 
     error_sk_pos = sk_pos - df_fund_inc
@@ -475,5 +473,4 @@ if __name__ == '__main__':
     # df_fiem = fiem.estimate_fund_inc()
 
     # fund_inc_estimate_cmp()
-    set_trace()
 
