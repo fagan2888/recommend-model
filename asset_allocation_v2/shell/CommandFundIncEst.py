@@ -70,7 +70,7 @@ def fund_inc_estimate_create(ctx):
 
 @fie.command()
 @click.pass_context
-def fund_inc_estimate_updatex(ctx):
+def fund_inc_estimate_update(ctx):
     '''fund inc estimate update
     '''
 
