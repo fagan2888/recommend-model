@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 def load_stock_nav(begin_date=None, end_date=None, reindex=None, stock_ids=None):
 
-    db = database.connection('caihui')
-    metadata = MetaData(bind=db)
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
     t = Table('tq_sk_dquoteindic', metadata, autoload=True)
 
     columns = [
@@ -34,7 +34,7 @@ def load_stock_nav(begin_date=None, end_date=None, reindex=None, stock_ids=None)
     if stock_ids is not None:
         s = s.where(t.c.SECODE.in_(stock_ids))
 
-    df = pd.read_sql(s, db, parse_dates=['date'])
+    df = pd.read_sql(s, engine, parse_dates=['date'])
 
     df = df.pivot('date', 'stock_id', 'nav')
     if reindex is not None:
@@ -44,4 +44,6 @@ def load_stock_nav(begin_date=None, end_date=None, reindex=None, stock_ids=None)
 
 
 if __name__ == '__main__':
+
     load_stock_nav(begin_date='20181201', end_date='20181227')
+

@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 def load_index_basic_info(index_ids=None, index_codes=None, est_class=None, status=1):
 
-    db = database.connection('caihui')
-    metadata = MetaData(bind=db)
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
     t = Table('tq_ix_basicinfo', metadata, autoload=True)
 
     columns = [
@@ -35,10 +35,12 @@ def load_index_basic_info(index_ids=None, index_codes=None, est_class=None, stat
     if status is not None:
         s = s.where(t.c.STATUS==status)
 
-    df = pd.read_sql(s, db, index_col=['index_id'])
+    df = pd.read_sql(s, engine, index_col=['index_id'])
 
     return df
 
+
 if __name__ == '__main__':
+
     load_index_basic_info(est_class='申万一级行业指数')
 
