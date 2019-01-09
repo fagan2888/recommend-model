@@ -283,8 +283,8 @@ class FundIncEstIxPos(FundIncEstimation):
         dates = dates.resample('MS').first().index
 
         df_fund_nav = base_ra_fund_nav.load_daily(
-                trade_date_before(dates[0]).strftime('%Y%m%d'),
-                trade_date_before(dates[-1]).strftime('%Y%m%d'),
+                begin_date=trade_date_before(dates[0]).strftime('%Y%m%d'),
+                end_date=trade_date_before(dates[-1]).strftime('%Y%m%d'),
                 codes=self._fund_pool.fund_code
         )
         df_fund_inc = df_fund_nav.pct_change().iloc[1:]
@@ -370,8 +370,8 @@ class FundIncEstMix(FundIncEstimation):
         dates = dates.resample('MS').first().index
 
         df_fund_nav = base_ra_fund_nav.load_daily(
-                trade_date_before(dates[0]).strftime('%Y%m%d'),
-                trade_date_before(dates[-1]).strftime('%Y%m%d'),
+                begin_date=trade_date_before(dates[0]).strftime('%Y%m%d'),
+                end_date=trade_date_before(dates[-1]).strftime('%Y%m%d'),
                 codes=self._fund_pool.fund_code
         )
         df_fund_inc = df_fund_nav.pct_change().iloc[1:]
@@ -439,22 +439,23 @@ class FundIncEstMix(FundIncEstimation):
         return df_fund_inc_est
 
 
-def fund_inc_estimate_cmp():
+def cal_fund_inc_estimate_error():
 
     df_fund_inc_est = asset_fund_inc_estimate.load_fund_inc_estimate()
-    sk_pos = df_fund_inc_est.sk_pos.unstack()
-    ix_pos = df_fund_inc_est.ix_pos.unstack()
-    mix = df_fund_inc_est.mix.unstack()
+    df_fiesp = df_fund_inc_est.sk_pos.unstack()
+    df_fieip = df_fund_inc_est.ix_pos.unstack()
+    df_fiem = df_fund_inc_est.mix.unstack()
 
-    df_fund_nav = base_ra_fund_nav.load_daily()
-    df_fund_inc = df_fund_nav.pct_change().iloc[1:]
+    df_fn = base_ra_fund_nav.load_daily(
+            begin_date=trade_date_before(df_fiem.index[0]).strftime('%Y%m%d'),
+            end_date=df_fiem.index[-1].strftime('%Y%m%d'),
+            codes=df_fiesp.columns
+    )
+    df_fi = df_fn.pct_change().iloc[1:]
 
-    error_sk_pos = sk_pos - df_fund_inc
-    error_sk_pos = error_sk_pos.dropna(how='all').dropna(how='all', axis='columns')
-    error_ix_pos = ix_pos - df_fund_inc
-    error_ix_pos = error_ix_pos.dropna(how='all').dropna(how='all', axis='columns')
-    error_mix = mix - df_fund_inc
-    error_mix = error_mix.dropna(how='all').dropna(how='all', axis='columns')
+    df_fiesp_error = df_fiesp - df_fi
+    df_fieip_error = df_fieip - df_fi
+    df_fiem_error = df_fiem - df_fi
 
     set_trace()
 
@@ -469,8 +470,8 @@ if __name__ == '__main__':
     # fieip = FundIncEstIxPos(fund_codes=['000001', '000011'])
     # df_fieip = fieip.estimate_fund_inc()
 
-    # fiem = FundIncEstMix(begin_date='20190101', end_date='20180106')
+    # fiem = FundIncEstMix(begin_date='20190101', end_date='20190106')
     # df_fiem = fiem.estimate_fund_inc()
 
-    # fund_inc_estimate_cmp()
+    cal_fund_inc_estimate_error()
 
