@@ -16,6 +16,7 @@ import config
 import pandas as pd
 import numpy as np
 import copy
+from dateutil.relativedelta import relativedelta
 from ipdb import set_trace
 from Const import datapath
 from tabulate import tabulate
@@ -73,7 +74,7 @@ def fund_inc_estimate_update(ctx):
     '''fund inc estimate update
     '''
 
-    begin_date = asset_fund_inc_estimate.load_date_last_updated() + pd.Timedelta('1d')
+    begin_date = asset_fund_inc_estimate.load_date_last_updated() + relativedelta(days=+1)
 
     fiesp = FundIncEstSkPos(begin_date=begin_date)
     df_fiesp = fiesp.estimate_fund_inc()

@@ -13,10 +13,11 @@ import warnings
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
+from dateutil.relativedelta import relativedelta
 from ipdb import set_trace
 sys.path.append('shell')
-from db import database, base_ra_fund_nav
-from db import asset_fund_inc_estimate, caihui_tq_fd_basicinfo, caihui_tq_fd_skdetail, caihui_tq_sk_dquoteindic, caihui_tq_ix_basicinfo, caihui_tq_qt_index
+from db import database, asset_fund_inc_estimate
+from db import base_ra_fund_nav, caihui_tq_fd_basicinfo, caihui_tq_fd_skdetail, caihui_tq_sk_dquoteindic, caihui_tq_ix_basicinfo, caihui_tq_qt_index
 from trade_date import ATradeDate
 from util_timestamp import *
 
@@ -81,7 +82,7 @@ class FundIncEstimation(object):
                 t.c.FDSTYLE.in_([2, 3, 4]),
                 # t.c.ENABLED==3,
                 t.c.FOUNDDATE!='19000101',
-                t.c.FOUNDDATE<=last_year(date).strftime('%Y%m%d'),
+                t.c.FOUNDDATE<=(date+relativedelta(years=-1)).strftime('%Y%m%d'),
                 t.c.ENDDATE=='19000101',
                 t.c.FDNATURE.in_(['证券投资基金', 'LOF']),
                 t.c.FDMETHOD=='开放式基金',
@@ -101,8 +102,8 @@ class FundIncEstimation(object):
         date = self._begin_date
         while date <= self._end_date:
             dates.append(date)
-            date = month_start(next_month(date))
-        dates.append(self._end_date+pd.Timedelta('1d'))
+            date += relativedelta(months=+1, day=1)
+        dates.append(self._end_date+relativedelta(days=+1))
         dates = pd.Index(dates)
 
         return dates
@@ -205,10 +206,10 @@ class FundIncEstSkPos(FundIncEstimation):
         df_fund_inc_est = pd.DataFrame()
         for date, next_date in zip(dates[:-1], dates[1:]):
 
-            next_date -= pd.Timedelta('1d')
+            next_date += relativedelta(days=-1)
             # print('fund_inc_estimate_sk_pos', date, next_date)
 
-            fund_stock_pos = df_fund_stock_pos.loc[month_start(date)]
+            fund_stock_pos = df_fund_stock_pos.loc[date+relativedelta(day=1)]
             fund_stock_pos = fund_stock_pos.unstack(level=0).navrto.fillna(0.0)
             stock_ret = df_stock_ret.loc[date:next_date].reindex(fund_stock_pos.index, axis='columns').fillna(0.0)
 
@@ -279,7 +280,7 @@ class FundIncEstIxPos(FundIncEstimation):
 
     def __cal_ix_pos_days(self):
 
-        begin_date_cal = month_start(last_quarter(self._begin_date))
+        begin_date_cal = self._begin_date + relativedelta(months=-3, day=1)
         dates = pd.Series(index=[begin_date_cal, self._end_date])
         dates = dates.resample('MS').first().index
 
@@ -302,7 +303,7 @@ class FundIncEstIxPos(FundIncEstimation):
         for date, next_date in zip(dates[:-lookback], dates[lookback:]):
 
             # print('cal_ix_pos_days', next_date)
-            next_date -= pd.Timedelta('1d')
+            next_date += relativedelta(days=-1)
 
             fund_inc = df_fund_inc.loc[date:next_date].dropna(how='any', axis='columns')
             index_inc = df_index_inc.loc[date:next_date]
@@ -311,7 +312,7 @@ class FundIncEstIxPos(FundIncEstimation):
             fund_index_pos.index.name = 'fund_code'
             for fund_code in fund_inc.columns:
                 fund_index_pos.loc[fund_code] = self.__cal_ix_pos(index_inc, fund_inc[fund_code])
-            fund_index_pos['date'] = next_date + pd.Timedelta('1d')
+            fund_index_pos['date'] = next_date + relativedelta(days=+1)
             fund_index_pos = fund_index_pos.reset_index().set_index(['date', 'fund_code'])
 
             df_fund_index_pos = pd.concat([df_fund_index_pos, fund_index_pos])
@@ -334,10 +335,10 @@ class FundIncEstIxPos(FundIncEstimation):
         df_fund_inc_est = pd.DataFrame()
         for date, next_date in zip(dates[:-1], dates[1:]):
 
-            next_date -= pd.Timedelta('1d')
+            next_date += relativedelta(days=-1)
             # print('fund_inc_estimate_ix_pos', date, next_date)
 
-            fund_index_pos = df_fund_index_pos.loc[month_start(date)].T
+            fund_index_pos = df_fund_index_pos.loc[date+relativedelta(day=1)].T
             index_inc = df_index_inc.loc[date:next_date]
 
             fund_inc_est = pd.DataFrame(np.dot(index_inc, fund_index_pos), index=index_inc.index, columns=fund_index_pos.columns)
@@ -366,7 +367,7 @@ class FundIncEstMix(FundIncEstimation):
 
     def __cal_mix_pos_days(self):
 
-        begin_date_cal = month_start(last_month(self._begin_date))
+        begin_date_cal = self._begin_date + relativedelta(months=-1, day=1)
         dates = pd.Series(index=[begin_date_cal, self._end_date])
         dates = dates.resample('MS').first().index
 
@@ -389,7 +390,7 @@ class FundIncEstMix(FundIncEstimation):
         for date, next_date in zip(dates[:-lookback], dates[lookback:]):
 
             # print('cal_mix_pos_days', next_date)
-            next_date -= pd.Timedelta('1d')
+            next_date += relativedelta(days=-1)
 
             fund_inc = df_fund_inc.loc[date:next_date]
             fund_inc_estimated = df_fund_inc_estimated.loc[date:next_date]
@@ -399,7 +400,7 @@ class FundIncEstMix(FundIncEstimation):
             fund_mix_pos.index.name = 'fund_code'
             for fund_code in fund_inc.columns.intersection(fund_inc_estimated.columns.levels[0]):
                 fund_mix_pos.loc[fund_code] = self.__cal_mix_pos(fund_inc_estimated[fund_code], fund_inc[fund_code])
-            fund_mix_pos['date'] = next_date + pd.Timedelta('1d')
+            fund_mix_pos['date'] = next_date + relativedelta(days=+1)
             fund_mix_pos = fund_mix_pos.reset_index().set_index(['date', 'fund_code'])
 
             df_fund_mix_pos = pd.concat([df_fund_mix_pos, fund_mix_pos])
@@ -425,10 +426,10 @@ class FundIncEstMix(FundIncEstimation):
         df_fund_inc_est.index.name = 'date'
         for date, next_date in zip(dates[:-1], dates[1:]):
 
-            next_date -= pd.Timedelta('1d')
+            next_date += relativedelta(days=-1)
             # print('fund_inc_estimate_mix', date, next_date)
 
-            fund_mix_pos = df_fund_mix_pos.loc[month_start(date)]
+            fund_mix_pos = df_fund_mix_pos.loc[date+relativedelta(day=1)]
 
             for edate in trade_dates[(trade_dates>=date) & (trade_dates<=next_date)]:
                 df_fund_inc_est.loc[edate] = (df_fund_inc_estimated.loc[edate] * fund_mix_pos).dropna().sum(axis='columns')
@@ -465,14 +466,14 @@ if __name__ == '__main__':
 
     fie = FundIncEstimation()
 
-    # fiesp = FundIncEstSkPos()
-    # df_fiesp = fiesp.estimate_fund_inc()
+    fiesp = FundIncEstSkPos()
+    df_fiesp = fiesp.estimate_fund_inc()
 
-    # fieip = FundIncEstIxPos(fund_codes=['000001', '000011'])
-    # df_fieip = fieip.estimate_fund_inc()
+    fieip = FundIncEstIxPos(fund_codes=['000001', '000011'])
+    df_fieip = fieip.estimate_fund_inc()
 
-    # fiem = FundIncEstMix(begin_date='20190101', end_date='20190106')
-    # df_fiem = fiem.estimate_fund_inc()
+    fiem = FundIncEstMix(begin_date='20190101', end_date='20190106')
+    df_fiem = fiem.estimate_fund_inc()
 
     # cal_fund_inc_estimate_error()
 

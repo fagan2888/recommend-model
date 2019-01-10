@@ -17,39 +17,39 @@ from trade_date import ATradeDate
 logger = logging.getLogger(__name__)
 
 
-def last_year(date):
+# def last_year(date):
 
-    days_in_month = pd.Timestamp(date.year-1, date.month, 1).days_in_month
-    return pd.Timestamp(date.year-1, date.month, min(date.day, days_in_month))
+    # days_in_month = pd.Timestamp(date.year-1, date.month, 1).days_in_month
+    # return pd.Timestamp(date.year-1, date.month, min(date.day, days_in_month))
 
-def last_quarter(date):
+# def last_quarter(date):
 
-    if date.month < 4:
-        days_in_month = pd.Timestamp(date.year-1, date.month+9, 1).days_in_month
-        return pd.Timestamp(date.year-1, date.month+9, min(date.day, days_in_month))
-    else:
-        days_in_month = pd.Timestamp(date.year, date.month-3, 1).days_in_month
-        return pd.Timestamp(date.year, date.month-3, min(date.day, days_in_month))
+    # if date.month < 4:
+        # days_in_month = pd.Timestamp(date.year-1, date.month+9, 1).days_in_month
+        # return pd.Timestamp(date.year-1, date.month+9, min(date.day, days_in_month))
+    # else:
+        # days_in_month = pd.Timestamp(date.year, date.month-3, 1).days_in_month
+        # return pd.Timestamp(date.year, date.month-3, min(date.day, days_in_month))
 
-def last_month(date):
+# def last_month(date):
 
-    if date.month < 2:
-        return pd.Timestamp(date.year-1, 12, date.day)
-    else:
-        days_in_month = pd.Timestamp(date.year, date.month-1, 1).days_in_month
-        return pd.Timestamp(date.year, date.month-1, min(date.day, days_in_month))
+    # if date.month < 2:
+        # return pd.Timestamp(date.year-1, 12, date.day)
+    # else:
+        # days_in_month = pd.Timestamp(date.year, date.month-1, 1).days_in_month
+        # return pd.Timestamp(date.year, date.month-1, min(date.day, days_in_month))
 
-def next_month(date):
+# def next_month(date):
 
-    if date.month < 12:
-        days_in_month = pd.Timestamp(date.year, date.month+1, 1).days_in_month
-        return pd.Timestamp(date.year, date.month+1, min(date.day, days_in_month))
-    else:
-        return pd.Timestamp(date.year+1, 1, date.day)
+    # if date.month < 12:
+        # days_in_month = pd.Timestamp(date.year, date.month+1, 1).days_in_month
+        # return pd.Timestamp(date.year, date.month+1, min(date.day, days_in_month))
+    # else:
+        # return pd.Timestamp(date.year+1, 1, date.day)
 
-def month_start(date):
+# def month_start(date):
 
-    return pd.Timestamp(date.year, date.month, 1)
+    # return pd.Timestamp(date.year, date.month, 1)
 
 def last_end_date_fund_skdetail_all_published(date):
 
