@@ -73,41 +73,59 @@ def last_end_date_fund_skdetail_ten_published(date):
     else:
         return pd.Timestamp(date.year, 9, 30)
 
-def trade_date_before(date):
-
-    trade_dates = ATradeDate.trade_date()
-
-    if date <= trade_dates[0]:
-        raise ValueError('There is not trading day before the day.')
-
-    lo = 0
-    hi = trade_dates.shape[0]
-    while lo + 1 < hi:
-        mi = (lo + hi) // 2
-        if date < trade_dates[mi]:
-            hi = mi
-        else:
-            lo = mi
-
-    if date == trade_dates[lo]:
-        return trade_dates[lo-1]
-    else:
-        return trade_dates[lo]
-
 def trade_date_not_later_than(date):
 
     trade_dates = ATradeDate.trade_date()
 
-    if date < trade_dates[0]:
-        raise ValueError('It is before the first day of trading.')
+    try:
+        date = trade_dates[trade_dates.get_loc(date, method='pad')]
+    except KeyError:
+        return np.nan
 
-    lo = 0
-    hi = trade_dates.shape[0]
-    while lo + 1 < hi:
-        mi = (lo + hi) // 2
-        if date < trade_dates[mi]:
-            hi = mi
-        else:
-            lo = mi
+    return date
 
-    return trade_dates[lo]
+def trade_date_before(date):
+
+    date = date - pd.Timedelta('1d')
+
+    return trade_date_not_later_than(date)
+
+# def trade_date_before_(date):
+
+    # trade_dates = ATradeDate.trade_date()
+
+    # if date <= trade_dates[0]:
+        # raise ValueError('There is not trading day before the day.')
+
+    # lo = 0
+    # hi = trade_dates.shape[0]
+    # while lo + 1 < hi:
+        # mi = (lo + hi) // 2
+        # if date < trade_dates[mi]:
+            # hi = mi
+        # else:
+            # lo = mi
+
+    # if date == trade_dates[lo]:
+        # return trade_dates[lo-1]
+    # else:
+        # return trade_dates[lo]
+
+# def trade_date_not_later_than_(date):
+
+    # trade_dates = ATradeDate.trade_date()
+
+    # if date < trade_dates[0]:
+        # raise ValueError('It is before the first day of trading.')
+
+    # lo = 0
+    # hi = trade_dates.shape[0]
+    # while lo + 1 < hi:
+        # mi = (lo + hi) // 2
+        # if date < trade_dates[mi]:
+            # hi = mi
+        # else:
+            # lo = mi
+
+    # return trade_dates[lo]
+

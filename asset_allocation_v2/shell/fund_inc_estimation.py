@@ -103,6 +103,7 @@ class FundIncEstimation(object):
             dates.append(date)
             date = month_start(next_month(date))
         dates.append(self._end_date + pd.Timedelta('1d'))
+        dates = pd.Index(dates)
 
         return dates
 
@@ -129,7 +130,7 @@ class FundIncEstSkPos(FundIncEstimation):
                 stock_pos_ten = fund_stock_pos_ten.loc[fund_id]
 
                 min_navrto = stock_pos_ten.navrto.min()
-                stock_pos[stock_pos.navrto > min_navrto] = min_navrto
+                stock_pos.loc[stock_pos.navrto > min_navrto, 'navrto'] = min_navrto
                 stock_pos = stock_pos.drop(stock_pos_ten.index.intersection(stock_pos.index))
                 stock_pos = pd.concat([stock_pos, stock_pos_ten])
 
@@ -153,12 +154,12 @@ class FundIncEstSkPos(FundIncEstimation):
     def __cal_sk_pos_days(self):
 
         if self._begin_date.month < 4:
-            begin_date = pd.Timestamp(self._begin_date.year-1, 9, 1)
+            begin_date_cal = pd.Timestamp(self._begin_date.year-1, 9, 1)
         elif self._begin_date.month < 9:
-            begin_date = pd.Timestamp(self._begin_date.year, 4, 1)
+            begin_date_cal = pd.Timestamp(self._begin_date.year, 4, 1)
         else:
-            begin_date = pd.Timestamp(self._begin_date.year, 9, 1)
-        dates = pd.Series(index=[begin_date, self._end_date])
+            begin_date_cal = pd.Timestamp(self._begin_date.year, 9, 1)
+        dates = pd.Series(index=[begin_date_cal, self._end_date])
         dates = dates.resample('MS').first().index
 
         df_fund_stock_pos = pd.DataFrame()
@@ -258,7 +259,7 @@ class FundIncEstIxPos(FundIncEstimation):
         w0 = np.array([1.0/index_num]*index_num)
 
         cons = (
-                {'type': 'ineq', 'fun': lambda x: -sum(x) + 1.0},
+                {'type': 'ineq', 'fun': lambda x: 1.0-sum(x)},
                 {'type': 'ineq', 'fun': lambda x: sum(x)},
         )
 
@@ -357,9 +358,9 @@ class FundIncEstMix(FundIncEstimation):
 
         fund_inc_estimated_error = pd.Series(index=fund_inc_estimated.columns)
         for method in fund_inc_estimated.columns:
-            fund_inc_estimated_error[method] = (fund_inc_estimated[method] - fund_inc).abs().mean() ** 2
+            fund_inc_estimated_error.loc[method] = (fund_inc_estimated[method] - fund_inc).abs().mean() ** 2
 
-        mix_pos = 1 - fund_inc_estimated_error/fund_inc_estimated_error.sum()
+        mix_pos = 1 - fund_inc_estimated_error / fund_inc_estimated_error.sum()
 
         return mix_pos
 
@@ -473,5 +474,8 @@ if __name__ == '__main__':
     # fiem = FundIncEstMix(begin_date='20190101', end_date='20190106')
     # df_fiem = fiem.estimate_fund_inc()
 
-    cal_fund_inc_estimate_error()
+    # cal_fund_inc_estimate_error()
 
+    date = pd.Timestamp('20190101')
+    trade_date_before(date)
+    set_trace()
