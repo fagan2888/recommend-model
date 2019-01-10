@@ -12,15 +12,13 @@ import os
 import sys
 import logging
 import click
-import config
 import pandas as pd
 import numpy as np
 import copy
 from dateutil.relativedelta import relativedelta
 from ipdb import set_trace
-from Const import datapath
-from tabulate import tabulate
 sys.path.append('shell')
+import config
 from db import asset_fund_inc_estimate
 from fund_inc_estimation import *
 
