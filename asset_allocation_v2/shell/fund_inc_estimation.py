@@ -466,14 +466,14 @@ if __name__ == '__main__':
 
     fie = FundIncEstimation()
 
-    fiesp = FundIncEstSkPos()
-    df_fiesp = fiesp.estimate_fund_inc()
+    # fiesp = FundIncEstSkPos()
+    # df_fiesp = fiesp.estimate_fund_inc()
 
-    fieip = FundIncEstIxPos(fund_codes=['000001', '000011'])
-    df_fieip = fieip.estimate_fund_inc()
+    # fieip = FundIncEstIxPos(fund_codes=['000001', '000011'])
+    # df_fieip = fieip.estimate_fund_inc()
 
-    fiem = FundIncEstMix(begin_date='20190101', end_date='20190106')
-    df_fiem = fiem.estimate_fund_inc()
+    # fiem = FundIncEstMix(begin_date='20190101', end_date='20190106')
+    # df_fiem = fiem.estimate_fund_inc()
 
     # cal_fund_inc_estimate_error()
 
