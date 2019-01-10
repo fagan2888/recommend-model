@@ -476,6 +476,3 @@ if __name__ == '__main__':
 
     # cal_fund_inc_estimate_error()
 
-    date = pd.Timestamp('20190101')
-    trade_date_before(date)
-    set_trace()
