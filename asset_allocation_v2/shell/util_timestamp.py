@@ -7,10 +7,11 @@ Contact: sushixun@licaimofang.com
 
 import sys
 import logging
-sys.path.append('shell')
 import numpy as np
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 from ipdb import set_trace
+sys.path.append('shell')
 from trade_date import ATradeDate
 
 
@@ -86,7 +87,7 @@ def trade_date_not_later_than(date):
 
 def trade_date_before(date):
 
-    date = date - pd.Timedelta('1d')
+    date = date + relativedelta(days=-1)
 
     return trade_date_not_later_than(date)
 
