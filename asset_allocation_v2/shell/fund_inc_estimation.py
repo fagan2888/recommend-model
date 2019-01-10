@@ -68,8 +68,8 @@ class FundIncEstimation(object):
 
     def __load_fund_pool(self, date):
 
-        db = database.connection('caihui')
-        metadata = MetaData(bind=db)
+        engine = database.connection('caihui')
+        metadata = MetaData(bind=engine)
         t = Table('tq_fd_basicinfo', metadata, autoload=True)
 
         columns = [
@@ -91,7 +91,7 @@ class FundIncEstimation(object):
                 not_(t.c.FDNAME.contains('港股通'))
         ))
 
-        df = pd.read_sql(s, db, index_col=['fund_id'])
+        df = pd.read_sql(s, engine, index_col=['fund_id'])
 
         return df
 
@@ -102,14 +102,14 @@ class FundIncEstimation(object):
         while date <= self._end_date:
             dates.append(date)
             date = month_start(next_month(date))
-        dates.append(self._end_date + pd.Timedelta('1d'))
+        dates.append(self._end_date+pd.Timedelta('1d'))
         dates = pd.Index(dates)
 
         return dates
 
     def estimate_fund_inc(self):
 
-        raise NotImplementedError()
+        raise NotImplementedError('Method \'estimate_fund_inc\' is not defined.')
 
 
 class FundIncEstSkPos(FundIncEstimation):
@@ -393,7 +393,7 @@ class FundIncEstMix(FundIncEstimation):
 
             fund_inc = df_fund_inc.loc[date:next_date]
             fund_inc_estimated = df_fund_inc_estimated.loc[date:next_date]
-            fund_inc_estimated = fund_inc_estimated.unstack().stack(0, dropna=False).dropna(axis='columns').unstack()
+            fund_inc_estimated = fund_inc_estimated.unstack().stack(level=0, dropna=False).dropna(axis='columns').unstack()
 
             fund_mix_pos = pd.DataFrame(columns=['sk_pos', 'ix_pos'])
             fund_mix_pos.index.name = 'fund_code'
