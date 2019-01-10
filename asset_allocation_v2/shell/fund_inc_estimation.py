@@ -463,7 +463,7 @@ def cal_fund_inc_estimate_error():
 
 if __name__ == '__main__':
 
-    # fie = FundIncEstimation()
+    fie = FundIncEstimation()
 
     # fiesp = FundIncEstSkPos()
     # df_fiesp = fiesp.estimate_fund_inc()
