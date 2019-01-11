@@ -798,8 +798,9 @@ class TradeNav(object):
         #        为跟该赎回相关的购买订单已经被需要，所以需要重新生成），
         #        生成方法也是根据在途资金的到账日期来下购买订单。
         #
-        if dt.strftime("%Y-%m-%d") in ['2019-01-10']:
-            pdb.set_trace()
+
+        # if dt.strftime("%Y-%m-%d") in ['2019-01-10']:
+        #     pdb.set_trace()
 
         dt_flying = {}          # 在途资金
 
