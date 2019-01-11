@@ -677,8 +677,6 @@ class TradeNav(object):
             # if dt.strftime("%Y-%m-%d") in ['2014-02-10']:
             #     pdb.set_trace()
             day = pd.to_datetime(dt.date())
-            # if dt.strftime("%Y-%m-%d") == '2016-10-10':
-            #     pdb.set_trace()
 
             #
             # 记录持仓
@@ -900,6 +898,12 @@ class TradeNav(object):
 
     def make_redeem_order(self, dt, fund_id, share, share_id, buy_date):
         (nav, nav_date) = self.get_tdate_and_nav(fund_id, dt)
+        if dt.strftime("%Y-%m-%d") == '2029-01-01':
+            nav_date = pd.to_datetime('2029-01-01')
+            ack_date = nav_date
+        else:
+            ack_date = self.get_redeem_ack_date(fund_id, nav_date)
+
         amount = share * nav
         fee = self.get_redeem_fee(dt, fund_id, buy_date, amount)
         # dd(nav, nav_date, share, amount, fee)
@@ -916,7 +920,7 @@ class TradeNav(object):
             'fee': fee,
             'nav': nav,
             'nav_date': nav_date,
-            'ack_date': self.get_redeem_ack_date(fund_id, nav_date),
+            'ack_date': ack_date,
             'ack_amount': amount - fee,
             'ack_share': share,
             'div_mode': 0,
@@ -1022,6 +1026,9 @@ class TradeNav(object):
         (nav, nav_date) = self.get_tdate_and_nav(fund_id, dt)
         if dt.strftime("%Y-%m-%d") == '2029-01-01':
             nav_date = pd.to_datetime('2029-01-01')
+            ack_date = nav_date
+        else:
+            ack_date = self.get_buy_ack_date(fund_id, nav_date)
 
         fee = self.get_buy_fee(dt, fund_id, amount)
         ack_amount = amount - fee
@@ -1039,7 +1046,7 @@ class TradeNav(object):
             'fee': fee,
             'nav': nav,
             'nav_date': nav_date,
-            'ack_date': self.get_buy_ack_date(fund_id, nav_date),
+            'ack_date': ack_date,
             'ack_amount': amount - fee,
             'ack_share': share,
             'div_mode': 1,
