@@ -18,13 +18,15 @@ session = Session()
 def get_monthly_holding_num(m_start, m_end):
     # db = database.connection('portfolio_sta')
     # metadata = MetaData(bind=db)
-    t = Table('ds_order_pdate', metadata, autoload=True)
+    t = Table('user_statistics', metadata, autoload=True)
     #Session = sessionmaker(bind=db)
     # session = Session()
     rst = session.query(t).filter( \
-        t.c.us_date >= s_date, \
-        t.c.us_date <= e_date) \
+        t.c.us_date >= m_start, \
+        t.c.us_date <= m_end) \
         .first()
+    if rst is None:
+        return 0
     num = rst.us_holding_users
     if num is None:
         min_date = 0
