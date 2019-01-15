@@ -786,3 +786,4 @@ if __name__ == "__main__":
     obj_reten.handle()
     obj_rolling = MonthlyStaRolling()
     obj_rolling.handle()
+    obj_srrc.handle()

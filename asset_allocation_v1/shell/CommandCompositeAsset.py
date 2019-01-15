@@ -35,6 +35,7 @@ from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
 from db import database
+from util.xdebug import dd
 
 import traceback, code
 
@@ -107,7 +108,6 @@ def nav_update_index(db, asset):
     # 构建均分仓位
     df_position = df.unstack().fillna(0.0)
     df_position.columns = df_position.columns.droplevel(0)
-
     
     # 加载基金收益率
     min_date = df_position.index.min()
@@ -117,6 +117,7 @@ def nav_update_index(db, asset):
 
     df_nav = DBData.db_index_value_daily(
         min_date, max_date, codes=df_position.columns)
+
     df_inc = df_nav.pct_change().fillna(0.0)
 
     # 计算复合资产净值
