@@ -17,11 +17,11 @@ from db import portfolio_statistics_rpt_srrc_apportion as rpt_srrc_apportion
 from db import portfolio_statistics_rpt_retention_data as rpt_retention_data
 from db import portfolio_statistics_rpt_srrc_rolling as rpt_srrc_rolling
 from db import portfolio_statistics_rpt_srrc as rpt_srrc
+from db import portfolio_statistics_user_statistics as user_stat
 
 def hprint(con):
     print con
     os._exit(0)
-
 def getBetweenMonth(s_date, e_date):
     """
     给出时间区间(s_date, e_date)内年月列表
@@ -729,7 +729,8 @@ class MonthlyStaSrrc(object):
 
             # 持仓用户数
             # hold_amount = ds_share.get_specific_month_hold_count(e_date)[0][0]
-            hold_amount = len(date_holding_uids(e_date))
+            # hold_amount = len(date_holding_uids(e_date))
+            hold_amount = user_stat.get_monthly_holding_num(e_date, e_date)
             # 首购金额
             amount_firstsub = ds_order.get_specific_month_amount(s_date, \
                 e_date, [10], newsub_uids)[0][0]
