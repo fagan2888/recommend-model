@@ -18,6 +18,7 @@ import CommandUserTrain
 import CommandUserFeature
 import CommandUserAnalysis
 import CommandUserGoodBad
+import CommandUserRisklevel
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -68,4 +69,5 @@ if __name__=='__main__':
     user_analysis.add_command(CommandUserFeature.feature)
     user_analysis.add_command(CommandUserAnalysis.analysis)
     user_analysis.add_command(CommandUserGoodBad.gb)
+    user_analysis.add_command(CommandUserRisklevel.risklevel)
     user_analysis(obj={})
