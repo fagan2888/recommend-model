@@ -462,7 +462,6 @@ def markowitz_bootstrape_bl_fixrisk(df_inc, P, eta, alpha, bound, target_risk, c
         mod = m % cpu_count
         process_indexs[mod].append(list(indexs))
 
-
     manager = Manager()
     q = manager.Queue()
     processes = []

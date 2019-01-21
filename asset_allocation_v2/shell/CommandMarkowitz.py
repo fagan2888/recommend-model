@@ -1186,7 +1186,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     #每四周做平滑
         df = df.rolling(window = 4, min_periods = 1).mean()
 
-    print(df.tail(10))
+    print(df.tail(52))
     if optappend:
         df = df.iloc[3:,:]
 

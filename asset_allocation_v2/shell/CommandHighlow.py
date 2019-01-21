@@ -982,18 +982,18 @@ def yao(highlow, alloc):
     index = df_high.index.union(df_high_riskmgr.index)
 
     if risk > 1.0 and high.startswith('MZ.00007'):
-        df_high_riskmgr.loc['2018-12-21', 'ERI000001'] = 0.0
-        df_high_riskmgr.loc['2018-12-21', 'ERI000002'] = 1.0
-        df_high_riskmgr.loc['2018-12-21', '120000053'] = 1.0
-        df_high_riskmgr.loc['2018-12-21', '120000056'] = 1.0
-        df_high_riskmgr.loc['2018-12-21', '120000058'] = 1.0
-        df_high_riskmgr.loc['2018-12-21', '120000073'] = 1.0
-        df_high_riskmgr.loc['2018-12-21', '120000081'] = 0.0
+        df_high_riskmgr.loc['2019-01-18', 'ERI000001'] = 1.0
+        df_high_riskmgr.loc['2019-01-18', 'ERI000002'] = 1.0
+        df_high_riskmgr.loc['2019-01-18', '120000053'] = 1.0
+        df_high_riskmgr.loc['2019-01-18', '120000056'] = 1.0
+        df_high_riskmgr.loc['2019-01-18', '120000058'] = 1.0
+        df_high_riskmgr.loc['2019-01-18', '120000073'] = 1.0
+        df_high_riskmgr.loc['2019-01-18', '120000081'] = 1.0
 
-        df_high_riskmgr.loc['2018-12-21', 'MZ.FA0010'] = 1.0
-        df_high_riskmgr.loc['2018-12-21', 'MZ.FA0050'] = 1.0
-        df_high_riskmgr.loc['2018-12-21', 'MZ.FA0070'] = 1.0
-    print(df_high_riskmgr.tail())
+        df_high_riskmgr.loc['2019-01-18', 'MZ.FA0010'] = 1.0
+        df_high_riskmgr.loc['2019-01-18', 'MZ.FA0050'] = 1.0
+        df_high_riskmgr.loc['2019-01-18', 'MZ.FA0070'] = 1.0
+    #print(df_high_riskmgr.tail())
 
     data_h = {}
     if not df_high.empty:
@@ -1003,8 +1003,62 @@ def yao(highlow, alloc):
             data_h[column] = df_high[column] * df_high_riskmgr[column]
 
     df_h = pd.DataFrame(data_h)
+    if high.startswith('MZ.00007'):
+        if risk == 10.0:
+            overflow = (0.0478 - df_h.loc['2019-01-18', 'ERI000001'] ) + (0.0254 - df_h.loc['2019-01-18', '120000081'])
+            df_h.loc['2019-01-18', 'ERI000001'] = 0.0478
+            df_h.loc['2019-01-18', '120000081'] = 0.0254
+            df_h.loc['2019-01-18', '120000014'] = df_h.loc['2019-01-18', '120000014'] - overflow  / 2
+            df_h.loc['2019-01-18', 'MZ.FA1010'] = df_h.loc['2019-01-18', 'MZ.FA1010'] - overflow  / 2
+        elif risk == 9.0:
+            overflow = (0.0431 - df_h.loc['2019-01-18', 'ERI000001'] ) + (0.0224 - df_h.loc['2019-01-18', '120000081'])
+            df_h.loc['2019-01-18', 'ERI000001'] = 0.0431
+            df_h.loc['2019-01-18', '120000081'] = 0.0224
+            df_h.loc['2019-01-18', '120000014'] = df_h.loc['2019-01-18', '120000014'] - overflow  / 2
+            df_h.loc['2019-01-18', 'MZ.FA1010'] = df_h.loc['2019-01-18', 'MZ.FA1010'] - overflow  / 2
+        elif risk == 8.0:
+            overflow = (0.0397 - df_h.loc['2019-01-18', 'ERI000001'] ) + (0.0201 - df_h.loc['2019-01-18', '120000081'])
+            df_h.loc['2019-01-18', 'ERI000001'] = 0.0397
+            df_h.loc['2019-01-18', '120000081'] = 0.0201
+            df_h.loc['2019-01-18', '120000014'] = df_h.loc['2019-01-18', '120000014'] - overflow  / 2
+            df_h.loc['2019-01-18', 'MZ.FA1010'] = df_h.loc['2019-01-18', 'MZ.FA1010'] - overflow  / 2
+        elif risk == 7.0:
+            overflow = (0.0353 - df_h.loc['2019-01-18', 'ERI000001'] ) + (0.0174 - df_h.loc['2019-01-18', '120000081'])
+            df_h.loc['2019-01-18', 'ERI000001'] = 0.0353
+            df_h.loc['2019-01-18', '120000081'] = 0.0174
+            df_h.loc['2019-01-18', '120000014'] = df_h.loc['2019-01-18', '120000014'] - overflow  / 2
+            df_h.loc['2019-01-18', 'MZ.FA1010'] = df_h.loc['2019-01-18', 'MZ.FA1010'] - overflow  / 2
+        elif risk == 6.0:
+            overflow = (0.0307 - df_h.loc['2019-01-18', 'ERI000001'] ) + (0.0139 - df_h.loc['2019-01-18', '120000081'])
+            df_h.loc['2019-01-18', 'ERI000001'] = 0.0307
+            df_h.loc['2019-01-18', '120000081'] = 0.0139
+            df_h.loc['2019-01-18', '120000014'] = df_h.loc['2019-01-18', '120000014'] - overflow  / 2
+            df_h.loc['2019-01-18', 'MZ.FA1010'] = df_h.loc['2019-01-18', 'MZ.FA1010'] - overflow  / 2
+        elif risk == 5.0:
+            overflow = (0.0260 - df_h.loc['2019-01-18', 'ERI000001'] ) + (0.0124 - df_h.loc['2019-01-18', '120000081'])
+            df_h.loc['2019-01-18', 'ERI000001'] = 0.0260
+            df_h.loc['2019-01-18', '120000081'] = 0.0124
+            df_h.loc['2019-01-18', '120000014'] = df_h.loc['2019-01-18', '120000014'] - overflow  / 2
+            df_h.loc['2019-01-18', 'MZ.FA1010'] = df_h.loc['2019-01-18', 'MZ.FA1010'] - overflow  / 2
+        elif risk == 4.0:
+            overflow = (0.0207 - df_h.loc['2019-01-18', 'ERI000001'] ) + (0.0098 - df_h.loc['2019-01-18', '120000081'])
+            df_h.loc['2019-01-18', 'ERI000001'] = 0.0207
+            df_h.loc['2019-01-18', '120000081'] = 0.0098
+            df_h.loc['2019-01-18', '120000014'] = df_h.loc['2019-01-18', '120000014'] - overflow  / 2
+            df_h.loc['2019-01-18', 'MZ.FA1010'] = df_h.loc['2019-01-18', 'MZ.FA1010'] - overflow  / 2
+        elif risk == 3.0:
+            overflow = (0.0159 - df_h.loc['2019-01-18', 'ERI000001'] ) + (0.0072 - df_h.loc['2019-01-18', '120000081'])
+            df_h.loc['2019-01-18', 'ERI000001'] = 0.0159
+            df_h.loc['2019-01-18', '120000081'] = 0.0072
+            df_h.loc['2019-01-18', '120000014'] = df_h.loc['2019-01-18', '120000014'] - overflow  / 2
+            df_h.loc['2019-01-18', 'MZ.FA1010'] = df_h.loc['2019-01-18', 'MZ.FA1010'] - overflow  / 2
+        elif risk == 2.0:
+            overflow = (0.0104 - df_h.loc['2019-01-18', 'ERI000001'] ) + (0.0045 - df_h.loc['2019-01-18', '120000081'])
+            df_h.loc['2019-01-18', 'ERI000001'] = 0.0104
+            df_h.loc['2019-01-18', '120000081'] = 0.0045
+            df_h.loc['2019-01-18', '120000014'] = df_h.loc['2019-01-18', '120000014'] - overflow  / 2
+            df_h.loc['2019-01-18', 'MZ.FA1010'] = df_h.loc['2019-01-18', 'MZ.FA1010'] - overflow  / 2
 
-    #
     # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
     # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
     # 天的持仓100%， 如果因为风控空仓，需要用货币补足。
@@ -1015,6 +1069,7 @@ def yao(highlow, alloc):
     if (sr > 0.000099).any():
         df_h['120000039'] = df_h['120000039'] + sr
 
+    print(df_h.tail())
     return df_high_riskmgr, pd.DataFrame(), df_h
 
 

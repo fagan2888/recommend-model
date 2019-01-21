@@ -601,7 +601,7 @@ def nav_update_alloc(portfolio, risks, fee, debug, enddate):
 
         processes = []
         for _, alloc in bar:
-            # nav_update(alloc, fee, debug, enddate)
+            #nav_update(alloc, fee, debug, enddate)
             p = multiprocessing.Process(target = nav_update, args = (alloc, fee, debug, enddate,))
             processes.append(p)
             p.start()
@@ -624,7 +624,19 @@ def nav_update(alloc, fee, debug, enddate):
         max_date = (datetime.now() - timedelta(days=1)) # yesterday
 
     # 计算复合资产净值
-    if fee == 8:
+    if df_pos.index.get_level_values(1)[0] == 40000001:
+        days = pd.date_range('2012-07-21', max_date.strftime('%Y-%m-%d'))
+        sr = [ 1.0 + 0.015 / 365 * x for x in range(0, len(days))]
+        sr_nav_portfolio = pd.Series(sr, index = days)
+        sr_contrib = pd.Series()
+        xtype = 9
+    elif df_pos.index.get_level_values(1)[0] == 40000002:
+        days = pd.date_range('2012-07-21', max_date.strftime('%Y-%m-%d'))
+        sr = [ 1.0 + 0.0035 / 365 * x for x in range(0, len(days))]
+        sr_nav_portfolio = pd.Series(sr, index = days)
+        sr_contrib = pd.Series()
+        xtype = 9
+    elif fee == 8:
         xtype = 8
         df_pos = df_pos.loc[df_pos.index.get_level_values(0) >= '2012-07-27']
         tn = TradeNav.TradeNav(debug=debug)
