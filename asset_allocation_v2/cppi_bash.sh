@@ -25,3 +25,17 @@ python shell/roboadvisor.py portfolio --id PO.CB0040 --new
 #python shell/roboadvisor.py composite nav --asset 20302
 #python shell/roboadvisor.py composite nav --asset 20303
 #python shell/roboadvisor.py composite nav --asset 20304
+
+python shell/roboadvisor.py markowitz --id MZ.CB0050 --new --start-date 2018-12-16
+python shell/roboadvisor.py highlow --id HL.CB0050 --new
+python shell/roboadvisor.py portfolio --id PO.CB0050 --new
+
+
+
+python shell/roboadvisor.py markowitz --id MZ.MO0020 --new
+python shell/roboadvisor.py highlow --id HL.MO0020 --new
+python shell/roboadvisor.py portfolio --id PO.MO0020 --new
+
+python shell/roboadvisor.py portfolio nav --id PO.MO0030 --fee 9
+python shell/roboadvisor.py portfolio nav --id PO.MO0040 --fee 9
+python shell/roboadvisor.py portfolio nav --id PO.MO0050 --fee 9
