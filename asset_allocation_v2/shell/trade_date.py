@@ -60,6 +60,7 @@ class ATradeDate(object):
                 td_date = td_date[td_date.index >= begin_date]
         if end_date is not None:
             td_date = td_date[td_date.index <= end_date]
+        set_trace()
         return td_date.index
 
 

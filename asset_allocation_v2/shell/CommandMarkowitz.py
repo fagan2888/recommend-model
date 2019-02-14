@@ -1087,14 +1087,16 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         #single factor index
         lookback = int(argv.get('lookback'))
-        period = int(argv.get('period'))
+        # period = int(argv.get('period'))
+        period = 1
         factor_num = int(argv.get('factor_num'))
         factor_loc = int(argv.get('factor_loc'))
         factor_end = int(argv.get('factor_end'))
         target = np.zeros(factor_num)
         target[factor_loc] = 1
         target = target * factor_end
-        trade_date = ATradeDate.trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
+        print(trade_date)
         allocate = FactorIndexAllocate('ALC.000001', trade_date, lookback, period = period, target = target)
         df = allocate.allocate()
 
@@ -1283,9 +1285,13 @@ def nav_update(markowitz, alloc):
 
     data = {}
     for asset_id in df_pos.columns:
-        data[asset_id] = Asset.load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
+        try:
+            data[asset_id] = Asset.load_nav_series(asset_id, begin_date=min_date, end_date=max_date)
+        except:
+            print('not have asset : ' + asset_id)
     df_nav = pd.DataFrame(data).fillna(method='pad')
     df_inc  = df_nav.pct_change().fillna(0.0)
+    df_pos = df_pos[df_inc.columns]
 
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')

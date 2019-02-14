@@ -574,6 +574,7 @@ class FactorIndexAllocate(Allocate):
         sfe.columns = sfe.columns.droplevel(0)
         sfe = sfe.dropna(how = 'all')
         sfe = sfe.fillna(0.0)
+        print(day)
         sfe = sfe[self.sf_ids]
 
         stock_weights = IndexFactor.cal_weight(sfe, self.target)

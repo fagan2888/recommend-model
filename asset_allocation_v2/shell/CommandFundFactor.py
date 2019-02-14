@@ -52,8 +52,8 @@ def factor_exposure_update(ctx):
     '''insert factor info
     '''
 
-    # ff_ids = ['FF.000001', 'FF.000005', 'FF.000007', 'FF.100009', 'FF.100012', 'FF.100018', 'FF.100019']
-    ff_ids = ['FF.000007']
+    ff_ids = ['FF.000001', 'FF.000005', 'FF.000007', 'FF.100009', 'FF.100012', 'FF.100018', 'FF.100019']
+    #ff_ids = ['FF.000007']
     ffs = [FundFactor(ff_id) for ff_id in ff_ids]
     # ffs = [FundFactor('FF.0000%02d'%i) for i in range(1,10)]+[FundFactor('FF.1000%02d'%i) for i in range(1,29)]
     pool = Pool(len(ffs))

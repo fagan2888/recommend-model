@@ -63,6 +63,8 @@ def factor_exposure_update(ctx):
     print('load all quote done')
     StockAsset.all_stock_fdmt()
     print('load all fdmt done')
+    # exposure_update(VolStockFactor(factor_id = "SF.000002"))
+    # os._exit(0)
 
     sfs = [
         SizeStockFactor(factor_id = "SF.000001"),
@@ -115,10 +117,12 @@ def factor_exposure_update(ctx):
     #     print(_sf.factor_id, 'update done')
 
 
-    pool = Pool(len(sfs))
-    pool.map(exposure_update, sfs)
-    pool.close()
-    pool.join()
+    # pool = Pool(len(sfs))
+    # pool.map(exposure_update, sfs)
+    # pool.close()
+    # pool.join()
+    for _sf in sfs:
+        exposure_update(_sf)
 
 
 @sf.command()
