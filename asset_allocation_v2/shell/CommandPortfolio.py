@@ -629,13 +629,13 @@ def nav_update(alloc, fee, debug, enddate):
         sr = [ np.exp(0.015 / 365 * x) for x in range(0, len(days))]
         sr_nav_portfolio = pd.Series(sr, index = days)
         sr_contrib = pd.Series()
-        xtype = 9
+        xtype = 8
     elif df_pos.index.get_level_values(1)[0] == 40000002:
         days = pd.date_range('2012-07-21', max_date.strftime('%Y-%m-%d'))
         sr = [ np.exp(0.0035 / 365 * x) for x in range(0, len(days))]
         sr_nav_portfolio = pd.Series(sr, index = days)
         sr_contrib = pd.Series()
-        xtype = 9
+        xtype = 8
     elif fee == 8:
         xtype = 8
         df_pos = df_pos.loc[df_pos.index.get_level_values(0) >= '2012-07-27']
