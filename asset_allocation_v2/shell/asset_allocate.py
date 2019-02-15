@@ -805,6 +805,20 @@ class CppiAllocate(Allocate):
         return var
 
 
+class MzMOBKAllocate(Allocate):
+
+
+    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
+        super(MzMOBKAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
+
+    def allocate_algo(self, day, df_inc, bound):
+        df_inc_mean = df_inc.mean()
+        if df_inc_mean.loc['MZ.MO0010'] >= df_inc_mean.loc['MZ.MO0020']:
+            return {'MZ.MO0010':1.0, 'MZ.MO0020':0.0}
+        else:
+            return {'MZ.MO0010':0.0, 'MZ.MO0020':1.0}
+
 
 if __name__ == '__main__':
 
