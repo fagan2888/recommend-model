@@ -11,7 +11,7 @@ from . import database
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from ipdb import set_trace
-import asset
+# import asset
 
 logger = logging.getLogger(__name__)
 
@@ -197,11 +197,7 @@ def load_all_fund_pos():
     df.index = df.index.astype('str')
     df = df.rename(index = secode_dict)
     df = df.loc[:, ['publishdate', 'skcode', 'navrto']]
-    stock_secode_dict = asset.StockAsset.secode_dict()
-    stock_secode_dict = {v:k for k,v in stock_secode_dict.items()}
     df['skcode'] = df['skcode'].astype('str')
-    # df['skcode'] = df['skcode'].replace(stock_secode_dict)
-    df['skcode'] = [stock_secode_dict.get(x, np.nan) for x in df['skcode'].values]
     df = df.dropna()
 
     return df

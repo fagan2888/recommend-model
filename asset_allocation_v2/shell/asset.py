@@ -537,6 +537,11 @@ class StockFundAsset(FundAsset):
             stock_secode_dict = StockAsset.secode_dict()
             stock_secode_dict = {v:k for k,v in stock_secode_dict.items()}
             fund_pos = db.asset_fund.load_all_fund_pos()
+            stock_secode_dict = StockAsset.secode_dict()
+            stock_secode_dict = {v:k for k,v in stock_secode_dict.items()}
+            # df['skcode'] = df['skcode'].replace(stock_secode_dict)
+            fund_pos['skcode'] = [stock_secode_dict.get(x, np.nan) for x in fund_pos['skcode'].values]
+            fund_pos = fund_pos.dropna()
             fund_ids = np.intersect1d(StockFundAsset.all_fund_info().index, fund_pos.index)
             StockFundAsset.__all_fund_info = StockFundAsset.__all_fund_info.loc[fund_ids]
 
