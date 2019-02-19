@@ -11,7 +11,6 @@ from . import database
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from ipdb import set_trace
-# import asset
 
 logger = logging.getLogger(__name__)
 
