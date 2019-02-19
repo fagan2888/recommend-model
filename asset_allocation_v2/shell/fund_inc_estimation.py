@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from dateutil.relativedelta import relativedelta
-from ipdb import set_trace
 sys.path.append('shell')
 from db import database, asset_fund_inc_estimate
 from db import base_ra_fund_nav, caihui_tq_fd_basicinfo, caihui_tq_fd_skdetail, caihui_tq_sk_dquoteindic, caihui_tq_ix_basicinfo, caihui_tq_qt_index
