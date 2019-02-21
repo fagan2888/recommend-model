@@ -820,6 +820,68 @@ class MzMOBKAllocate(Allocate):
             return {'MZ.MO0010':0.0, 'MZ.MO0020':1.0}
 
 
+class BkFinBdFdAllocate(Allocate):
+
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, lockup_period='1m', bank_fin_annual_ret=0.038, lowest_annual_ret=0.01, var_percent=10):
+        super(BkFinBdFdAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        bank_fin = {
+            '1w': (7, '120000095'),
+            '1m': (30, '120000096'),
+            '2m': (61, '120000097'),
+            '3m': (91, '120000098'),
+            '6m': (182, '120000099'),
+            '1y': (365, '120000100')
+        }
+        self.lockup_period, self.bank_fin_id = bank_fin[lockup_period]
+        self.bank_fin_ret = (1 + bank_fin_annual_ret) ** (self.lockup_period / 365) - 1
+        self.lowest_ret = (1 + lowest_annual_ret) ** (self.lockup_period / 365) - 1
+        self.var_percent = var_percent
+
+    @staticmethod
+    def cal_bank_fin_ret(bank_fin_id, period, day):
+
+        df_bank_fin_nav = base_ra_index_nav.load_series(bank_fin_id)
+        df_bank_fin_inc = df_bank_fin_nav.pct_change(period).dropna()
+        df_bank_fin_inc = df_bank_fin_inc.loc[df_bank_fin_inc.index < day]
+
+        return df_bank_fin_inc.iloc[-1]
+
+    @staticmethod
+    def cal_bond_fund_var(period, percent, day):
+        df_bond_fund_nav = base_ra_index_nav.load_series('120000010')
+        df_bond_fund_inc = df_bond_fund_nav.pct_change(period).dropna()
+        df_bond_fund_inc = df_bond_fund_inc.loc[df_bond_fund_inc.index < day]
+        df_bond_fund_inc = df_bond_fund_inc.iloc[-365*5:]
+        var = np.percentile(df_bond_fund_inc, percent)
+
+        return var
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        # bank_fin_ret = BkFinBdFdAllocate.cal_bank_fin_ret(self.bank_fin_id, self.lockup_period, day)
+        bank_fin_ret = self.bank_fin_ret
+        bond_fund_var = BkFinBdFdAllocate.cal_bond_fund_var(self.lockup_period, self.var_percent, day)
+
+        ws_bank_fin = (self.lowest_ret - bond_fund_var) / (bank_fin_ret - bond_fund_var)
+        ws_bond_fund = (1 - ws_bank_fin) / 2
+
+        ws = {}
+        if ws_bank_fin > 1.0:
+            ws['120000010'] = 0.0
+            ws['120000010'] = 0.0
+            ws[self.bank_fin_id] = 1.0
+        elif ws_bank_fin > 0.0:
+            ws['120000010'] = ws_bond_fund
+            ws['120000011'] = ws_bond_fund
+            ws[self.bank_fin_id] = ws_bank_fin
+        else:
+            ws['120000010'] = 0.5
+            ws['120000011'] = 0.5
+            ws[self.bank_fin_id] = 0.0
+
+        return ws
+
+
 if __name__ == '__main__':
 
 
