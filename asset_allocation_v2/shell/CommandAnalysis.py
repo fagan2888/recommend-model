@@ -1023,7 +1023,6 @@ def allocate_comp(ctx):
     df = pd.concat([online_df, index_df], axis = 1, join_axes = [online_df.index]).fillna(method = 'pad')
     tmp_df = df.resample('M').last()
     tmp_df = tmp_df.iloc[-25:-1]
-    print(tmp_df.index)
     df = df[df.index >= tmp_df.index[0]]
     df = df / df.iloc[0]
     #print(df)
@@ -1050,8 +1049,12 @@ def allocate_comp(ctx):
     new_df = pd.DataFrame(data)
 
     df = pd.concat([old_df, new_df], axis = 1, join_axes = [old_df.index]).fillna(method='pad')
+    tmp_df = df
+    df = df.resample('W').last()
+    df.loc[tmp_df.index[0]] = tmp_df.loc[tmp_df.index[0]]
+    df = df.sort_index()
     df.to_csv('allocate_comp.csv')
-    print(df.tail())
+    print(df)
 
     #print(tmp_df / tmp_df.iloc[0] - 1.0)
     #tmp_df = tmp_df.pct_change().fillna(0.0)
