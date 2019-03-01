@@ -90,8 +90,15 @@ class Trade(object):
         self.asset_navs = self.asset_navs.reindex(self.index).fillna(method='pad')
         self.asset_inc = self.asset_inc.reindex(self.index).fillna(0.0)
 
-    def rebuy():
-        pass
+    def rebuy(self, today, amount):
+
+        index = self.index.tolist().index(today)
+        tomorrow = self.index[index+1]
+        allocate_weight = self.asset_pos.loc[today]
+        user_weight = self.user_hold_weight.loc[today]
+        for asset_id in allocate_weight.index:
+            self.user_hold_asset.loc[tomorrow, asset_id] = self.user_hold_asset.loc[tomorrow, asset_id] + amount * allocate_weight.loc[asset_id]
+
 
     def cal_score(self, today):
         user_weight = self.user_hold_weight.loc[today]
@@ -123,11 +130,11 @@ class Trade(object):
 
 
     def redeem(today, ratio = 0.0):
-        self.user_hold_asset[self.user_hold_asset.index >= today] = self.user_hold_asset[self.user_hold_asset.index >= today] * (1.0 - ratio)
-        self.user_redeem_and_buy[self.user_hold_asset.index >= today] = self.user_redeem_and_buy[self.user_hold_asset.index >= today] * (1.0 - ratio)
-        self.user_buying[self.user_hold_asset.index >= today] = self.user_buying[self.user_hold_asset.index >= today] * (1.0 - ratio)
-
-        pass
+        index = self.index.tolist().index(today)
+        tomorrow = self.index[index+1]
+        every_asset = self.user_hold_asset[self.user_hold_asset.index >= today].sum(axis = 0)
+        for asset_id in every_asset.index:
+           self.user_hold_asset.loc[tomorrow, asset_id] = -1.0 * every_asset.loc[asset_id] * ratio
 
 
     def trade_strategy(self):
