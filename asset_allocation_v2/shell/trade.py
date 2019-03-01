@@ -142,8 +142,8 @@ class Trade(object):
             #计算当天可获得收益的资产总额
             self.user_hold_asset.loc[today] = self.user_hold_asset.loc[yesterday] + self.user_hold_asset.loc[today]
             #计算当日收益率
-            today_inc = (self.user_hold_asset.loc[today] * (1 + self.asset_inc.loc[today])).sum() / (self.user_hold_asset.loc[today]).sum()
-            self.user_nav.loc[today] = self.user_nav.loc[yesterday] * (1 + today_inc)
+            #today_inc = (self.user_hold_asset.loc[today] * (1 + self.asset_inc.loc[today])) / (self.user_hold_asset.loc[today]).sum()
+            #self.user_nav.loc[today] = self.user_nav.loc[yesterday] * (1 + today_inc)
             #当日获得收益后的资产额度
             self.user_hold_asset.loc[today] = self.user_hold_asset.loc[today] * (1 + self.asset_inc.loc[today])
 
