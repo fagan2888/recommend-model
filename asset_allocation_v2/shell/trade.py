@@ -249,12 +249,13 @@ class TradeNew(Trade):
 
         return pos
 
-class TradeVolability(Trade):
+class TradeVolatility(Trade):
 
     def __init__(self, globalid, asset_pos, reindex, asset_trade_delay = None, ops = None, init_amount = 10000):
 
-        super(TradeVolability, self).__init__(globalid, asset_pos, reindex, asset_trade_delay, ops, init_amount)
+        super(TradeVolatility, self).__init__(globalid, asset_pos, reindex, asset_trade_delay, ops, init_amount)
         # self.asset_volability = self.asset_inc.cov()
+        self.count_adjust = 0
 
     def cal_score(self, today):
 
@@ -263,14 +264,24 @@ class TradeVolability(Trade):
         delta_weight = (user_weight - allocate_weight).abs()
         asset_inc = self.asset_inc.loc[:today]
         asset_inc = asset_inc[-120:]
-        asset_volability = np.diag(asset_inc.cov())
+        asset_volatility = np.diag(asset_inc.cov())
 
-        score = (delta_weight * (asset_volability ** 0.5)).sum()
+        score = (delta_weight * (asset_volatility ** 0.5)).sum()
         # print(score)
         # set_trace()
-        if score < 0.001:
+        if score < 0.00124:
             return 100
         else:
-            print(today)
+            self.count_adjust += 1
+            print(self.count_adjust)
             return 70
 
+def tracking_error(asset_1='MZ.T00070', asset_2='MZ.000072', reindex=None):
+
+    ser_asset1_nav = Asset(asset_1).nav()
+    ser_asset2_nav = Asset(asset_2).nav()
+    error = (ser_asset1_nav - ser_asset2_nav).std()
+
+    return error
+
+# print(tracking_error())
