@@ -88,8 +88,9 @@ class Trade(object):
         self.asset_navs = pd.DataFrame(self.asset_navs).fillna(method='pad')
         self.asset_inc = self.asset_navs.pct_change()
 
-        self.asset_navs = self.asset_navs.reindex(self.index).fillna(method='pad')
+        #self.asset_navs = self.asset_navs.reindex(self.index).fillna(method='pad')
         self.asset_inc = self.asset_inc.reindex(self.index).fillna(0.0)
+
 
     def rebuy(self, today, amount):
 
@@ -146,7 +147,7 @@ class Trade(object):
         every_asset = self.user_hold_asset.sum(axis = 0)
         pos.loc[self.index[0]] = every_asset / every_asset.sum()
 
-        for i in range(1, len(self.index) - 2):
+        for i in range(1, len(self.index) - 3):
             today, yesterday, tomorrow = self.index[i], self.index[i-1], self.index[i+1]
             #计算当天可获得收益的资产总额
             self.user_hold_asset.loc[today] = self.user_hold_asset.loc[yesterday] + self.user_hold_asset.loc[today]
@@ -164,7 +165,7 @@ class Trade(object):
             self.user_hold_weight.loc[today] = every_asset / every_asset.sum()
 
             score = self.cal_score(today)
-            if score < 80:
+            if score < 90:
                 #print(today, score, self.asset_pos.loc[today], self.user_hold_weight.loc[today])
                 #print('----------')
                 self.adjust(today)
@@ -274,7 +275,50 @@ class TradeVolatility(Trade):
         else:
             self.count_adjust += 1
             print(self.count_adjust)
+        delta_weight = (user_weight - allocate_weight).abs() / 2
+        #asset_inc = self.asset_inc.loc[:today]
+        #asset_inc = asset_inc[-120:]
+
+        week_trade_date = ATradeDate.week_trade_date()
+        week_trade_date = week_trade_date[week_trade_date <= today]
+        week_trade_date = week_trade_date[-26:]
+
+        asset_week_navs = self.asset_navs.loc[week_trade_date]
+        asset_week_inc = asset_week_navs.pct_change().fillna(0.0)
+
+        #asset_volability = np.diag(asset_inc.cov()) ** 0.5
+        #user_inc = (asset_inc * user_weight).sum(axis = 1)
+        #allocate_inc = (asset_inc * allocate_weight).sum(axis = 1)
+        delta_weight_inc = (asset_week_inc * delta_weight).sum(axis = 1)
+        #user_shape = user_inc.mean() / user_inc.std()
+        #allocate_shape = allocate_inc.mean() / allocate_inc.std()
+
+        #user_std = user_inc.std()
+        #allocate_std = allocate_inc.std()
+        #deviation = abs(user_std - allocate_std) / allocate_std
+        #print(today, delta_weight_inc.mean(), delta_weight_inc.std())
+        delta_std = delta_weight_inc.std()
+        if delta_std < 0.015 * 0.15:
+            return 100
+        else:
+            print(today, delta_std)
             return 70
+        #user_volability()
+
+        #volability_score = (delta_weight * asset_volability).sum()
+        #print(volability_score)
+
+        # print(score)
+        # set_trace()
+        #0.005
+        #if volability_score < 0.005:
+        #if volability_score - 0.015 < 0.015 * 0.1:
+        #if user_shape < 0 and allocate_shape < 0:
+        #    if user_shape > allocate_shape * 1.1:
+        #        return 100
+        #    else:
+        #        return 70
+        return 100
 
 def tracking_error(asset_1='MZ.T00070', asset_2='MZ.000072', reindex=None):
 

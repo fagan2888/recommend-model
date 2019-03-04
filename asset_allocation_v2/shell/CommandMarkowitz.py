@@ -1151,9 +1151,11 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 19:
 
-        asset_pos = asset_mz_markowitz_pos.load('MZ.000072')
+        asset_pos = asset_mz_markowitz_pos.load('MZ.000070')
         trade_date = ATradeDate.trade_date(begin_date='2013-01-01')
         trade = TradeVolatility('T00001', asset_pos, trade_date)
+        #trade = TradeNew('T00001', asset_pos, trade_date)
+        #trade = Trade('T00001', asset_pos, trade_date)
         df = trade.trade_strategy()
 
 
@@ -1194,7 +1196,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     #每四周做平滑
         df = df.rolling(window = 4, min_periods = 1).mean()
 
-    print(df.tail(52))
+    #print(df.tail(52))
     if optappend:
         df = df.iloc[3:,:]
 
