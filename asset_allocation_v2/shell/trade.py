@@ -47,6 +47,7 @@ import PureFactor
 import IndexFactor
 import traceback, code
 from monetary_fund_filter import MonetaryFundFilter
+from dateutil.relativedelta import relativedelta
 
 
 logger = logging.getLogger(__name__)
@@ -101,10 +102,11 @@ class Trade(object):
 
 
     def cal_score(self, today):
+        set_trace()
         user_weight = self.user_hold_weight.loc[today]
         allocate_weight = self.asset_pos.loc[today]
         deviation = abs(user_weight - allocate_weight).sum() / 2
-        return (1.0 - deviation) * 100
+        return (1.0 - deviation) * 10
 
 
     def adjust(self, today):
@@ -177,3 +179,73 @@ class Trade(object):
         return pos
         #set_trace()
         #return ws
+
+
+class TradeNew(Trade):
+
+    def __init__(self, globalid, asset_pos, reindex, asset_trade_delay = None, ops = None, init_amount = 10000):
+
+        super(TradeNew, self).__init__(globalid, asset_pos, reindex, asset_trade_delay, ops, init_amount)
+        self.last_adjust_day = reindex[0]
+        self.count = 0
+
+    def cal_score(self, today):
+
+        user_weight = self.user_hold_weight
+        allocate_weight = self.asset_pos
+        delta_weight = (user_weight - allocate_weight).loc[self.last_adjust_day:today].abs()
+        # if delta_weight.shape[0] > 15:
+        #     delta_weight = delta_weight.iloc[-15:]
+        assets = user_weight.columns
+
+        cov = np.cov(np.array(delta_weight.T).tolist())
+        res = np.dot(np.mat([allocate_weight.loc[today]]), np.dot(cov, np.mat([allocate_weight.loc[today]]).T))[0, 0]
+        res = res ** 0.5
+        deviation = abs(user_weight.loc[today] - allocate_weight.loc[today]).sum() / 2
+        # print(res)
+        if res > 0.012  and today > self.last_adjust_day + relativedelta(days=+7):
+            # print(today)
+            return 70
+        else:
+            return 100
+
+    def trade_strategy(self):
+
+        self.asset_inc = self.asset_inc[self.asset_pos.columns]
+        pos = pd.DataFrame(columns = self.asset_pos.columns)
+        every_asset = self.user_hold_asset.sum(axis = 0)
+        pos.loc[self.index[0]] = every_asset / every_asset.sum()
+
+        for i in range(1, len(self.index) - 2):
+            today, yesterday, tomorrow = self.index[i], self.index[i-1], self.index[i+1]
+            #计算当天可获得收益的资产总额
+            self.user_hold_asset.loc[today] = self.user_hold_asset.loc[yesterday] + self.user_hold_asset.loc[today]
+            #计算当日收益率
+            #today_inc = (self.user_hold_asset.loc[today] * (1 + self.asset_inc.loc[today])) / (self.user_hold_asset.loc[today]).sum()
+            #self.user_nav.loc[today] = self.user_nav.loc[yesterday] * (1 + today_inc)
+            #当日获得收益后的资产额度
+            self.user_hold_asset.loc[today] = self.user_hold_asset.loc[today] * (1 + self.asset_inc.loc[today])
+
+            #self.redeem(today, ratio)
+            #self.rebuy(today, amount)
+
+            #计算当天配置比例
+            every_asset = self.user_hold_asset[self.user_hold_asset.index >= today].sum(axis = 0)
+            self.user_hold_weight.loc[today] = every_asset / every_asset.sum()
+
+            score = self.cal_score(today)
+            if score < 80:
+                #print(today, score, self.asset_pos.loc[today], self.user_hold_weight.loc[today])
+                #print('----------')
+                self.adjust(today)
+                every_asset = self.user_hold_asset[self.user_hold_asset.index >= today].sum(axis = 0)
+                pos.loc[tomorrow] = every_asset / every_asset.sum()
+                self.last_adjust_day = today
+
+            #every_asset = self.user_hold_asset.loc[today] - self.user_redeeming.loc[today] + self.user_buying.loc[today]
+            #sys.exit(0)
+            #self.user_hold_weight =
+            #print(date)
+
+        return pos
+
