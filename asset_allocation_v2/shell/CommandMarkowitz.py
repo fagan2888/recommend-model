@@ -1154,7 +1154,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         load_markowitz_id = 'MZ.00007' + markowitz_id[-1]
         #print(markowitz_id, trade_risk, load_markowitz_id)
-        asset_pos = asset_mz_markowitz_pos.load('MZ.000072')
+        asset_pos = asset_mz_markowitz_pos.load(load_markowitz_id)
         trade_date = ATradeDate.trade_date(begin_date='2013-01-01')
         trade = TradeVolatility('T00001', asset_pos, trade_date, trade_risk = float(trade_risk))
         #trade = TradeNew('T00001', asset_pos, trade_date)

@@ -146,6 +146,7 @@ class Trade(object):
         pos = pd.DataFrame(columns = self.asset_pos.columns)
         every_asset = self.user_hold_asset.sum(axis = 0)
         pos.loc[self.index[0]] = every_asset / every_asset.sum()
+        num_adjust = 0
 
         for i in range(1, len(self.index) - 3):
             today, yesterday, tomorrow = self.index[i], self.index[i-1], self.index[i+1]
@@ -168,6 +169,7 @@ class Trade(object):
             if score < 90:
                 #print(today, score, self.asset_pos.loc[today], self.user_hold_weight.loc[today])
                 #print('----------')
+                num_adjust += 1
                 self.adjust(today)
                 every_asset = self.user_hold_asset[self.user_hold_asset.index >= today].sum(axis = 0)
                 pos.loc[tomorrow] = every_asset / every_asset.sum()
@@ -176,6 +178,8 @@ class Trade(object):
             #sys.exit(0)
             #self.user_hold_weight =
             #print(date)
+
+        print(num_adjust)
 
         return pos
         #set_trace()
@@ -326,12 +330,23 @@ class TradeVolatility(Trade):
         #        return 70
         #return 100
 
-def tracking_error(asset_1='MZ.T00070', asset_2='MZ.000072', reindex=None):
+def cal_tracking_error(asset1, asset2, reindex=None):
 
-    ser_asset1_nav = Asset(asset_1).nav()
-    ser_asset2_nav = Asset(asset_2).nav()
-    error = (ser_asset1_nav - ser_asset2_nav).std()
+    ser_asset1_nav = Asset(asset1).nav()
+    ser_asset2_nav = Asset(asset2).nav()
+    tracking_error = (ser_asset1_nav - ser_asset2_nav).std()
 
-    return error
+    return tracking_error
 
-# print(tracking_error())
+if __name__ == '__main__':
+
+    print(cal_tracking_error('MZ.T00011', 'MZ.000071'))
+    print(cal_tracking_error('MZ.T00012', 'MZ.000072'))
+    print(cal_tracking_error('MZ.T00013', 'MZ.000073'))
+    print(cal_tracking_error('MZ.T00014', 'MZ.000074'))
+    print(cal_tracking_error('MZ.T00015', 'MZ.000075'))
+    print(cal_tracking_error('MZ.T00016', 'MZ.000076'))
+    print(cal_tracking_error('MZ.T00017', 'MZ.000077'))
+    print(cal_tracking_error('MZ.T00018', 'MZ.000078'))
+    print(cal_tracking_error('MZ.T00019', 'MZ.000079'))
+    print(cal_tracking_error('MZ.T00010', 'MZ.000070'))
