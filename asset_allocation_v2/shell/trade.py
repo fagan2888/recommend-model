@@ -252,11 +252,12 @@ class TradeNew(Trade):
 
 class TradeVolatility(Trade):
 
-    def __init__(self, globalid, asset_pos, reindex, asset_trade_delay = None, ops = None, init_amount = 10000):
+    def __init__(self, globalid, asset_pos, reindex, asset_trade_delay = None, ops = None, init_amount = 10000, trade_risk = None):
 
         super(TradeVolatility, self).__init__(globalid, asset_pos, reindex, asset_trade_delay, ops, init_amount)
         # self.asset_volability = self.asset_inc.cov()
         self.count_adjust = 0
+        self.trade_risk = trade_risk
 
     def cal_score(self, today):
 
@@ -268,28 +269,33 @@ class TradeVolatility(Trade):
         asset_volatility = np.diag(asset_inc.cov())
 
         score = (delta_weight * (asset_volatility ** 0.5)).sum()
+        score = max(0.6, 100 - score / self.trade_risk * 10)
         # print(score)
         # set_trace()
-        if score < 0.00124:
-            return 100
-        else:
-            self.count_adjust += 1
-            print(self.count_adjust)
-        delta_weight = (user_weight - allocate_weight).abs() / 2
+        #if score < 0.00124:
+        user_weight = self.user_hold_weight.loc[today]
+        allocate_weight = self.asset_pos.loc[today]
+        deviation = abs(user_weight - allocate_weight).sum() / 2
+        deviation = max(0.6, 100 - deviation / 0.2 * 10)
+        return (score + deviation) / 2
+        #else:
+        #    self.count_adjust += 1
+        #    print(self.count_adjust)
+        #delta_weight = (user_weight - allocate_weight).abs() / 2
         #asset_inc = self.asset_inc.loc[:today]
         #asset_inc = asset_inc[-120:]
 
-        week_trade_date = ATradeDate.week_trade_date()
-        week_trade_date = week_trade_date[week_trade_date <= today]
-        week_trade_date = week_trade_date[-26:]
+        #week_trade_date = ATradeDate.week_trade_date()
+        #week_trade_date = week_trade_date[week_trade_date <= today]
+        #week_trade_date = week_trade_date[-26:]
 
-        asset_week_navs = self.asset_navs.loc[week_trade_date]
-        asset_week_inc = asset_week_navs.pct_change().fillna(0.0)
+        #asset_week_navs = self.asset_navs.loc[week_trade_date]
+        #asset_week_inc = asset_week_navs.pct_change().fillna(0.0)
 
         #asset_volability = np.diag(asset_inc.cov()) ** 0.5
         #user_inc = (asset_inc * user_weight).sum(axis = 1)
         #allocate_inc = (asset_inc * allocate_weight).sum(axis = 1)
-        delta_weight_inc = (asset_week_inc * delta_weight).sum(axis = 1)
+        #delta_weight_inc = (asset_week_inc * delta_weight).sum(axis = 1)
         #user_shape = user_inc.mean() / user_inc.std()
         #allocate_shape = allocate_inc.mean() / allocate_inc.std()
 
@@ -297,12 +303,12 @@ class TradeVolatility(Trade):
         #allocate_std = allocate_inc.std()
         #deviation = abs(user_std - allocate_std) / allocate_std
         #print(today, delta_weight_inc.mean(), delta_weight_inc.std())
-        delta_std = delta_weight_inc.std()
-        if delta_std < 0.015 * 0.15:
-            return 100
-        else:
-            print(today, delta_std)
-            return 70
+        #delta_std = delta_weight_inc.std()
+        #if delta_std < 0.015 * 0.15:
+        #    return 100
+        #else:
+        #    print(today, delta_std)
+        #    return 70
         #user_volability()
 
         #volability_score = (delta_weight * asset_volability).sum()
@@ -318,7 +324,7 @@ class TradeVolatility(Trade):
         #        return 100
         #    else:
         #        return 70
-        return 100
+        #return 100
 
 def tracking_error(asset_1='MZ.T00070', asset_2='MZ.000072', reindex=None):
 
