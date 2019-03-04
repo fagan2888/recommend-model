@@ -102,11 +102,11 @@ class Trade(object):
 
 
     def cal_score(self, today):
-        set_trace()
+
         user_weight = self.user_hold_weight.loc[today]
         allocate_weight = self.asset_pos.loc[today]
         deviation = abs(user_weight - allocate_weight).sum() / 2
-        return (1.0 - deviation) * 10
+        return (1.0 - deviation) * 100
 
 
     def adjust(self, today):
@@ -240,7 +240,7 @@ class TradeNew(Trade):
                 self.adjust(today)
                 every_asset = self.user_hold_asset[self.user_hold_asset.index >= today].sum(axis = 0)
                 pos.loc[tomorrow] = every_asset / every_asset.sum()
-                self.last_adjust_day = today
+                self.last_adjust_day = tomorrow
 
             #every_asset = self.user_hold_asset.loc[today] - self.user_redeeming.loc[today] + self.user_buying.loc[today]
             #sys.exit(0)
@@ -248,4 +248,29 @@ class TradeNew(Trade):
             #print(date)
 
         return pos
+
+class TradeVolability(Trade):
+
+    def __init__(self, globalid, asset_pos, reindex, asset_trade_delay = None, ops = None, init_amount = 10000):
+
+        super(TradeVolability, self).__init__(globalid, asset_pos, reindex, asset_trade_delay, ops, init_amount)
+        # self.asset_volability = self.asset_inc.cov()
+
+    def cal_score(self, today):
+
+        user_weight = self.user_hold_weight.loc[today]
+        allocate_weight = self.asset_pos.loc[today]
+        delta_weight = (user_weight - allocate_weight).abs()
+        asset_inc = self.asset_inc.loc[:today]
+        asset_inc = asset_inc[-120:]
+        asset_volability = np.diag(asset_inc.cov())
+
+        score = (delta_weight * (asset_volability ** 0.5)).sum()
+        # print(score)
+        # set_trace()
+        if score < 0.001:
+            return 100
+        else:
+            print(today)
+            return 70
 

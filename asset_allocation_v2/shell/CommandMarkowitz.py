@@ -39,7 +39,7 @@ from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
 from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, CppiAllocate
 from trade_date import ATradeDate
-from trade import Trade, TradeNew
+from trade import Trade, TradeNew, TradeVolability
 from view import View
 
 
@@ -1151,9 +1151,9 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 19:
 
-        asset_pos = asset_mz_markowitz_pos.load('MZ.000070')
+        asset_pos = asset_mz_markowitz_pos.load('MZ.000072')
         trade_date = ATradeDate.trade_date(begin_date='2013-01-01')
-        trade = TradeNew('T00001', asset_pos, trade_date)
+        trade = TradeVolability('T00001', asset_pos, trade_date)
         df = trade.trade_strategy()
 
 
