@@ -99,6 +99,7 @@ class AssetBound(object):
         bounds = {}
         for asset_id in df.index:
             bound_dict = df.loc[asset_id].to_dict()
+            bound_dict['asset_id'] = asset_id
             bound = bounds.setdefault(asset_id, [])
             bound.append(
                 AssetBound(globalid = globalid, asset_id = asset_id, bound = bound_dict, start_date = bound_dict['mz_allocate_start_date'], end_date = bound_dict['mz_allocate_end_date'])
