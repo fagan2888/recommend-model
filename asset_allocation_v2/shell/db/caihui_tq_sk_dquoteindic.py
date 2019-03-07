@@ -43,7 +43,7 @@ def load_stock_nav(begin_date=None, end_date=None, reindex=None, stock_ids=None)
 
     return df
 
-def load_stock_dquote_indic(begin_date=None, end_date=None, stock_ids=None):
+def load_stock_market_data(begin_date=None, end_date=None, stock_ids=None):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
