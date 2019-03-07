@@ -14,7 +14,7 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_stock_fin_indic(begin_data=None, end_data=None, stock_ids=None):
+def load_stock_financial_data(begin_date=None, end_date=None, stock_ids=None):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
@@ -56,7 +56,7 @@ def load_stock_fin_indic(begin_data=None, end_data=None, stock_ids=None):
     ]
 
     s = select(columns)
-    if begin_data is not None:
+    if begin_date is not None:
         s = s.where(t.c.TRADEDATE>=begin_date)
     if end_date is not None:
         s = s.where(t.c.TRADEDATE<=end_date)

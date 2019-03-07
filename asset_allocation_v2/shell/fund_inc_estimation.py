@@ -1,6 +1,6 @@
 #coding=utf-8
 '''
-Created at Dec. 28, 2018
+Created on: Dec. 28, 2018
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -46,7 +46,7 @@ class FundIncEstimation(object):
         if fund_codes is None and fund_ids is None:
             self._fund_pool = self.__load_fund_pool(self._end_date)
         else:
-            self._fund_pool = caihui_tq_fd_basicinfo.load_fund_basic_info(fund_codes=fund_codes, fund_ids=fund_ids)
+            self._fund_pool = caihui_tq_fd_basicinfo.load_fund_code_info(fund_codes=fund_codes, fund_ids=fund_ids)
 
         if self._fund_pool.empty:
             raise NotImplementedError('The pool of funds is empty.')

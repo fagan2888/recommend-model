@@ -12,7 +12,7 @@ import warnings
 import numpy as np
 import pandas as pd
 sys.path.append('shell')
-from db import caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic
+from db import caihui_tq_ix_comp, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic
 from trade_date import ATradeDate
 from util_timestamp import *
 from ipdb import set_trace
@@ -23,12 +23,16 @@ logger = logging.getLogger(__name__)
 
 def load_CSI800():
 
-    df_CSI800_constinuents = pd.read_csv('data/CSI800_constinuents.csv')
-    ser_CSI800_pool = caihui_tq_sk_basicinfo.load_stock_basic_info(stock_codes=df_CSI800_constinuents['Consituents Code'], current=True)
-    ser = caihui_tq_sk_basicinfo.load_stock_basic_info(stock_codes=df_CSI800_constinuents['Consituents Code'], current=False)
+    # df_CSI800_pool = caihui_tq_ix_comp.load_index_constituents('2070000191',date='20171231')
+    df_CSI800_constituents = pd.read_csv('data/CSI800_constituents.csv')
+    df_CSI800_pool = caihui_tq_sk_basicinfo.load_stock_code_info(stock_codes=df_CSI800_constituents['Constituents Code'], current=False)
+
+    df_CSI800_market_data = caihui_tq_sk_dquoteindic.load_stock_market_data(begin_date='20000101', stock_ids=df_CSI800_pool.index)
+    df_CSI800_financial_data = caihui_tq_sk_finindic.load_stock_financial_data(begin_date='20000101', stock_ids=df_CSI800_pool.index)
+    df_CSI800_industry = caihui_tq_sk_basicinfo.load_stock_industry(stock_ids=df_CSI800_pool.index)
     set_trace()
-    df_CSI800_dquote_indic = caihui_tq_sk_dquoteindic.load_stock_dquote_indic(begin_date='20180101', stock_ids=ser_CSI800_pool.index)
-    df_CSI800_fin_indic = caihui_tq_sk_finindic.load_stock_fin_indic(begin_date='20180101', stock_ids=ser_CSI_800_pool.index)
+    result = pd.merge(df_CSI800_dquote_indic, df_CSI800_financial_data, how='outer', on=['stock_id', 'date'])
+
     set_trace()
 
 
