@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 #
 # asset.ra_pool_nav
 #
-def load_series(id_, category, xtype, reindex=None, begin_date=None, end_date=None):
+def load_series(id_, category=None, xtype=None, reindex=None, begin_date=None, end_date=None):
     db = database.connection('asset')
     metadata = MetaData(bind=db)
     t1 = Table('ra_pool_nav', metadata, autoload=True)
@@ -28,10 +28,11 @@ def load_series(id_, category, xtype, reindex=None, begin_date=None, end_date=No
     ]
 
     s = select(columns) \
-        .where(t1.c.ra_pool == id_) \
-        .where(t1.c.ra_category == category) \
-        .where(t1.c.ra_type == xtype)
-
+        .where(t1.c.ra_pool == id_)
+    if category is not None:
+        s = s.where(t1.c.ra_category == category)
+    if xtype is not None:
+        s = s.where(t1.c.ra_type == xtype)
     if begin_date is not None:
         s = s.where(t1.c.ra_date >= begin_date)
     if end_date is not None:

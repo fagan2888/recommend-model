@@ -27,7 +27,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
-from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_stock_factor, asset_fund_factor, base_fund_fee
+from db import database, base_trade_dates, base_ra_index_nav, asset_ra_pool_sample, base_ra_fund_nav, base_ra_fund, asset_stock_factor, asset_fund_factor, base_fund_fee, asset_ra_pool_fund
 from asset import Asset, StockFundAsset
 from asset_allocate import MonetaryAllocate
 from trade_date import ATradeDate
@@ -263,7 +263,7 @@ def fund_update_factor_pool(pool, adjust_points, optlimit, optcalc):
 @click.option('--id', 'optid', help='fund pool id to update')
 @click.option('--list/--no-list', 'optlist', default=False, help='list pool to update')
 @click.option('--calc/--no-calc', 'optcalc', default=True, help='re calc label')
-@click.option('--limit', 'optlimit', type=int, default=3, help='how many fund selected for each category')
+@click.option('--limit', 'optlimit', type=int, default=2, help='how many fund selected for each category')
 @click.option('--points', 'optpoints', help='Adjust points')
 @click.pass_context
 def fund_monetary_pool(ctx, datadir, startdate, enddate, optid, optlist, optlimit, optcalc, optperiod, optpoints):
@@ -1130,32 +1130,72 @@ def pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc):
     fund_status = mnf.fund_status
     fund_status = fund_status[fund_status.fi_yingmi_amount <= 1e3]
     fund_status = fund_status[fund_status.fi_yingmi_subscribe_status == 0.0]
-    valid_ids_1 = fund_status.index
+    #valid_ids_1 = fund_status.index
+    valid_ids = fund_status.index
+
 
     fund_fee = mnf.fund_fee.ff_fee
     valid_ids_2 = fund_fee[fund_fee >= 0.2].index
-    valid_ids_2 = ['%06d' % fund_code for fund_code in valid_ids_2]
-    valid_ids = np.intersect1d(valid_ids_1, valid_ids_2)
+    #valid_ids_2 = ['%d' % fund_code for fund_code in valid_ids_2]
+    #valid_ids = np.intersect1d(valid_ids_1, valid_ids_2)
 
+    #print(valid_ids_1)
+    #print(valid_ids_2)
+    #print('30002562' in valid_ids.ravel())
     tmp_scale = mnf.fund_scale.loc[day]
     tmp_scale = tmp_scale.sort_values(ascending=False)
-    scale_filter_codes = tmp_scale[tmp_scale > 1e10].index
+    scale_filter_codes = tmp_scale[tmp_scale > 5e9].index
     scale_filter_ids = [str(mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
+    #print('33009272' in scale_filter_ids)
 
     final_filter_ids = np.intersect1d(scale_filter_ids, valid_ids)
     tmp_df_inc = df_inc.copy()
-    tmp_df_inc = tmp_df_inc[final_filter_ids]
     tmp_df_inc = tmp_df_inc[tmp_df_inc.index < day]
     tmp_df_inc = tmp_df_inc.iloc[-lookback:]
+    all_df_inc = tmp_df_inc.copy()
+    tmp_df_inc = tmp_df_inc[final_filter_ids]
 
+
+    qieman_funds = asset_ra_pool_fund.load(11310106)
+    qieman_funds = qieman_funds[qieman_funds.index.get_level_values(0) <= day]
+    qieman_funds = qieman_funds.tail(3).index.get_level_values(1).astype(str).ravel()
+
+    fund_fee.index = fund_fee.index.astype(str)
     pool_codes = []
     num = limit
     rs = tmp_df_inc.mean()
+    all_df_inc = all_df_inc.mean()
     rs = rs.sort_values(ascending=False)
-    num = min(num, len(rs))
-    for i in range(0, num):
-        fund_globalid = rs.index[i]
-        pool_codes.append(fund_globalid)
+    if len(qieman_funds) == 0:
+        threshold = rs.iloc[int(len(rs) * 0.15)]
+    else:
+        new_qieman_funds = []
+        for f in qieman_funds:
+            if f in all_df_inc.index:
+                new_qieman_funds.append(f)
+        if len(new_qieman_funds) > 0:
+            threshold = all_df_inc.loc[new_qieman_funds].mean() * 0.95
+        else:
+            threshold = rs.iloc[int(len(rs) * 0.15)]
+    threshold = rs.iloc[int(len(rs) * 0.15)]
+    rs = rs[rs > threshold]
+    #for fund_globalid in rs.index:
+    #        pool_codes.append(fund_globalid)
+    #        if len(pool_codes) >= num:
+    #            print(' fee : ' , fund_fee.loc[pool_codes].mean())
+    #            return pool_codes
 
-    return pool_codes
-
+    for fund_globalid in rs.index:
+        if int(fund_globalid) in valid_ids_2:
+            pool_codes.append(fund_globalid)
+        if len(pool_codes) >= num:
+            print(' fee : ' , fund_fee.loc[pool_codes].mean())
+            return pool_codes
+    rs = tmp_df_inc.mean()
+    rs = rs.sort_values(ascending=False)
+    for fund_globalid in rs.index:
+        if fund_globalid not in pool_codes:
+            pool_codes.append(fund_globalid)
+        if len(pool_codes) >= num:
+            print(' fee : ' , fund_fee.loc[pool_codes].mean())
+            return pool_codes

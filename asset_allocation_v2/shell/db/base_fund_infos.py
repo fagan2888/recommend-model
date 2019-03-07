@@ -56,13 +56,13 @@ def load_status(status=None):
         t.c.fi_yingmi_subscribe_status
     ]
 
-    s = select(columns)
+    s = select(columns).where(t.c.fi_yingmi_amount <= 10000)
     if status is not None:
         s = s.where(t.c.fi_yingmi_subscribe_status == 0)
 
     df = pd.read_sql(s, db, index_col=['fi_globalid'])
     df.index = df.index.astype('str')
-    fi_codes = ['%06d' % fi_code for fi_code in df.fi_code]
+    fi_codes = ['%06d' % int(fi_code) for fi_code in df.fi_code]
     df['fi_code'] = fi_codes
 
     return df

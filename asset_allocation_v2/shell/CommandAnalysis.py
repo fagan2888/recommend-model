@@ -23,7 +23,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav, base_ra_fund_nav, asset_mz_highlow_pos
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav, base_ra_fund_nav, asset_mz_highlow_pos, asset_ra_pool_nav
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
@@ -868,7 +868,7 @@ def benchmark(ctx):
     bench_df = pd.DataFrame(data)
     benchmark_df = pd.concat([bench_df,df],axis = 1, join_axes = [bench_df.index])
 
-    benchmark_df = benchmark_df[benchmark_df.index >= '2013-01-01']
+    benchmark_df = benchmark_df[benchmark_df.index >= '2012-07-27']
     benchmark_df = benchmark_df / benchmark_df.iloc[0]
     #print(df.tail())
     #df.to_csv('benchmark.csv')
@@ -885,7 +885,7 @@ def benchmark(ctx):
         dfs.append(df)
 
     df = pd.concat(dfs, axis = 1)
-    df = df[df.index >= '2013-01-04']
+    df = df[df.index >= '2012-07-27']
     online_df = df / df.iloc[0]
     #df.to_csv('./online_nav.csv')
 
@@ -1068,3 +1068,18 @@ def allocate_comp(ctx):
     #        user_asset = user_asset + 1
 
     #    print(col, total_asset / user_asset - 1.0)
+
+
+#基金池收益率对比
+@analysis.command()
+@click.pass_context
+def fund_pool_nav(ctx):
+
+    pool_ids = ['11310103', '11310105', '11310106', '11310109', '11310111']
+    datas = {} 
+    for pool_id in pool_ids:
+        datas[pool_id] = asset_ra_pool_nav.load_series(pool_id)
+    df = pd.DataFrame(datas)
+    df = df[df.index >= '2017-02-01']
+    df = df / df.iloc[0]
+    df.to_csv('money_pool_nav.csv')

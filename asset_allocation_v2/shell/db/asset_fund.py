@@ -243,7 +243,6 @@ def load_share(fund_ids):
     df = df.groupby(['publishdate', 'secode']).last()
     df = df.unstack().fillna(method='pad')
     df = df.rename(columns=secode_dict)
-    df = df.fillna(0.0)
     df.columns = df.columns.get_level_values(1)
 
     return df
