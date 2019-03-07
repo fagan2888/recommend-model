@@ -1,7 +1,7 @@
 #coding=utf-8
 '''
-Edited at Dec. 28, 2018
-Editor: Shixun Su
+Created on: Dec. 28, 2018
+Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
 
@@ -21,8 +21,8 @@ def load_index_basic_info(index_ids=None, index_codes=None, est_class=None, stat
     t = Table('tq_ix_basicinfo', metadata, autoload=True)
 
     columns = [
-            t.c.SECODE.label('index_id'),
-            t.c.SYMBOL.label('index_code')
+        t.c.SECODE.label('index_id'),
+        t.c.SYMBOL.label('index_code')
     ]
 
     s = select(columns)
