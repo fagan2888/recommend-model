@@ -23,7 +23,7 @@ from dateutil.parser import parse
 from Const import datapath
 from sqlalchemy import MetaData, Table, select, func, literal_column
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav, base_ra_fund_nav, asset_mz_highlow_pos, asset_ra_pool_nav
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
@@ -868,7 +868,7 @@ def benchmark(ctx):
     bench_df = pd.DataFrame(data)
     benchmark_df = pd.concat([bench_df,df],axis = 1, join_axes = [bench_df.index])
 
-    benchmark_df = benchmark_df[benchmark_df.index >= '2013-01-01']
+    benchmark_df = benchmark_df[benchmark_df.index >= '2012-07-27']
     benchmark_df = benchmark_df / benchmark_df.iloc[0]
     #print(df.tail())
     #df.to_csv('benchmark.csv')
@@ -885,7 +885,7 @@ def benchmark(ctx):
         dfs.append(df)
 
     df = pd.concat(dfs, axis = 1)
-    df = df[df.index >= '2013-01-04']
+    df = df[df.index >= '2012-07-27']
     online_df = df / df.iloc[0]
     #df.to_csv('./online_nav.csv')
 
@@ -897,3 +897,189 @@ def benchmark(ctx):
     print(df.head())
 
     df.to_csv('./online_benchmark.csv')
+
+
+#标杆组合
+@analysis.command()
+@click.pass_context
+def fin_indicator(ctx):
+
+    '''
+    index_ids = ['120000009','120000014','120000016', '120000042', '120000043']
+    data = {}
+    for _id in index_ids:
+        data[_id] = base_ra_index_nav.load_series(_id)
+    df = pd.DataFrame(data)
+
+    benchmark_df = df
+
+    benchmark_df = benchmark_df[benchmark_df.index >= '2013-01-01']
+    benchmark_df = benchmark_df / benchmark_df.iloc[0]
+
+    benchmark_df_inc = benchmark_df.sum(axis = 1) / len(benchmark_df.columns)
+    #print(benchmark_df_inc.tail())
+    '''
+
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+
+    dfs = []
+    for i in range(0, 10):
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
+        df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
+        df.columns = ['risk_' + str(i)]
+        dfs.append(df)
+
+    df = pd.concat(dfs, axis = 1)
+    df = df[df.index >= '2012-12-31']
+    online_df = df / df.iloc[0]
+    #df.to_csv('./online_nav.csv')
+
+    #print(online_df.tail())
+  
+    year = '2014'
+    begin_date = '2013-12-31'
+    end_date = '2014-12-31'
+
+ 
+    fund_year = pd.read_csv('fund_year.csv', index_col = ['code'])
+    funds = fund_year[year].dropna()
+    codes = [code[0:6] for code in funds.index]
+    #print(len(codes))
+    navs = base_ra_fund_nav.load_daily(begin_date, end_date, codes = codes)
+    navs = navs / navs.iloc[0]
+
+    online_df = online_df.loc[navs.index]
+    online_df = online_df['risk_0']
+
+    #online_df = online_df.mean(axis = 1) 
+    navs['online'] = online_df
+    navs = navs / navs.iloc[0]
+
+    std = navs.pct_change().fillna(0.0).std()
+    rs = navs.iloc[-1]
+    maxdrawdown = (1 - navs / navs.cummax()).max()
+    #print(maxdrawdown)
+    sharp = rs  / len(navs) / std
+
+    std = std.sort_values(ascending = True)
+    rs = rs.sort_values(ascending = False)
+    maxdrawdown = maxdrawdown.sort_values(ascending = True)
+    sharp = sharp.sort_values(ascending = False)
+
+    print(year)
+    print('sharp', sharp.index.tolist().index('online') / len(codes))
+    print('rs', rs.index.tolist().index('online') / len(codes))
+    print('maxdrawdown', maxdrawdown.index.tolist().index('online') / len(codes))
+    print('std', std.index.tolist().index('online') / len(codes))
+    #print(navs)
+    #print(fund_year.tail()) 
+
+
+#组合配置比例和净值
+@analysis.command()
+@click.pass_context
+def allocate_nav(ctx):
+
+    index_ids = ['120000001', '120000002', '120000013', '120000014', '120000015']
+    data = {}
+    for _id in index_ids:
+        data[_id] = base_ra_index_nav.load_series(_id)
+    df = pd.DataFrame(data)
+
+    pos = asset_mz_highlow_pos.load('HL.000070')
+
+    df = pd.concat([df, pos], axis = 1, join_axes = [pos.index])
+
+    df.to_csv('allocate_nav.csv')
+
+
+
+#投资理财魔方和投资指数的收益对比
+@analysis.command()
+@click.pass_context
+def allocate_comp(ctx):
+
+
+    index_ids = ['120000001', '120000018']
+    data = {}
+    for _id in index_ids:
+        data[_id] = base_ra_index_nav.load_series(_id)
+    index_df = pd.DataFrame(data)
+
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+
+    dfs = []
+    for i in range(0, 10):
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
+        df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
+        df.columns = ['risk_' + str(i)]
+        dfs.append(df)
+
+    online_df = pd.concat(dfs, axis = 1)[['risk_7', 'risk_0']]
+
+
+    df = pd.concat([online_df, index_df], axis = 1, join_axes = [online_df.index]).fillna(method = 'pad')
+    tmp_df = df.resample('M').last()
+    tmp_df = tmp_df.iloc[-25:-1]
+    df = df[df.index >= tmp_df.index[0]]
+    df = df / df.iloc[0]
+    #print(df)
+    old_df = df
+    tmp_df.loc[df.index[-3]] = df.iloc[-3]
+    #print(tmp_df.index)
+
+    df = df[df.index >= tmp_df.index[0]]
+    df = df[df.index <= tmp_df.index[-1]]
+    df_inc = df.pct_change().fillna(0.0)
+
+    data = {}
+    for col in df_inc.columns:
+        total_asset = 0.0
+        user_asset = 0.0
+        navs = {}
+        for date in df_inc.index:
+            if date in tmp_df.index:
+                total_asset = total_asset + 1
+                user_asset = user_asset + 1
+            total_asset = total_asset * (df_inc.loc[date, col] + 1)
+            navs[date] = 1.0 * total_asset / user_asset
+        data[col] = pd.Series(navs) 
+    new_df = pd.DataFrame(data)
+
+    df = pd.concat([old_df, new_df], axis = 1, join_axes = [old_df.index]).fillna(method='pad')
+    tmp_df = df
+    df = df.resample('W').last()
+    df.loc[tmp_df.index[0]] = tmp_df.loc[tmp_df.index[0]]
+    df = df.sort_index()
+    df.to_csv('allocate_comp.csv')
+    print(df)
+
+    #print(tmp_df / tmp_df.iloc[0] - 1.0)
+    #tmp_df = tmp_df.pct_change().fillna(0.0)
+
+    #for col in tmp_df.columns:
+    #    rs = tmp_df[col].ravel()
+    #    total_asset = 0.0
+    #    user_asset = 0.0
+    #    for r in rs:
+    #        total_asset = (total_asset + 1) * (r + 1)
+    #        user_asset = user_asset + 1
+
+    #    print(col, total_asset / user_asset - 1.0)
+
+
+#基金池收益率对比
+@analysis.command()
+@click.pass_context
+def fund_pool_nav(ctx):
+
+    pool_ids = ['11310103', '11310105', '11310106', '11310109', '11310111']
+    datas = {} 
+    for pool_id in pool_ids:
+        datas[pool_id] = asset_ra_pool_nav.load_series(pool_id)
+    df = pd.DataFrame(datas)
+    df = df[df.index >= '2017-02-01']
+    df = df / df.iloc[0]
+    df.to_csv('money_pool_nav.csv')

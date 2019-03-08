@@ -55,8 +55,9 @@ class MonetaryFundFilter:
 
         fund_status = base_fund_infos.load_status()
         blacklist_funds = asset_fund.load_fund_by_shholdercodes(self.blacklist_codes)
-        valid_codes = np.setdiff1d(fund_status.fi_code.values, blacklist_funds.fsymbol.values)
-        fund_status = fund_status[fund_status.fi_code.isin(valid_codes)]
+        #print(blacklist_funds)
+        #valid_codes = np.setdiff1d(fund_status.fi_code.values, blacklist_funds.fsymbol.values)
+        #fund_status = fund_status[fund_status.fi_code.isin(valid_codes)]
         # fund_status = fund_status[fund_status.fi_yingmi_amount <= self.yingmi_amount_limit]
 
         return fund_status
