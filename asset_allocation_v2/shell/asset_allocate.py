@@ -806,10 +806,10 @@ class CppiAllocate(Allocate):
         return var
 
 
-class MzLayerFixRiskBootBlAllocate2(MzBlAllocate):
+class MzLayerFixRiskSmoothBootBlAllocate(MzBlAllocate):
 
     def __init__(self, globalid, assets, views, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
-        super(MzLayerFixRiskBootBlAllocate2, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
+        super(MzLayerFixRiskSmoothBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
         if cpu_count is None:
             count = int(multiprocessing.cpu_count()) // 2
             cpu_count = count if count > 0 else 1

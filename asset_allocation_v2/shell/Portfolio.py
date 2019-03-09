@@ -502,7 +502,7 @@ def markowitz_bootstrap_smooth_bl_fixrisk(df_inc, P, eta, alpha, bound, target_r
         cpu_count = count if count > 0 else 1
     cpu_count = int(cpu_count)
 
-    look_back = len(df_inc)
+    look_back = len(df_inc) - 2
     if bootstrap_count <= 0:
         loop_num = look_back * 4
     elif bootstrap_count % 2:
@@ -516,13 +516,19 @@ def markowitz_bootstrap_smooth_bl_fixrisk(df_inc, P, eta, alpha, bound, target_r
     #print process_indexs
     #loop_num = 20
     rep_num = loop_num * (look_back // 2) // look_back
+    # method 2
     day_indexs = []
-    u = look_back * rep_num * (1 - 4 ** (1 / (look_back - 1.0))) / ( 1 - 4 ** (look_back / (look_back - 1.0)))
-    for i in range(look_back):
-        day_indexs.extend([i]*round(u))
-        u *= 4 ** (1 / (look_back - 1.0))
+    for i in range(5):
+        day_indexs.extend([i]*round(rep_num*(i+1)/5))
+    day_indexs.extend(list(range(5, look_back+2))*rep_num)
+    # method 1
+    # u = look_back * rep_num * (1 - 4 ** (1 / (look_back - 1.0))) / ( 1 - 4 ** (look_back / (look_back - 1.0)))
+    # for i in range(look_back):
+    #     day_indexs.extend([i]*round(u))
+    #     u *= 4 ** (1 / (look_back - 1.0))
     if len(day_indexs) != look_back * rep_num:
         set_trace()
+    # method 0
     # day_indexs = list(range(0, look_back)) * rep_num
     random.shuffle(day_indexs)
     #print day_indexs
