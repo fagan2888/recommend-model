@@ -806,6 +806,53 @@ class CppiAllocate(Allocate):
         return var
 
 
+class MzLayerFixRiskBootBlAllocate2(MzBlAllocate):
+
+    def __init__(self, globalid, assets, views, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+        super(MzLayerFixRiskBootBlAllocate2, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
+        if cpu_count is None:
+            count = int(multiprocessing.cpu_count()) // 2
+            cpu_count = count if count > 0 else 1
+            self.__cpu_count = cpu_count
+        else:
+            self.__cpu_count = cpu_count
+        self.__bootstrap_count = bootstrap_count
+        self.risk = risk
+
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        layer_assets_1 = ['120000053', '120000056','120000058','120000073']
+        layer_assets_2 = ['MZ.FA0010', 'MZ.FA0050','MZ.FA0070']
+        layer_assets = layer_assets_1 + layer_assets_2
+
+        layer_assets = dict([(asset_id , Asset(asset_id)) for asset_id in layer_assets])
+        layer_bounds = {}
+        for asset in layer_assets.keys():
+            layer_bounds[asset] = self.bound[asset]
+        rp_allocate = RpAllocate('ALC.000001', layer_assets, self.index, self.lookback, bound = layer_bounds)
+        layer_ws, df_alayer_inc = rp_allocate.allocate_day(day)
+
+        df_inc['ALayer'] = df_alayer_inc
+        df_inc_layer = df_inc[df_inc.columns.difference(layer_assets)]
+        P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
+
+        bound = []
+        allocate_asset_ids = []
+        for asset_id in df_inc_layer.columns:
+            asset_bound = AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict()
+            if asset_bound['upper'] > 0:
+                bound.append(asset_bound)
+                allocate_asset_ids.append(asset_id)
+
+        risk, returns, ws, sharpe = PF.markowitz_bootstrap_smooth_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        ws = dict(zip(df_inc_layer.columns.ravel(), ws))
+        for asset in layer_ws.index:
+            ws[asset] = ws['ALayer'] * layer_ws.loc[asset]
+        del ws['ALayer']
+
+        return ws
+
 
 if __name__ == '__main__':
 
