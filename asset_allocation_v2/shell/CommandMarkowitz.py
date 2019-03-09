@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, CppiAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzLayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, CppiAllocate, MzLayerFixRiskBootBlAllocate2
 from trade_date import ATradeDate
 from view import View
 
@@ -1102,6 +1102,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 15:
 
+        set_trace()
         # Layer Fix Risk Boot Bl
         upper_risk = float(argv.get('upper_risk', 0.015))
         view_df = View.load_view(argv.get('bl_view_id'))
@@ -1148,6 +1149,26 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = CppiAllocate('ALC.000001', assets, trade_date, lookback, bound=bounds, period=1)
         df = allocate.allocate_cppi()
 
+    elif algo == 19:
+
+        # Layer Fix Risk Boot Bl
+
+        # lookback = 52
+        lookback = int(argv.get('allocate_lookback', '52'))
+        upper_risk = float(argv.get('upper_risk', 0.015))
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+
+        asset_ids = list(assets.keys())
+        asset_ids.append('ALayer')
+        views = {}
+        for asset_id in asset_ids:
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzLayerFixRiskBootBlAllocate2('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
+        df = allocate.allocate()
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
