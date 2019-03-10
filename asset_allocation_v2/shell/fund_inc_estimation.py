@@ -1,6 +1,7 @@
 #coding=utf-8
 '''
 Created on: Dec. 28, 2018
+Modified on: Mar. 11, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -29,42 +30,42 @@ class FundIncEstimation(object):
     def __init__(self, begin_date=None, end_date=None, fund_ids=None, fund_codes=None):
 
         if end_date is None:
-            self._end_date = pd.Period.now(freq="D").start_time
+            self.__end_date = pd.Period.now(freq="D").start_time
             if  pd.Timestamp.now().hour < 18:
-                self._end_date = trade_date_before(self._end_date)
+                self.__end_date = trade_date_before(self.__end_date)
         else:
-            self._end_date = pd.Timestamp(end_date)
+            self.__end_date = pd.Timestamp(end_date)
 
         if begin_date is None:
-            self._begin_date = trade_date_not_later_than(self._end_date)
+            self.__begin_date = trade_date_not_later_than(self.__end_date)
         else:
-            self._begin_date = pd.Timestamp(begin_date)
+            self.__begin_date = pd.Timestamp(begin_date)
 
-        if self._begin_date > self._end_date:
+        if self.__begin_date > self.__end_date:
             warnings.warn('The begin date is later then the end date.', Warning)
 
         if fund_codes is None and fund_ids is None:
-            self._fund_pool = self.__load_fund_pool(self._end_date)
+            self.__fund_pool = self.__load_fund_pool(self.__end_date)
         else:
-            self._fund_pool = caihui_tq_fd_basicinfo.load_fund_code_info(fund_codes=fund_codes, fund_ids=fund_ids)
+            self.__fund_pool = caihui_tq_fd_basicinfo.load_fund_code_info(fund_codes=fund_codes, fund_ids=fund_ids)
 
-        if self._fund_pool.empty:
+        if self.__fund_pool.empty:
             raise NotImplementedError('The pool of funds is empty.')
 
     @property
     def fund_pool(self):
 
-        return self._fund_pool
+        return self.__fund_pool
 
     @property
     def begin_date(self):
 
-        return self._begin_date
+        return self.__begin_date
 
     @property
     def end_date(self):
 
-        return self._end_date
+        return self.__end_date
 
     def __load_fund_pool(self, date):
 
@@ -98,11 +99,11 @@ class FundIncEstimation(object):
     def _dates_divided(self):
 
         dates = []
-        date = self._begin_date
-        while date <= self._end_date:
+        date = self.begin_date
+        while date <= self.end_date:
             dates.append(date)
             date += relativedelta(months=+1, day=1)
-        dates.append(self._end_date+relativedelta(days=+1))
+        dates.append(self.end_date+relativedelta(days=+1))
         dates = pd.Index(dates)
 
         return dates
@@ -153,13 +154,13 @@ class FundIncEstSkPos(FundIncEstimation):
 
     def __cal_sk_pos_days(self):
 
-        if self._begin_date.month < 4:
-            begin_date_cal = pd.Timestamp(self._begin_date.year-1, 9, 1)
-        elif self._begin_date.month < 9:
-            begin_date_cal = pd.Timestamp(self._begin_date.year, 4, 1)
+        if self.begin_date.month < 4:
+            begin_date_cal = pd.Timestamp(self.begin_date.year-1, 9, 1)
+        elif self.begin_date.month < 9:
+            begin_date_cal = pd.Timestamp(self.begin_date.year, 4, 1)
         else:
-            begin_date_cal = pd.Timestamp(self._begin_date.year, 9, 1)
-        dates = pd.Series(index=[begin_date_cal, self._end_date])
+            begin_date_cal = pd.Timestamp(self.begin_date.year, 9, 1)
+        dates = pd.Series(index=[begin_date_cal, self.end_date])
         dates = dates.resample('MS').first().index
 
         df_fund_stock_pos = pd.DataFrame()
@@ -171,14 +172,14 @@ class FundIncEstSkPos(FundIncEstimation):
                 last_end_date = last_end_date_fund_skdetail_all_published(date)
                 fund_stock_pos = caihui_tq_fd_skdetail.load_fund_skdetail_all(
                         last_end_date.strftime('%Y%m%d'),
-                        fund_ids=self._fund_pool.index
+                        fund_ids=self.fund_pool.index
                 ).fillna(0.0)
             elif date.month in [2, 5, 8, 11]:
                 last_end_date = last_end_date_fund_skdetail_ten_published(date)
                 fund_stock_pos_ten = caihui_tq_fd_skdetail.load_fund_skdetail_ten(
                         last_end_date.strftime('%Y%m%d'),
                         date.strftime('%Y%m%d'),
-                        fund_ids=self._fund_pool.index
+                        fund_ids=self.fund_pool.index
                 ).fillna(0.0)
                 fund_stock_pos = self.__cal_sk_pos(fund_stock_pos, fund_stock_pos_ten)
 
@@ -195,8 +196,8 @@ class FundIncEstSkPos(FundIncEstimation):
         dates = self._dates_divided()
 
         df_stock_nav = caihui_tq_sk_dquoteindic.load_stock_nav(
-                begin_date=trade_date_before(self._begin_date).strftime('%Y%m%d'),
-                end_date=self._end_date.strftime('%Y%m%d')
+                begin_date=trade_date_before(self.begin_date).strftime('%Y%m%d'),
+                end_date=self.end_date.strftime('%Y%m%d')
         ).dropna(how='all', axis='columns')
         df_stock_ret = df_stock_nav.pct_change().iloc[1:]
 
@@ -219,7 +220,7 @@ class FundIncEstSkPos(FundIncEstimation):
             )
             df_fund_inc_est = pd.concat([df_fund_inc_est, fund_inc_est])
 
-        df_fund_inc_est = df_fund_inc_est.rename(self._fund_pool.fund_code, axis='columns').sort_index(axis='columns')
+        df_fund_inc_est = df_fund_inc_est.rename(self.fund_pool.fund_code, axis='columns').sort_index(axis='columns')
         df_fund_inc_est.columns.name = 'fund_code'
 
         # print('fund_inc_estimate_sk_pos done.')
@@ -234,14 +235,14 @@ class FundIncEstIxPos(FundIncEstimation):
         super(FundIncEstIxPos, self).__init__(begin_date, end_date, fund_ids, fund_codes)
 
         if index_ids is None:
-            self._index_ids = caihui_tq_ix_basicinfo.load_index_basic_info(est_class='申万一级行业指数').index
+            self.__index_ids = caihui_tq_ix_basicinfo.load_index_basic_info(est_class='申万一级行业指数').index
         else:
-            self._index_ids = pd.Index(index_ids)
+            self.__index_ids = pd.Index(index_ids)
 
     @property
     def index_ids(self):
 
-        return self._index_ids
+        return self.__index_ids
 
     def __fund_inc_objective(self, x, pars):
 
@@ -279,21 +280,21 @@ class FundIncEstIxPos(FundIncEstimation):
 
     def __cal_ix_pos_days(self):
 
-        begin_date_cal = self._begin_date + relativedelta(months=-3, day=1)
-        dates = pd.Series(index=[begin_date_cal, self._end_date])
+        begin_date_cal = self.begin_date + relativedelta(months=-3, day=1)
+        dates = pd.Series(index=[begin_date_cal, self.end_date])
         dates = dates.resample('MS').first().index
 
         df_fund_nav = base_ra_fund_nav.load_daily(
                 begin_date=trade_date_before(dates[0]).strftime('%Y%m%d'),
                 end_date=trade_date_before(dates[-1]).strftime('%Y%m%d'),
-                codes=self._fund_pool.fund_code
+                codes=self.fund_pool.fund_code
         )
         df_fund_inc = df_fund_nav.pct_change().iloc[1:]
 
         df_index_nav = caihui_tq_qt_index.load_index_nav(
                 begin_date=trade_date_before(dates[0]).strftime('%Y%m%d'),
                 end_date=trade_date_before(dates[-1]).strftime('%Y%m%d'),
-                index_ids=self._index_ids
+                index_ids=self.index_ids
         )
         df_index_inc = df_index_nav.pct_change().iloc[1:]
 
@@ -307,7 +308,7 @@ class FundIncEstIxPos(FundIncEstimation):
             fund_inc = df_fund_inc.loc[date:next_date].dropna(how='any', axis='columns')
             index_inc = df_index_inc.loc[date:next_date]
 
-            fund_index_pos = pd.DataFrame(columns=self._index_ids)
+            fund_index_pos = pd.DataFrame(columns=self.index_ids)
             fund_index_pos.index.name = 'fund_code'
             for fund_code in fund_inc.columns:
                 fund_index_pos.loc[fund_code] = self.__cal_ix_pos(index_inc, fund_inc[fund_code])
@@ -323,9 +324,9 @@ class FundIncEstIxPos(FundIncEstimation):
         dates = self._dates_divided()
 
         df_index_nav = caihui_tq_qt_index.load_index_nav(
-                begin_date=trade_date_before(self._begin_date).strftime('%Y%m%d'),
-                end_date=self._end_date.strftime('%Y%m%d'),
-                index_ids=self._index_ids
+                begin_date=trade_date_before(self.begin_date).strftime('%Y%m%d'),
+                end_date=self.end_date.strftime('%Y%m%d'),
+                index_ids=self.index_ids
         )
         df_index_inc = df_index_nav.pct_change().iloc[1:]
 
@@ -366,21 +367,21 @@ class FundIncEstMix(FundIncEstimation):
 
     def __cal_mix_pos_days(self):
 
-        begin_date_cal = self._begin_date + relativedelta(months=-1, day=1)
-        dates = pd.Series(index=[begin_date_cal, self._end_date])
+        begin_date_cal = self.begin_date + relativedelta(months=-1, day=1)
+        dates = pd.Series(index=[begin_date_cal, self.end_date])
         dates = dates.resample('MS').first().index
 
         df_fund_nav = base_ra_fund_nav.load_daily(
                 begin_date=trade_date_before(dates[0]).strftime('%Y%m%d'),
                 end_date=trade_date_before(dates[-1]).strftime('%Y%m%d'),
-                codes=self._fund_pool.fund_code
+                codes=self.fund_pool.fund_code
         )
         df_fund_inc = df_fund_nav.pct_change().iloc[1:]
 
         df_fund_inc_estimated = asset_fund_inc_estimate.load_fund_inc_estimate(
                 begin_date=dates[0].strftime('%Y%m%d'),
                 end_date=trade_date_before(dates[-1]).strftime('%Y%m%d'),
-                fund_codes=self._fund_pool.fund_code,
+                fund_codes=self.fund_pool.fund_code,
                 methods=['sk_pos', 'ix_pos']
         )
 
@@ -411,9 +412,9 @@ class FundIncEstMix(FundIncEstimation):
         dates = self._dates_divided()
 
         df_fund_inc_estimated = asset_fund_inc_estimate.load_fund_inc_estimate(
-                begin_date=self._begin_date.strftime('%Y%m%d'),
-                end_date=self._end_date.strftime('%Y%m%d'),
-                fund_codes=self._fund_pool.fund_code,
+                begin_date=self.begin_date.strftime('%Y%m%d'),
+                end_date=self.end_date.strftime('%Y%m%d'),
+                fund_codes=self.fund_pool.fund_code,
                 methods=['sk_pos', 'ix_pos']
         )
 
@@ -421,7 +422,7 @@ class FundIncEstMix(FundIncEstimation):
 
         trade_dates = df_fund_inc_estimated.index.levels[0]
 
-        df_fund_inc_est = pd.DataFrame(columns=self._fund_pool.fund_code)
+        df_fund_inc_est = pd.DataFrame(columns=self.fund_pool.fund_code)
         df_fund_inc_est.index.name = 'date'
         for date, next_date in zip(dates[:-1], dates[1:]):
 
