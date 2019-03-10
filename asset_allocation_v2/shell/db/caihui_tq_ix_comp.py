@@ -36,7 +36,7 @@ def load_index_constituents(index_id, date=None, constituent_type='stock'):
 
     return df
 
-def load_index_historical_constituents(index_id, constituent_type='stock'):
+def load_index_historical_constituents(index_id, begin_date=None, end_date=None, constituent_type='stock'):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
@@ -45,11 +45,16 @@ def load_index_historical_constituents(index_id, constituent_type='stock'):
     columns = [
         t.c.SECODE.label('index_id'),
         t.c.SELECTECODE.label(f'{constituent_type}_id'),
+        t.c.SAMPLECODE.label(f'{constituent_type}_code'),
         t.c.SELECTEDDATE.label('selected_date'),
         t.c.OUTDATE.label('out_date')
     ]
 
     s = select(columns).where(t.c.SECODE==index_id)
+    if begin_date is not None:
+        s = s.where(or_(t.c.OUTDATE>begin_date, t.c.OUTDATE=='19000101'))
+    if end_date is not None:
+        s = s.where(t.c.SELECTEDDATE<=end_date)
 
     df = pd.read_sql(s, engine, parse_dates=['selected_date', 'out_date'])
 
