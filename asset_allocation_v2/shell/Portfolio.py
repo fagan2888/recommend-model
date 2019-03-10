@@ -6,7 +6,7 @@ import string
 import os
 import sys
 import logging
-sys.path.append("windshell")
+sys.path.append("shell")
 import Financial as fin
 import Const
 from numpy import *
@@ -493,7 +493,7 @@ def markowitz_bootstrape_bl_fixrisk(df_inc, P, eta, alpha, bound, target_risk, c
     ws = wss / loop_num
     return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
 
-def markowitz_bootstrap_smooth_bl_fixrisk(df_inc, P, eta, alpha, bound, target_risk, cpu_count = 0, bootstrap_count=0):
+def markowitz_bootstrap_smooth_bl_fixrisk(df_inc, P, eta, alpha, bound, target_risk, smooth, cpu_count=0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -502,52 +502,45 @@ def markowitz_bootstrap_smooth_bl_fixrisk(df_inc, P, eta, alpha, bound, target_r
         cpu_count = count if count > 0 else 1
     cpu_count = int(cpu_count)
 
-    look_back = len(df_inc) - 2
+    if smooth % 2:
+        smooth += 1
+    look_back = len(df_inc)
+    smooth = min(smooth, look_back)
+    look_back_smooth = look_back - smooth // 2
+
     if bootstrap_count <= 0:
-        loop_num = look_back * 4
+        loop_num = look_back_smooth * 4
     elif bootstrap_count % 2:
         loop_num = bootstrap_count + 1
     else:
         loop_num = bootstrap_count
 
     # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
-    process_indexs = [[] for i in range(0, cpu_count)]
+    process_indices = [[] for i in range(0, cpu_count)]
 
-    #print process_indexs
-    #loop_num = 20
-    rep_num = loop_num * (look_back // 2) // look_back
-    # method 2
-    day_indexs = []
-    for i in range(5):
-        day_indexs.extend([i]*round(rep_num*(i+1)/5))
-    day_indexs.extend(list(range(5, look_back+2))*rep_num)
-    # method 1
-    # u = look_back * rep_num * (1 - 4 ** (1 / (look_back - 1.0))) / ( 1 - 4 ** (look_back / (look_back - 1.0)))
-    # for i in range(look_back):
-    #     day_indexs.extend([i]*round(u))
-    #     u *= 4 ** (1 / (look_back - 1.0))
-    if len(day_indexs) != look_back * rep_num:
-        set_trace()
-    # method 0
-    # day_indexs = list(range(0, look_back)) * rep_num
-    random.shuffle(day_indexs)
-    #print day_indexs
-    day_indexs = np.array(day_indexs)
+    rep_num = loop_num * (look_back_smooth // 2) // look_back_smooth
+    day_indices = list(range(smooth, look_back)) * rep_num
+    for i in range(smooth):
+        day_index = [i] * round((i+1)/(smooth+1)*rep_num)
+        day_indices.extend(day_index)
+    day_indices.sort()
+    random.shuffle(day_indices)
+    day_indices = np.array(day_indices)
 
-    day_indexs = day_indexs.reshape(len(day_indexs) // (look_back // 2), look_back // 2)
-    for m in range(0, len(day_indexs)):
-        indexs = day_indexs[m]
+    day_indices = day_indices.reshape(len(day_indices) // (look_back_smooth // 2), look_back_smooth // 2)
+    for m in range(0, len(day_indices)):
+        day_index = day_indices[m]
         mod = m % cpu_count
-        process_indexs[mod].append(list(indexs))
+        process_indices[mod].append(list(day_index))
 
     manager = Manager()
     q = manager.Queue()
     processes = []
-    for indexs in process_indexs:
+    for process_index in process_indices:
         if eta.size == 0:
-            p = multiprocessing.Process(target = m_markowitz_fixrisk, args = (q, indexs, df_inc, bound, target_risk))
+            p = multiprocessing.Process(target = m_markowitz_fixrisk, args = (q, peocess_index, df_inc, bound, target_risk))
         else:
-            p = multiprocessing.Process(target = m_markowitz_bl_fixrisk, args = (q, indexs, df_inc, P, eta, alpha, bound, target_risk))
+            p = multiprocessing.Process(target = m_markowitz_bl_fixrisk, args = (q, process_index, df_inc, P, eta, alpha, bound, target_risk))
         processes.append(p)
         p.start()
 

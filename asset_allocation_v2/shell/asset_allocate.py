@@ -808,7 +808,7 @@ class CppiAllocate(Allocate):
 
 class MzLayerFixRiskSmoothBootBlAllocate(MzBlAllocate):
 
-    def __init__(self, globalid, assets, views, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+    def __init__(self, globalid, assets, views, reindex, lookback, risk, smooth, period=1, bound=None, cpu_count=None, bootstrap_count=0):
         super(MzLayerFixRiskSmoothBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
         if cpu_count is None:
             count = int(multiprocessing.cpu_count()) // 2
@@ -817,8 +817,8 @@ class MzLayerFixRiskSmoothBootBlAllocate(MzBlAllocate):
         else:
             self.__cpu_count = cpu_count
         self.__bootstrap_count = bootstrap_count
-        self.risk = risk
-
+        self.__smooth = smooth
+        self.__risk = risk
 
     def allocate_algo(self, day, df_inc, bound):
 
@@ -845,7 +845,7 @@ class MzLayerFixRiskSmoothBootBlAllocate(MzBlAllocate):
                 bound.append(asset_bound)
                 allocate_asset_ids.append(asset_id)
 
-        risk, returns, ws, sharpe = PF.markowitz_bootstrap_smooth_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrap_smooth_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.__risk, self.__smooth, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         ws = dict(zip(df_inc_layer.columns.ravel(), ws))
         for asset in layer_ws.index:
             ws[asset] = ws['ALayer'] * layer_ws.loc[asset]
