@@ -1102,7 +1102,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 15:
 
-        set_trace()
         # Layer Fix Risk Boot Bl
         upper_risk = float(argv.get('upper_risk', 0.015))
         view_df = View.load_view(argv.get('bl_view_id'))
@@ -1157,6 +1156,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         upper_risk = float(argv.get('upper_risk', 0.015))
         view_df = View.load_view(argv.get('bl_view_id'))
         confidence = float(argv.get('bl_confidence'))
+        smooth = int(argv.get('smooth', '4'))
 
         asset_ids = list(assets.keys())
         asset_ids.append('ALayer')
@@ -1166,7 +1166,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = MzLayerFixRiskSmoothBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
+        allocate = MzLayerFixRiskSmoothBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, smooth, bound=bounds)
         df = allocate.allocate()
 
     else:
