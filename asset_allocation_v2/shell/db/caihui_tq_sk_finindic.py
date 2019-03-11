@@ -23,7 +23,7 @@ def load_stock_financial_data(begin_date=None, end_date=None, stock_ids=None):
     columns = [
         t.c.SYMBOL.label('stock_code'),
         t.c.SECODE.label('stock_id'),
-        t.c.TRADEDATE.label('date'),
+        t.c.TRADEDATE.label('trade_date'),
         t.c.LTDATE.label('ldate'),
         t.c.TCLOSE.label('tclose'),
         t.c.NEGOTIABLEMV.label('negotiablemv'),
@@ -63,9 +63,9 @@ def load_stock_financial_data(begin_date=None, end_date=None, stock_ids=None):
     if stock_ids is not None:
         s = s.where(t.c.SECODE.in_(stock_ids))
 
-    df = pd.read_sql(s, engine, parse_dates=['date'])
+    df = pd.read_sql(s, engine, parse_dates=['trade_date'])
 
-    df = df.set_index(['stock_id', 'date'])
+    df = df.set_index(['stock_id', 'trade_date'])
 
     return df
 

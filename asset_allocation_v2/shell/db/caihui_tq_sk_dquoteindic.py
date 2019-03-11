@@ -15,16 +15,16 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_stock_nav(begin_date=None, end_date=None, reindex=None, stock_ids=None):
+def load_stock_price(begin_date=None, end_date=None, reindex=None, stock_ids=None):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
     t = Table('tq_sk_dquoteindic', metadata, autoload=True)
 
     columns = [
-        t.c.TRADEDATE.label('date'),
+        t.c.TRADEDATE.label('trade_date'),
         t.c.SECODE.label('stock_id'),
-        t.c.TCLOSEAF.label('nav')
+        t.c.TCLOSEAF.label('prc')
     ]
 
     s = select(columns)
@@ -35,9 +35,9 @@ def load_stock_nav(begin_date=None, end_date=None, reindex=None, stock_ids=None)
     if stock_ids is not None:
         s = s.where(t.c.SECODE.in_(stock_ids))
 
-    df = pd.read_sql(s, engine, parse_dates=['date'])
+    df = pd.read_sql(s, engine, parse_dates=['trade_date'])
 
-    df = df.pivot('date', 'stock_id', 'nav')
+    df = df.pivot('trade_date', 'stock_id', 'prc')
     if reindex is not None:
         df = df.reindex(reindex, method='pad')
 
@@ -52,8 +52,8 @@ def load_stock_market_data(begin_date=None, end_date=None, stock_ids=None):
     columns = [
         t.c.SYMBOL.label('stock_code'),
         t.c.SECODE.label('stock_id'),
-        t.c.TRADEDATE.label('date'),
-        t.c.TCLOSEAF.label('nav'),
+        t.c.TRADEDATE.label('trade_date'),
+        t.c.TCLOSEAF.label('prc'),
         t.c.VOL.label('vol'),
         t.c.AMOUNT.label('amount'),
         t.c.MKTSHARE.label('mktshare'),
@@ -68,9 +68,9 @@ def load_stock_market_data(begin_date=None, end_date=None, stock_ids=None):
     if stock_ids is not None:
         s = s.where(t.c.SECODE.in_(stock_ids))
 
-    df = pd.read_sql(s, engine, parse_dates=['date'])
+    df = pd.read_sql(s, engine, parse_dates=['trade_date'])
 
-    df = df.set_index(['stock_id', 'date'])
+    df = df.set_index(['stock_id', 'trade_date'])
 
     return df
 

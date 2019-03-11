@@ -48,7 +48,7 @@ def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None)
     t = Table('tq_qt_index', metadata, autoload=True)
 
     columns = [
-            t.c.TRADEDATE.label('date'),
+            t.c.TRADEDATE.label('trade_date'),
             t.c.SECODE.label('index_id'),
             t.c.TCLOSE.label('nav')
     ]
@@ -61,9 +61,9 @@ def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None)
     if index_ids is not None:
         s = s.where(t.c.SECODE.in_(index_ids))
 
-    df = pd.read_sql(s, engine, parse_dates=['date'])
+    df = pd.read_sql(s, engine, parse_dates=['trade_date'])
 
-    df = df.pivot('date', 'index_id', 'nav')
+    df = df.pivot('trade_date', 'index_id', 'nav')
     if reindex is not None:
         df = df.reindex(reindex, method='pad')
 
