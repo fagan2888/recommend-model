@@ -27,6 +27,7 @@ from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
+from monetary_fund_filter import MonetaryFundFilter
 
 import traceback, code
 
@@ -1075,7 +1076,8 @@ def allocate_comp(ctx):
 @click.pass_context
 def fund_pool_nav(ctx):
 
-    pool_ids = ['11310103', '11310105', '11310106', '11310109', '11310111']
+    #pool_ids = ['11310103', '11310105', '11310106', '11310109', '11310111']
+    pool_ids = ['11310106', '11310109']
     datas = {} 
     for pool_id in pool_ids:
         datas[pool_id] = asset_ra_pool_nav.load_series(pool_id)
@@ -1083,3 +1085,21 @@ def fund_pool_nav(ctx):
     df = df[df.index >= '2017-02-01']
     df = df / df.iloc[0]
     df.to_csv('money_pool_nav.csv')
+
+
+#基金池销售服务费
+@analysis.command()
+@click.pass_context
+def fund_pool_fee(ctx):
+
+    pool_ids = ['11310106', '11310109']
+    mnf = MonetaryFundFilter()
+    mnf.handle()
+    fund_fee = mnf.fund_fee.ff_fee
+    for pool_id in pool_ids:
+        pool_funds = asset_ra_pool_fund.load(pool_id)
+        fund_fees = []
+        for fid in pool_funds.index.get_level_values(1):
+            #if fid in fund_fee.index:
+            fund_fees.append(fund_fee.loc[fid])
+        print(pool_id, np.mean(fund_fees))

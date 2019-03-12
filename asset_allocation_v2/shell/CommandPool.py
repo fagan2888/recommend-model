@@ -560,6 +560,8 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
 
     index = base_trade_dates.load_trade_dates(startdate, end_date=enddate)
     index = index[index.td_type >= 8].index
+    index = ATradeDate.week_trade_date(startdate, enddate)
+    #print(index)
     #index = DBData.trade_date_index(startdate, end_date=enddate)
 
     if label_period > 1:
@@ -1135,67 +1137,92 @@ def pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc):
 
 
     fund_fee = mnf.fund_fee.ff_fee
-    valid_ids_2 = fund_fee[fund_fee >= 0.2].index
+    valid_ids_2 = fund_fee[fund_fee >= 0.01].index
     #valid_ids_2 = ['%d' % fund_code for fund_code in valid_ids_2]
     #valid_ids = np.intersect1d(valid_ids_1, valid_ids_2)
 
     #print(valid_ids_1)
     #print(valid_ids_2)
     #print('30002562' in valid_ids.ravel())
-    tmp_scale = mnf.fund_scale.loc[day]
-    tmp_scale = tmp_scale.sort_values(ascending=False)
-    scale_filter_codes = tmp_scale[tmp_scale > 5e9].index
-    scale_filter_ids = [str(mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
+    #tmp_scale = mnf.fund_scale.loc[day]
+    #tmp_scale = tmp_scale.sort_values(ascending=False)
+    #scale_filter_codes = tmp_scale[tmp_scale > 1e8].index
+    #scale_filter_codes = tmp_scale.index
+    #scale_filter_ids = [str(mnf.fund_id_dict[fund_code]) for fund_code in scale_filter_codes]
     #print('33009272' in scale_filter_ids)
 
-    final_filter_ids = np.intersect1d(scale_filter_ids, valid_ids)
+    #final_filter_ids = np.intersect1d(scale_filter_ids, valid_ids)
+    #final_filter_ids = np.intersect1d(valid_ids, valid_ids)
     tmp_df_inc = df_inc.copy()
+    final_filter_ids = valid_ids & tmp_df_inc.columns
     tmp_df_inc = tmp_df_inc[tmp_df_inc.index < day]
     tmp_df_inc = tmp_df_inc.iloc[-lookback:]
-    all_df_inc = tmp_df_inc.copy()
     tmp_df_inc = tmp_df_inc[final_filter_ids]
+    #print(tmp_df_inc.columns)
+    #print(final_filter_ids)
 
-
-    qieman_funds = asset_ra_pool_fund.load(11310106)
-    qieman_funds = qieman_funds[qieman_funds.index.get_level_values(0) <= day]
-    qieman_funds = qieman_funds.tail(3).index.get_level_values(1).astype(str).ravel()
+    #trade_dates = ATradeDate.week_trade_date()
+    #dict_nav = {}
+    #for asset_id in tmp_df_inc.columns:
+    #    dict_nav[asset_id] = Asset.load_nav_series(asset_id, reindex=trade_dates)
+    #df_nav = pd.DataFrame(dict_nav).fillna(method='pad')
+    #df_inc = df_nav.pct_change().fillna(0.0)
+    #df_inc = df_inc[df_inc.index > day]
+    #df_inc = df_inc.iloc[0:4]
+    #rs = df_inc.mean()
+    #rs = rs.sort_values(ascending=False)
+    #num = limit
+    #pool_codes = []
+    #for fund_globalid in rs.index:
+    #        pool_codes.append(fund_globalid)
+    #        if len(pool_codes) >= num:
+    #            return pool_codes
+    #qieman_funds = asset_ra_pool_fund.load(11310106)
+    #qieman_funds = qieman_funds[qieman_funds.index.get_level_values(0) <= day]
+    #qieman_funds = qieman_funds.tail(3).index.get_level_values(1).astype(str).ravel()
 
     fund_fee.index = fund_fee.index.astype(str)
     pool_codes = []
     num = limit
     rs = tmp_df_inc.mean()
-    all_df_inc = all_df_inc.mean()
+    #a = fund_fee.loc[rs.index]
+    #a.to_csv('fee.csv')
+    #print('----', len(rs))
+    rs = rs[rs > 0]
+    #print('****', len(rs))
+    #all_df_inc = all_df_inc.mean()
     rs = rs.sort_values(ascending=False)
-    if len(qieman_funds) == 0:
-        threshold = rs.iloc[int(len(rs) * 0.15)]
-    else:
-        new_qieman_funds = []
-        for f in qieman_funds:
-            if f in all_df_inc.index:
-                new_qieman_funds.append(f)
-        if len(new_qieman_funds) > 0:
-            threshold = all_df_inc.loc[new_qieman_funds].mean() * 0.95
-        else:
-            threshold = rs.iloc[int(len(rs) * 0.15)]
-    threshold = rs.iloc[int(len(rs) * 0.15)]
-    rs = rs[rs > threshold]
+    #if len(qieman_funds) == 0:
+    #    threshold = rs.iloc[int(len(rs) * 0.15)]
+    #else:
+    #    new_qieman_funds = []
+    #    for f in qieman_funds:
+    #        if f in all_df_inc.index:
+    #            new_qieman_funds.append(f)
+    #    if len(new_qieman_funds) > 0:
+    #        threshold = all_df_inc.loc[new_qieman_funds].mean() * 0.95
+    #    else:
+    #        threshold = rs.iloc[int(len(rs) * 0.15)]
+
+    threshold = rs.iloc[int(len(rs) * 0.02)]
+    rs = rs[rs >= threshold]
     #for fund_globalid in rs.index:
     #        pool_codes.append(fund_globalid)
     #        if len(pool_codes) >= num:
-    #            print(' fee : ' , fund_fee.loc[pool_codes].mean())
     #            return pool_codes
 
+    #print(' fund num ', len(rs))
     for fund_globalid in rs.index:
         if int(fund_globalid) in valid_ids_2:
+            print('fee')
+            print(fund_globalid, fund_fee.loc[fund_globalid])
             pool_codes.append(fund_globalid)
         if len(pool_codes) >= num:
-            print(' fee : ' , fund_fee.loc[pool_codes].mean())
             return pool_codes
-    rs = tmp_df_inc.mean()
-    rs = rs.sort_values(ascending=False)
     for fund_globalid in rs.index:
         if fund_globalid not in pool_codes:
+            print('fee')
+            print(fund_globalid, fund_fee.loc[fund_globalid])
             pool_codes.append(fund_globalid)
         if len(pool_codes) >= num:
-            print(' fee : ' , fund_fee.loc[pool_codes].mean())
             return pool_codes
