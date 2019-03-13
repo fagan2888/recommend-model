@@ -721,16 +721,27 @@ class CppiAllocate(Allocate):
         edate_3m = sdate + timedelta(90)
         edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
         pre_3m = adjust_days[adjust_days <= edate_3m]
+        #pre_3m = pre_3m[1:]
         adjust_days = adjust_days[adjust_days > edate_3m]
         pos_df = pd.DataFrame(columns=asset_ids, index=pre_3m)
         pos_df = pos_df.fillna(0.0)
-        pos_df['120000039'] = 1.0
-
+        pos_df['MZ.MO0040'] = 1.0
         self.pos_df = pos_df
+
+        for day in pre_3m:
+
+            df_inc, bound = self.load_allocate_data(day, asset_ids)
+            ws = self.allocate_algo(day, df_inc, bound, True)
+
+            for asset_id in list(ws.keys()):
+                pos_df.loc[day, asset_id] = ws[asset_id]
+            self.pos_df = pos_df
+
+
         for day in adjust_days:
 
             df_inc, bound = self.load_allocate_data(day, asset_ids)
-            ws = self.allocate_algo(day, df_inc, bound)
+            ws = self.allocate_algo(day, df_inc, bound, False)
 
             for asset_id in list(ws.keys()):
                 pos_df.loc[day, asset_id] = ws[asset_id]
@@ -738,7 +749,7 @@ class CppiAllocate(Allocate):
 
         return pos_df
 
-    def allocate_algo(self, day, df_inc, bound):
+    def allocate_algo(self, day, df_inc, bound, pre_3m):
 
         bond_var = CppiAllocate.bond_var(self.forcast_days, self.var_percent, day)
         monetary_ret = 1.04**(self.forcast_days / 365) - 1
@@ -749,10 +760,17 @@ class CppiAllocate(Allocate):
 
         tmp_ret = df_nav.iloc[-1] / df_nav.iloc[0]
         tmp_benchmark_ret = 0
+        if pre_3m:
+            benchamark_ser = base_ra_fund_nav.load_series('000198', begin_date = df_nav.index[0], end_date = df_nav.index[-1])
+            #print(benchamark_ser.index[-1], benchamark_ser.index[0])
+            tmp_benchmark_ret = benchamark_ser.iloc[-1] / benchamark_ser.iloc[0] - 1.0
         tmp_overret = tmp_ret - tmp_benchmark_ret
-
+        tmp_overret = 1.0 if tmp_overret < 1.0001 else tmp_overret
+        #print(day, tmp_ret, tmp_benchmark_ret, tmp_overret)
+        print(day,tmp_overret)
+        #print(day, df_nav.index[0], df_nav.index[-1], tmp_ret, tmp_benchmark_ret, tmp_overret)
         tmp_dd = 1 - df_nav.iloc[-1] / df_nav.max()
-        money_pos = df_pos.iloc[-1].loc['120000039']
+        money_pos = df_pos.iloc[-1].loc['MZ.MO0040']
         # print(tmp_dd)
 
         if (tmp_dd > 0.01) or (money_pos == 1.0 and tmp_dd > 0):
@@ -774,7 +792,7 @@ class CppiAllocate(Allocate):
         ws = {}
         ws['120000010'] = 0.0
         ws['120000011'] = 0.0
-        ws['120000039'] = 1.0
+        ws['MZ.MO0040'] = 1.0
 
         return ws
 
@@ -787,11 +805,11 @@ class CppiAllocate(Allocate):
         if ws_m > 0.25:
             ws['120000010'] = ws_b
             ws['120000011'] = ws_b
-            ws['120000039'] = ws_m
+            ws['MZ.MO0040'] = ws_m
         else:
             ws['120000010'] = 0.375
             ws['120000011'] = 0.375
-            ws['120000039'] = 0.25
+            ws['MZ.MO0040'] = 0.25
 
         return ws
 
