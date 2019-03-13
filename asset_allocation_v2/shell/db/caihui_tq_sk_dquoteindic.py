@@ -53,11 +53,11 @@ def load_stock_market_data(begin_date=None, end_date=None, stock_ids=None):
         t.c.SYMBOL.label('stock_code'),
         t.c.SECODE.label('stock_id'),
         t.c.TRADEDATE.label('trade_date'),
-        t.c.TCLOSEAF.label('prc'),
-        t.c.VOL.label('vol'),
+        t.c.TCLOSEAF.label('price'),
+        t.c.VOL.label('volume'),
         t.c.AMOUNT.label('amount'),
-        t.c.MKTSHARE.label('mktshare'),
-        t.c.TOTALSHARE.label('totalshare')
+        t.c.MKTSHARE.label('market_share'),
+        t.c.TOTALSHARE.label('total_share')
     ]
 
     s = select(columns)

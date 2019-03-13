@@ -74,22 +74,22 @@ class FundIncEstimation(object):
         t = Table('tq_fd_basicinfo', metadata, autoload=True)
 
         columns = [
-                t.c.SECODE.label('fund_id'),
-                t.c.FSYMBOL.label('fund_code')
+            t.c.SECODE.label('fund_id'),
+            t.c.FSYMBOL.label('fund_code')
         ]
 
         s = select(columns).where(and_(
-                t.c.FDSTYLE.in_([2, 3, 4]),
-                # t.c.ENABLED==3,
-                t.c.FOUNDDATE!='19000101',
-                t.c.FOUNDDATE<=(date+relativedelta(years=-1)).strftime('%Y%m%d'),
-                t.c.ENDDATE=='19000101',
-                t.c.FDNATURE.in_(['证券投资基金', 'LOF']),
-                t.c.FDMETHOD=='开放式基金',
-                t.c.TOTSHARE>0.1,
-                not_(t.c.FDNAME.contains('联接')),
-                not_(t.c.FDNAME.contains('沪港深')),
-                not_(t.c.FDNAME.contains('港股通'))
+            t.c.FDSTYLE.in_([2, 3, 4]),
+            # t.c.ENABLED==3,
+            t.c.FOUNDDATE!='19000101',
+            t.c.FOUNDDATE<=(date+relativedelta(years=-1)).strftime('%Y%m%d'),
+            t.c.ENDDATE=='19000101',
+            t.c.FDNATURE.in_(['证券投资基金', 'LOF']),
+            t.c.FDMETHOD=='开放式基金',
+            t.c.TOTSHARE>0.1,
+            not_(t.c.FDNAME.contains('联接')),
+            not_(t.c.FDNAME.contains('沪港深')),
+            not_(t.c.FDNAME.contains('港股通'))
         ))
 
         df = pd.read_sql(s, engine, index_col=['fund_id'])
