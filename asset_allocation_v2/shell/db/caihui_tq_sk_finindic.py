@@ -26,8 +26,8 @@ def load_stock_financial_data(begin_date=None, end_date=None, stock_ids=None):
         t.c.TRADEDATE.label('trade_date'),
         t.c.LTDATE.label('ldate'),
         t.c.TCLOSE.label('tclose'),
-        t.c.NEGOTIABLEMV.label('negotiablemv'),
-        t.c.TOTMKTCAP.label('tot_mkt_cap'),
+        t.c.NEGOTIABLEMV.label('negotiable_market_value'),
+        t.c.TOTMKTCAP.label('total_market_cap'),
         t.c.TURNRATE.label('turn_rate'),
         t.c.PELFY.label('pe_lfy'),
         t.c.PETTM.label('pe_ttm'),
@@ -50,7 +50,6 @@ def load_stock_financial_data(begin_date=None, end_date=None, stock_ids=None):
         t.c.PCNCF.label('pcncf'),
         t.c.PCNCFTTM.label('pcncf_ttm'),
         t.c.PETTMRN.label('pe_ttm_rn'),
-        t.c.ISVALID.label('is_valid'),
         t.c.TMSTAMP.label('tmstamp'),
         t.c.LYDY.label('lydy')
     ]
