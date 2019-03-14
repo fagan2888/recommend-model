@@ -30,13 +30,34 @@ def load_stock_code_info(stock_ids=None, stock_codes=None, current=True):
         s = s.where(t.c.SECODE.in_(stock_ids))
     if stock_codes is not None:
         s = s.where(t.c.SYMBOL.in_(stock_codes))
-    if current is True:
-        columns2 = [
-            t.c.SYMBOL,
-            func.max(t.c.LISTDATE)
-        ]
-        s2 = select(columns2).group_by(t.c.SYMBOL)
-        s = s.where(tuple_(t.c.SYMBOL, t.c.LISTDATE).in_(s2))
+        if current is True:
+            columns2 = [
+                t.c.SYMBOL,
+                func.max(t.c.LISTDATE)
+            ]
+            s2 = select(columns2).group_by(t.c.SYMBOL)
+            s = s.where(tuple_(t.c.SYMBOL, t.c.LISTDATE).in_(s2))
+
+    df = pd.read_sql(s, engine, index_col=['stock_id'])
+
+    return df
+
+def load_stock_company_id(stock_ids=None, company_ids=None):
+
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
+    t = Table('tq_sk_basicinfo', metadata, autoload=True)
+
+    columns = [
+        t.c.SECODE.label('stock_id'),
+        t.c.COMPCODE.label('company_id')
+    ]
+
+    s = select(columns)
+    if stock_ids is not None:
+        s = s.where(t.c.SECODE.in_(stock_ids))
+    if company_ids is not None:
+        s = s.where(t.c.COMPCODE.in_(company_ids))
 
     df = pd.read_sql(s, engine, index_col=['stock_id'])
 
@@ -86,5 +107,6 @@ def load_stock_industry(stock_ids=None):
 
 if __name__ == '__main__':
 
-    load_stock_basic_info()
+    load_stock_code_info()
+    load_stock_company_code()
 

@@ -38,6 +38,6 @@ def load_fund_code_info(fund_ids=None, fund_codes=None):
 
 if __name__ == '__main__':
 
-    load_fund_basic_info()
-    load_fund_basic_info(fund_ids=['1030000001', '1030000002'])
-    load_fund_basic_info(fund_codes=['000001', '000003'])
+    load_fund_code_info()
+    load_fund_code_info(fund_ids=['1030000001', '1030000002'])
+    load_fund_code_info(fund_codes=['000001', '000003'])

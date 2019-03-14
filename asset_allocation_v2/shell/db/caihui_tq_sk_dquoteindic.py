@@ -15,7 +15,7 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_stock_price(begin_date=None, end_date=None, reindex=None, stock_ids=None):
+def load_stock_price(stock_ids=None, begin_date=None, end_date=None, reindex=None):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
@@ -28,12 +28,12 @@ def load_stock_price(begin_date=None, end_date=None, reindex=None, stock_ids=Non
     ]
 
     s = select(columns)
+    if stock_ids is not None:
+        s = s.where(t.c.SECODE.in_(stock_ids))
     if begin_date is not None:
         s = s.where(t.c.TRADEDATE>=begin_date)
     if end_date is not None:
         s = s.where(t.c.TRADEDATE<=end_date)
-    if stock_ids is not None:
-        s = s.where(t.c.SECODE.in_(stock_ids))
 
     df = pd.read_sql(s, engine, parse_dates=['trade_date'])
 
@@ -43,7 +43,7 @@ def load_stock_price(begin_date=None, end_date=None, reindex=None, stock_ids=Non
 
     return df
 
-def load_stock_market_data(begin_date=None, end_date=None, stock_ids=None):
+def load_stock_market_data(stock_ids=None, begin_date=None, end_date=None):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
@@ -61,12 +61,12 @@ def load_stock_market_data(begin_date=None, end_date=None, stock_ids=None):
     ]
 
     s = select(columns)
+    if stock_ids is not None:
+        s = s.where(t.c.SECODE.in_(stock_ids))
     if begin_date is not None:
         s = s.where(t.c.TRADEDATE>=begin_date)
     if end_date is not None:
         s = s.where(t.c.TRADEDATE<=end_date)
-    if stock_ids is not None:
-        s = s.where(t.c.SECODE.in_(stock_ids))
 
     df = pd.read_sql(s, engine, parse_dates=['trade_date'])
 
@@ -76,7 +76,7 @@ def load_stock_market_data(begin_date=None, end_date=None, stock_ids=None):
 
 if __name__ == '__main__':
 
-    load_stock_nav(begin_date='20181201', end_date='20181227')
-    load_stock_dquoteindic(begin_date='20000101')
+    load_stock_price(begin_date='20181201', end_date='20181227')
+    load_stock_market_data(begin_date='20000101')
 
 
