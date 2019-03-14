@@ -1,6 +1,6 @@
 #coding=utf-8
 '''
-Edited at Dec. 28, 2018
+Modified on: Dec. 28, 2018
 Editor: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -41,7 +41,7 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
     return df
 
 
-def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None):
+def load_index_nav(index_ids=None, begin_date=None, end_date=None, reindex=None):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
@@ -54,12 +54,12 @@ def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None)
     ]
 
     s = select(columns)
+    if index_ids is not None:
+        s = s.where(t.c.SECODE.in_(index_ids))
     if begin_date is not None:
         s = s.where(t.c.TRADEDATE>=begin_date)
     if end_date is not None:
         s = s.where(t.c.TRADEDATE<=end_date)
-    if index_ids is not None:
-        s = s.where(t.c.SECODE.in_(index_ids))
 
     df = pd.read_sql(s, engine, parse_dates=['trade_date'])
 
