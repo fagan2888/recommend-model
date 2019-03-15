@@ -329,7 +329,7 @@ def ir_view(bt_int):
     ir = pd.merge(sf_m2, ytm, left_index = True, right_index = True, how = 'outer').fillna(method = 'pad')
     ir = ir.dropna()
     #ir = sf_m2.join(ytm)
-    #ir.to_csv('data/sf_m2.csv', index_label = 'date')
+    ir.to_csv('data/sf_m2.csv', index_label = 'date')
 
     ir_views = []
     ir = ir.reindex(bt_int).fillna(method = 'pad')

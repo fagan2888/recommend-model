@@ -31,7 +31,7 @@ from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
-from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl, asset_stock
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl, asset_stock, asset_ra_bl_view
 from db.asset_stock_factor import *
 from util import xdict
 from util.xdebug import dd
@@ -42,6 +42,7 @@ from view import View
 import RiskParity
 import util_optimize
 from multiprocessing import Pool
+
 
 import PureFactor
 import IndexFactor
@@ -767,7 +768,7 @@ class CppiAllocate(Allocate):
         tmp_overret = tmp_ret - tmp_benchmark_ret
         tmp_overret = 1.0 if tmp_overret < 1.0001 else tmp_overret
         #print(day, tmp_ret, tmp_benchmark_ret, tmp_overret)
-        print(day,tmp_overret)
+        #print(day,tmp_overret)
         #print(day, df_nav.index[0], df_nav.index[-1], tmp_ret, tmp_benchmark_ret, tmp_overret)
         tmp_dd = 1 - df_nav.iloc[-1] / df_nav.max()
         money_pos = df_pos.iloc[-1].loc['MZ.MO0040']
@@ -784,6 +785,30 @@ class CppiAllocate(Allocate):
         # print(day, ws)
         # print(day, tmp_overret, tmp_ret)
 
+        views = asset_ra_bl_view.load('BL.000001', '120000010')
+        views.index = views.index.astype(str)
+        view = views[views.index <= day.strftime('%Y-%m-%d')].iloc[-1][0]
+        #view = 0
+        change = 0.15
+        if view == -1.0:
+            if (ws['120000010'] < change) and (ws['120000011'] < change):
+                ws['MZ.MO0040'] = 1.0
+                ws['120000010'] = 0.0
+                ws['120000011'] = 0.0
+            else:
+                ws['MZ.MO0040'] = ws['MZ.MO0040'] + change * 2
+                ws['120000010'] = ws['120000010'] - change
+                ws['120000011'] = ws['120000011'] - change
+        elif view == 1.0:
+            if ws['MZ.MO0040'] - change * 2 < 0:
+                ws['120000010'] = ws['120000010'] + ws['MZ.MO0040'] / 2
+                ws['120000011'] = ws['120000011'] + ws['MZ.MO0040'] / 2
+                ws['MZ.MO0040'] = 0.0
+            else:
+                ws['MZ.MO0040'] = ws['MZ.MO0040'] - change * 2
+                ws['120000010'] = ws['120000010'] + change
+                ws['120000011'] = ws['120000011'] + change
+        print(day, ws)
         return ws
 
     @staticmethod
