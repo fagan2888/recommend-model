@@ -68,9 +68,7 @@ def load_stock_market_data(stock_ids=None, begin_date=None, end_date=None):
     if end_date is not None:
         s = s.where(t.c.TRADEDATE<=end_date)
 
-    df = pd.read_sql(s, engine, parse_dates=['trade_date'])
-
-    df = df.set_index(['stock_id', 'trade_date'])
+    df = pd.read_sql(s, engine, index_col=['trade_date', 'stock_id'], parse_dates=['trade_date'])
 
     return df
 

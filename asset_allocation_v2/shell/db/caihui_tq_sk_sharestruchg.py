@@ -55,22 +55,24 @@ def load_company_historical_share(company_ids=None, begin_date=None, end_date=No
         t.c.BEGINDATE.label('begin_date'),
         t.c.ENDDATE.label('end_date'),
         t.c.TOTALSHARE.label('total_share'),
-        t.c.FCIRCSKAMT.label('fcircskamt')
+        t.c.FCIRCSKAMT.label('free_float_share')
     ]
 
     s = select(columns)
     if company_ids is not None:
         s = s.where(t.c.COMPCODE.in_(company_ids))
     if begin_date is not None:
-        s = s.where(t.c.BEGINDATE<=begin_date)
+        s = s.where(or_(t.c.ENDDATE>begin_date, t.c.ENDDATE=='19000101'))
     if end_date is not None:
-        s = s.where(or_(t.c.ENDDATE>end_date, t.c.ENDDATE=='19000101'))
+        s = s.where(t.c.BEGINDATE<=end_date)
 
-    df = pd.read_sql(s, engine, index_col=['company_id'])
+    df = pd.read_sql(s, engine, parse_dates=['begin_date', 'end_date'])
 
     return df
 
 if __name__ == '__main__':
 
-    load_company_share()
+    load_company_share(company_ids=['10000001', '10000013', '10000020'])
+    load_company_share(date='20150101')
+    load_company_historical_share(begin_date='20160101', end_date='20170101')
 
