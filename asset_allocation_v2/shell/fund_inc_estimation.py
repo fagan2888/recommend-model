@@ -8,13 +8,14 @@ Contact: sushixun@licaimofang.com
 
 import sys
 import logging
-from sqlalchemy import MetaData, Table, select, func, and_, not_
-import click
 import warnings
+import click
+from sqlalchemy import MetaData, Table, select, func, and_, not_
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from dateutil.relativedelta import relativedelta
+from ipdb import set_trace
 sys.path.append('shell')
 from db import database, asset_fund_inc_estimate
 from db import base_ra_fund_nav, caihui_tq_fd_basicinfo, caihui_tq_fd_skdetail, caihui_tq_sk_dquoteindic, caihui_tq_ix_basicinfo, caihui_tq_qt_index
@@ -30,44 +31,44 @@ class FundIncEstimation(object):
     def __init__(self, begin_date=None, end_date=None, fund_ids=None, fund_codes=None):
 
         if end_date is None:
-            self.__end_date = pd.Period.now(freq="D").start_time
+            self._end_date = pd.Period.now(freq="D").start_time
             if  pd.Timestamp.now().hour < 18:
-                self.__end_date = trade_date_before(self.__end_date)
+                self._end_date = trade_date_before(self._end_date)
         else:
-            self.__end_date = pd.Timestamp(end_date)
+            self._end_date = pd.Timestamp(end_date)
 
         if begin_date is None:
-            self.__begin_date = trade_date_not_later_than(self.__end_date)
+            self._begin_date = trade_date_not_later_than(self._end_date)
         else:
-            self.__begin_date = pd.Timestamp(begin_date)
+            self._begin_date = pd.Timestamp(begin_date)
 
-        if self.__begin_date > self.__end_date:
+        if self._begin_date > self._end_date:
             warnings.warn('The begin date is later then the end date.', Warning)
 
         if fund_codes is None and fund_ids is None:
-            self.__fund_pool = self.__load_fund_pool(self.__end_date)
+            self._fund_pool = self._load_fund_pool(self._end_date)
         else:
-            self.__fund_pool = caihui_tq_fd_basicinfo.load_fund_code_info(fund_codes=fund_codes, fund_ids=fund_ids)
+            self._fund_pool = caihui_tq_fd_basicinfo.load_fund_code_info(fund_codes=fund_codes, fund_ids=fund_ids)
 
-        if self.__fund_pool.empty:
+        if self._fund_pool.empty:
             raise NotImplementedError('The pool of funds is empty.')
 
     @property
     def fund_pool(self):
 
-        return self.__fund_pool
+        return self._fund_pool
 
     @property
     def begin_date(self):
 
-        return self.__begin_date
+        return self._begin_date
 
     @property
     def end_date(self):
 
-        return self.__end_date
+        return self._end_date
 
-    def __load_fund_pool(self, date):
+    def _load_fund_pool(self, date):
 
         engine = database.connection('caihui')
         metadata = MetaData(bind=engine)
@@ -195,7 +196,7 @@ class FundIncEstSkPos(FundIncEstimation):
 
         dates = self._dates_divided()
 
-        df_stock_nav = caihui_tq_sk_dquoteindic.load_stock_nav(
+        df_stock_nav = caihui_tq_sk_dquoteindic.load_stock_price(
                 begin_date=trade_date_before(self.begin_date).strftime('%Y%m%d'),
                 end_date=self.end_date.strftime('%Y%m%d')
         ).dropna(how='all', axis='columns')
@@ -235,7 +236,7 @@ class FundIncEstIxPos(FundIncEstimation):
         super(FundIncEstIxPos, self).__init__(begin_date, end_date, fund_ids, fund_codes)
 
         if index_ids is None:
-            self.__index_ids = caihui_tq_ix_basicinfo.load_index_basic_info(est_class='申万一级行业指数').index
+            self.__index_ids = caihui_tq_ix_basicinfo.load_index_code_info(est_class='申万一级行业指数').index
         else:
             self.__index_ids = pd.Index(index_ids)
 

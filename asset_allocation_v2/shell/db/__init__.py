@@ -71,3 +71,5 @@ from . import caihui_tq_qt_index
 from . import caihui_tq_sk_basicinfo
 from . import caihui_tq_sk_dquoteindic
 from . import caihui_tq_sk_finindic
+from . import caihui_tq_sk_sharestruchg
+
