@@ -16,11 +16,11 @@ import pandas as pd
 import math
 import hashlib
 import copy
+# from ipdb import set_trace
 sys.path.append('shell')
 from db import database
 from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic, caihui_tq_sk_sharestruchg
 from trade_date import ATradeDate
-from ipdb import set_trace
 
 
 logger = logging.getLogger(__name__)
@@ -423,7 +423,7 @@ class StockPortfolio: # (metaclass=MetaClassPropertyDecorator)
 
 class StockPortfolioMarketCap(StockPortfolio):
 
-    def __init__(self, index_id, reindex, look_back, periodi, *args, **kwargs):
+    def __init__(self, index_id, reindex, look_back, period, *args, **kwargs):
 
         super(StockPortfolioMarketCap, self).__init__(index_id, reindex, look_back, period, *args, **kwargs)
 
@@ -531,6 +531,35 @@ class StockPortfolioMomentum(StockPortfolio):
         return stock_pos
 
 
+class StockPortfolioSmallSize(StockPortfolioMarketCap):
+
+    def __init__(self, index_id, reindex, look_back, period, percentage=0.3, *args, **kwargs):
+
+        super(StockPortfolioSmallSize, self).__init__(index_id, reindex, look_back, period, *args, **kwargs)
+
+        self._percentage = percentage
+
+    @property
+    def percentage(self):
+
+        return self._percentage
+
+    def cal_stock_pos(self, trade_date):
+
+        stock_ids = self._load_stock_pool(trade_date).index
+        df_stock_share = self._load_stock_share(trade_date)
+        ser_stock_total_market_cap = self.stock_financial_data['total_market_cap'].loc[trade_date, stock_ids]
+
+        ser_free_float_market_value = df_stock_share.free_float_share / df_stock_share.total_share * ser_stock_total_market_cap
+        portfolio_size = round(stock_ids.size * self.percentage)
+        small_size_stock_ids = ser_free_float_market_value.sort_values(ascending=True).iloc[:portfolio_size].index
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[small_size_stock_ids] = 1.0 / portfolio_size
+
+        return stock_pos
+
+
 class StockPortfolioIndustry(StockPortfolio):
 
     def __init__(self, index_id, reindex, look_back, period, sw_industry_code, *args, **kwargs):
@@ -627,8 +656,11 @@ if __name__ == '__main__':
     # dict_portfolio['Momentum'] = StockPortfolioMomentum(index_id, trade_dates, look_back, period, 20)
     # df_portfolio_nav['Momentum'] = dict_portfolio['Momentum'].cal_portfolio_nav()
 
+    # dict_portfolio['SmallSize'] = StockPortfolioSmallSize(index_id, trade_dates, look_back, period, pct=0.3)
+    # df_portfolio_nav['SmallSize'] = dict_portfolio['SmallSize'].cal_portfolio_nav()
+
     # df_portfolio_nav.to_csv('df_portfolio_nav.csv')
     # set_trace()
 
-   #  multiprocessing_cal_portfolio_nav_by_industry(index_id, trade_dates, look_back, period)
+    #  multiprocessing_cal_portfolio_nav_by_industry(index_id, trade_dates, look_back, period)
 
