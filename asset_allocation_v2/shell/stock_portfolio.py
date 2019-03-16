@@ -7,6 +7,7 @@ Contact: sushixun@licaimofang.com
 
 import sys
 import logging
+import warnings
 import click
 from sqlalchemy import MetaData, Table, select, func, and_
 import multiprocessing
@@ -17,7 +18,7 @@ import hashlib
 import copy
 sys.path.append('shell')
 from db import database
-from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic,caihui_tq_sk_sharestruchg
+from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic, caihui_tq_sk_sharestruchg
 from trade_date import ATradeDate
 from ipdb import set_trace
 
@@ -25,45 +26,45 @@ from ipdb import set_trace
 logger = logging.getLogger(__name__)
 
 
-class MetaClassPropertyDecorator(type):
+# class MetaClassPropertyDecorator(type):
 
-    def __new__(cls, name, bases, attrs):
+    # def __new__(cls, name, bases, attrs):
 
-        attrs.update({name: property(MetaClassPropertyDecorator.generate_property_func_in_data(name)) for name in attrs.get('_name_list_in_data', [])})
-        attrs.update({name: property(MetaClassPropertyDecorator.generate_property_func_private(name)) for name in attrs.get('_name_list_private', [])})
+        # attrs.update({name: property(MetaClassPropertyDecorator.generate_property_func_in_data(name)) for name in attrs.get('_name_list_in_data', [])})
+        # attrs.update({name: property(MetaClassPropertyDecorator.generate_property_func_private(name)) for name in attrs.get('_name_list_private', [])})
 
-        return type.__new__(cls, name, bases, attrs)
+        # return type.__new__(cls, name, bases, attrs)
 
-    @staticmethod
-    def generate_property_func_in_data(name):
+    # @staticmethod
+    # def generate_property_func_in_data(name):
 
-        def func(self):
+        # def func(self):
 
-            if not hasattr(self, '_data'):
-                raise ValueError
-            else:
-                data = getattr(self, '_data')
-                if not hasattr(data, name):
-                    raise ValueError
+            # if not hasattr(self, '_data'):
+                # raise ValueError
+            # else:
+                # data = getattr(self, '_data')
+                # if not hasattr(data, name):
+                    # raise ValueError
 
-            return getattr(data, name)
+            # return getattr(data, name)
 
-        return func
+        # return func
 
-    @staticmethod
-    def generate_property_func_private(name):
+    # @staticmethod
+    # def generate_property_func_private(name):
 
-        def func(self):
+        # def func(self):
 
-            if not hasattr(self, f'_{name}'):
-                raise ValueError
+            # if not hasattr(self, f'_{name}'):
+                # raise ValueError
 
-            return getattr(self, f'_{name}')
+            # return getattr(self, f'_{name}')
 
-        return func
+        # return func
 
 
-class StockPortfolioData(object):
+class StockPortfolioData:
 
     def __init__(self, index_id, reindex, look_back, period):
 
@@ -83,9 +84,12 @@ class StockPortfolioData(object):
 
         self.df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_price(stock_ids=self.stock_pool.index, reindex=self.reindex_total)
         self.df_stock_ret = self.df_stock_prc.pct_change().iloc[1:]
-
         self.df_stock_status = self.__load_stock_status()
-        self.stock_market_data, self.stock_financial_data, self.df_stock_industry = self.__load_stock_data()
+
+        self.df_stock_industry = caihui_tq_sk_basicinfo.load_stock_industry(stock_ids=self.stock_pool.index)
+        self.df_stock_historical_share = self.__load_stock_historical_share()
+        self.stock_market_data, self.stock_financial_data = self.__load_stock_data()
+        # self.stock_market_data = self.stock_financial_data = None
 
         self.ser_index_nav = caihui_tq_qt_index.load_index_nav(index_ids=[self.index_id], reindex=self.reindex_total)[self.index_id]
 
@@ -126,58 +130,70 @@ class StockPortfolioData(object):
         else:
             return 0
 
+    def __load_stock_historical_share(self):
+
+        ser_stock_company_id = caihui_tq_sk_basicinfo.load_stock_company_id(stock_ids=self.stock_pool.index).reset_index().set_index('company_id').stock_id
+
+        df_stock_historical_share = caihui_tq_sk_sharestruchg.load_company_historical_share(
+            company_ids=ser_stock_company_id.index,
+            begin_date=self.reindex[0].strftime('%Y%m%d'),
+            end_date=self.reindex[-1].strftime('%Y%m%d')
+        )
+        df_stock_historical_share['stock_id'] = df_stock_historical_share.company_id.map(ser_stock_company_id)
+        df_stock_historical_share.drop('company_id', axis='columns', inplace=True)
+
+        return df_stock_historical_share
+
     def __load_stock_data(self):
 
-        # df_stock_market_data = caihui_tq_sk_dquoteindic.load_stock_market_data(
-            # stock_ids=self.stock_pool.index,
-            # begin_date=self.reindex_total[0].strftime('%Y%m%d'),
-            # end_date=self.reindex_total[-1].strftime('%Y%m%d')
-        # )
+        df_stock_market_data = caihui_tq_sk_dquoteindic.load_stock_market_data(
+            stock_ids=self.stock_pool.index,
+            begin_date=self.reindex_total[0].strftime('%Y%m%d'),
+            end_date=self.reindex_total[-1].strftime('%Y%m%d')
+        )
         # stock_market_data = {col: df_stock_market_data[col].unstack(0) for col in df_stock_market_data.columns}
+        df_stock_market_data = df_stock_market_data.unstack()
 
-        # df_stock_financial_data = caihui_tq_sk_finindic.load_stock_financial_data(
-            # stock_ids=self.stock_pool.index,
-            # begin_date=self.reindex_total[0].strftime('%Y%m%d'),
-            # end_date=self.reindex_total[-1].strftime('%Y%m%d')
-        # )
+        df_stock_financial_data = caihui_tq_sk_finindic.load_stock_financial_data(
+            stock_ids=self.stock_pool.index,
+            begin_date=self.reindex_total[0].strftime('%Y%m%d'),
+            end_date=self.reindex_total[-1].strftime('%Y%m%d')
+        )
         # stock_financial_data = {col: df_stock_financial_data[col].unstack(0) for col in df_stock_financial_data.columns}
+        df_stock_financial_data = df_stock_financial_data.unstack()
 
-        stock_market_data = None
-        stock_financial_data = None
-
-        df_stock_industry = caihui_tq_sk_basicinfo.load_stock_industry(stock_ids=self.stock_pool.index)
-
-        return stock_market_data, stock_financial_data, df_stock_industry
+        return df_stock_market_data, df_stock_financial_data
 
 
-class StockPortfolio(object, metaclass=MetaClassPropertyDecorator):
+class StockPortfolio: # (metaclass=MetaClassPropertyDecorator)
 
     _ref_list = {}
 
-    _name_list_in_data = [
-        'index_id',
-        'reindex_total',
-        'look_back',
-        'period',
-        'reindex',
-        'df_index_historical_constituents',
-        'stock_pool',
-        'df_stock_prc',
-        'df_stock_ret',
-        'df_stock_status',
-        'stock_market_data',
-        'stock_financial_data',
-        'df_stock_industry',
-        'ser_index_nav'
-    ]
+    # _name_list_in_data = [
+        # 'index_id',
+        # 'reindex_total',
+        # 'look_back',
+        # 'period',
+        # 'reindex',
+        # 'df_index_historical_constituents',
+        # 'stock_pool',
+        # 'df_stock_prc',
+        # 'df_stock_ret',
+        # 'df_stock_status',
+        # 'df_stock_industry',
+        # 'df_stock_historical_share',
+        # 'stock_market_data',
+        # 'stock_financial_data',
+        # 'ser_index_nav'
+    # ]
 
-    _name_list_private = [
-        'df_stock_pos',
-        'df_stock_pos_adjusted',
-        'ser_portfolio_nav',
-        'ser_portfolio_inc',
-        'turnover'
-    ]
+    # _name_list_private = [
+        # 'df_stock_pos',
+        # 'df_stock_pos_adjusted',
+        # 'ser_portfolio_nav',
+        # 'ser_portfolio_inc',
+        # 'ser_turnover'
+    # ]
 
     def __init__(self, index_id, reindex, look_back, period, *args, **kwargs):
 
@@ -196,7 +212,107 @@ class StockPortfolio(object, metaclass=MetaClassPropertyDecorator):
 
         self._ser_portfolio_nav = None
         self._ser_portfolio_inc = None
-        self._turnover = None
+        self._ser_turnover = None
+
+    @property
+    def index_id(self):
+
+        return self._data.index_id
+
+    @property
+    def reindex_total(self):
+
+        return self._data.reindex_total
+
+    @property
+    def look_back(self):
+
+        return self._data.look_back
+
+    @property
+    def period(self):
+
+        return self._data.period
+
+    @property
+    def reindex(self):
+
+        return self._data.reindex
+
+    @property
+    def df_index_historical_constituents(self):
+
+        return self._data.df_index_historical_constituents
+
+    @property
+    def stock_pool(self):
+
+        return self._data.stock_pool
+
+    @property
+    def df_stock_prc(self):
+
+        return self._data.df_stock_prc
+
+    @property
+    def df_stock_ret(self):
+
+        return self._data.df_stock_ret
+
+    @property
+    def df_stock_status(self):
+
+        return self._data.df_stock_status
+
+    @property
+    def df_stock_industry(self):
+
+        return self._data.df_stock_industry
+
+    @property
+    def df_stock_historical_share(self):
+
+        return self._data.df_stock_historical_share
+
+    @property
+    def stock_market_data(self):
+
+        return self._data.stock_market_data
+
+    @property
+    def stock_financial_data(self):
+
+        return self._data.stock_financial_data
+
+    @property
+    def ser_index_nav(self):
+
+        return self._data.ser_stock_nav
+
+    @property
+    def df_stock_pos(self):
+
+        return self._df_stock_pos
+
+    @property
+    def df_stock_pos_adjusted(self):
+
+        return self._df_stock_pos_adjusted
+
+    @property
+    def ser_portfolio_nav(self):
+
+        return self._ser_portfolio_nav
+
+    @property
+    def ser_portfolio_inc(self):
+
+        return self._ser_portfolio_inc
+
+    @property
+    def ser_turnover(self):
+
+        return self._ser_turnover
 
     def cal_portfolio_nav(self):
 
@@ -209,7 +325,7 @@ class StockPortfolio(object, metaclass=MetaClassPropertyDecorator):
         df_stock_pos_adjusted = pd.concat([df_stock_pos_adjusted, self.df_stock_pos.iloc[[0], :].fillna(0.0)], sort=True)
         ser_portfolio_nav = pd.Series(1.0, index=self.reindex)
         ser_portfolio_inc = pd.Series(0.0, index=self.reindex)
-        turnover = 0.0
+        ser_turnover = pd.Series(0.0, index=self.reindex)
 
         for last_trade_date, trade_date in zip(self.reindex[:-1], self.reindex[1:]):
 
@@ -229,7 +345,7 @@ class StockPortfolio(object, metaclass=MetaClassPropertyDecorator):
 
             stock_pos_adjusted = copy.deepcopy(stock_pos)
             stock_pos_adjusted.loc[index_adjustable_stock] = stock_pos_standard.loc[index_adjustable_stock] / sum_pos_standard * sum_pos_adjustable
-            turnover += (stock_pos_adjusted - stock_pos).abs().sum()
+            ser_turnover.loc[trade_date] = (stock_pos_adjusted - stock_pos).abs().sum()
 
             stock_pos_adjusted = stock_pos_adjusted.to_frame(name=trade_date).T
             df_stock_pos_adjusted = pd.concat([df_stock_pos_adjusted, stock_pos_adjusted], sort=True)
@@ -237,7 +353,7 @@ class StockPortfolio(object, metaclass=MetaClassPropertyDecorator):
         self._df_stock_pos_adjusted = df_stock_pos_adjusted
         self._ser_portfolio_nav = ser_portfolio_nav
         self._ser_portfolio_inc = ser_portfolio_inc
-        self._turnover = turnover
+        self._ser_turnover = ser_turnover
 
         return ser_portfolio_nav
 
@@ -261,21 +377,21 @@ class StockPortfolio(object, metaclass=MetaClassPropertyDecorator):
     def _load_stock_price(self, trade_date):
 
         reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back:]
-        stock_pool = self._load_stock_pool(trade_date)
+        stock_ids = self._load_stock_pool(trade_date).index
 
-        # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_pool.index, reindex=reindex)
-        df_stock_prc = self.df_stock_prc.reindex(index=reindex, columns=stock_pool.index)
+        # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex)
+        df_stock_prc = self.df_stock_prc.reindex(index=reindex, columns=stock_ids)
 
         return df_stock_prc
 
     def _load_stock_return(self, trade_date):
 
         reindex = self.reindex_total[self.reindex_total<=trade_date][1-self.look_back:]
-        stock_pool = self._load_stock_pool(trade_date)
+        stock_ids = self._load_stock_pool(trade_date).index
 
-        # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_pool.index, reindex=reindex)
+        # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex)
         # df_stock_ret = df_stock_prc.pct_change().iloc[1:]
-        df_stock_ret = self.df_stock_ret.reindex(index=reindex, columns=stock_pool.index)
+        df_stock_ret = self.df_stock_ret.reindex(index=reindex, columns=stock_ids)
 
         return df_stock_ret
 
@@ -311,32 +427,35 @@ class StockPortfolioMarketCap(StockPortfolio):
 
         super(StockPortfolioMarketCap, self).__init__(index_id, reindex, look_back, period, *args, **kwargs)
 
-        df1 = caihui_tq_sk_basicinfo.load_stock_company_id(stock_ids=self.stock_pool.index)
-        df2 = caihui_tq_sk_sharestruchg.load_company_historical_share(company_ids=df1.company_id, begin_date=self.reindex[0], end_date=self.reindex[-1])
-        df2.index =  df1.reset_index().set_index('company_id').loc[df2.index, 'stock_id']
-        self.df2 = df2
-
     # Refrence: http://www.csindex.com.cn/zh-CN/indices/index-detail/000906
     def cal_stock_pos(self, trade_date):
 
-        df_stock_ret = self._load_stock_return(trade_date)
-        stock_ids = df_stock_ret.columns
-
+        stock_ids = self._load_stock_pool(trade_date).index
+        df_stock_share = self._load_stock_share(trade_date)
         ser_stock_total_market_cap = self.stock_financial_data['total_market_cap'].loc[trade_date, stock_ids]
-        ser_stock_market_share = self.stock_market_data['market_share'].loc[trade_date, stock_ids]
-        ser_stock_total_share = self.stock_market_data['total_share'].loc[trade_date, stock_ids]
 
-        # ser_weight = ser_stock_market_share / ser_stock_total_share
-        ser_weight = self.df2.fcircskamt /self.df2.total_share
-        ser_weight.loc[:] = ser_weight.apply(self.__weight_adjustment_algo)
+        ser_free_float_weight = df_stock_share.free_float_share / df_stock_share.total_share
+        ser_free_float_weight.loc[:] = ser_free_float_weight.apply(self._weight_adjustment_algo)
 
         stock_pos = pd.Series(index=stock_ids, name=trade_date)
-        stock_pos.loc[:] = (ser_stock_total_market_cap * ser_weight).fillna(0.0)
+        stock_pos.loc[:] = (ser_stock_total_market_cap * ser_free_float_weight).fillna(0.0)
         stock_pos.loc[:] = stock_pos / stock_pos.sum()
 
         return stock_pos
 
-    def __weight_adjustment_algo(self, weight):
+    def _load_stock_share(self, trade_date):
+
+        stock_ids = self._load_stock_pool(trade_date).index
+
+        df_stock_share = self.df_stock_historical_share.loc[
+            (self.df_stock_historical_share.begin_date<=trade_date) & \
+            ((self.df_stock_historical_share.end_date>trade_date) | \
+            (self.df_stock_historical_share.end_date=='19000101'))
+        ].set_index('stock_id').reindex(stock_ids)
+
+        return df_stock_share
+
+    def _weight_adjustment_algo(self, weight):
 
         if weight > 0.8:
             return 1.0
@@ -448,30 +567,37 @@ class StockPortfolioIndustryMininumVolatility(StockPortfolioMininumVolatility, S
         super(StockPortfolioIndustryMininumVolatility, self).__init__(index_id, reindex, look_back, period, sw_industry_code)
 
 
-def func(index_id, trade_dates, look_back, period, li):
+def func(index_id, trade_dates, look_back, period, sw_industry_codes):
 
     df = pd.DataFrame()
 
-    for code in li:
+    for sw_industry_code in sw_industry_codes:
 
-        p = StockPortfolioIndustryMininumVolatility(index_id, trade_dates, look_back, period, code)
-        ser = p.cal_portfolio_nav()
-        df[code] = ser
+        if sw_industry_code is not None:
 
-    file = li[0]+'.csv'
+            portfolio = StockPortfolioIndustryMininumVolatility(index_id, trade_dates, look_back, period, sw_industry_code)
+            df[sw_industry_code] = portfolio.cal_portfolio_nav()
 
-    df.to_csv(file)
+            file_name = sw_industry_code + '.csv'
+            df.to_csv(file_name)
 
-def multiprocessing_cal_portfolio_nav_by_industry(index_id, trade_dates, look_back, period):
+def multiprocessing_cal_portfolio_nav_by_industry(index_id, trade_dates, look_back, period, cpu_count=4):
 
-    industry_codes = [f'{i}0000' for i in [11,21,22,23,24,27,28,33,34,35,36,37,41,42,43,45,46,48,49,51,61,62,63,64,65,71,72,73]]
-    industry_codes = np.array(industry_codes).reshape(28, 1)
+    portfolio = StockPortfolio(index_id, trade_dates, look_back, period)
 
-    sp = StockPortfolio(index_id, trade_dates, look_back, period)
+    arr_sw_industry_codes = np.array(portfolio.df_stock_industry.sw_level1_code.drop_duplicates().sort_values())
 
-    for li in industry_codes:
-        p = multiprocessing.Process(target=func, args=(index_id, trade_dates, look_back, period, li))
-        p.start()
+    if portfolio.stock_market_data is None and portfolio.stock_financial_data is None:
+        arr_sw_industry_codes = arr_sw_industry_codes.reshape(-1, 1)
+    else:
+        warnings.warn('如果不使用stock_market_data和stock_financial_data, 请在StockPortfolio中将其赋值为None.', Warning)
+        arr_sw_industry_codes = np.append(arr_sw_industry_codes, [None] * (-arr_sw_industry_codes.size % cpu_count))
+        arr_sw_industry_codes = arr_sw_industry_codes.reshape(cpu_count, -1)
+
+    for sw_industry_codes in arr_sw_industry_codes:
+
+        process = multiprocessing.Process(target=func, args=(index_id, trade_dates, look_back, period, sw_industry_codes))
+        process.start()
 
 
 if __name__ == '__main__':
@@ -504,5 +630,5 @@ if __name__ == '__main__':
     # df_portfolio_nav.to_csv('df_portfolio_nav.csv')
     # set_trace()
 
-    multiprocessing_cal_portfolio_nav_by_industry(index_id, trade_dates, look_back, period)
+   #  multiprocessing_cal_portfolio_nav_by_industry(index_id, trade_dates, look_back, period)
 
