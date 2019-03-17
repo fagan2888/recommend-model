@@ -849,7 +849,7 @@ def index_nav(ctx):
 @click.pass_context
 def benchmark(ctx):
 
-    index_ids = ['120000016', '120000010']
+    index_ids = ['120000016', '120000010', '120000001']
     data = {}
     for _id in index_ids:
         data[_id] = base_ra_index_nav.load_series(_id)
@@ -869,10 +869,10 @@ def benchmark(ctx):
     bench_df = pd.DataFrame(data)
     benchmark_df = pd.concat([bench_df,df],axis = 1, join_axes = [bench_df.index])
 
-    benchmark_df = benchmark_df[benchmark_df.index >= '2012-07-27']
+    benchmark_df = benchmark_df[benchmark_df.index >= '2016-01-01']
     benchmark_df = benchmark_df / benchmark_df.iloc[0]
     #print(df.tail())
-    #df.to_csv('benchmark.csv')
+    benchmark_df.to_csv('benchmark.csv')
 
 
     conn  = MySQLdb.connect(**config.db_asset)
@@ -886,15 +886,16 @@ def benchmark(ctx):
         dfs.append(df)
 
     df = pd.concat(dfs, axis = 1)
-    df = df[df.index >= '2012-07-27']
+    df = df[df.index >= '2017-01-01']
     online_df = df / df.iloc[0]
-    #df.to_csv('./online_nav.csv')
+    df.to_csv('./online_nav.csv')
 
     online_df.head()
     conn.close()
 
 
     df = pd.concat([online_df, benchmark_df], axis = 1, join_axes = [benchmark_df.index])
+    df = df.fillna(method='pad')
     print(df.head())
 
     df.to_csv('./online_benchmark.csv')

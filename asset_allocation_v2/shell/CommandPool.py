@@ -292,7 +292,7 @@ def fund_monetary_pool(ctx, datadir, startdate, enddate, optid, optlist, optlimi
     if optpoints is not None:
         adjust_points = pd.DatetimeIndex(optpoints.split(','))
     else:
-        adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate, enddate=enddate)
+        adjust_points = get_week_adjust_point(label_period=optperiod, startdate=startdate, enddate=enddate)
 
     print("adjust point:")
     for date in adjust_points:
@@ -560,7 +560,7 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
 
     index = base_trade_dates.load_trade_dates(startdate, end_date=enddate)
     index = index[index.td_type >= 8].index
-    index = ATradeDate.week_trade_date(startdate, enddate)
+    #index = ATradeDate.week_trade_date(startdate, enddate)
     #print(index)
     #index = DBData.trade_date_index(startdate, end_date=enddate)
 
@@ -589,6 +589,23 @@ def get_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
     # ])
 
     return label_index
+
+def get_week_adjust_point(startdate = '2010-01-08', enddate=None, label_period=1):
+    # 加载时间轴数据
+    if not enddate:
+        yesterday = (datetime.now() - timedelta(days=1));
+        enddate = yesterday.strftime("%Y-%m-%d")
+
+    index = ATradeDate.week_trade_date(startdate, enddate)
+
+    if label_period > 1:
+        label_index = index[::label_period]
+        if index.max() not in label_index:
+            label_index = label_index.insert(len(label_index), index.max())
+    else:
+        label_index = index
+    return label_index
+
 
 @pool.command()
 @click.option('--id', 'optid', help='ids of fund pool to update')
@@ -1226,3 +1243,4 @@ def pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc):
             pool_codes.append(fund_globalid)
         if len(pool_codes) >= num:
             return pool_codes
+    return pool_codes
