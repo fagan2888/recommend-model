@@ -589,14 +589,21 @@ class StockPortfolioIndustry(StockPortfolio):
         return stock_ids_by_industry
 
 
-class StockPortfolioIndustryMininumVolatility(StockPortfolioMininumVolatility, StockPortfolioIndustry):
+class StockPortfolioIndustryMininumVolatility(StockPortfolioIndustry, StockPortfolioMininumVolatility):
 
-    def __init__(self, index_id, reindex, look_back, period, sw_industry_code):
+    def __init__(self, index_id, reindex, look_back, period, sw_industry_code, *args, **kwargs):
 
-        super(StockPortfolioIndustryMininumVolatility, self).__init__(index_id, reindex, look_back, period, sw_industry_code)
+        super(StockPortfolioIndustryMininumVolatility, self).__init__(index_id, reindex, look_back, period, sw_industry_code, *args, **kwargs)
 
 
-def func(index_id, trade_dates, look_back, period, sw_industry_codes):
+class StockPortfolioIndustryMomentum(StockPortfolioIndustry, StockPortfolioMomentum):
+
+    def __init__(self, index_id, reindex, look_back, period, sw_industry_code, exclusion, *args, **kwargs):
+
+        super(StockPortfolioIndustryMomentum, self).__init__(index_id, reindex, look_back, period, sw_industry_code, exclusion, *args, **kwargs)
+
+
+def func(classname, index_id, trade_dates, look_back, period, sw_industry_codes, *args, **kwargs):
 
     df = pd.DataFrame()
 
@@ -604,13 +611,13 @@ def func(index_id, trade_dates, look_back, period, sw_industry_codes):
 
         if sw_industry_code is not None:
 
-            portfolio = StockPortfolioIndustryMininumVolatility(index_id, trade_dates, look_back, period, sw_industry_code)
+            cls = globals()[classname]
+            portfolio = cls(index_id, trade_dates, look_back, period, sw_industry_code, *args, **kwargs)
             df[sw_industry_code] = portfolio.cal_portfolio_nav()
 
-            file_name = sw_industry_code + '.csv'
-            df.to_csv(file_name)
+            df.to_csv(f'{classname}_{sw_industry_code}.csv')
 
-def multiprocessing_cal_portfolio_nav_by_industry(index_id, trade_dates, look_back, period, cpu_count=4):
+def multiprocessing_cal_portfolio_nav_by_industry(classname, index_id, trade_dates, look_back, period, cpu_count=4, *args, **kwargs):
 
     portfolio = StockPortfolio(index_id, trade_dates, look_back, period)
 
@@ -619,13 +626,13 @@ def multiprocessing_cal_portfolio_nav_by_industry(index_id, trade_dates, look_ba
     if portfolio.stock_market_data is None and portfolio.stock_financial_data is None:
         arr_sw_industry_codes = arr_sw_industry_codes.reshape(-1, 1)
     else:
-        warnings.warn('如果不使用stock_market_data和stock_financial_data, 请在StockPortfolio中将其赋值为None.', Warning)
+        warnings.warn('如果不使用stock_market_data和stock_financial_data, 请在StockPortfolioData中将其赋值为None.', Warning)
         arr_sw_industry_codes = np.append(arr_sw_industry_codes, [None] * (-arr_sw_industry_codes.size % cpu_count))
         arr_sw_industry_codes = arr_sw_industry_codes.reshape(cpu_count, -1)
 
     for sw_industry_codes in arr_sw_industry_codes:
 
-        process = multiprocessing.Process(target=func, args=(index_id, trade_dates, look_back, period, sw_industry_codes))
+        process = multiprocessing.Process(target=func, args=(classname, index_id, trade_dates, look_back, period, sw_industry_codes, *args), kwargs={**kwargs})
         process.start()
 
 
@@ -662,5 +669,8 @@ if __name__ == '__main__':
     # df_portfolio_nav.to_csv('df_portfolio_nav.csv')
     # set_trace()
 
-    #  multiprocessing_cal_portfolio_nav_by_industry(index_id, trade_dates, look_back, period)
+    # multiprocessing_cal_portfolio_nav_by_industry('StockPortfolioIndustryMininumVolatility', index_id, trade_dates, look_back, period)
+
+    # multiprocessing_cal_portfolio_nav_by_industry('StockPortfolioIndustryMomentum', index_id, trade_dates, look_back, period, exclusion=30)
+    # set_trace()
 
