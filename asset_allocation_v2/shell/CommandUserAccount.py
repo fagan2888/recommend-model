@@ -44,7 +44,6 @@ def account(ctx):
     pass
 
 
-
 @account.command()
 @click.pass_context
 def account_balance(ctx):
@@ -82,13 +81,14 @@ def account_balance(ctx):
     asset_liquidity_df = 1.0 - asset_liquidity_df * 1.0 / 36
     asset_risk_df = (asset_risk_df - min(asset_risk_df)) / (max(asset_risk_df) - min(asset_risk_df))
     asset_liquidity_df = (asset_liquidity_df - min(asset_liquidity_df)) / (max(asset_liquidity_df) - min(asset_liquidity_df))
+
     print(asset_risk_df)
     print(asset_liquidity_df)
 
-
     user_asset = {'risk_7':10000, 'steady':2000}
-    user_best = {'risk': 0.5, 'liquidity': 0.8}
-
+    user_best = {'risk': 0.6, 'liquidity': 0.8}
+    assets = ['risk_7', 'steady']
+    all_amount = np.sum(list(user_asset.values()))
 
 
     def user_risk_liquidity(user_asset):
@@ -103,37 +103,100 @@ def account_balance(ctx):
         return user_risk, user_liquidity
 
 
-    #def user_add_asset_obj(x, user_best, user_asset, asset):
+    def user_add_asset_obj(x, user_best, user_asset, assets):
+        user_add_asset = user_asset.copy()
+        for i in range(0, len(assets)):
+            asset = assets[i]
+            user_add_asset[asset] = user_add_asset[asset] + x[i]
+        user_risk, user_liquidity = user_risk_liquidity(user_add_asset)
+        return (user_best['risk'] - user_risk) ** 2 + (user_best['liquidity'] - user_liquidity) ** 2
 
-    #    user_add_asset = user_asset.copy()
-    #    user_add_asset[asset] = user_add_asset[asset] + x[0]
-    #    user_risk, user_liquidity = user_risk_liquidity(user_add_asset)
-    #    print(asset, x, user_asset, user_add_asset, user_risk, user_liquidity, user_best)
-        #print(user_add_asset, user_risk, user_liquidity)
-    #    return (user_best['risk'] - user_risk) ** 2 + (user_best['liquidity'] - user_liquidity) ** 2
+    x = [0, 0]
+    bound = [ (0.0 , all_amount) for i in range(len(assets))]
+    cons = [{'type': 'ineq', 'fun': lambda x: all_amount - np.sum(x)}]
+    result = scipy.optimize.minimize(user_add_asset_obj, x, (user_best, user_asset, assets), method='SLSQP', bounds = bound, constraints = cons, options = {'ftol':1e-12, 'eps':100})
+    if result.success:
+        print(result.x)
 
-    #print(user_risk_liquidity(user_asset), user_best, asset_risk_df.loc['risk_7'], asset_liquidity_df.loc['risk_7'])
-    #user_add_asset = user_asset.copy()
-    #user_add_asset['steady'] = user_add_asset['steady'] + 5000
-    #print(user_risk_liquidity(user_add_asset), user_best, asset_risk_df.loc['risk_7'], asset_liquidity_df.loc['risk_7'])
-    #for asset in user_asset.keys():
-    #    x = 0
-        #constrain = ({'type':'eq', 'fun': lambda x: x})
-        #result = scipy.optimize.minimize(user_add_asset_obj, x, (user_best, user_asset, asset), method='SLSQP', constraints=constrain)
-    #    result = scipy.optimize.minimize(user_add_asset_obj, x, (user_best, user_asset, asset), method='SLSQP')
-        #print(result)
-        #if result.success:
-        #    print(asset, result.x, user_risk_liquidity(user_asset), user_best)
 
+
+@account.command()
+@click.pass_context
+def account_balance_simple(ctx):
+
+    asset_risk = {  'risk_1':0.015,
+                    'risk_2':0.03,
+                    'risk_3':0.045,
+                    'risk_4':0.06,
+                    'risk_5':0.075,
+                    'risk_6':0.09,
+                    'risk_7':0.105,
+                    'risk_8':0.120,
+                    'risk_9':0.135,
+                    'risk_10':0.15,
+                    'steady':0.01,
+                    'money':0.0,
+            }
+
+    asset_liquidity = {'risk_1':3,
+                        'risk_2':3,
+                        'risk_3':6,
+                        'risk_4':9,
+                        'risk_5':12,
+                        'risk_6':15,
+                        'risk_7':18,
+                        'risk_8':24,
+                        'risk_9':30,
+                        'risk_10':36,
+                        'steady':3,
+                        'money':0,
+            }
+
+    asset_risk_df = pd.Series(asset_risk)
+    asset_liquidity_df = pd.Series(asset_liquidity)
+    asset_liquidity_df = 1.0 - asset_liquidity_df * 1.0 / 36
+    asset_risk_df = (asset_risk_df - min(asset_risk_df)) / (max(asset_risk_df) - min(asset_risk_df))
+    asset_liquidity_df = (asset_liquidity_df - min(asset_liquidity_df)) / (max(asset_liquidity_df) - min(asset_liquidity_df))
+
+    print(asset_risk_df)
+    print(asset_liquidity_df)
+
+    def user_risk_liquidity(user_asset):
+
+        user_asset_ser = pd.Series(user_asset)
+        user_asset_ser = user_asset_ser / user_asset_ser.sum()
+        user_risk = 0
+        user_liquidity = 0
+        for asset in user_asset_ser.index:
+            user_risk = user_risk + asset_risk_df.loc[asset] * user_asset_ser.loc[asset]
+            user_liquidity = user_liquidity + asset_liquidity_df.loc[asset] * user_asset_ser.loc[asset]
+        return user_risk, user_liquidity
+
+    user_asset = {'risk_7':10000, 'steady':2000}
     user_risk, user_liquidity = user_risk_liquidity(user_asset)
-    user_risk_asset = None
+
+    age = 20
+    amount = np.sum(list(user_asset.values()))
+    age_liquidity = 0.5 + (0.33 / 400) * ((age - 40) ** 2)
+    amount_liquidity = 0.5
+    if amount <= 20000:
+        amount_liquidity = 0.83
+    elif amount > 20000 and amount <= 200000:
+        amount_liquidity = 0.66
+    elif amount > 100000 and amount <= 1000000:
+        amount_liquidity = 0.5
+    else:
+        amount_liquidity = 0.33
+
+    user_asset_risk = 0.0
     for asset in user_asset.keys():
         if asset.startswith('risk'):
-            user_risk_asset = asset
-    if user_risk > user_best['risk'] and user_liquidity < user_best['liquidity']:
-        asset_risk = asset_risk_df.loc[user_risk_asset]
-        asset_risk_amount = user_asset[user_risk_asset]
-        steady_risk = asset_risk_df.loc['steady']
-        best_risk = user_best['risk']
-        amount = (asset_risk * asset_risk_amount - best_risk * asset_risk_amount) / (best_risk - steady_risk)
-        print(amount)
+            user_asset_risk = asset_liquidity_df.loc[asset]
+
+    print(user_asset_risk, age_liquidity, amount_liquidity)
+    user_best_liquidity = 0.4 * user_asset_risk + 0.3 * age_liquidity + 0.3 * amount_liquidity
+    add_amount = 0.0
+    if user_liquidity > user_best_liquidity:
+        add_amount = 0.0
+    else:
+        add_amount =
