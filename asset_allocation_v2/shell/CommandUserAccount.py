@@ -16,6 +16,8 @@ import util_numpy as npu
 import MySQLdb
 import config
 from ipdb import set_trace
+import scipy
+import scipy.optimize
 
 
 from datetime import datetime, timedelta
@@ -80,24 +82,58 @@ def account_balance(ctx):
     asset_liquidity_df = 1.0 - asset_liquidity_df * 1.0 / 36
     asset_risk_df = (asset_risk_df - min(asset_risk_df)) / (max(asset_risk_df) - min(asset_risk_df))
     asset_liquidity_df = (asset_liquidity_df - min(asset_liquidity_df)) / (max(asset_liquidity_df) - min(asset_liquidity_df))
-    #print(asset_risk_df)
-    #print(asset_liquidity_df)
+    print(asset_risk_df)
+    print(asset_liquidity_df)
 
 
     user_asset = {'risk_7':10000, 'steady':2000}
-    user_best = {'risk': 0.5, 'liquidity': 0.5}
+    user_best = {'risk': 0.5, 'liquidity': 0.8}
 
-    user_asset_ser = pd.Series(user_asset)
-    user_asset_ser = user_asset_ser / user_asset_ser.sum()
 
-    user_risk = 0
-    user_liquidity = 0
-    for asset in user_asset_ser.index:
-        user_risk = user_risk + asset_risk_df.loc[asset] * user_asset_ser.loc[asset]
-        user_liquidity = user_liquidity + asset_liquidity_df.loc[asset] * user_asset_ser.loc[asset]
 
-    print(user_risk, user_liquidity)
-    print(user_best)
+    def user_risk_liquidity(user_asset):
 
-    if user_best['risk'] >= asset_risk_df.loc['steady'] and user_best['liquidity'] < asset_liquidity_df.loc['steady']:
-        print('HeHe')
+        user_asset_ser = pd.Series(user_asset)
+        user_asset_ser = user_asset_ser / user_asset_ser.sum()
+        user_risk = 0
+        user_liquidity = 0
+        for asset in user_asset_ser.index:
+            user_risk = user_risk + asset_risk_df.loc[asset] * user_asset_ser.loc[asset]
+            user_liquidity = user_liquidity + asset_liquidity_df.loc[asset] * user_asset_ser.loc[asset]
+        return user_risk, user_liquidity
+
+
+    #def user_add_asset_obj(x, user_best, user_asset, asset):
+
+    #    user_add_asset = user_asset.copy()
+    #    user_add_asset[asset] = user_add_asset[asset] + x[0]
+    #    user_risk, user_liquidity = user_risk_liquidity(user_add_asset)
+    #    print(asset, x, user_asset, user_add_asset, user_risk, user_liquidity, user_best)
+        #print(user_add_asset, user_risk, user_liquidity)
+    #    return (user_best['risk'] - user_risk) ** 2 + (user_best['liquidity'] - user_liquidity) ** 2
+
+    #print(user_risk_liquidity(user_asset), user_best, asset_risk_df.loc['risk_7'], asset_liquidity_df.loc['risk_7'])
+    #user_add_asset = user_asset.copy()
+    #user_add_asset['steady'] = user_add_asset['steady'] + 5000
+    #print(user_risk_liquidity(user_add_asset), user_best, asset_risk_df.loc['risk_7'], asset_liquidity_df.loc['risk_7'])
+    #for asset in user_asset.keys():
+    #    x = 0
+        #constrain = ({'type':'eq', 'fun': lambda x: x})
+        #result = scipy.optimize.minimize(user_add_asset_obj, x, (user_best, user_asset, asset), method='SLSQP', constraints=constrain)
+    #    result = scipy.optimize.minimize(user_add_asset_obj, x, (user_best, user_asset, asset), method='SLSQP')
+        #print(result)
+        #if result.success:
+        #    print(asset, result.x, user_risk_liquidity(user_asset), user_best)
+
+    user_risk, user_liquidity = user_risk_liquidity(user_asset)
+    user_risk_asset = None
+    for asset in user_asset.keys():
+        if asset.startswith('risk'):
+            user_risk_asset = asset
+    if user_risk > user_best['risk'] and user_liquidity < user_best['liquidity']:
+        asset_risk = asset_risk_df.loc[user_risk_asset]
+        asset_risk_amount = user_asset[user_risk_asset]
+        steady_risk = asset_risk_df.loc['steady']
+        best_risk = user_best['risk']
+        amount = (asset_risk * asset_risk_amount - best_risk * asset_risk_amount) / (best_risk - steady_risk)
+        print(amount)
