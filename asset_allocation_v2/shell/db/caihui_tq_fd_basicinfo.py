@@ -1,6 +1,6 @@
 #coding=utf-8
 '''
-Created at Dec. 28, 2018
+Created on: Dec. 28, 2018
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -14,7 +14,7 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_fund_basic_info(fund_ids=None, fund_codes=None):
+def load_fund_code_info(fund_ids=None, fund_codes=None):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
@@ -38,6 +38,6 @@ def load_fund_basic_info(fund_ids=None, fund_codes=None):
 
 if __name__ == '__main__':
 
-    load_fund_basic_info()
-    load_fund_basic_info(fund_ids=['1030000001', '1030000002'])
-    load_fund_basic_info(fund_codes=['000001', '000003'])
+    load_fund_code_info()
+    load_fund_code_info(fund_ids=['1030000001', '1030000002'])
+    load_fund_code_info(fund_codes=['000001', '000003'])

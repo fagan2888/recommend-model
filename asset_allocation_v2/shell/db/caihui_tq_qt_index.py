@@ -1,6 +1,6 @@
 #coding=utf-8
 '''
-Edited at Dec. 28, 2018
+Modified on: Dec. 28, 2018
 Editor: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -41,29 +41,29 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
     return df
 
 
-def load_index_nav(begin_date=None, end_date=None, reindex=None, index_ids=None):
+def load_index_nav(index_ids=None, begin_date=None, end_date=None, reindex=None):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
     t = Table('tq_qt_index', metadata, autoload=True)
 
     columns = [
-            t.c.TRADEDATE.label('date'),
+            t.c.TRADEDATE.label('trade_date'),
             t.c.SECODE.label('index_id'),
             t.c.TCLOSE.label('nav')
     ]
 
     s = select(columns)
+    if index_ids is not None:
+        s = s.where(t.c.SECODE.in_(index_ids))
     if begin_date is not None:
         s = s.where(t.c.TRADEDATE>=begin_date)
     if end_date is not None:
         s = s.where(t.c.TRADEDATE<=end_date)
-    if index_ids is not None:
-        s = s.where(t.c.SECODE.in_(index_ids))
 
-    df = pd.read_sql(s, engine, parse_dates=['date'])
+    df = pd.read_sql(s, engine, parse_dates=['trade_date'])
 
-    df = df.pivot('date', 'index_id', 'nav')
+    df = df.pivot('trade_date', 'index_id', 'nav')
     if reindex is not None:
         df = df.reindex(reindex, method='pad')
 

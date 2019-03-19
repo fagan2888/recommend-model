@@ -1,6 +1,7 @@
 #coding=utf-8
 '''
-Created at Dec. 28, 2018
+Created on: Dec. 28, 2018
+Modified on: Mar. 6, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -14,36 +15,66 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_stock_nav(begin_date=None, end_date=None, reindex=None, stock_ids=None):
+def load_stock_price(stock_ids=None, begin_date=None, end_date=None, reindex=None):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
     t = Table('tq_sk_dquoteindic', metadata, autoload=True)
 
     columns = [
-            t.c.TRADEDATE.label('date'),
-            t.c.SECODE.label('stock_id'),
-            t.c.TCLOSEAF.label('nav')
+        t.c.TRADEDATE.label('trade_date'),
+        t.c.SECODE.label('stock_id'),
+        t.c.TCLOSEAF.label('prc')
     ]
 
     s = select(columns)
+    if stock_ids is not None:
+        s = s.where(t.c.SECODE.in_(stock_ids))
     if begin_date is not None:
         s = s.where(t.c.TRADEDATE>=begin_date)
     if end_date is not None:
         s = s.where(t.c.TRADEDATE<=end_date)
-    if stock_ids is not None:
-        s = s.where(t.c.SECODE.in_(stock_ids))
 
-    df = pd.read_sql(s, engine, parse_dates=['date'])
+    df = pd.read_sql(s, engine, parse_dates=['trade_date'])
 
-    df = df.pivot('date', 'stock_id', 'nav')
+    df = df.pivot('trade_date', 'stock_id', 'prc')
     if reindex is not None:
         df = df.reindex(reindex, method='pad')
 
     return df
 
+def load_stock_market_data(stock_ids=None, begin_date=None, end_date=None):
+
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
+    t = Table('tq_sk_dquoteindic', metadata, autoload=True)
+
+    columns = [
+        t.c.SYMBOL.label('stock_code'),
+        t.c.SECODE.label('stock_id'),
+        t.c.TRADEDATE.label('trade_date'),
+        t.c.TCLOSEAF.label('price'),
+        t.c.VOL.label('volume'),
+        t.c.AMOUNT.label('amount'),
+        t.c.MKTSHARE.label('market_share'),
+        t.c.TOTALSHARE.label('total_share')
+    ]
+
+    s = select(columns)
+    if stock_ids is not None:
+        s = s.where(t.c.SECODE.in_(stock_ids))
+    if begin_date is not None:
+        s = s.where(t.c.TRADEDATE>=begin_date)
+    if end_date is not None:
+        s = s.where(t.c.TRADEDATE<=end_date)
+
+    df = pd.read_sql(s, engine, index_col=['trade_date', 'stock_id'], parse_dates=['trade_date'])
+
+    return df
 
 if __name__ == '__main__':
 
-    load_stock_nav(begin_date='20181201', end_date='20181227')
+    load_stock_price(begin_date='20181201', end_date='20181227')
+    load_stock_market_data(begin_date='20000101')
+
 

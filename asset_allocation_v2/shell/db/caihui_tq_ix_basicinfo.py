@@ -1,7 +1,7 @@
 #coding=utf-8
 '''
-Edited at Dec. 28, 2018
-Editor: Shixun Su
+Created on: Dec. 28, 2018
+Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
 
@@ -14,15 +14,15 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_index_basic_info(index_ids=None, index_codes=None, est_class=None, status=1):
+def load_index_code_info(index_ids=None, index_codes=None, est_class=None, status=1):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
     t = Table('tq_ix_basicinfo', metadata, autoload=True)
 
     columns = [
-            t.c.SECODE.label('index_id'),
-            t.c.SYMBOL.label('index_code')
+        t.c.SECODE.label('index_id'),
+        t.c.SYMBOL.label('index_code')
     ]
 
     s = select(columns)
@@ -42,5 +42,5 @@ def load_index_basic_info(index_ids=None, index_codes=None, est_class=None, stat
 
 if __name__ == '__main__':
 
-    load_index_basic_info(est_class='申万一级行业指数')
+    load_index_code_info(est_class='申万一级行业指数')
 
