@@ -72,4 +72,9 @@ from . import caihui_tq_sk_basicinfo
 from . import caihui_tq_sk_dquoteindic
 from . import caihui_tq_sk_finindic
 from . import caihui_tq_sk_sharestruchg
+from . import factor_sp_stock_portfolio
+from . import factor_sp_stock_portfolio_argv
+from . import factor_sp_stock_portfolio_pos
+from . import factor_sp_stock_portfolio_nav
+
 
