@@ -73,14 +73,14 @@ class StockPortfolioData:
         self.reindex_total = reindex
         self.look_back = look_back
         self.period = period
-        self.reindex = self.reindex_total[self.look_back-1::self.period]
+        self.reindex = self.reindex_total[self.look_back::self.period]
 
         self.df_index_historical_constituents = caihui_tq_ix_comp.load_index_historical_constituents(
             self.index_id,
             begin_date=self.reindex[0].strftime('%Y%m%d'),
             end_date=self.reindex[-1].strftime('%Y%m%d')
         )
-        self.stock_pool = self.df_index_historical_constituents.loc[:, ['stock_id', 'stock_code']].drop_duplicates(['stock_id']).set_index('stock_id').sort_index()
+        self.stock_pool = self.df_index_historical_constituents.loc[:, ['stock_id', 'stock_code']].drop_duplicates(subset=['stock_id']).set_index('stock_id').sort_index()
 
         self.df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_price(stock_ids=self.stock_pool.index, reindex=self.reindex_total)
         self.df_stock_ret = self.df_stock_prc.pct_change().iloc[1:]
@@ -321,11 +321,11 @@ class StockPortfolio: # (metaclass=MetaClassPropertyDecorator)
 
         self.cal_stock_pos_days()
 
-        df_stock_pos_adjusted = pd.DataFrame(columns=self.stock_pool.index)
-        df_stock_pos_adjusted = pd.concat([df_stock_pos_adjusted, self.df_stock_pos.iloc[[0], :].fillna(0.0)], sort=True)
-        ser_portfolio_nav = pd.Series(1.0, index=self.reindex)
-        ser_portfolio_inc = pd.Series(0.0, index=self.reindex)
-        ser_turnover = pd.Series(0.0, index=self.reindex)
+        df_stock_pos_adjusted = pd.DataFrame(index=self.reindex, columns=self.stock_pool.index)
+        df_stock_pos_adjusted.loc[self.reindex[0]] = self.df_stock_pos.loc[self.reindex[0], :].fillna(0.0)
+        ser_portfolio_nav = pd.Series(1.0, index=self.reindex, name='nav')
+        ser_portfolio_inc = pd.Series(0.0, index=self.reindex, name='inc')
+        ser_turnover = pd.Series(0.0, index=self.reindex, name='turnover')
 
         for last_trade_date, trade_date in zip(self.reindex[:-1], self.reindex[1:]):
 
@@ -347,8 +347,7 @@ class StockPortfolio: # (metaclass=MetaClassPropertyDecorator)
             stock_pos_adjusted.loc[index_adjustable_stock] = stock_pos_standard.loc[index_adjustable_stock] / sum_pos_standard * sum_pos_adjustable
             ser_turnover.loc[trade_date] = (stock_pos_adjusted - stock_pos).abs().sum()
 
-            stock_pos_adjusted = stock_pos_adjusted.to_frame(name=trade_date).T
-            df_stock_pos_adjusted = pd.concat([df_stock_pos_adjusted, stock_pos_adjusted], sort=True)
+            df_stock_pos_adjusted.loc[trade_date] = stock_pos_adjusted
 
         self._df_stock_pos_adjusted = df_stock_pos_adjusted
         self._ser_portfolio_nav = ser_portfolio_nav
@@ -376,7 +375,7 @@ class StockPortfolio: # (metaclass=MetaClassPropertyDecorator)
 
     def _load_stock_price(self, trade_date):
 
-        reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back:]
+        reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back-1:]
         stock_ids = self._load_stock_pool(trade_date).index
 
         # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex)
@@ -386,7 +385,7 @@ class StockPortfolio: # (metaclass=MetaClassPropertyDecorator)
 
     def _load_stock_return(self, trade_date):
 
-        reindex = self.reindex_total[self.reindex_total<=trade_date][1-self.look_back:]
+        reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back:]
         stock_ids = self._load_stock_pool(trade_date).index
 
         # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex)
@@ -451,7 +450,7 @@ class StockPortfolioMarketCap(StockPortfolio):
             (self.df_stock_historical_share.begin_date<=trade_date) & \
             ((self.df_stock_historical_share.end_date>trade_date) | \
             (self.df_stock_historical_share.end_date=='19000101'))
-        ].set_index('stock_id').reindex(stock_ids)
+        ].sort_values(by='begin_date').drop_duplicates(subset=['stock_id'], keep='last').set_index('stock_id').reindex(stock_ids)
 
         return df_stock_share
 
@@ -495,7 +494,7 @@ class StockPortfolioMininumVolatility(StockPortfolio):
         df_stock_status = self.df_stock_status.loc[df_stock_ret.index, stock_ids]
 
         df_stock_ret[df_stock_status>2] = np.nan
-        ser_stock_volatility = df_stock_ret.apply(np.std)
+        ser_stock_volatility = df_stock_ret.std()
 
         stock_pos = pd.Series(index=stock_ids, name=trade_date)
         stock_pos.loc[:] = ser_stock_volatility.apply(lambda x: 1.0/x if x>0.0 else 0.0)
@@ -533,7 +532,7 @@ class StockPortfolioMomentum(StockPortfolio):
 
 class StockPortfolioSmallSize(StockPortfolioMarketCap):
 
-    def __init__(self, index_id, reindex, look_back, period, percentage=0.3, *args, **kwargs):
+    def __init__(self, index_id, reindex, look_back, period, percentage, *args, **kwargs):
 
         super(StockPortfolioSmallSize, self).__init__(index_id, reindex, look_back, period, *args, **kwargs)
 
@@ -603,7 +602,7 @@ class StockPortfolioIndustryMomentum(StockPortfolioIndustry, StockPortfolioMomen
         super(StockPortfolioIndustryMomentum, self).__init__(index_id, reindex, look_back, period, sw_industry_code, exclusion, *args, **kwargs)
 
 
-def func(classname, index_id, trade_dates, look_back, period, sw_industry_codes, *args, **kwargs):
+def func(class_name, index_id, trade_dates, look_back, period, sw_industry_codes, *args, **kwargs):
 
     df = pd.DataFrame()
 
@@ -611,13 +610,13 @@ def func(classname, index_id, trade_dates, look_back, period, sw_industry_codes,
 
         if sw_industry_code is not None:
 
-            cls = globals()[classname]
+            cls = globals()[class_name]
             portfolio = cls(index_id, trade_dates, look_back, period, sw_industry_code, *args, **kwargs)
             df[sw_industry_code] = portfolio.cal_portfolio_nav()
 
-            df.to_csv(f'{classname}_{sw_industry_code}.csv')
+            df.to_csv(f'{class_name}_{sw_industry_code}.csv')
 
-def multiprocessing_cal_portfolio_nav_by_industry(classname, index_id, trade_dates, look_back, period, cpu_count=4, *args, **kwargs):
+def multiprocessing_cal_portfolio_nav_by_industry(class_name, index_id, trade_dates, look_back, period, cpu_count=4, *args, **kwargs):
 
     portfolio = StockPortfolio(index_id, trade_dates, look_back, period)
 
@@ -632,7 +631,7 @@ def multiprocessing_cal_portfolio_nav_by_industry(classname, index_id, trade_dat
 
     for sw_industry_codes in arr_sw_industry_codes:
 
-        process = multiprocessing.Process(target=func, args=(classname, index_id, trade_dates, look_back, period, sw_industry_codes, *args), kwargs={**kwargs})
+        process = multiprocessing.Process(target=func, args=(class_name, index_id, trade_dates, look_back, period, sw_industry_codes, *args), kwargs={**kwargs})
         process.start()
 
 
@@ -660,10 +659,10 @@ if __name__ == '__main__':
     # dict_portfolio['MininumVolatility'] = StockPortfolioMininumVolatility(index_id, trade_dates, look_back, period)
     # df_portfolio_nav['MininumVolatility'] = dict_portfolio['MininumVolatility'].cal_portfolio_nav()
 
-    # dict_portfolio['Momentum'] = StockPortfolioMomentum(index_id, trade_dates, look_back, period, 20)
+    # dict_portfolio['Momentum'] = StockPortfolioMomentum(index_id, trade_dates, look_back, period, exclusion=20)
     # df_portfolio_nav['Momentum'] = dict_portfolio['Momentum'].cal_portfolio_nav()
 
-    # dict_portfolio['SmallSize'] = StockPortfolioSmallSize(index_id, trade_dates, look_back, period, pct=0.3)
+    # dict_portfolio['SmallSize'] = StockPortfolioSmallSize(index_id, trade_dates, look_back, period, percentage=0.3)
     # df_portfolio_nav['SmallSize'] = dict_portfolio['SmallSize'].cal_portfolio_nav()
 
     # df_portfolio_nav.to_csv('df_portfolio_nav.csv')
