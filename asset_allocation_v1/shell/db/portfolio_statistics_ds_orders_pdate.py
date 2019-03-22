@@ -67,7 +67,7 @@ def get_min_date():
     rst = session.query(t).order_by(asc(t.c.ds_placed_date)).order_by(asc(t.c.ds_placed_time)).first()
     min_date = rst.ds_placed_date
     if min_date is None:
-        min_date = '2016-08-17'
+        min_date = datetime.date(2016, 8, 17)
     return min_date
 
 def get_max_date():
