@@ -23,7 +23,7 @@ def load_company_share(company_ids=None, date=None):
     columns = [
         t.c.COMPCODE.label('company_id'),
         t.c.TOTALSHARE.label('total_share'),
-        t.c.FCIRCSKAMT.label('fcircskamt')
+        t.c.FCIRCAAMT.label('free_float_share')
     ]
 
     s = select(columns)
@@ -55,7 +55,7 @@ def load_company_historical_share(company_ids=None, begin_date=None, end_date=No
         t.c.BEGINDATE.label('begin_date'),
         t.c.ENDDATE.label('end_date'),
         t.c.TOTALSHARE.label('total_share'),
-        t.c.FCIRCSKAMT.label('free_float_share')
+        t.c.FCIRCAAMT.label('free_float_share')
     ]
 
     s = select(columns)

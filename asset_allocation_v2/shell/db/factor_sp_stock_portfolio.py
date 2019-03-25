@@ -51,7 +51,7 @@ def max_id_between(min_id, max_id):
 
     return s.execute().scalar()
 
-def save(portfolio_ids, df_new):
+def save(portfolio_id, df_new):
 
     engine = database.connection('factor')
     metadata = MetaData(bind=engine)
@@ -59,7 +59,7 @@ def save(portfolio_ids, df_new):
 
     columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
 
-    s = select(columns).where(t.c.globalid.in_(portfolio_ids))
+    s = select(columns).where(t.c.globalid==portfolio_id)
 
     df_old = pd.read_sql(s, engine, index_col=['globalid'])
 

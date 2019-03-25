@@ -14,7 +14,7 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_nav(portfolio_ids=None, begin_date=None, end_date=None, reindex=None):
+def load_nav(portfolio_id, begin_date=None, end_date=None, reindex=None):
 
     engine = database.connection('factor')
     metadata = MetaData(bind=engine)
@@ -26,9 +26,7 @@ def load_nav(portfolio_ids=None, begin_date=None, end_date=None, reindex=None):
         t.c.sp_nav,
     ]
 
-    s = select(columns)
-    if portfolio_ids is not None:
-        s = s.where(t.c.globalid.in_(portfolio_ids))
+    s = select(columns).where(t.c.globalid==portfolio_id)
     if begin_date is not None:
         s = s.where(t.c.sp_date>=begin_date)
     if end_date is not None:
@@ -42,7 +40,7 @@ def load_nav(portfolio_ids=None, begin_date=None, end_date=None, reindex=None):
 
     return df
 
-def save(portfolio_ids, df_new):
+def save(portfolio_id, df_new):
 
     fmt_columns = ['sp_nav', 'sp_inc']
     fmt_precision = 6
@@ -55,7 +53,7 @@ def save(portfolio_ids, df_new):
 
     columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
 
-    s = select(columns).where(t.c.globalid.in_(portfolio_ids))
+    s = select(columns).where(t.c.globalid==portfolio_id)
 
     df_old = pd.read_sql(s, engine, index_col=['globalid', 'sp_date'], parse_dates=['sp_date'])
 

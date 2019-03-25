@@ -14,7 +14,7 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load(portfolio_ids=None):
+def load(portfolio_id):
 
     engine = database.connection('factor')
     metadata = MetaData(bind=engine)
@@ -27,9 +27,7 @@ def load(portfolio_ids=None):
         t.c.sp_sk_pos
     ]
 
-    s = select(columns)
-    if portfolio_ids is not None:
-        s = s.where(t.c.globalid.in_(portfolio_ids))
+    s = select(columns).where(t.c.globalid==portfolio_id)
 
     df = pd.read_sql(s, engine, index_col=['globalid', 'sp_date', 'sp_sk_id'], parse_dates=['sp_date'])
 
@@ -37,7 +35,7 @@ def load(portfolio_ids=None):
 
     return df
 
-def save(portfolio_ids, df_new):
+def save(portfolio_id, df_new):
 
     fmt_columns = ['sp_sk_pos']
     fmt_precision = 6
@@ -50,7 +48,7 @@ def save(portfolio_ids, df_new):
 
     columns = [literal_column(c) for c in (df_new.index.names + list(df_new.columns))]
 
-    s = select(columns).where(t.c.globalid.in_(portfolio_ids))
+    s = select(columns).where(t.c.globalid==portfolio_id)
 
     df_old = pd.read_sql(s, engine, index_col=['globalid', 'sp_date', 'sp_sk_id'], parse_dates=['sp_date'])
 
