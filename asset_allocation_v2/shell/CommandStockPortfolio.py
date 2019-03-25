@@ -79,30 +79,48 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     stock_portfolio_id = stock_portfolio_info.name
     algo = stock_portfolio_info.loc['sp_algo']
 
-    df_argv = factor_sp_stock_portfolio_argv.load(portfolio_ids=[stock_portfolio_id])
+    df_argv = factor_sp_stock_portfolio_argv.load(portfolio_id=stock_portfolio_id)
     kwargs = df_argv.loc[stock_portfolio_id].sp_value.to_dict()
 
     list_int_arg = [
         'look_back',
-        'period',
         'exclusion',
-        'percentage',
-        'sw_industry_code'
+    ]
+
+    list_float_arg = [
+        'percentage'
     ]
 
     for arg in list_int_arg:
         if kwargs.get(arg) is not None:
             kwargs[arg] = int(kwargs.get(arg))
 
-    kwargs['reindex'] = ATradeDate.trade_date(begin_date=begin_date, end_date=end_date, lookback=kwargs.get('look_back')).rename('trade_date')
+    for arg in list_float_arg:
+        if kwargs.get(arg) is not None:
+            kwargs[arg] =float(kwargs.get(arg))
+
+    period = kwargs.get('period', 'day')
+
+    if period == 'day':
+        kwargs['reindex'] = ATradeDate.trade_date(begin_date=begin_date, end_date=end_date).rename('trade_date')
+    elif period == 'week':
+        kwargs['reindex'] = ATradeDate.week_trade_date(begin_date=begin_date, end_date=end_date).rename('trade_date')
+    elif period == 'month':
+        kwargs['reindex'] = ATradeDate.month_trade_date(begin_date=begin_date, end_date=end_date).rename('trade_date')
+
+    else:
+        click.echo(click.style(f'\n Period {period} is unknown for stock portfolio {stock_portfolio_id}.', fg='red'))
+        return
 
     try:
 
         class_name = f'StockPortfolio{algo}'
         cls = getattr(stock_portfolio, class_name)
+
         class_stock_portfolio = cls(**kwargs)
         click.echo(click.style(f'\n Stock data for stock portfolio {stock_portfolio_id} loaded.', fg='yellow'))
-        class_stock_portfolio.cal_portfolio_nav()
+
+        class_stock_portfolio.calc_portfolio_nav()
         click.echo(click.style(f'\n Nav of stock portfolio {stock_portfolio_id} calculated.', fg='yellow'))
 
         df_pos = deepcopy(class_stock_portfolio.df_stock_pos_adjusted)
@@ -129,8 +147,8 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     df_nav['globalid'] = stock_portfolio_id
     df_nav = df_nav.set_index(['globalid', 'sp_date'])
 
-    factor_sp_stock_portfolio_pos.save([stock_portfolio_id], df_pos)
-    factor_sp_stock_portfolio_nav.save([stock_portfolio_id], df_nav)
+    factor_sp_stock_portfolio_pos.save(stock_portfolio_id, df_pos)
+    factor_sp_stock_portfolio_nav.save(stock_portfolio_id, df_nav)
 
     click.echo(click.style(f'\n Successfully updated pos and nav of stock portfolio {stock_portfolio_info.name}!', fg='green'))
 
@@ -154,12 +172,12 @@ def copy(ctx, optsrc, optdst):
     # copy sp_stock_portfolio
     df_stock_portfolio_info = factor_sp_stock_portfolio.load(portfolio_ids=[src_portfolio_id])
     df_stock_portfolio_info.rename(index={src_portfolio_id: dst_portfolio_id}, inplace=True)
-    factor_sp_stock_portfolio.save([dst_portfolio_id], df_stock_portfolio_info)
+    factor_sp_stock_portfolio.save(dst_portfolio_id, df_stock_portfolio_info)
 
     # copy sp_stock_portfolio_argv
-    df_stock_portfolio_argv = factor_sp_stock_portfolio_argv.load(portfolio_ids=[src_portfolio_id])
+    df_stock_portfolio_argv = factor_sp_stock_portfolio_argv.load(portfolio_id=src_portfolio_id)
     df_stock_portfolio_argv.rename(index={src_portfolio_id: dst_portfolio_id}, level='globalid', inplace=True)
-    factor_sp_stock_portfolio_argv.save([dst_portfolio_id], df_stock_portfolio_argv)
+    factor_sp_stock_portfolio_argv.save(dst_portfolio_id, df_stock_portfolio_argv)
 
     click.echo(click.style(f'\n Successfully created stock portfolio {dst_portfolio_id}!', fg='green'))
 
