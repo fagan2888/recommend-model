@@ -105,6 +105,24 @@ def load_stock_industry(stock_ids=None):
 
     return df
 
+def load_sw_industry_code_info():
+
+    engine = database.connection('caihui')
+    metadata = MetaData(bind=engine)
+    t = Table('tq_sk_basicinfo', metadata, autoload=True)
+
+    columns = [
+        func.distinct(t.c.SWLEVEL1CODE).label('sw_level1_code'),
+        t.c.SWLEVEL1NAME.label('sw_level1_name')
+    ]
+
+    s = select(columns)
+
+    df = pd.read_sql(s, engine, index_col=['sw_level1_code'])
+    df = df.sort_index().dropna()
+
+    return df
+
 if __name__ == '__main__':
 
     load_stock_code_info()
