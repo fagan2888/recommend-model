@@ -577,11 +577,11 @@ def func(algo, index_id, trade_dates, look_back, sw_industry_code, *args, **kwar
 
 def multiprocessing_calc_portfolio_nav_by_industry(algo, index_id, trade_dates, look_back, *args, **kwargs):
 
+    sw_industry_codes = caihui_tq_sk_basicinfo.load_sw_industry_code_info().index
+
     portfolio = StockPortfolio(index_id, trade_dates, look_back)
 
-    arr_sw_industry_code = np.array(portfolio.df_stock_industry.sw_level1_code.drop_duplicates().dropna().sort_values())
-
-    for sw_industry_code in arr_sw_industry_code:
+    for sw_industry_code in sw_industry_codes:
 
         process = multiprocessing.Process(target=func, args=(algo, index_id, trade_dates, look_back, sw_industry_code, *args), kwargs={**kwargs})
         process.start()

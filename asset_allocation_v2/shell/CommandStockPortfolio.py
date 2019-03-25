@@ -16,6 +16,7 @@ from tabulate import tabulate
 # from ipdb import set_trace
 sys.path.append('shell')
 from db import database
+from db import caihui_tq_sk_basicinfo
 from db import factor_sp_stock_portfolio, factor_sp_stock_portfolio_argv, factor_sp_stock_portfolio_pos, factor_sp_stock_portfolio_nav
 from trade_date import ATradeDate
 import stock_portfolio
@@ -24,11 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 @click.group(invoke_without_command=True)
-@click.option('--list/--no-list', 'optlist', default=False, help='print stock paortfolio list')
-@click.option('--id', 'optid', help='stock portfolio id')
+@click.option('--list/--no-list', 'optlist', default=False, help='print list of stock paortfolios')
+@click.option('--id', 'optid', help='stock portfolio ids')
 @click.option('--begin-date', 'begin_date', default='2006-01-01', help='begin date to calculate')
 @click.option('--end-date', 'end_date', help='end date to calculate')
-@click.option('--cpu-count', 'cpu_count', type=int, default=0, help='how many cpu to use, (0 for all available)')
+@click.option('--cpu-count', 'cpu_count', type=int, default=0, help='cpu count to use, (0 for all available)')
 @click.pass_context
 def sp(ctx, optlist, optid, begin_date, end_date, cpu_count):
     ''' stock portfolio
@@ -38,7 +39,7 @@ def sp(ctx, optlist, optid, begin_date, end_date, cpu_count):
 
         if optlist:
 
-            df_stock_portfolio_info = factor_sp_stock_portfolio.load()
+            df_stock_portfolio_info = factor_sp_stock_portfolio.load_all()
             print(tabulate(df_stock_portfolio_info, headers='keys', tablefmt='psql'))
 
             return
@@ -49,11 +50,11 @@ def sp(ctx, optlist, optid, begin_date, end_date, cpu_count):
 
 
 @sp.command()
-@click.option('--id', 'optid', help='stock portfolio id to update')
-@click.option('--type', 'opttype', default='0,1', help='which type to run')
+@click.option('--id', 'optid', help='stock portfolio ids to update')
+@click.option('--type', 'opttype', help='stock portfolio types to update')
 @click.option('--begin-date', 'begin_date', default='2006-01-01', help='begin date to calculate')
 @click.option('--end-date', 'end_date', help='end date to calculate')
-@click.option('--cpu-count', 'cpu_count', type=int, default=0, help='how many cpu to use, (0 for all available)')
+@click.option('--cpu-count', 'cpu_count', type=int, default=0, help='cpu count to use, (0 for all available)')
 @click.pass_context
 def pos_n_nav(ctx, optid, opttype, begin_date, end_date, cpu_count):
     ''' calculate pos and nav of stock portfolio to update
@@ -64,12 +65,20 @@ def pos_n_nav(ctx, optid, opttype, begin_date, end_date, cpu_count):
     else:
         list_portfolio_id = None
 
-    list_type = [s.strip() for s in opttype.split(',')]
+    if opttype is not None:
+        list_type = [s.strip() for s in opttype.split(',')]
+    else:
+        list_type = None
+
+    if list_portfolio_id is None and list_type is None:
+
+        click.echo(click.style(f'\n Either stock portfolio id or type is required to perform pos n nav.', fg='red'))
+        return
 
     if list_portfolio_id is not None:
-        df_stock_portfolio_info = factor_sp_stock_portfolio.load(portfolio_ids=list_portfolio_id)
+        df_stock_portfolio_info = factor_sp_stock_portfolio.load_by_id(portfolio_ids=list_portfolio_id)
     else:
-        df_stock_portfolio_info = factor_sp_stock_portfolio.load(types=list_type)
+        df_stock_portfolio_info = factor_sp_stock_portfolio.load_by_type(types=list_type)
 
     for _, stock_portfolio_info in df_stock_portfolio_info.iterrows():
         pos_n_nav_update(stock_portfolio_info, begin_date, end_date)
@@ -84,7 +93,7 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 
     list_int_arg = [
         'look_back',
-        'exclusion',
+        'exclusion'
     ]
 
     list_float_arg = [
@@ -111,6 +120,11 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     else:
         click.echo(click.style(f'\n Period {period} is unknown for stock portfolio {stock_portfolio_id}.', fg='red'))
         return
+
+    if stock_portfolio_id[-2:] != '00':
+
+        algo = f'Industry{algo}'
+        kwargs['sw_industry_code'] = f'{stock_portfolio_id[-2:]}0000'
 
     try:
 
@@ -154,30 +168,163 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 
 
 @sp.command()
-@click.option('--src', 'optsrc', help='src id of stock portfolio to copy from')
-@click.option('--dst', 'optdst', help='dst id of stock portfolio to copy to')
+@click.option('--id', 'optid', help='stock portfolio id')
+@click.option('--name', 'optname', default='', help='stock portfolio name')
+@click.option('--type', 'opttype', default='0', help='stock portfolio type')
+@click.option('--algo', 'optalgo', default='MarketCap', help='stock portfolio algo')
+@click.option('--argv', 'optargv', default='index_id:2070000191:指数ID,look_back:120:回测时长,period:day:调整间隔', help='stock portfolio argv')
+@click.option('--override/--no-override', 'optoverride', default=False, help='override existing stock portfolio or not')
 @click.pass_context
-def copy(ctx, optsrc, optdst):
+def create(ctx, optid, optname, opttype, optalgo, optargv, optoverride):
+    ''' create new stock portfolio
+    '''
+
+    if optid is None:
+
+        click.echo(click.style(f'\n Stock portfolio id is required to perform create.', fg='red'))
+        return
+
+    portfolio_id = optid
+    portfolio_name = optname
+    portfolio_type = opttype
+    portfolio_algo = optalgo
+    list_portfolio_argv = [[s2.strip() for s2 in s1.split(':')] for s1 in optargv.split(',')]
+
+    if not optoverride and factor_sp_stock_portfolio.load_by_id(portfolio_ids=[portfolio_id]).shape[0] > 0:
+
+        click.echo(click.style(f'\n Stock portfolio {portfolio_id} is existed.', fg='red'))
+        return
+
+    df_stock_portfolio_info = pd.DataFrame([[portfolio_name, portfolio_type, portfolio_algo]], columns=['sp_name', 'sp_type', 'sp_algo'])
+    df_stock_portfolio_info['globalid'] = portfolio_id
+    df_stock_portfolio_info = df_stock_portfolio_info.set_index('globalid')
+    factor_sp_stock_portfolio.save(portfolio_id, df_stock_portfolio_info)
+
+    df_stock_portfolio_argv = pd.DataFrame(list_portfolio_argv, columns=['sp_key', 'sp_value', 'sp_desc'])
+    df_stock_portfolio_argv['globalid'] = portfolio_id
+    df_stock_portfolio_argv = df_stock_portfolio_argv.set_index(['globalid', 'sp_key'])
+    factor_sp_stock_portfolio_argv.save(portfolio_id, df_stock_portfolio_argv)
+
+    click.echo(click.style(f'\n Successfully created stock portfolio {portfolio_id}!', fg='green'))
+
+
+@sp.command()
+@click.option('--src', 'optsrc', help='source id of stock portfolio to copy from')
+@click.option('--dst', 'optdst', help='destination id of stock portfolio to copy to')
+@click.option('--override/--no-override', 'optoverride', default=False, help='override existing stock portfolio or not')
+@click.pass_context
+def copy(ctx, optsrc, optdst, optoverride):
     ''' create new stock portfolio by copying existed one
     '''
 
     if optsrc is None or optdst is None:
 
-        click.echo(click.style(f'\n Both src id and dst id are required to perform copy.', fg='red'))
+        click.echo(click.style(f'\n Both source id and destination id are required to perform copy.', fg='red'))
         return
 
     src_portfolio_id = optsrc
     dst_portfolio_id = optdst
 
-    # copy sp_stock_portfolio
-    df_stock_portfolio_info = factor_sp_stock_portfolio.load(portfolio_ids=[src_portfolio_id])
+    if factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id]).shape[0] == 0:
+
+        click.echo(click.style(f'\n Stock portfolio {src_portfolio_id} is not existed.', fg='red'))
+        return
+
+    if not optoverride and factor_sp_stock_portfolio.load_by_id(portfolio_ids=[dst_portfolio_id]).shape[0] > 0:
+
+        click.echo(click.style(f'\n Stock portfolio {dst_portfolio_id} is existed.', fg='red'))
+        return
+
+    df_stock_portfolio_info = factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id])
     df_stock_portfolio_info.rename(index={src_portfolio_id: dst_portfolio_id}, inplace=True)
     factor_sp_stock_portfolio.save(dst_portfolio_id, df_stock_portfolio_info)
 
-    # copy sp_stock_portfolio_argv
     df_stock_portfolio_argv = factor_sp_stock_portfolio_argv.load(portfolio_id=src_portfolio_id)
     df_stock_portfolio_argv.rename(index={src_portfolio_id: dst_portfolio_id}, level='globalid', inplace=True)
     factor_sp_stock_portfolio_argv.save(dst_portfolio_id, df_stock_portfolio_argv)
 
     click.echo(click.style(f'\n Successfully created stock portfolio {dst_portfolio_id}!', fg='green'))
+
+
+@sp.command()
+@click.option('--src', 'optsrc', help='source id of stock portfolio to devide from')
+@click.option('--override/--no-override', 'optoverride', default=False, help='override existing stock portfolio or not')
+@click.pass_context
+def devide(ctx, optsrc, optoverride):
+    ''' create new stock portfolio for industries
+    '''
+
+    if optsrc is None:
+
+        click.echo(click.style(f'\n Src id is required to perform devide.', fg='red'))
+        return
+
+    src_portfolio_id = optsrc
+
+    if src_portfolio_id[-2:] != '00':
+
+        click.echo(click.style(f'\n Source id {src_portfolio_id} is invalid.', fg='red'))
+        return
+
+    if factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id]).shape[0] == 0:
+
+        click.echo(click.style(f'\n Stock portfolio {src_portfolio_id} is not existed.', fg='red'))
+        return
+
+    if not optoverride and factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id[:-2]]).shape[0] > 1:
+
+        click.echo(click.style(f'\n Stock portfolio for industries {src_portfolio_id[:-2]} is existed.', fg='red'))
+        return
+
+    sw_industry_code_pool = caihui_tq_sk_basicinfo.load_sw_industry_code_info()
+    num_sw_industry = sw_industry_code_pool.shape[0]
+    list_dst_portfolio_id = [f'{src_portfolio_id[:-2]}{sw_industry_code[:2]}' for sw_industry_code in sw_industry_code_pool.index]
+
+    for dst_portfolio_id in list_dst_portfolio_id:
+
+        df_stock_portfolio_info = factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id])
+        df_stock_portfolio_info.rename(index={src_portfolio_id: dst_portfolio_id}, inplace=True)
+        factor_sp_stock_portfolio.save(dst_portfolio_id, df_stock_portfolio_info)
+
+        df_stock_portfolio_argv = factor_sp_stock_portfolio_argv.load(portfolio_id=src_portfolio_id)
+        df_stock_portfolio_argv.rename(index={src_portfolio_id: dst_portfolio_id}, level='globalid', inplace=True)
+        factor_sp_stock_portfolio_argv.save(dst_portfolio_id, df_stock_portfolio_argv)
+
+    click.echo(click.style(f'\n Successfully created stock portfolios for industries {list_dst_portfolio_id}!', fg='green'))
+
+
+@sp.command()
+@click.option('--id', 'optid', help='stock portfolio id to remove')
+@click.option('--except', 'optexcept', help='stock portfolio ids not to remove')
+@click.pass_context
+def remove(ctx, optid, optexcept):
+
+    if optid is None:
+
+        click.echo(click.style(f'\n Stock portfolio id is required to perform remove.', fg='red'))
+        return
+
+    if optexcept is not None:
+        list_except_portfolio_id = [s.strip() for s in optexcept.split(',')]
+    else:
+        list_except_portfolio_id = None
+
+    list_portfolio_id = list(factor_sp_stock_portfolio.load_by_id(portfolio_ids=[optid]).index)
+    list_portfolio_id = list(set(list_portfolio_id)-set(list_except_portfolio_id))
+
+    engine = database.connection('factor')
+    metadata = MetaData(bind=engine)
+    table_sp = Table('sp_stock_portfolio', metadata, autoload=True)
+    table_sp_argv = Table('sp_stock_portfolio_argv', metadata, autoload=True)
+    table_sp_pos = Table('sp_stock_portfolio_pos', metadata, autoload=True)
+    table_sp_nav = Table('sp_stock_portfolio_nav', metadata, autoload=True)
+
+    for portfolio_id in list_portfolio_id:
+
+        table_sp.delete(table_sp.c.globalid==portfolio_id).execute()
+        table_sp_argv.delete(table_sp_argv.c.globalid==portfolio_id).execute()
+        table_sp_pos.delete(table_sp_pos.c.globalid==portfolio_id).execute()
+        table_sp_nav.delete(table_sp_nav.c.globalid==portfolio_id).execute()
+
+    click.echo(click.style(f'\n Successfully remove stock portfolios {list_portfolio_id}!', fg='green'))
 
