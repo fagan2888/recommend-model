@@ -442,11 +442,11 @@ class StockPortfolioEqualWeight(StockPortfolio):
         return stock_pos
 
 
-class StockPortfolioMininumVolatility(StockPortfolio):
+class StockPortfolioMinimumVolatility(StockPortfolio):
 
     def __init__(self, index_id, reindex, look_back, *args, **kwargs):
 
-        super(StockPortfolioMininumVolatility, self).__init__(index_id, reindex, look_back, *args, **kwargs)
+        super(StockPortfolioMinimumVolatility, self).__init__(index_id, reindex, look_back, *args, **kwargs)
 
     def _calc_stock_pos(self, trade_date):
 
@@ -549,11 +549,11 @@ class StockPortfolioIndustry(StockPortfolio):
         return stock_ids_by_industry
 
 
-class StockPortfolioIndustryMininumVolatility(StockPortfolioIndustry, StockPortfolioMininumVolatility):
+class StockPortfolioIndustryMinimumVolatility(StockPortfolioIndustry, StockPortfolioMinimumVolatility):
 
     def __init__(self, index_id, reindex, look_back, sw_industry_code, *args, **kwargs):
 
-        super(StockPortfolioIndustryMininumVolatility, self).__init__(index_id, reindex, look_back, sw_industry_code, *args, **kwargs)
+        super(StockPortfolioIndustryMinimumVolatility, self).__init__(index_id, reindex, look_back, sw_industry_code, *args, **kwargs)
 
 
 class StockPortfolioIndustryMomentum(StockPortfolioIndustry, StockPortfolioMomentum):
@@ -606,8 +606,8 @@ if __name__ == '__main__':
     # dict_portfolio['EqualWeight'] = StockPortfolioEqualWeight(index_id, trade_dates, look_back)
     # df_portfolio_nav['EqualWeight'] = dict_portfolio['EqualWeight'].calc_portfolio_nav()
 
-    # dict_portfolio['MininumVolatility'] = StockPortfolioMininumVolatility(index_id, trade_dates, look_back)
-    # df_portfolio_nav['MininumVolatility'] = dict_portfolio['MininumVolatility'].calc_portfolio_nav()
+    # dict_portfolio['MinimumVolatility'] = StockPortfolioMinimumVolatility(index_id, trade_dates, look_back)
+    # df_portfolio_nav['MinimumVolatility'] = dict_portfolio['MinimumVolatility'].calc_portfolio_nav()
 
     # dict_portfolio['Momentum'] = StockPortfolioMomentum(index_id, trade_dates, look_back, exclusion=20)
     # df_portfolio_nav['Momentum'] = dict_portfolio['Momentum'].calc_portfolio_nav()
@@ -618,7 +618,7 @@ if __name__ == '__main__':
     # df_portfolio_nav.to_csv('df_portfolio_nav.csv')
     # set_trace()
 
-    # multiprocessing_calc_portfolio_nav_by_industry('IndustryMininumVolatility', index_id, trade_dates, look_back)
+    # multiprocessing_calc_portfolio_nav_by_industry('IndustryMinimumVolatility', index_id, trade_dates, look_back)
 
     # multiprocessing_calc_portfolio_nav_by_industry('IndustryMomentum', index_id, trade_dates, look_back, exclusion=30)
     # set_trace()
