@@ -41,7 +41,7 @@ def load(gid, reindex=None):
     s = select(columns)
 
     if gid is not None:
-        s = s.where(t1.c.ra_pool == pool_id).where(t1.c.ra_category == category)
+        s = s.where(t1.c.ra_pool == pool_id).where(t1.c.ra_category == category).where(t1.c.ra_fund_level != 2)
     else:
         return None
     # if xtypes is not None:

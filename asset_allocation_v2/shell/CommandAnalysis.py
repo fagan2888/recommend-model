@@ -869,7 +869,7 @@ def benchmark(ctx):
     bench_df = pd.DataFrame(data)
     benchmark_df = pd.concat([bench_df,df],axis = 1, join_axes = [bench_df.index])
 
-    benchmark_df = benchmark_df[benchmark_df.index >= '2016-01-01']
+    benchmark_df = benchmark_df[benchmark_df.index >= '2013-01-01']
     benchmark_df = benchmark_df / benchmark_df.iloc[0]
     #print(df.tail())
     benchmark_df.to_csv('benchmark.csv')
@@ -880,13 +880,13 @@ def benchmark(ctx):
 
     dfs = []
     for i in range(0, 10):
-        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 9' % i
         df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
         df.columns = ['risk_' + str(i)]
         dfs.append(df)
 
     df = pd.concat(dfs, axis = 1)
-    df = df[df.index >= '2017-01-01']
+    df = df[df.index >= '2013-01-01']
     online_df = df / df.iloc[0]
     df.to_csv('./online_nav.csv')
 
@@ -1104,3 +1104,4 @@ def fund_pool_fee(ctx):
             #if fid in fund_fee.index:
             fund_fees.append(fund_fee.loc[fid])
         print(pool_id, np.mean(fund_fees))
+
