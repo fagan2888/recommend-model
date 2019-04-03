@@ -20,7 +20,7 @@ import copy
 sys.path.append('shell')
 from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_qt_skdailyprice, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic, caihui_tq_sk_sharestruchg
 from trade_date import ATradeDate
-
+from util_timestamp import *
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class StockPortfolioData:
             begin_date=self.reindex[0],
             end_date=self.reindex[-1],
             lookback=self.look_back+1
-        )
+        ).rename('trade_date')
 
         self.df_index_historical_constituents = caihui_tq_ix_comp.load_index_historical_constituents(
             self.index_id,
@@ -391,17 +391,27 @@ class StockPortfolioMarketCap(StockPortfolio):
     def _calc_stock_pos(self, trade_date):
 
         stock_ids = self._load_stock_pool(trade_date).index
+
+        ser_stock_free_float_market_cap = self._calc_stock_free_float_market_cap(trade_date)
+
+        stock_pos = pd.Series(index=stock_ids, name=trade_date)
+        stock_pos.loc[:] = (ser_stock_free_float_market_cap).fillna(0.0)
+        stock_pos.loc[:] = stock_pos / stock_pos.sum()
+
+        return stock_pos
+
+    def _calc_stock_free_float_market_cap(self, trade_date):
+
+        stock_ids = self._load_stock_pool(trade_date).index
         df_stock_share = self._load_stock_share(trade_date)
         ser_stock_total_market_cap = self.stock_financial_data['total_market_cap'].loc[trade_date, stock_ids]
 
         ser_free_float_weight = df_stock_share.free_float_share / df_stock_share.total_share
         ser_free_float_weight.loc[:] = ser_free_float_weight.apply(self._weight_adjustment_algo)
 
-        stock_pos = pd.Series(index=stock_ids, name=trade_date)
-        stock_pos.loc[:] = (ser_stock_total_market_cap * ser_free_float_weight).fillna(0.0)
-        stock_pos.loc[:] = stock_pos / stock_pos.sum()
+        ser_stock_free_float_market_cap = ser_stock_total_market_cap * ser_free_float_weight
 
-        return stock_pos
+        return ser_stock_free_float_market_cap
 
     def _load_stock_share(self, trade_date):
 
@@ -442,12 +452,20 @@ class StockPortfolioEqualWeight(StockPortfolio):
         return stock_pos
 
 
-class StockPortfolioMinimumVolatility(StockPortfolio):
+class StockPortfolioMinimumVolatility(StockPortfolioMarketCap):
 
-    def __init__(self, index_id, reindex, look_back, *args, **kwargs):
+    def __init__(self, index_id, reindex, look_back, percentage, *args, **kwargs):
 
         super(StockPortfolioMinimumVolatility, self).__init__(index_id, reindex, look_back, *args, **kwargs)
 
+        self._percentage = percentage
+
+    @property
+    def percentage(self):
+
+        return self._percentage
+
+    # Refrence: http://www.csindex.com.cn/zh-CN/indices/index-detail/000803
     def _calc_stock_pos(self, trade_date):
 
         df_stock_ret = self._load_stock_return(trade_date)
@@ -456,9 +474,13 @@ class StockPortfolioMinimumVolatility(StockPortfolio):
 
         df_stock_ret[df_stock_status>2] = np.nan
         ser_stock_volatility = df_stock_ret.std()
+        ser_stock_free_float_market_cap = self._calc_stock_free_float_market_cap(trade_date)
 
-        stock_pos = pd.Series(index=stock_ids, name=trade_date)
-        stock_pos.loc[:] = ser_stock_volatility.apply(lambda x: 1.0/x if x>0.0 else 0.0)
+        portfolio_size = round(stock_ids.size * self.percentage)
+        minimum_volatility_stock_ids = ser_stock_volatility.sort_values(ascending=True).iloc[:portfolio_size].index
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[minimum_volatility_stock_ids] = ser_stock_free_float_market_cap.fillna(0.0)
         stock_pos.loc[:] = stock_pos / stock_pos.sum()
 
         return stock_pos
@@ -485,7 +507,7 @@ class StockPortfolioMomentum(StockPortfolio):
         ser_stock_momentum = df_stock_prc.iloc[-1-self.exclusion] / df_stock_prc.iloc[0]
 
         stock_pos = pd.Series(index=stock_ids, name=trade_date)
-        stock_pos.loc[:] = (math.e ** ser_stock_momentum).fillna(0.0)
+        stock_pos.loc[:] = ser_stock_momentum.fillna(0.0)
         stock_pos.loc[:] = stock_pos / stock_pos.sum()
 
         return stock_pos
@@ -507,17 +529,78 @@ class StockPortfolioSmallSize(StockPortfolioMarketCap):
     def _calc_stock_pos(self, trade_date):
 
         stock_ids = self._load_stock_pool(trade_date).index
-        df_stock_share = self._load_stock_share(trade_date)
-        ser_stock_total_market_cap = self.stock_financial_data['total_market_cap'].loc[trade_date, stock_ids]
 
-        ser_free_float_market_value = df_stock_share.free_float_share / df_stock_share.total_share * ser_stock_total_market_cap
+        ser_stock_free_float_market_cap = self._calc_stock_free_float_market_cap(trade_date)
+
         portfolio_size = round(stock_ids.size * self.percentage)
-        small_size_stock_ids = ser_free_float_market_value.sort_values(ascending=True).iloc[:portfolio_size].index
+        small_size_stock_ids = ser_stock_free_float_market_cap.sort_values(ascending=True).iloc[:portfolio_size].index
 
         stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
-        stock_pos.loc[small_size_stock_ids] = 1.0 / portfolio_size
+        stock_pos.loc[small_size_stock_ids] = ser_stock_free_float_market_cap.fillna(0.0)
+        stock_pos.iloc[:] = stock_pos / stock_pos.sum()
 
         return stock_pos
+
+
+def get_all_subclasses(cls, including_itself=False):
+
+    set_queue = set([cls])
+    set_subclasses = set()
+    if including_itself:
+        set_subclasses.add(cls)
+
+    while len(set_queue) > 0:
+
+        cls = set_queue.pop()
+        set_new_subclasses = set(cls.__subclasses__()) - set_subclasses
+        set_queue.update(set_new_subclasses)
+        set_subclasses.update(set_new_subclasses)
+
+    return set_subclasses
+
+
+class StockPortfolioBenchmark(StockPortfolio):
+
+    def __init__(self, index_id, reindex, look_back, percentage, benchmark_algo, *args, **kwargs):
+
+        super(StockPortfolioBenchmark, self).__init__(index_id, reindex, look_back, *args, **kwargs)
+
+        self._percentage = percentage
+
+        kwargs['look_back'] = look_back
+        kwargs['percentage'] = percentage
+        self._ser_benchmark_ret = self._load_benchmark_return(benchmark_algo, *args, **kwargs)
+
+    @property
+    def percentage(self):
+
+        return self._percentage
+
+    @property
+    def ser_benchmark_ret(self):
+
+        return self._ser_benchmark_ret
+
+    def _load_benchmark_return(self, benchmark_algo, *args, **kwargs):
+
+        benchmark_class_name = f'StockPortfolio{benchmark_algo}'
+        benchmark_cls = globals()[benchmark_class_name]
+
+        if benchmark_cls in get_all_subclasses(StockPortfolioBenchmark):
+            raise RuntimeError('It might cause an infinite loop.')
+
+        benchmark_kwargs = {}
+        for key, value in kwargs.items():
+            if key[:10] == 'benchmark_':
+                benchmark_kwargs[key[10:]] = value
+            elif key not in benchmark_kwargs:
+                benchmark_kwargs[key] = value
+
+        benchmark_portfolio = benchmark_cls(self.index_id, self.reindex_total, *args, **benchmark_kwargs)
+        df_benchmark_pos = benchmark_portfolio.calc_stock_pos_days().rename(index=trade_date_after)
+        ser_benchmark_ret = (df_benchmark_pos * benchmark_portfolio.df_stock_ret).loc[self.reindex_total[1:]].sum(axis='columns')
+
+        return ser_benchmark_ret
 
 
 class StockPortfolioIndustry(StockPortfolio):

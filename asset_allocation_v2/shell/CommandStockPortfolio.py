@@ -121,7 +121,7 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
         click.echo(click.style(f'\n Period {period} is unknown for stock portfolio {stock_portfolio_id}.', fg='red'))
         return
 
-    if stock_portfolio_id[-2:] != '00':
+    if stock_portfolio_id[:3] == 'SP.' and stock_portfolio_id[-2:] != '00':
 
         algo = f'Industry{algo}'
         kwargs['sw_industry_code'] = f'{stock_portfolio_id[-2:]}0000'
@@ -139,6 +139,8 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 
         df_pos = deepcopy(class_stock_portfolio.df_stock_pos_adjusted)
         df_nav = pd.DataFrame({'nav': class_stock_portfolio.ser_portfolio_nav, 'inc': class_stock_portfolio.ser_portfolio_inc})
+
+        class_stock_portfolio.portfolio_analysis()
 
     except AttributeError:
 
@@ -307,7 +309,7 @@ def remove(ctx, optid, optexcept):
     if optexcept is not None:
         list_except_portfolio_id = [s.strip() for s in optexcept.split(',')]
     else:
-        list_except_portfolio_id = None
+        list_except_portfolio_id = []
 
     list_portfolio_id = list(factor_sp_stock_portfolio.load_by_id(portfolio_ids=[optid]).index)
     list_portfolio_id = list(set(list_portfolio_id)-set(list_except_portfolio_id))

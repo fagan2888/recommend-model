@@ -130,3 +130,20 @@ def trade_date_before(date):
 
     # return trade_dates[lo]
 
+def trade_date_not_earlier_than(date):
+
+    trade_dates = ATradeDate.trade_date()
+
+    try:
+        date = trade_dates[trade_dates.get_loc(date, method='backfill')]
+    except KeyError:
+        return np.nan
+
+    return date
+
+def trade_date_after(date):
+
+    date = date + relativedelta(days=+1)
+
+    return trade_date_not_earlier_than(date)
+
