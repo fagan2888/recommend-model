@@ -19,7 +19,7 @@ from db import database
 from db import caihui_tq_sk_basicinfo
 from db import factor_sp_stock_portfolio, factor_sp_stock_portfolio_argv, factor_sp_stock_portfolio_pos, factor_sp_stock_portfolio_nav
 from trade_date import ATradeDate
-import stock_portfolio
+import stock_portfolio3 as stock_portfolio
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +139,8 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 
         df_pos = deepcopy(class_stock_portfolio.df_stock_pos_adjusted)
         df_nav = pd.DataFrame({'nav': class_stock_portfolio.ser_portfolio_nav, 'inc': class_stock_portfolio.ser_portfolio_inc})
+
+        print(class_stock_portfolio.portfolio_analysis())
 
     except AttributeError:
 
