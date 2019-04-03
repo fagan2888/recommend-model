@@ -39,7 +39,7 @@ def mt(ctx):
 @mt.command()
 @click.option('--start-date', 'startdate', default='2012-07-27', help='start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help='start date to calc')
-@click.option('--viewid', 'viewid', default='BL.000001', help='macro timing view id')
+@click.option('--viewid', 'viewid', default='BL.000002', help='macro timing view id')
 @click.option('--index', 'idx', default='sz', help='macro timing view id')
 @click.pass_context
 def macro_view_update(ctx, startdate, enddate, viewid, idx):
@@ -100,7 +100,7 @@ def macro_view_update(ctx, startdate, enddate, viewid, idx):
 @mt.command()
 @click.option('--start-date', 'startdate', default='2012-07-27', help='start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help='start date to calc')
-@click.option('--viewid', 'viewid', default='BL.000001', help='macro timing view id')
+@click.option('--viewid', 'viewid', default='BL.000002', help='macro timing view id')
 @click.pass_context
 def bond_view_update(ctx, startdate, enddate, viewid):
     backtest_interval = pd.date_range(startdate, enddate)
@@ -153,7 +153,7 @@ def bond_view_update(ctx, startdate, enddate, viewid):
 @mt.command()
 @click.option('--start-date', 'startdate', default='2012-07-27', help='start date to calc')
 @click.option('--end-date', 'enddate', default=datetime.today().strftime('%Y-%m-%d'), help='start date to calc')
-@click.option('--viewid', 'viewid', default='BL.000001', help='macro timing view id')
+@click.option('--viewid', 'viewid', default='BL.000002', help='macro timing view id')
 @click.pass_context
 def sp_view_update(ctx, startdate, enddate, viewid):
     #backtest_interval = pd.date_range(startdate, enddate)
@@ -205,7 +205,7 @@ def sp_view_update(ctx, startdate, enddate, viewid):
 @mt.command()
 @click.option('--start-date','startdate',default='2003-01-01',help=u'start date to calc')
 @click.option('--end-date','enddate',default=datetime.today().strftime('%Y-%m-%d'),help=u'startdate to calc')
-@click.option('--viewid','viewid',default='BL.000001',help=u'macro timing view id')
+@click.option('--viewid','viewid',default='BL.000002',help=u'macro timing view id')
 @click.pass_context
 def gold_view_update(ctx,startdate,enddate,viewid):
     #function:"更新结果"
