@@ -14,16 +14,16 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_nav(portfolio_id, begin_date=None, end_date=None, reindex=None):
+def load(portfolio_id, begin_date=None, end_date=None, reindex=None):
 
     engine = database.connection('factor')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio_nav', metadata, autoload=True)
 
     columns = [
-        t.c.globalid,
-        t.c.sp_date,
-        t.c.sp_nav,
+        t.c.sp_date.label('trade_date'),
+        t.c.sp_nav.label('nav'),
+        t.c.sp_inc.label('inc')
     ]
 
     s = select(columns).where(t.c.globalid==portfolio_id)
@@ -32,9 +32,9 @@ def load_nav(portfolio_id, begin_date=None, end_date=None, reindex=None):
     if end_date is not None:
         s = s.where(t.c.sp_date<=end_date)
 
-    df = pd.read_sql(s, engine, parse_dates=['sp_date'])
+    df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
 
-    df = df.pivot('sp_date', 'globalid', 'sp_nav')
+    # df = df.pivot('sp_date', 'globalid', 'sp_nav')
     if reindex is not None:
         df = df.reindex(reindex, method='pad')
 

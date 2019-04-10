@@ -1,6 +1,7 @@
 #coding=utf-8
 '''
 Created on: Mar. 19, 2019
+Modified on: Apr. 8, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -27,11 +28,12 @@ logger = logging.getLogger(__name__)
 @click.group(invoke_without_command=True)
 @click.option('--list/--no-list', 'optlist', default=False, help='print list of stock paortfolios')
 @click.option('--id', 'optid', help='stock portfolio ids')
+@click.option('--type', 'opttype', help='stock portfolio types to update')
 @click.option('--begin-date', 'begin_date', default='2006-01-01', help='begin date to calculate')
 @click.option('--end-date', 'end_date', help='end date to calculate')
 @click.option('--cpu-count', 'cpu_count', type=int, default=0, help='cpu count to use, (0 for all available)')
 @click.pass_context
-def sp(ctx, optlist, optid, begin_date, end_date, cpu_count):
+def sp(ctx, optlist, optid, opttype, begin_date, end_date, cpu_count):
     ''' stock portfolio
     '''
 
@@ -46,7 +48,7 @@ def sp(ctx, optlist, optid, begin_date, end_date, cpu_count):
 
         else:
 
-            ctx.invoke(pos_n_nav, optid=optid, begin_date=begin_date, end_date=end_date, cpu_count=cpu_count)
+            ctx.invoke(pos_n_nav, optid=optid, opttype=opttype, begin_date=begin_date, end_date=end_date, cpu_count=cpu_count)
 
 
 @sp.command()
@@ -86,6 +88,7 @@ def pos_n_nav(ctx, optid, opttype, begin_date, end_date, cpu_count):
 def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 
     stock_portfolio_id = stock_portfolio_info.name
+    stock_portfolio_type = stock_portfolio_info.loc['sp_type']
     algo = stock_portfolio_info.loc['sp_algo']
 
     df_argv = factor_sp_stock_portfolio_argv.load(portfolio_id=stock_portfolio_id)
@@ -121,7 +124,7 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
         click.echo(click.style(f'\n Period {period} is unknown for stock portfolio {stock_portfolio_id}.', fg='red'))
         return
 
-    if stock_portfolio_id[:3] == 'SP.' and stock_portfolio_id[-2:] != '00':
+    if stock_portfolio_id[:3] != 'CS.' and stock_portfolio_id[-2:] != '00':
 
         algo = f'Industry{algo}'
         kwargs['sw_industry_code'] = f'{stock_portfolio_id[-2:]}0000'
@@ -131,21 +134,25 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
         class_name = f'StockPortfolio{algo}'
         cls = getattr(stock_portfolio, class_name)
 
-        class_stock_portfolio = cls(**kwargs)
-        click.echo(click.style(f'\n Stock data for stock portfolio {stock_portfolio_id} loaded.', fg='yellow'))
-
-        class_stock_portfolio.calc_portfolio_nav()
-        click.echo(click.style(f'\n Nav of stock portfolio {stock_portfolio_id} calculated.', fg='yellow'))
-
-        df_pos = deepcopy(class_stock_portfolio.df_stock_pos_adjusted)
-        df_nav = pd.DataFrame({'nav': class_stock_portfolio.ser_portfolio_nav, 'inc': class_stock_portfolio.ser_portfolio_inc})
-
-        class_stock_portfolio.portfolio_analysis()
-
     except AttributeError:
 
         click.echo(click.style(f'\n Algo {algo} is unknown for stock portfolio {stock_portfolio_id}.', fg='red'))
         return
+
+    class_stock_portfolio = cls(**kwargs)
+    click.echo(click.style(f'\n Stock data for stock portfolio {stock_portfolio_id} loaded.', fg='yellow'))
+
+    if stock_portfolio_type == 0:
+        class_stock_portfolio.calc_portfolio_nav(considering_status=False)
+    elif stock_portfolio_type == 1:
+        class_stock_portfolio.calc_portfolio_nav()
+    else:
+        click.echo(click.style(f'\n Type {stock_portfolio_type} is unknown for stock portfolio {stock_portfolio_id}.', fg='red'))
+
+    df_pos = deepcopy(class_stock_portfolio.df_stock_pos_adjusted)
+    df_nav = pd.DataFrame({'nav': class_stock_portfolio.ser_portfolio_nav, 'inc': class_stock_portfolio.ser_portfolio_inc})
+    class_stock_portfolio.portfolio_analysis()
+    click.echo(click.style(f'\n Nav of stock portfolio {stock_portfolio_id} calculated.', fg='yellow'))
 
     engine = database.connection('factor')
     metadata = MetaData(bind=engine)
@@ -172,7 +179,7 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 @sp.command()
 @click.option('--id', 'optid', help='stock portfolio id')
 @click.option('--name', 'optname', default='', help='stock portfolio name')
-@click.option('--type', 'opttype', default='0', help='stock portfolio type')
+@click.option('--type', 'opttype', default='1', help='stock portfolio type')
 @click.option('--algo', 'optalgo', default='MarketCap', help='stock portfolio algo')
 @click.option('--argv', 'optargv', default='index_id:2070000191:指数ID,look_back:120:回测时长,period:day:调整间隔', help='stock portfolio argv')
 @click.option('--override/--no-override', 'optoverride', default=False, help='override existing stock portfolio or not')
