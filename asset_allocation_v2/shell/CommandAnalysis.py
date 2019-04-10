@@ -880,7 +880,7 @@ def benchmark(ctx):
 
     dfs = []
     for i in range(0, 10):
-        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 9' % i
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
         df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
         df.columns = ['risk_' + str(i)]
         dfs.append(df)
@@ -893,10 +893,21 @@ def benchmark(ctx):
     online_df.head()
     conn.close()
 
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+    sql = "select ra_date as date, ra_nav as nav from ra_portfolio_nav where ra_portfolio_id = 'PO.000070' and ra_type = 8"
+    po_df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
+    po_df = po_df[po_df.index >= '2013-01-01']
 
     df = pd.concat([online_df, benchmark_df], axis = 1, join_axes = [benchmark_df.index])
+    print(df.shape, po_df.shape)
+    df = pd.concat([df, po_df], axis = 1, join_axes = [df.index])
+    df = df[df.index >= '2018-01-01']
+    df = df / df.iloc[0]
     df = df.fillna(method='pad')
-    print(df.head())
+    #print(df.head())
+
+
 
     df.to_csv('./online_benchmark.csv')
 
@@ -1104,4 +1115,66 @@ def fund_pool_fee(ctx):
             #if fid in fund_fee.index:
             fund_fees.append(fund_fee.loc[fid])
         print(pool_id, np.mean(fund_fees))
+
+
+#标杆组合
+@analysis.command()
+@click.pass_context
+def allocate_benchmark_comp(ctx):
+
+    index_ids = ['120000016', '120000010']
+    data = {}
+    for _id in index_ids:
+        data[_id] = base_ra_index_nav.load_series(_id)
+    df = pd.DataFrame(data)
+
+    composite_asset_ids = ['20201','20202', '20203', '20204', '20205', '20206', '20207', '20208']
+
+    data = {}
+
+    for _id in composite_asset_ids:
+        nav = asset_ra_composite_asset_nav.load_nav(_id)
+        nav = nav.reset_index()
+        nav = nav[['ra_date', 'ra_nav']]
+        nav = nav.set_index(['ra_date'])
+        data[_id] = nav.ra_nav
+
+    bench_df = pd.DataFrame(data)
+    benchmark_df = pd.concat([bench_df,df],axis = 1, join_axes = [bench_df.index])
+
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+
+    dfs = []
+    for i in range(0, 10):
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
+        df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
+        df.columns = ['risk_' + str(i)]
+        dfs.append(df)
+
+    df = pd.concat(dfs, axis = 1)
+
+    conn.close()
+
+    df = pd.concat([df, benchmark_df], axis = 1, join_axes = [df.index])
+    df = df.fillna(method='pad')
+    df = df.rename(columns = {'risk_0':'风险10','risk_1':'风险1','risk_2':'风险2','risk_3':'风险3','risk_4':'风险4','risk_5':'风险5',
+                            'risk_6':'风险6','risk_7':'风险7','risk_8':'风险8','risk_9':'风险9',
+                            '20201':'风险2比较基准','20202':'风险3比较基准', '20203':'风险4比较基准', '20204':'风险5比较基准', 
+                            '20205':'风险6比较基准', '20206':'风险7比较基准', '20207':'风险8比较基准', '20208':'风险9比较基准',
+                            '120000016':'风险10比较基准','120000010':'风险1比较基准'})
+    cols = ['风险1', '风险2', '风险3', '风险4', '风险5', '风险6', '风险7', '风险8', '风险9', '风险10','风险1比较基准','风险2比较基准', '风险3比较基准', '风险4比较基准', '风险5比较基准', '风险6比较基准', '风险7比较基准', '风险8比较基准', '风险9比较基准', '风险10比较基准']
+    df = df[cols]
+
+    result_df = pd.DataFrame(columns = df.columns)
+    last_day = df.index[-1]
+    result_df.loc[df.index[-1].strftime('%Y-%m-%d') + ' 当日'] = df.pct_change().iloc[-1]
+    result_df.loc[df.index[-1].strftime('%Y-%m-%d') + ' 过去一周'] = df.loc[last_day] / df.loc[last_day - timedelta(weeks = 1)] - 1
+    result_df.loc[df.index[-1].strftime('%Y-%m-%d') + ' 过去一月'] = df.loc[last_day] / df.loc[last_day - timedelta(days = 31)] - 1
+    result_df.loc[df.index[-1].strftime('%Y-%m-%d') + ' 过去三个月'] = df.loc[last_day] / df.loc[last_day - timedelta(days = 91)] - 1
+    result_df.loc[df.index[-1].strftime('%Y-%m-%d') + ' 过去六个月'] = df.loc[last_day] / df.loc[last_day - timedelta(days = 182)] - 1
+    result_df.loc[df.index[-1].strftime('%Y-%m-%d') + ' 过去一年'] = df.loc[last_day] / df.loc[last_day - timedelta(days = 365)] - 1
+    result_df.to_csv('智能组合收益与比较基准收益比较.csv', encoding='gbk')
+
+
 
