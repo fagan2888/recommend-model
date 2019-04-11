@@ -8,15 +8,12 @@ Contact: sushixun@licaimofang.com
 
 import sys
 import logging
-import warnings
-import click
 from functools import partial
 import multiprocessing
 import numpy as np
 import pandas as pd
 import math
 import hashlib
-import types
 import re
 import copy
 # from ipdb import set_trace
@@ -254,10 +251,10 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
         df_stock_pos_adjusted = pd.DataFrame(arr_stock_pos_adjusted, index=self.reindex, columns=self.stock_pool_total.index)
 
-        ser0_portfolio_inc = pd.Series(0.0, index=self.reindex, name='inc')
-        ser0_portfolio_nav = pd.Series(1.0, index=self.reindex, name='nav')
-        ser0_portfolio_inc.loc[:] = (df_stock_pos_adjusted.rename(index=trade_date_after) * (self.df_stock_prc / self.df_stock_prc.rename(index=trade_date_after) - 1.0)).sum(axis='columns')
-        ser0_portfolio_nav.loc[:] = (ser0_portfolio_inc + 1.0).cumprod()
+        # ser0_portfolio_inc = pd.Series(0.0, index=self.reindex, name='inc')
+        # ser0_portfolio_nav = pd.Series(1.0, index=self.reindex, name='nav')
+        # ser0_portfolio_inc.loc[:] = (df_stock_pos_adjusted.rename(index=trade_date_after) * (self.df_stock_prc / self.df_stock_prc.rename(index=trade_date_after) - 1.0)).sum(axis='columns')
+        # ser0_portfolio_nav.loc[:] = (ser0_portfolio_inc + 1.0).cumprod()
 
         self._df_stock_pos_adjusted = df_stock_pos_adjusted
         self._ser_portfolio_nav = ser_portfolio_nav
@@ -283,22 +280,32 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
         raise NotImplementedError('Method \'calc_stock_pos\' is not defined.')
 
-    def _load_stock_price(self, trade_date, stock_ids):
+    def _load_stock_price(self, trade_date, stock_ids, fillna=True):
 
         reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back-1:]
 
         # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex)
         df_stock_prc = self.df_stock_prc.reindex(index=reindex, columns=stock_ids)
 
+        if not fillna:
+
+            df_stock_status = self.df_stock_status.loc[reindex, stock_ids]
+            df_stock_prc[df_stock_status>2] = np.nan
+
         return df_stock_prc
 
-    def _load_stock_return(self, trade_date, stock_ids):
+    def _load_stock_return(self, trade_date, stock_ids, fillna=True):
 
-        reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back:]
+        reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back-1:]
 
         # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex)
         # df_stock_ret = df_stock_prc.pct_change().iloc[1:]
-        df_stock_ret = self.df_stock_ret.reindex(index=reindex, columns=stock_ids)
+        df_stock_ret = self.df_stock_ret.reindex(index=reindex[1:], columns=stock_ids)
+
+        if not fillna:
+
+            df_stock_status = self.df_stock_status.loc[reindex[1:], stock_ids]
+            df_stock_ret[df_stock_status>2] = np.nan
 
         return df_stock_ret
 
@@ -435,9 +442,7 @@ class StockPortfolioLowVolatility(StockPortfolio):
 
     def _calc_low_volatility(self, trade_date, stock_ids, percentage, **kwargs):
 
-        df_stock_ret = self._load_stock_return(trade_date, stock_ids)
-        df_stock_status = self.df_stock_status.loc[df_stock_ret.index, stock_ids]
-        df_stock_ret[df_stock_status>2] = np.nan
+        df_stock_ret = self._load_stock_return(trade_date, stock_ids, fillna=False)
 
         ser_stock_volatility = df_stock_ret.std()
 
@@ -478,14 +483,17 @@ class StockPortfolioMomentum(StockPortfolioMarketCap):
     def _calc_momentum(self, trade_date, stock_ids, percentage, **kwargs):
 
         df_stock_prc = self._load_stock_price(trade_date, stock_ids)
+        df_stock_ret = self._load_stock_return(trade_date, stock_ids, fillna=False)
 
-        ser_stock_momentum = df_stock_prc.iloc[-1-self.exclusion] / df_stock_prc.iloc[0]
+        ser_stock_momentum = (df_stock_prc.iloc[-1-self.exclusion] / df_stock_prc.iloc[0] - 1.0) \
+            / df_stock_ret.std()
 
         # Momentum condition quantile as percentage
         portfolio_size = round(stock_ids.size * percentage)
         momentum_stock_ids = ser_stock_momentum.sort_values(ascending=False).iloc[:portfolio_size].index
 
         ser_momentum_stock_weight = ser_stock_momentum.loc[momentum_stock_ids]
+        ser_momentum_stock_weight.loc[ser_momentum_stock_weight<0.0] = 0.0
         ser_momentum_stock_weight /= ser_momentum_stock_weight.sum()
 
         return momentum_stock_ids, ser_momentum_stock_weight
@@ -519,6 +527,7 @@ class StockPortfolioSmallSize(StockPortfolioMarketCap):
         portfolio_size = round(stock_ids.size * self.percentage)
         small_size_stock_ids = ser_stock_free_float_market_cap.sort_values(ascending=True).iloc[:portfolio_size].index
 
+        # Small size condition quantile as percentage
         ser_small_size_stock_weight = ser_stock_free_float_market_cap.loc[small_size_stock_ids]
         ser_small_size_stock_weight /= ser_small_size_stock_weight.sum()
 
@@ -556,9 +565,7 @@ class StockPortfolioLowBeta(StockPortfolio):
 
     def _calc_low_beta(self, trade_date, stock_ids, percentage, **kwargs):
 
-        df_stock_ret = self._load_stock_return(trade_date, stock_ids)
-        df_stock_status = self.df_stock_status.loc[df_stock_ret.index, stock_ids]
-        df_stock_ret[df_stock_status>2] = np.nan
+        df_stock_ret = self._load_stock_return(trade_date, stock_ids, fillna=False)
 
         ser_benchmark_inc = self.ser_benchmark_inc.loc[df_stock_ret.index]
         benchmark_inc_std = ser_benchmark_inc.std()
@@ -608,9 +615,7 @@ class StockPortfolioHighBeta(StockPortfolioLowBeta):
 
     def _calc_high_beta(self, trade_date, stock_ids, percentage, **kwargs):
 
-        df_stock_ret = self._load_stock_return(trade_date, stock_ids)
-        df_stock_status = self.df_stock_status.loc[df_stock_ret.index, stock_ids]
-        df_stock_ret[df_stock_status>2] = np.nan
+        df_stock_ret = self._load_stock_return(trade_date, stock_ids, fillna=False)
 
         ser_benchmark_inc = self.ser_benchmark_inc.loc[df_stock_ret.index]
         benchmark_inc_std = ser_benchmark_inc.std()
@@ -742,7 +747,8 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketCap):
         ser_stock_free_float_market_cap = self._calc_stock_free_float_market_cap(trade_date, stock_ids)
         df_stock_industry = self.df_stock_industry.loc[stock_ids]
 
-        ser_industry_free_float_market_cap = ser_stock_free_float_market_cap.rename(index=df_stock_industry.sw_level1_code).rename_axis('sw_industry_code').groupby(by='sw_industry_code').sum()
+        ser_industry_free_float_market_cap = ser_stock_free_float_market_cap \
+            .rename(index=df_stock_industry.sw_level1_code).rename_axis('sw_industry_code').groupby(by='sw_industry_code').sum()
 
         return ser_industry_free_float_market_cap
 
@@ -886,7 +892,7 @@ if __name__ == '__main__':
     # df_portfolio_nav['LowVolatility'] = dict_portfolio['LowVolatility'].calc_portfolio_nav()
 
     # dict_portfolio['Momentum'] = StockPortfolioMomentum(index_id, trade_dates, look_back, percentage=0.3, exclusion=20)
-    # df_portfolio_nav['Momentum'] = dict_portfolio['Momentum'].calc_portfolio_nav()
+    # tdf_portfolio_nav['Momentum'] = dict_portfolio['Momentum'].calc_portfolio_nav()
 
     # dict_portfolio['SmallSize'] = StockPortfolioSmallSize(index_id, trade_dates, look_back, percentage=0.3)
     # df_portfolio_nav['SmallSize'] = dict_portfolio['SmallSize'].calc_portfolio_nav()

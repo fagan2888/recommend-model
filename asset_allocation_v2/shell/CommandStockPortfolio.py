@@ -16,11 +16,12 @@ from copy import deepcopy
 from tabulate import tabulate
 # from ipdb import set_trace
 sys.path.append('shell')
+import stock_portfolio
 from db import database
 from db import caihui_tq_sk_basicinfo
 from db import factor_sp_stock_portfolio, factor_sp_stock_portfolio_argv, factor_sp_stock_portfolio_pos, factor_sp_stock_portfolio_nav
 from trade_date import ATradeDate
-import stock_portfolio
+
 
 logger = logging.getLogger(__name__)
 
@@ -119,9 +120,12 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
         kwargs['reindex'] = ATradeDate.week_trade_date(begin_date=begin_date, end_date=end_date).rename('trade_date')
     elif period == 'month':
         kwargs['reindex'] = ATradeDate.month_trade_date(begin_date=begin_date, end_date=end_date).rename('trade_date')
-
     else:
         click.echo(click.style(f'\n Period {period} is unknown for stock portfolio {stock_portfolio_id}.', fg='red'))
+        return
+
+    if kwargs['reindex'].size == 0:
+        click.echo(click.style(f'\n Trade date index for stock portfolio {stock_portfolio_id} is empty.', fg='red'))
         return
 
     if stock_portfolio_id[:3] != 'CS.' and stock_portfolio_id[-2:] != '00':
