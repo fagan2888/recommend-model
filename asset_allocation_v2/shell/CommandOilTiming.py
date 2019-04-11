@@ -23,7 +23,7 @@ from datetime import datetime,timedelta
 from statsmodels.stats.outliers_influence import summary_table
 
 #from sklearn import datasets,linear_model
-from sklearn.cross_validation import cross_val_score, ShuffleSplit
+# from sklearn.cross_validation import cross_val_score, ShuffleSplit
 from sklearn.preprocessing import StandardScaler,Normalizer,Binarizer,PolynomialFeatures
 from sklearn.feature_selection import VarianceThreshold,SelectKBest,chi2,RFE,SelectFromModel#,MINE
 from sklearn.ensemble import GradientBoostingClassifier,RandomForestRegressor,ExtraTreesClassifier

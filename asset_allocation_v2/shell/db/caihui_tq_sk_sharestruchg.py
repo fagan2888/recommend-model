@@ -38,7 +38,7 @@ def load_company_share(company_ids=None, date=None):
         s = s.where(tuple_(t.c.COMPCODE, t.c.BEGINDATE).in_(s2))
     else:
         s = s.where(t.c.BEGINDATE<=date)
-        s = s.where(or_(t.c.ENDDATE>date, t.c.ENDDATE=='19000101'))
+        s = s.where(or_(t.c.ENDDATE>=date, t.c.ENDDATE=='19000101'))
 
     df = pd.read_sql(s, engine, index_col=['company_id'])
 
@@ -62,7 +62,7 @@ def load_company_historical_share(company_ids=None, begin_date=None, end_date=No
     if company_ids is not None:
         s = s.where(t.c.COMPCODE.in_(company_ids))
     if begin_date is not None:
-        s = s.where(or_(t.c.ENDDATE>begin_date, t.c.ENDDATE=='19000101'))
+        s = s.where(or_(t.c.ENDDATE>=begin_date, t.c.ENDDATE=='19000101'))
     if end_date is not None:
         s = s.where(t.c.BEGINDATE<=end_date)
 
