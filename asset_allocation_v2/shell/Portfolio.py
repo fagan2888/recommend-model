@@ -538,7 +538,7 @@ def markowitz_bootstrap_smooth_bl_fixrisk(df_inc, P, eta, alpha, bound, target_r
     processes = []
     for process_index in process_indices:
         if eta.size == 0:
-            p = multiprocessing.Process(target = m_markowitz_fixrisk, args = (q, peocess_index, df_inc, bound, target_risk))
+            p = multiprocessing.Process(target = m_markowitz_fixrisk, args = (q, process_index, df_inc, bound, target_risk))
         else:
             p = multiprocessing.Process(target = m_markowitz_bl_fixrisk, args = (q, process_index, df_inc, P, eta, alpha, bound, target_risk))
         processes.append(p)
