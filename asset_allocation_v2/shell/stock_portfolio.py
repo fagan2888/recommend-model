@@ -22,6 +22,7 @@ from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_qt_skdailyprice,
 from db import factor_ml_merge_list, factor_sp_stock_portfolio_nav
 from trade_date import ATradeDate
 from util_timestamp import *
+from statistic_tools_multifactor import *
 
 
 logger = logging.getLogger(__name__)
@@ -331,11 +332,27 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
             reindex = self.reindex
 
         portfolio_return = self.ser_portfolio_nav.loc[reindex[-1]] / self.ser_portfolio_nav.loc[reindex[0]] - 1.0
-        free_risk_rate = 0.0
-        std_excess_return = self.ser_portfolio_inc.reindex(reindex).std()
-        sharpe_ratio = (portfolio_return - free_risk_rate) / std_excess_return
+        ser_free_risk_rate = pd.Series(0.00013, index=reindex[1:])
+        ser_excess_return = self._ser_portfolio_inc.reindex(reindex[1:]) - ser_free_risk_rate
+        excess_return_std = ser_excess_return.std()
+        sharpe_ratio = ser_excess_return.mean() / excess_return_std
 
-        return portfolio_return, std_excess_return, sharpe_ratio
+        print(f'portfolio_return: {portfolio_return} sharpe_ratio: {sharpe_ratio}')
+
+        return portfolio_return, sharpe_ratio
+
+    def portfolio_statistic(self, benchmark_id):
+
+        if self.ser_portfolio_nav is None:
+            self.calc_portfolio_nav()
+
+        ser_benchmark_nav = factor_sp_stock_portfolio_nav.load(benchmark_id) \
+            .nav.rename(benchmark_id)
+
+        # OLS_compare_summary(self.ser_portfolio_nav, ser_benchmark_nav)
+        GLS_compare_summary(self.ser_portfolio_nav, ser_benchmark_nav)
+
+        return
 
 
 class StockPortfolioMarketCap(StockPortfolio):
@@ -890,6 +907,8 @@ if __name__ == '__main__':
 
     # dict_portfolio['LowVolatility'] = StockPortfolioLowVolatility(index_id, trade_dates, look_back, percentage=0.3)
     # df_portfolio_nav['LowVolatility'] = dict_portfolio['LowVolatility'].calc_portfolio_nav()
+    # dict_portfolio['LowVolatility'].portfolio_analysis()
+    # dict_portfolio['LowVolatility'].portfolio_statistic('CS.000906')
 
     # dict_portfolio['Momentum'] = StockPortfolioMomentum(index_id, trade_dates, look_back, percentage=0.3, exclusion=20)
     # tdf_portfolio_nav['Momentum'] = dict_portfolio['Momentum'].calc_portfolio_nav()

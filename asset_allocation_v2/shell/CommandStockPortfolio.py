@@ -16,11 +16,11 @@ from copy import deepcopy
 from tabulate import tabulate
 # from ipdb import set_trace
 sys.path.append('shell')
-import stock_portfolio
 from db import database
 from db import caihui_tq_sk_basicinfo
 from db import factor_sp_stock_portfolio, factor_sp_stock_portfolio_argv, factor_sp_stock_portfolio_pos, factor_sp_stock_portfolio_nav
 from trade_date import ATradeDate
+import stock_portfolio
 
 
 logger = logging.getLogger(__name__)
@@ -155,8 +155,17 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 
     df_pos = deepcopy(class_stock_portfolio.df_stock_pos_adjusted)
     df_nav = pd.DataFrame({'nav': class_stock_portfolio.ser_portfolio_nav, 'inc': class_stock_portfolio.ser_portfolio_inc})
-    class_stock_portfolio.portfolio_analysis()
     click.echo(click.style(f'\n Nav of stock portfolio {stock_portfolio_id} calculated.', fg='yellow'))
+
+    class_stock_portfolio.portfolio_analysis()
+    dict_benchmark = {
+        '2070000043': 'SH.000050',
+        '2070000060': 'CS.000300',
+        '2070000187': 'CS.000905',
+        '2070000191': 'CS.000906'
+    }
+    benchmark_id = dict_benchmark[kwargs['index_id']]
+    class_stock_portfolio.portfolio_statistic(benchmark_id)
 
     engine = database.connection('factor')
     metadata = MetaData(bind=engine)
