@@ -1450,3 +1450,41 @@ def average_allocate_test(ctx):
         data.append([asset_inc, online_inc])
     df = pd.DataFrame(data, index=ds)
     df.to_csv('average_allocate_test.csv')
+
+def user_holding_risk_asset(ctx):
+    dates = pd.date_range('2016-07-01','2019-04-16')
+    month_last_days = []
+    for k, v in dates.groupby(dates.strftime('%Y-%m')).items():
+        month_last_days.append(v[-1])
+    engine = database.connection('trade')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    dfs = []
+    for day in month_last_days:
+        sql = "select ts_portfolio_id, ts_asset, ts_processing_asset from ts_holding_nav where ts_date = '%s'" % day.strftime('%Y-%m-%d')
+        df = pd.read_sql(sql, session.bind)
+        df['date'] = day
+        df.set_index(['date'],inplace = True)
+        dfs.append(df)
+    df = pd.concat(dfs, axis = 0)
+
+    risk_sql = 'SELECT * from (SELECT * FROM ts_order WHERE ts_trade_type IN (3,6) AND ts_trade_status IN (1, 5, 6) ORDER BY id DESC) AS a GROUP BY a.ts_portfolio_id'
+    risk_ser = pd.read_sql(risk_sql, session.bind, index_col = ['ts_portfolio_id']).ts_risk
+    portfolio_risks = []
+    for portfolio_id in df.ts_portfolio_id:
+        if portfolio_id in risk_ser.index:
+            portfolio_risks.append('risk_' + str(int(risk_ser.loc[portfolio_id] * 10)))
+        else:
+            portfolio_risks.append('risk_none')
+    df['portfolio_risk'] = portfolio_risks
+    df['total_asset'] = df.ts_asset + df.ts_processing_asset
+    df = df.reset_index()
+    df = df[['date', 'portfolio_risk', 'total_asset']]
+    df = df.set_index(['date', 'portfolio_risk'])
+    df = df.groupby(level = [0,1]).sum()
+    df = df.unstack()
+    df = df / (1e8)
+    df.to_csv('user_holding.csv')
+    print(df)
+    session.commit()
+    session.close()
