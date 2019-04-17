@@ -1488,3 +1488,84 @@ def user_holding_risk_asset(ctx):
     print(df)
     session.commit()
     session.close()
+
+
+#各个风险等级在各个基金公司持仓规模
+@analysis.command()
+@click.pass_context
+def user_holding_fund_company(ctx):
+
+    ctx.invoke(user_holding_risk_asset)
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = 'select on_online_id, on_date, on_fund_id, on_fund_ratio from on_online_fund'
+    df = pd.read_sql(sql, session.bind, index_col = ['on_online_id','on_date'])
+    session.commit()
+    session.close()
+
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = 'select fi_globalid,fi_company_id from fund_infos'
+    fund_code_company_df = pd.read_sql(sql, session.bind, index_col = ['fi_globalid'])
+    sql = 'select ci_globalid, ci_name from company_infos'
+    company_info_df = pd.read_sql(sql, session.bind, index_col = ['ci_globalid'])
+    session.commit()
+    session.close()
+    code_company = {}
+    for fi_code in fund_code_company_df.index:
+        company_id = fund_code_company_df.loc[fi_code].ravel()[0]
+        if company_id in company_info_df.index:
+            code_company[fi_code] = company_info_df.loc[company_id].ravel()[0]
+
+    #print(code_company)
+    fund_codes = []
+    for on_fund_code in df.on_fund_id:
+        fund_codes.append(code_company[on_fund_code])
+
+    df['on_fund_company'] = fund_codes
+    df = df[['on_fund_company', 'on_fund_ratio']]
+    df = df.reset_index()
+    df = df.set_index(['on_online_id','on_date','on_fund_company'])
+    df = df.groupby(level = [0,1,2]).sum()
+    df = df.unstack().fillna(0.0)
+
+    user_holding_df = pd.read_csv('user_holding.csv', index_col = ['date'], parse_dates = ['date'])
+    user_holding_df = user_holding_df.iloc[1:-1].fillna(0.0) * 10000
+
+
+    alloc_id_risk = {
+           '800000':'risk_10',
+           '800001':'risk_1',
+           '800002':'risk_2',
+           '800003':'risk_3',
+           '800004':'risk_4',
+           '800005':'risk_5',
+           '800006':'risk_6',
+           '800007':'risk_7',
+           '800008':'risk_8',
+           '800009':'risk_9',
+    }
+    user_holding_df = user_holding_df[['risk_1','risk_2','risk_3','risk_4','risk_5','risk_6','risk_7','risk_8','risk_9','risk_10']]
+    dfs = []
+    for k , v in df.groupby(level = [0]):
+        v = v.loc[k]
+        v = v[v.index >= user_holding_df.index[0]]
+        dates = v.index | user_holding_df.index
+        v = v.reindex(dates).fillna(method = 'pad')
+        v = v.loc[user_holding_df.index]
+        risk_level = alloc_id_risk[k]
+        amount = user_holding_df[risk_level]
+        amount = v.multiply(amount, axis = 0)
+        amount = amount.sort_index(ascending = False)
+        amount = amount.T
+        amount['risk'] = risk_level
+        amount = amount.reset_index()
+        amount = amount.set_index(['risk','on_fund_company'])
+        dfs.append(amount)
+    df = pd.concat(dfs ,axis = 0)
+    print(df)
+    df.to_csv('company_amount.csv', encoding='gbk')
