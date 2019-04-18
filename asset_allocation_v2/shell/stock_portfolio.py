@@ -178,6 +178,14 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
     def __init__(self, index_id, reindex, look_back, **kwargs):
 
+        for key in self._kwargs_list:
+
+            if key not in kwargs:
+                raise TypeError(f'__init__() missing 1 required positional argument: \'{key}\'')
+            value = kwargs.get(key)
+            setattr(self, f'_{key}', value)
+            setattr(self.__class__, key, property(MetaClassPropertyFuncGenerater.generate_func_for_instance_variable(key)))
+
         ref = f'{index_id}, {reindex}, {look_back}'
         sha1 = hashlib.sha1()
         sha1.update(ref.encode('utf-8'))
@@ -187,14 +195,6 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
             self._data = StockPortfolio._ref_list[ref]
         else:
             self._data = StockPortfolio._ref_list[ref] = StockPortfolioData(index_id, reindex, look_back)
-
-        for key, value in kwargs.items():
-            setattr(self, f'_{key}', value)
-            setattr(self.__class__, key, property(MetaClassPropertyFuncGenerater.generate_func_for_instance_variable(key)))
-
-        for key in self._kwargs_list:
-            if not hasattr(self, key):
-                raise TypeError(f'__init__() missing 1 required positional argument: \'{key}\'')
 
         self._df_stock_pos = None
         self._df_stock_pos_adjusted = None
@@ -318,7 +318,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         stock_pool = self.df_index_historical_constituents.loc[
             (self.df_index_historical_constituents.selected_date<=trade_date) & \
             ((self.df_index_historical_constituents.out_date>trade_date) | \
-            (self.df_index_historical_constituents.out_date=='19000101'))
+            (self.df_index_historical_constituents.out_date=='1900-01-01'))
         ].loc[:, ['stock_id', 'stock_code']].set_index('stock_id').sort_index()
 
         return stock_pool
@@ -337,7 +337,13 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         excess_return_std = ser_excess_return.std()
         sharpe_ratio = ser_excess_return.mean() / excess_return_std
 
-        print(f'portfolio_return: {portfolio_return} sharpe_ratio: {sharpe_ratio}')
+        print(f'portfolio return: {portfolio_return}, sharpe ratio: {sharpe_ratio}.')
+
+        max_drawdown_end_date = np.argmin(self.ser_portfolio_nav / np.maximum.accumulate(self.ser_portfolio_nav))
+        max_drawdown_begin_date = np.argmax(self.ser_portfolio_nav[:max_drawdown_end_date])
+        max_drawdown = self.ser_portfolio_nav[max_drawdown_end_date] / self.ser_portfolio_nav[max_drawdown_begin_date] - 1.0
+
+        print(f'max drawdown: {max_drawdown}, begin date: {max_drawdown_begin_date}, end date: {max_drawdown_end_date}.')
 
         return portfolio_return, sharpe_ratio
 
@@ -348,6 +354,12 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
         ser_benchmark_nav = factor_sp_stock_portfolio_nav.load(benchmark_id) \
             .nav.rename(benchmark_id)
+
+        if ser_benchmark_nav.size == 0:
+
+            print(f'Benchmark {benchmark_id} doesn\'t exist.')
+
+            return
 
         # OLS_compare_summary(self.ser_portfolio_nav, ser_benchmark_nav)
         GLS_compare_summary(self.ser_portfolio_nav, ser_benchmark_nav)
@@ -363,7 +375,7 @@ class StockPortfolioMarketCap(StockPortfolio):
 
         super(StockPortfolioMarketCap, self).__init__(index_id, reindex, look_back, **kwargs)
 
-    # Refrence: http://www.csindex.com.cn/zh-CN/indices/index-detail/000300
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000300
     def _calc_stock_pos(self, trade_date):
 
         stock_ids = self._load_stock_pool(trade_date).index
@@ -401,7 +413,7 @@ class StockPortfolioMarketCap(StockPortfolio):
         df_stock_share = self.df_stock_historical_share.loc[
             (self.df_stock_historical_share.begin_date<=trade_date) & \
             ((self.df_stock_historical_share.end_date>=trade_date) | \
-            (self.df_stock_historical_share.end_date=='19000101'))
+            (self.df_stock_historical_share.end_date=='1900-01-01'))
         ].sort_values(by='begin_date').drop_duplicates(subset=['stock_id'], keep='last').set_index('stock_id').reindex(stock_ids)
 
         return df_stock_share
@@ -445,7 +457,7 @@ class StockPortfolioLowVolatility(StockPortfolio):
 
         super(StockPortfolioLowVolatility, self).__init__(index_id, reindex, look_back, **kwargs)
 
-    # Refrence: http://www.csindex.com.cn/zh-CN/indices/index-detail/000803
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000803
     def _calc_stock_pos(self, trade_date):
 
         stock_ids = self._load_stock_pool(trade_date).index
@@ -484,7 +496,7 @@ class StockPortfolioMomentum(StockPortfolioMarketCap):
 
         super(StockPortfolioMomentum, self).__init__(index_id, reindex, look_back, **kwargs)
 
-    # Refrence: http://www.csindex.com.cn/zh-CN/indices/index-detail/H30260
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/H30260
     def _calc_stock_pos(self, trade_date):
 
         stock_ids = self._load_stock_pool(trade_date).index
@@ -568,7 +580,7 @@ class StockPortfolioLowBeta(StockPortfolio):
         self._ser_benchmark_nav = df_benchmark_nav.nav.rename(self.benchmark_id)
         self._ser_benchmark_inc = df_benchmark_nav.inc.rename(self.benchmark_id)
 
-    # Refrence: http://www.csindex.com.cn/zh-CN/indices/index-detail/000829
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000829
     def _calc_stock_pos(self, trade_date):
 
         stock_ids = self._load_stock_pool(trade_date).index
@@ -618,7 +630,7 @@ class StockPortfolioHighBeta(StockPortfolioLowBeta):
 
         super(StockPortfolioHighBeta, self).__init__(index_id, reindex, look_back, **kwargs)
 
-    # Refrence: http://www.csindex.com.cn/zh-CN/indices/index-detail/000828
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000828
     def _calc_stock_pos(self, trade_date):
 
         stock_ids = self._load_stock_pool(trade_date).index
@@ -700,7 +712,7 @@ class StockPortfolioLowBetaLowVolatility(StockPortfolioLowBeta, StockPortfolioLo
 
         super(StockPortfolioLowBetaLowVolatility, self).__init__(index_id, reindex, look_back, **kwargs)
 
-    # Refrence: http://www.csindex.com.cn/zh-CN/indices/index-detail/930985
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/930985
     def _calc_stock_pos(self, trade_date):
 
         stock_ids = self._load_stock_pool(trade_date).index
@@ -722,7 +734,7 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketCap):
 
         super(StockPortfolioSectorNeutral, self).__init__(index_id, reindex, look_back, **kwargs)
 
-    # Refrence: http://www.csindex.com.cn/zh-CN/indices/index-detail/930846
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/930846
     def _calc_stock_pos(self, trade_date):
 
         stock_ids = self._load_stock_pool(trade_date).index

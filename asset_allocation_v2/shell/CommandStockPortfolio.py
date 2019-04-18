@@ -101,7 +101,9 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     ]
 
     list_float_arg = [
-        'percentage'
+        'percentage',
+        'percentage_low_beta',
+        'percentage_low_volatility'
     ]
 
     for arg in list_int_arg:
@@ -158,14 +160,15 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     click.echo(click.style(f'\n Nav of stock portfolio {stock_portfolio_id} calculated.', fg='yellow'))
 
     class_stock_portfolio.portfolio_analysis()
-    dict_benchmark = {
-        '2070000043': 'SH.000050',
-        '2070000060': 'CS.000300',
-        '2070000187': 'CS.000905',
-        '2070000191': 'CS.000906'
-    }
-    benchmark_id = dict_benchmark[kwargs['index_id']]
-    class_stock_portfolio.portfolio_statistic(benchmark_id)
+    if stock_portfolio_type == 1:
+        dict_benchmark = {
+            '2070000043': 'SH.000050',
+            '2070000060': 'CS.000300',
+            '2070000187': 'CS.000905',
+            '2070000191': 'CS.000906'
+        }
+        benchmark_id = dict_benchmark[kwargs['index_id']]
+        class_stock_portfolio.portfolio_statistic(benchmark_id)
 
     engine = database.connection('factor')
     metadata = MetaData(bind=engine)
@@ -214,7 +217,7 @@ def create(ctx, optid, optname, opttype, optalgo, optargv, optoverride):
 
     if not optoverride and factor_sp_stock_portfolio.load_by_id(portfolio_ids=[portfolio_id]).shape[0] > 0:
 
-        click.echo(click.style(f'\n Stock portfolio {portfolio_id} is existed.', fg='red'))
+        click.echo(click.style(f'\n Stock portfolio {portfolio_id} already exists.', fg='red'))
         return
 
     df_stock_portfolio_info = pd.DataFrame([[portfolio_name, portfolio_type, portfolio_algo]], columns=['sp_name', 'sp_type', 'sp_algo'])
@@ -236,7 +239,7 @@ def create(ctx, optid, optname, opttype, optalgo, optargv, optoverride):
 @click.option('--override/--no-override', 'optoverride', default=False, help='override existing stock portfolio or not')
 @click.pass_context
 def copy(ctx, optsrc, optdst, optoverride):
-    ''' create new stock portfolio by copying existed one
+    ''' create new stock portfolio by copying existing one
     '''
 
     if optsrc is None or optdst is None:
@@ -249,12 +252,12 @@ def copy(ctx, optsrc, optdst, optoverride):
 
     if factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id]).shape[0] == 0:
 
-        click.echo(click.style(f'\n Stock portfolio {src_portfolio_id} is not existed.', fg='red'))
+        click.echo(click.style(f'\n Stock portfolio {src_portfolio_id} doesn\'t exist.', fg='red'))
         return
 
     if not optoverride and factor_sp_stock_portfolio.load_by_id(portfolio_ids=[dst_portfolio_id]).shape[0] > 0:
 
-        click.echo(click.style(f'\n Stock portfolio {dst_portfolio_id} is existed.', fg='red'))
+        click.echo(click.style(f'\n Stock portfolio {dst_portfolio_id} already exists.', fg='red'))
         return
 
     df_stock_portfolio_info = factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id])
@@ -290,12 +293,12 @@ def devide(ctx, optsrc, optoverride):
 
     if factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id]).shape[0] == 0:
 
-        click.echo(click.style(f'\n Stock portfolio {src_portfolio_id} is not existed.', fg='red'))
+        click.echo(click.style(f'\n Stock portfolio {src_portfolio_id} doesn\'t exist.', fg='red'))
         return
 
     if not optoverride and factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id[:-2]]).shape[0] > 1:
 
-        click.echo(click.style(f'\n Stock portfolio for industries {src_portfolio_id[:-2]} is existed.', fg='red'))
+        click.echo(click.style(f'\n Stock portfolio for industries {src_portfolio_id[:-2]} already exists.', fg='red'))
         return
 
     sw_industry_code_pool = caihui_tq_sk_basicinfo.load_sw_industry_code_info()

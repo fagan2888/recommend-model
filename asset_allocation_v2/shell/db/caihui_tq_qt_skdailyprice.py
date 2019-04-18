@@ -76,7 +76,10 @@ def load_stock_status_ser(stock_id, begin_date=None, end_date=None):
         s = s.where(t.c.TRADEDATE<=end_date)
 
     df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
-    ser = df.apply(status_algo, axis='columns').rename(stock_id)
+    if df.size > 0:
+        ser = df.apply(status_algo, axis='columns').rename(stock_id)
+    else:
+        ser = pd.Series(name=stock_id)
 
     return ser
 
