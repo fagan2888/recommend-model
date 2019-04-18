@@ -38,6 +38,7 @@ import CommandView
 import CommandFundFactor
 import CommandFundIncEst
 import CommandStockPortfolio
+import CommandOnlineCheck
 
 from util import ProgressBar
 from util.xdebug import dd
@@ -282,4 +283,5 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandFundFactor.ff)
     roboadvisor.add_command(CommandFundIncEst.fie)
     roboadvisor.add_command(CommandStockPortfolio.sp)
+    roboadvisor.add_command(CommandOnlineCheck.check)
     roboadvisor(obj={})

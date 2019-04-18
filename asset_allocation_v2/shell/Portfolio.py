@@ -564,3 +564,75 @@ def markowitz_bootstrap_smooth_bl_fixrisk(df_inc, P, eta, alpha, bound, target_r
     ws = wss / loop_num
     return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
 
+
+def markowitz_bootstrape_smooth(df_inc, bound, smooth, cpu_count = 0, bootstrap_count=0):
+
+    os.environ['OMP_NUM_THREADS'] = '1'
+
+    if cpu_count == 0:
+        count = int(multiprocessing.cpu_count())
+        cpu_count = count if count > 0 else 1
+    cpu_count = int(cpu_count)
+
+    if smooth % 2:
+        smooth += 1
+    look_back = len(df_inc)
+    smooth = min(smooth, look_back)
+    look_back_smooth = look_back - smooth // 2
+
+
+    if bootstrap_count <= 0:
+        loop_num = look_back * 4
+    elif bootstrap_count % 2:
+        loop_num = bootstrap_count + 1
+    else:
+        loop_num = bootstrap_count
+
+    # logger.info("bootstrap_count: %d, cpu_count: %d", loop_num, cpu_count)
+    process_indices = [[] for i in range(0, cpu_count)]
+
+
+    rep_num = loop_num * (look_back_smooth // 2) // look_back_smooth
+    day_indices = list(range(smooth, look_back)) * rep_num
+    for i in range(smooth):
+        day_index = [i] * round((i+1)/(smooth+1)*rep_num)
+        day_indices.extend(day_index)
+    day_indices.sort()
+    random.shuffle(day_indices)
+    day_indices = np.array(day_indices)
+
+    day_indices = day_indices.reshape(len(day_indices) // (look_back_smooth // 2), look_back_smooth // 2)
+    for m in range(0, len(day_indices)):
+        day_index = day_indices[m]
+        mod = m % cpu_count
+        process_indices[mod].append(list(day_index))
+
+
+    manager = Manager()
+    q = manager.Queue()
+    processes = []
+    for indexs in process_indices:
+        p = multiprocessing.Process(target = m_markowitz, args = (q, indexs, df_inc, bound,))
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
+
+    wss = np.zeros(len(df_inc.columns))
+    risks = []
+    returns = []
+    sharpes = []
+    for m in range(0, q.qsize()):
+        record = q.get(m)
+        ws = record[2]
+        for n in range(0, len(ws)):
+            w = ws[n]
+            wss[n] = wss[n] + w
+        risks.append(record[0])
+        returns.append(record[1])
+        sharpes.append(record[3])
+
+
+    ws = wss / loop_num
+    return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)

@@ -82,6 +82,30 @@ class rm_riskmgr_index_best_start_end(Base):
     created_at = Column(DateTime)
 
 
+class on_online_markowitz(Base):
+
+    __tablename__ = 'on_online_markowitz'
+
+    on_online_id = Column(String, primary_key = True)
+    on_online_status = Column(Integer)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+class on_online_cov(Base):
+
+    __tablename__ = 'on_online_cov'
+
+    on_asseta_id = Column(Integer, primary_key = True)
+    on_assetb_id = Column(Integer, primary_key = True)
+    on_online_status = Column(Integer)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
+
+
 
 def load_mz_markowitz_bounds(globalid):
 
@@ -100,6 +124,21 @@ def load_mz_markowitz_bounds(globalid):
     return df
 
 
+def delete_offline_cov():
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    session.query(on_online_cov).filter(on_online_cov.on_online_status == 1).delete()
+    session.commit()
+    session.close()
+
+def delete_offline_markowitz():
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    session.query(on_online_markowitz).filter(on_online_markowitz.on_online_status == 1).delete()
+    session.commit()
+    session.close()
 
 
 if __name__ == '__main__':

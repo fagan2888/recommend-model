@@ -197,3 +197,9 @@ def turnover_update(online):
 
     return total_turnover
 
+
+@online.command()
+@click.pass_context
+def delete_offline_markowitz_cov(ctx):
+    asset_allocate.delete_offline_cov()
+    asset_allocate.delete_offline_markowitz()
