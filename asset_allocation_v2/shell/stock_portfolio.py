@@ -19,7 +19,7 @@ import copy
 # from ipdb import set_trace
 sys.path.append('shell')
 from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_qt_skdailyprice, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic, caihui_tq_sk_sharestruchg
-from db import factor_ml_merge_list, factor_sp_stock_portfolio_nav
+from db import factor_ml_merge_list, asset_sp_stock_portfolio_nav
 from trade_date import ATradeDate
 from util_timestamp import *
 from statistic_tools_multifactor import *
@@ -352,7 +352,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         if self.ser_portfolio_nav is None:
             self.calc_portfolio_nav()
 
-        ser_benchmark_nav = factor_sp_stock_portfolio_nav.load(benchmark_id) \
+        ser_benchmark_nav = asset_sp_stock_portfolio_nav.load(benchmark_id) \
             .nav.rename(benchmark_id)
 
         if ser_benchmark_nav.size == 0:
@@ -576,7 +576,7 @@ class StockPortfolioLowBeta(StockPortfolio):
 
         super(StockPortfolioLowBeta, self).__init__(index_id, reindex, look_back, **kwargs)
 
-        df_benchmark_nav = factor_sp_stock_portfolio_nav.load(self.benchmark_id)
+        df_benchmark_nav = asset_sp_stock_portfolio_nav.load(self.benchmark_id)
         self._ser_benchmark_nav = df_benchmark_nav.nav.rename(self.benchmark_id)
         self._ser_benchmark_inc = df_benchmark_nav.inc.rename(self.benchmark_id)
 

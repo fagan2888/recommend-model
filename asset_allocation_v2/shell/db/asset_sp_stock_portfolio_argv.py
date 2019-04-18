@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def load(portfolio_id):
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio_argv', metadata, autoload=True)
 
@@ -35,7 +35,7 @@ def load(portfolio_id):
 
 def save(portfolio_id, df_new):
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio_argv', metadata, autoload=True)
 

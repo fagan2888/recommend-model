@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def load_all():
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio', metadata, autoload=True)
 
@@ -48,7 +48,7 @@ def load_by_id(portfolio_ids):
 
 def load_by_id_df(portfolio_id):
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio', metadata, autoload=True)
 
@@ -67,7 +67,7 @@ def load_by_id_df(portfolio_id):
 
 def load_by_type(types):
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio', metadata, autoload=True)
 
@@ -86,7 +86,7 @@ def load_by_type(types):
 
 def max_id_between(min_id, max_id):
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio', metadata, autoload=True)
 
@@ -100,7 +100,7 @@ def max_id_between(min_id, max_id):
 
 def save(portfolio_id, df_new):
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio', metadata, autoload=True)
 

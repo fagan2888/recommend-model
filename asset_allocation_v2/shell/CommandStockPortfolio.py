@@ -18,7 +18,7 @@ from tabulate import tabulate
 sys.path.append('shell')
 from db import database
 from db import caihui_tq_sk_basicinfo
-from db import factor_sp_stock_portfolio, factor_sp_stock_portfolio_argv, factor_sp_stock_portfolio_pos, factor_sp_stock_portfolio_nav
+from db import asset_sp_stock_portfolio, asset_sp_stock_portfolio_argv, asset_sp_stock_portfolio_pos, asset_sp_stock_portfolio_nav
 from trade_date import ATradeDate
 import stock_portfolio
 
@@ -42,7 +42,7 @@ def sp(ctx, optlist, optid, opttype, begin_date, end_date, cpu_count):
 
         if optlist:
 
-            df_stock_portfolio_info = factor_sp_stock_portfolio.load_all()
+            df_stock_portfolio_info = asset_sp_stock_portfolio.load_all()
             print(tabulate(df_stock_portfolio_info, headers='keys', tablefmt='psql'))
 
             return
@@ -79,9 +79,9 @@ def pos_n_nav(ctx, optid, opttype, begin_date, end_date, cpu_count):
         return
 
     if list_portfolio_id is not None:
-        df_stock_portfolio_info = factor_sp_stock_portfolio.load_by_id(portfolio_ids=list_portfolio_id)
+        df_stock_portfolio_info = asset_sp_stock_portfolio.load_by_id(portfolio_ids=list_portfolio_id)
     else:
-        df_stock_portfolio_info = factor_sp_stock_portfolio.load_by_type(types=list_type)
+        df_stock_portfolio_info = asset_sp_stock_portfolio.load_by_type(types=list_type)
 
     for _, stock_portfolio_info in df_stock_portfolio_info.iterrows():
         pos_n_nav_update(stock_portfolio_info, begin_date, end_date)
@@ -92,7 +92,7 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     stock_portfolio_type = stock_portfolio_info.loc['sp_type']
     algo = stock_portfolio_info.loc['sp_algo']
 
-    df_argv = factor_sp_stock_portfolio_argv.load(portfolio_id=stock_portfolio_id)
+    df_argv = asset_sp_stock_portfolio_argv.load(portfolio_id=stock_portfolio_id)
     kwargs = df_argv.loc[stock_portfolio_id].sp_value.to_dict()
 
     list_int_arg = [
@@ -170,7 +170,7 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
         benchmark_id = dict_benchmark[kwargs['index_id']]
         class_stock_portfolio.portfolio_statistic(benchmark_id)
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     table_sp_pos = Table('sp_stock_portfolio_pos', metadata, autoload=True)
     table_sp_nav = Table('sp_stock_portfolio_nav', metadata, autoload=True)
@@ -186,8 +186,8 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     df_nav['globalid'] = stock_portfolio_id
     df_nav = df_nav.set_index(['globalid', 'sp_date'])
 
-    factor_sp_stock_portfolio_pos.save(stock_portfolio_id, df_pos)
-    factor_sp_stock_portfolio_nav.save(stock_portfolio_id, df_nav)
+    asset_sp_stock_portfolio_pos.save(stock_portfolio_id, df_pos)
+    asset_sp_stock_portfolio_nav.save(stock_portfolio_id, df_nav)
 
     click.echo(click.style(f'\n Successfully updated pos and nav of stock portfolio {stock_portfolio_info.name}!', fg='green'))
 
@@ -215,7 +215,7 @@ def create(ctx, optid, optname, opttype, optalgo, optargv, optoverride):
     portfolio_algo = optalgo
     list_portfolio_argv = [[s2.strip() for s2 in s1.split(':')] for s1 in optargv.split(',')]
 
-    if not optoverride and factor_sp_stock_portfolio.load_by_id(portfolio_ids=[portfolio_id]).shape[0] > 0:
+    if not optoverride and asset_sp_stock_portfolio.load_by_id(portfolio_ids=[portfolio_id]).shape[0] > 0:
 
         click.echo(click.style(f'\n Stock portfolio {portfolio_id} already exists.', fg='red'))
         return
@@ -223,12 +223,12 @@ def create(ctx, optid, optname, opttype, optalgo, optargv, optoverride):
     df_stock_portfolio_info = pd.DataFrame([[portfolio_name, portfolio_type, portfolio_algo]], columns=['sp_name', 'sp_type', 'sp_algo'])
     df_stock_portfolio_info['globalid'] = portfolio_id
     df_stock_portfolio_info = df_stock_portfolio_info.set_index('globalid')
-    factor_sp_stock_portfolio.save(portfolio_id, df_stock_portfolio_info)
+    asset_sp_stock_portfolio.save(portfolio_id, df_stock_portfolio_info)
 
     df_stock_portfolio_argv = pd.DataFrame(list_portfolio_argv, columns=['sp_key', 'sp_value', 'sp_desc'])
     df_stock_portfolio_argv['globalid'] = portfolio_id
     df_stock_portfolio_argv = df_stock_portfolio_argv.set_index(['globalid', 'sp_key'])
-    factor_sp_stock_portfolio_argv.save(portfolio_id, df_stock_portfolio_argv)
+    asset_sp_stock_portfolio_argv.save(portfolio_id, df_stock_portfolio_argv)
 
     click.echo(click.style(f'\n Successfully created stock portfolio {portfolio_id}!', fg='green'))
 
@@ -250,23 +250,23 @@ def copy(ctx, optsrc, optdst, optoverride):
     src_portfolio_id = optsrc
     dst_portfolio_id = optdst
 
-    if factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id]).shape[0] == 0:
+    if asset_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id]).shape[0] == 0:
 
         click.echo(click.style(f'\n Stock portfolio {src_portfolio_id} doesn\'t exist.', fg='red'))
         return
 
-    if not optoverride and factor_sp_stock_portfolio.load_by_id(portfolio_ids=[dst_portfolio_id]).shape[0] > 0:
+    if not optoverride and asset_sp_stock_portfolio.load_by_id(portfolio_ids=[dst_portfolio_id]).shape[0] > 0:
 
         click.echo(click.style(f'\n Stock portfolio {dst_portfolio_id} already exists.', fg='red'))
         return
 
-    df_stock_portfolio_info = factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id])
+    df_stock_portfolio_info = asset_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id])
     df_stock_portfolio_info.rename(index={src_portfolio_id: dst_portfolio_id}, inplace=True)
-    factor_sp_stock_portfolio.save(dst_portfolio_id, df_stock_portfolio_info)
+    asset_sp_stock_portfolio.save(dst_portfolio_id, df_stock_portfolio_info)
 
-    df_stock_portfolio_argv = factor_sp_stock_portfolio_argv.load(portfolio_id=src_portfolio_id)
+    df_stock_portfolio_argv = asset_sp_stock_portfolio_argv.load(portfolio_id=src_portfolio_id)
     df_stock_portfolio_argv.rename(index={src_portfolio_id: dst_portfolio_id}, level='globalid', inplace=True)
-    factor_sp_stock_portfolio_argv.save(dst_portfolio_id, df_stock_portfolio_argv)
+    asset_sp_stock_portfolio_argv.save(dst_portfolio_id, df_stock_portfolio_argv)
 
     click.echo(click.style(f'\n Successfully created stock portfolio {dst_portfolio_id}!', fg='green'))
 
@@ -291,12 +291,12 @@ def devide(ctx, optsrc, optoverride):
         click.echo(click.style(f'\n Source id {src_portfolio_id} is invalid.', fg='red'))
         return
 
-    if factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id]).shape[0] == 0:
+    if asset_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id]).shape[0] == 0:
 
         click.echo(click.style(f'\n Stock portfolio {src_portfolio_id} doesn\'t exist.', fg='red'))
         return
 
-    if not optoverride and factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id[:-2]]).shape[0] > 1:
+    if not optoverride and asset_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id[:-2]]).shape[0] > 1:
 
         click.echo(click.style(f'\n Stock portfolio for industries {src_portfolio_id[:-2]} already exists.', fg='red'))
         return
@@ -307,13 +307,13 @@ def devide(ctx, optsrc, optoverride):
 
     for dst_portfolio_id in list_dst_portfolio_id:
 
-        df_stock_portfolio_info = factor_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id])
+        df_stock_portfolio_info = asset_sp_stock_portfolio.load_by_id(portfolio_ids=[src_portfolio_id])
         df_stock_portfolio_info.rename(index={src_portfolio_id: dst_portfolio_id}, inplace=True)
-        factor_sp_stock_portfolio.save(dst_portfolio_id, df_stock_portfolio_info)
+        asset_sp_stock_portfolio.save(dst_portfolio_id, df_stock_portfolio_info)
 
-        df_stock_portfolio_argv = factor_sp_stock_portfolio_argv.load(portfolio_id=src_portfolio_id)
+        df_stock_portfolio_argv = asset_sp_stock_portfolio_argv.load(portfolio_id=src_portfolio_id)
         df_stock_portfolio_argv.rename(index={src_portfolio_id: dst_portfolio_id}, level='globalid', inplace=True)
-        factor_sp_stock_portfolio_argv.save(dst_portfolio_id, df_stock_portfolio_argv)
+        asset_sp_stock_portfolio_argv.save(dst_portfolio_id, df_stock_portfolio_argv)
 
     click.echo(click.style(f'\n Successfully created stock portfolios for industries {list_dst_portfolio_id}!', fg='green'))
 
@@ -334,10 +334,10 @@ def remove(ctx, optid, optexcept):
     else:
         list_except_portfolio_id = []
 
-    list_portfolio_id = list(factor_sp_stock_portfolio.load_by_id(portfolio_ids=[optid]).index)
+    list_portfolio_id = list(asset_sp_stock_portfolio.load_by_id(portfolio_ids=[optid]).index)
     list_portfolio_id = list(set(list_portfolio_id)-set(list_except_portfolio_id))
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     table_sp = Table('sp_stock_portfolio', metadata, autoload=True)
     table_sp_argv = Table('sp_stock_portfolio_argv', metadata, autoload=True)

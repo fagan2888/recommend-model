@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def load(portfolio_id, begin_date=None, end_date=None, reindex=None):
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio_nav', metadata, autoload=True)
 
@@ -47,7 +47,7 @@ def save(portfolio_id, df_new):
     if not df_new.empty:
         df_new = database.number_format(df_new, fmt_columns, fmt_precision)
 
-    engine = database.connection('factor')
+    engine = database.connection('asset')
     metadata = MetaData(bind=engine)
     t = Table('sp_stock_portfolio_nav', metadata, autoload=True)
 
