@@ -108,7 +108,7 @@ def m_markowitz_bl(queue, random_index, df_inc, P, eta, alpha, bound):
         queue.put((risk, returns, ws, sharpe))
 
 
-def markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count = 0, bootstrap_count=0):
+def markowitz_bootstrap_bl(df_inc, P, eta, alpha, bound, cpu_count = 0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -178,7 +178,7 @@ def markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count = 0, bootstr
 
 
 
-def markowitz_bootstrape(df_inc, bound, cpu_count = 0, bootstrap_count=0):
+def markowitz_bootstrap(df_inc, bound, cpu_count = 0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -315,7 +315,7 @@ def m_markowitz_fixrisk(queue, random_index, df_inc, bound, target_risk):
         queue.put((risk, returns, ws, sharpe))
 
 
-def markowitz_bootstrape_fixrisk(df_inc, bound, target_risk, cpu_count = 0, bootstrap_count=0):
+def markowitz_bootstrap_fixrisk(df_inc, bound, target_risk, cpu_count = 0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -427,7 +427,7 @@ def m_markowitz_bl_fixrisk(queue, random_index, df_inc, P, eta, alpha, bound, ta
         queue.put((risk, returns, ws, sharpe))
 
 
-def markowitz_bootstrape_bl_fixrisk(df_inc, P, eta, alpha, bound, target_risk, cpu_count = 0, bootstrap_count=0):
+def markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, target_risk, cpu_count = 0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 
@@ -565,7 +565,7 @@ def markowitz_bootstrap_smooth_bl_fixrisk(df_inc, P, eta, alpha, bound, target_r
     return np.mean(risks), np.mean(returns), ws, np.mean(sharpes)
 
 
-def markowitz_bootstrape_smooth(df_inc, bound, smooth, cpu_count = 0, bootstrap_count=0):
+def markowitz_bootstrap_smooth(df_inc, bound, smooth, cpu_count = 0, bootstrap_count=0):
 
     os.environ['OMP_NUM_THREADS'] = '1'
 

@@ -636,11 +636,11 @@ def markowitz_r(df_inc, day, limits, bootstrap, cpu_count, blacklitterman, marko
     elif (bootstrap is None) and blacklitterman:
         risk, returns, ws, sharpe = PF.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
     elif (not bootstrap is None) and (not blacklitterman):
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrap(df_inc, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
         print(ws)
         exit(0)
     elif (not bootstrap is None) and blacklitterman:
-        risk, returns, ws, sharpe = PF.markowitz_bootstrape_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrap_bl(df_inc, P, eta, alpha, bound, cpu_count=cpu_count, bootstrap_count=bootstrap)
 
     sr_result = pd.concat([
         pd.Series(ws, index=df_inc.columns),
