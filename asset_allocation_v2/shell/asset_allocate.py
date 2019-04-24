@@ -296,7 +296,7 @@ class MzFixRiskBootWaveletAllocate(Allocate):
         wavelet_asset_ids = ['120000001','120000002', '120000010', '120000011' ,'120000016', '120000080', '120000081', '120000082', 'ERI000001', 'ERI000002']
         wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, wavelet_asset_ids)
         wavelet_df_inc[wavelet_df_inc > 0] = 0.0
-        #print(wavelet_df_inc)
+        print(wavelet_df_inc)
         risk, returns, ws, sharpe = PF.markowitz_r_spe(wavelet_df_inc, wavelet_bound)
         #risk, returns, ws, sharpe = PF.markowitz_bootstrape_smooth(wavelet_df_inc, wavelet_bound, 26, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
         wavelet_ws = dict(zip(wavelet_df_inc.columns.ravel(), ws))
@@ -600,7 +600,6 @@ class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
 
 
     def allocate_algo(self, day, df_inc, bound):
-
 
         layer_assets_1 = ['120000053', '120000056','120000058','120000073']
         layer_assets_2 = ['MZ.FA0010', 'MZ.FA0050','MZ.FA0070']

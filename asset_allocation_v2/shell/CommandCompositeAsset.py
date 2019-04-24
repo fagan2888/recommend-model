@@ -115,6 +115,8 @@ def nav_update_index(db, asset):
         min_date, max_date, codes=df_position.columns)
     df_inc = df_nav.pct_change().fillna(0.0)
 
+    dates = pd.date_range(df_position.index[0], datetime.now() - timedelta(1))
+    df_position = df_position.reindex(dates).fillna(method = 'pad')
     # 计算复合资产净值
     df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_position, result_col='portfolio')
     # df_nav_portfolio.to_csv(datapath('category_nav_' + category + '.csv'))

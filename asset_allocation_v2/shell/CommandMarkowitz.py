@@ -878,7 +878,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     df_argv.reset_index(level=0, inplace=True)
     argv = df_argv['mz_value'].to_dict()
 
-    lookback = int(argv.get('allocate_lookback', '26'))
+    lookback = int(argv.get('lookback', '26'))
     adjust_period = int(argv.get('adjust_period', 1))
     wavelet_filter_num = int(argv.get('allocate_wavelet', 0))
     turnover = float(argv.get('allocate_turnover_filter', 0))
@@ -926,6 +926,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = df.T
         df = df.groupby(df.index).sum()
         df = df.T
+        #trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        #df = df.reindex(trade_date)
+        #df = df.fillna(method = 'pad')
+        #df = df.dropna()
     elif algo == 2:
         #马科维兹
         #df = markowitz_days(
@@ -1096,7 +1100,6 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         target[factor_loc] = 1
         target = target * factor_end
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, end_date = edate, lookback=lookback)
-        print(trade_date)
         allocate = FactorIndexAllocate('ALC.000001', trade_date, lookback, period = period, target = target)
         df = allocate.allocate()
 
@@ -1212,7 +1215,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     df[df.abs() < 0.0009999] = 0 # 过滤掉过小的份额
     df = df.apply(npu.np_pad_to, raw=True, axis=1) # 补足缺失
-    df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
+    #df = DFUtil.filter_same_with_last(df)          # 过滤掉相同
     if turnover >= 0.01:
         df = DFUtil.filter_by_turnover(df, turnover)   # 基于换手率进行规律
 

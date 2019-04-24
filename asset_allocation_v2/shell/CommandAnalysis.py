@@ -1383,3 +1383,70 @@ def online_benchmark_std(ctx):
     data = data.pct_change().fillna(0.0)
     data = data[data.index>='2016-08-01']
     print(data.std() * (365 ** 0.5))
+
+
+@analysis.command()
+@click.pass_context
+def online_allocate_comp(ctx):
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+
+    dfs = []
+    for i in range(0, 10):
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
+        df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
+        df.columns = ['risk_' + str(i)]
+        dfs.append(df)
+
+    df = pd.concat(dfs, axis = 1)
+
+    conn.close()
+    online_ser = df['risk_0']
+
+    asset_ids = ['MZ.000060', 'MZ.110060']
+    assets = dict([(asset_id , Asset(asset_id)) for asset_id in asset_ids])
+    df = pd.concat([online_ser, assets['MZ.000060'].nav(), assets['MZ.110060'].nav()], axis = 1)
+    df = df.dropna()
+    df = df[df.index >= '2017-04-22']
+    df = df / df.iloc[0]
+    df.to_csv('tmp.csv')
+
+
+
+@analysis.command()
+@click.pass_context
+def average_allocate_test(ctx):
+
+    conn  = MySQLdb.connect(**config.db_asset)
+    conn.autocommit(True)
+
+    dfs = []
+    for i in range(0, 10):
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
+        df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
+        df.columns = ['risk_' + str(i)]
+        dfs.append(df)
+
+    df = pd.concat(dfs, axis = 1)
+
+    conn.close()
+    online_ser = df['risk_0']
+
+    #print(online_ser)
+
+    trade_date = ATradeDate.week_trade_date(begin_date = '2012-07-22', lookback=1)[1:]
+    ds = []
+    data = []
+    for date in trade_date:
+        cmd = 'python shell/roboadvisor.py markowitz --id MZ.210060 --new --start-date ' +  date.strftime('%Y-%m-%d')
+        os.system(cmd) 
+        asset = Asset('MZ.210060')
+        nav = asset.nav()
+        start_date = nav.index[0]
+        asset_inc = nav.iloc[-1] / nav.iloc[0] - 1
+        online_inc = online_ser.iloc[-1] / online_ser.loc[start_date] - 1
+        print(date, start_date, asset_inc, online_inc)
+        ds.append(date)
+        data.append([asset_inc, online_inc])
+    df = pd.DataFrame(data, index=ds)
+    df.to_csv('average_allocate_test.csv')

@@ -155,7 +155,6 @@ def ra_pool_fund_check(targetDate,weeks_lookback=1000):
     s = s.where(t1.c.ra_date <= targetDate)
     df = pd.read_sql(s,db,parse_dates=['ra_date']).set_index('ra_date')
     df = df.loc[max(df.index)].reset_index()
-    print(df)
     if (df.groupby('ra_fund_id')['ra_pool'].count()==1).all():
         print('基金池是否交叉：\033[1;35mPass inspection\033[0m 更新日期：{}'.format(max(df['ra_date'])))
     else:
@@ -260,12 +259,17 @@ def check(ctx):
     if ra_pool_fund_check(targetDate):
         pass
     else:
-        return
+        #return
+        pass
     print()
 
 
-    #turnover_check(targetDate)
-    pass
+    #查看换手率
+    if turnover_check(targetDate):
+        pass
+    else:
+        return
+    print()
 
 
 if __name__ == '__main__':
