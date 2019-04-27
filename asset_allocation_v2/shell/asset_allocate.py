@@ -1,5 +1,9 @@
 #coding=utf8
-
+'''
+Modified on: Apr. 25, 2019
+Editor: Shixun Su
+Contact: sushixun@licaimofang.com
+'''
 
 import string
 import os
@@ -8,6 +12,8 @@ sys.path.append('shell')
 import click
 import pandas as pd
 import numpy as np
+import scipy
+import scipy.optimize
 import time
 import logging
 import re
@@ -20,6 +26,9 @@ import Financial as fin
 from TimingWavelet import TimingWt
 import multiprocessing
 from multiprocessing import Manager
+from multiprocessing import Pool
+from functools import partial
+import random
 from ipdb import set_trace
 
 from datetime import datetime, timedelta
@@ -39,9 +48,9 @@ from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
 from trade_date import ATradeDate
 from view import View
+import Financial as fin
 import RiskParity
 import util_optimize
-from multiprocessing import Pool
 
 import PureFactor
 import IndexFactor
@@ -52,13 +61,10 @@ from monetary_fund_filter import MonetaryFundFilter
 logger = logging.getLogger(__name__)
 
 
-
 class AvgAllocate(Allocate):
-
 
     def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
         super(AvgAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-
 
     def allocate_algo(self, day, df_inc, bound):
         ws = [1.0 / len(df_inc.columns)] * len(df_inc.columns)
@@ -66,13 +72,10 @@ class AvgAllocate(Allocate):
         return ws
 
 
-
 class MzAllocate(Allocate):
-
 
     def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
         super(MzAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-
 
     def allocate_algo(self, day, df_inc, bound):
         risk, returns, ws, sharpe = PF.markowitz_r_spe(df_inc, bound)
@@ -82,10 +85,8 @@ class MzAllocate(Allocate):
 
 class RpAllocate(Allocate):
 
-
     def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None):
         super(RpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-
 
     def allocate_algo(self, day, df_inc, bound):
         asset_num = df_inc.shape[1]
@@ -93,32 +94,35 @@ class RpAllocate(Allocate):
         x_t = np.array([1 / asset_num] * asset_num)
         ws = RiskParity.cal_weight(V, x_t)
         ws = dict(zip(df_inc.columns.ravel(), ws))
-        return ws
 
+        return ws
 
 
 class MzBlAllocate(Allocate):
 
+    def __init__(self, globalid, assets, views, reindex, lookback, period=1, bound=None):
 
-    def __init__(self, globalid, assets, views, reindex, lookback, period = 1, bound = None):
         super(MzBlAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
-        self.__views = views
+        self._views = views
+
+    @property
+    def views(self):
+
+        return self._views
 
     def allocate_algo(self, day, df_inc, bound):
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        risk, returns, ws, sharpe = PF.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
-        ws = dict(zip(df_inc.columns.ravel(), ws))
+        risk, returns, ws, sharpe = self.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
 
         return ws
-
 
     def load_bl_view(self, day, asset_ids):
 
         confidences = []
         view = pd.Series(0, index = asset_ids)
         for asset_id in asset_ids:
-            view.loc[asset_id] = self.__views[asset_id].view(day)
-            confidences.append(self.__views[asset_id].confidence)
+            view.loc[asset_id] = self.views[asset_id].view(day)
+            confidences.append(self.views[asset_id].confidence)
 
         eta = np.array(abs(view[view!=0]))
         P = np.diag(np.sign(view))
@@ -129,47 +133,176 @@ class MzBlAllocate(Allocate):
 
         return P, eta, np.mean(confidences)
 
+    def markowitz_r_spe_bl(self, funddfr, P, eta, alpha, bounds):
+
+        rf = Const.rf
+
+        final_risk = 0
+        final_return = 0
+        final_ws = []
+        final_ws = list(1.0 * np.ones(len(funddfr.columns)) / len(funddfr.columns))
+        final_sharp = -np.inf
+        final_codes = []
+
+        codes = funddfr.columns
+        return_rate = []
+        for code in codes:
+            return_rate.append(funddfr[code].values)
+
+        if eta.size == 0:
+            risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds)
+        else:
+            risks, returns, ws = fin.efficient_frontier_spe_bl(return_rate, P, eta, alpha, bounds)
+
+        for j in range(0, len(risks)):
+            if risks[j] == 0:
+                continue
+            sharp = (returns[j] - rf) / risks[j]
+            if sharp > final_sharp:
+                final_risk = risks[j]
+                final_return = returns[j]
+                final_ws = ws[j]
+                final_sharp = sharp
+
+        final_ws = dict(zip(df_inc.columns.ravel(), final_ws))
+
+        return final_risk, final_return, final_ws, final_sharp
+
 
 class MzBootAllocate(Allocate):
 
-    def __init__(self, globalid, assets, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, cpu_count=None, bootstrap_count=0):
+
         super(MzBootAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
         if cpu_count is None:
             count = int(multiprocessing.cpu_count()) // 2
             cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
+            self._cpu_count = cpu_count
         else:
-            self.__cpu_count = cpu_count
-        self.__bootstrap_count = bootstrap_count
-
+            self._cpu_count = cpu_count
+        self._bootstrap_count = bootstrap_count
 
     def allocate_algo(self, day, df_inc, bound):
-        risk, returns, ws, sharpe = PF.markowitz_bootstrap(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
-        ws = dict(zip(df_inc.columns.ravel(), ws))
-        #print(ws)
-        return ws
 
+        risk, returns, ws, sharpe = PF.markowitz_bootstrap(df_inc, bound, cpu_count = self._cpu_count, bootstrap_count = self._bootstrap_count)
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+
+        return ws
 
 
 class MzBootBlAllocate(MzBlAllocate):
 
+    def __init__(self, globalid, assets, views, reindex, lookback, period=1, bound=None, cpu_count=None, bootstrap_count=0):
 
-    def __init__(self, globalid, assets, views, reindex, lookback, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
         super(MzBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
-        if cpu_count is None:
-            count = int(multiprocessing.cpu_count()) // 2
-            cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
-        else:
-            self.__cpu_count = cpu_count
-        self.__bootstrap_count = bootstrap_count
 
+        self._cpu_count = cpu_count
+        self._bootstrap_count = bootstrap_count
+
+    @property
+    def cpu_count(self):
+
+        return self._cpu_count
+
+    @property
+    def bootstrap_count(self):
+
+        return self._bootstrap_count
 
     def allocate_algo(self, day, df_inc, bound):
+
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        risk, returns, ws, sharpe = PF.markowitz_bootstrap_bl(df_inc, P, eta, alpha, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
-        ws = dict(zip(df_inc.columns.ravel(), ws))
+        risk, returns, ws, sharpe = self.markowitz_bootstrap_bl(df_inc, P, eta, alpha, bound, self.cpu_count, self.bootstrap_count)
+
         return ws
+
+    def markowitz_bootstrap_bl(self, df_inc, P, eta, alpha, bound, cpu_count, bootstrap_count):
+
+        os.environ['OMP_NUM_THREADS'] = '1'
+
+        cpu_count = self.get_cpu_count(cpu_count)
+
+        look_back = len(df_inc)
+        loop_num = self.get_loop_num(bootstrap_count, look_back)
+
+        day_indices = self.create_day_indices(look_back, loop_num)
+
+        process_indices = [[] for i in range(0, cpu_count)]
+        for m in range(len(day_indices)):
+            process_indices[m % cpu_count].append(list(day_indices[m]))
+
+        args = (df_inc, P, eta, alpha, bound)
+        func = partial(self.m_markowitz_bl, *args)
+
+        risk, ret, wss, sharpe = self.m_calc_func(len(df_inc.columns), process_indices, func)
+        ws = wss / loop_num
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+
+        return risk, ret, ws, sharpe
+
+    def get_cpu_count(self, cpu_count):
+
+        if cpu_count is None or cpu_count <= 0:
+            return max(int(multiprocessing.cpu_count()) // 2, 1)
+        else:
+            return min(cpu_count, multiprocessing.cpu_count())
+
+    def get_loop_num(self, bootstrap_count, look_back):
+
+        if bootstrap_count is None or bootstrap_count <= 0:
+            return look_back * 4
+        elif bootstrap_count % 2:
+            return bootstrap_count + 1
+        else:
+            return bootstrap_count
+
+    def create_day_indices(self, look_back, loop_num):
+
+        rep_num = loop_num * (look_back // 2) // look_back
+
+        day_indices = list(range(0, look_back)) * rep_num
+        random.shuffle(day_indices)
+
+        day_indices = np.array(day_indices)
+        day_indices = day_indices.reshape(len(day_indices) // (look_back // 2), look_back // 2)
+
+        return day_indices
+
+    def m_calc_func(self, num_assets, process_indices, func):
+
+        manager = Manager()
+        q = manager.Queue()
+        processes = []
+        for indices in process_indices:
+            p = multiprocessing.Process(target=func, args=(q, indices))
+            processes.append(p)
+            p.start()
+
+        for p in processes:
+            p.join()
+
+        wss = np.zeros(num_assets)
+        risks = []
+        returns = []
+        sharpes = []
+        for m in range(0, q.qsize()):
+            record = q.get(m)
+            ws = record[2]
+            for n in range(0, len(ws)):
+                w = ws[n]
+                wss[n] = wss[n] + w
+            risks.append(record[0])
+            returns.append(record[1])
+            sharpes.append(record[3])
+
+        return np.mean(risks), np.mean(returns), wss, np.mean(sharpes)
+
+    def m_markowitz_bl(self, df_inc, P, eta, alpha, bound, queue, random_index):
+
+        for index in random_index:
+            tmp_df_inc = df_inc.iloc[index]
+            risk, returns, ws, sharpe = self.markowitz_r_spe_bl(tmp_df_inc, P, eta, alpha, bound)
+            queue.put((risk, returns, ws, sharpe))
 
 
 class MzBootDownRiskAllocate(Allocate):
@@ -179,15 +312,15 @@ class MzBootDownRiskAllocate(Allocate):
         if cpu_count is None:
             count = int(multiprocessing.cpu_count()) // 2
             cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
+            self._cpu_count = cpu_count
         else:
-            self.__cpu_count = cpu_count
-        self.__bootstrap_count = bootstrap_count
+            self._cpu_count = cpu_count
+        self._bootstrap_count = bootstrap_count
 
 
     def allocate_algo(self, day, df_inc, bound):
         df_inc[df_inc >= 0] = 0.0
-        risk, returns, ws, sharpe = PF.markowitz_bootstrap(df_inc, bound, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        risk, returns, ws, sharpe = self.markowitz_bootstrap(df_inc, bound, cpu_count = self._cpu_count, bootstrap_count = self._bootstrap_count)
         tdate = ATradeDate.trade_date()
         var = np.array([self.assets[code].origin_nav_sr.reindex(tdate).pct_change().loc[df_inc.index[-13]:df_inc.index[-1]].var() for code in df_inc.columns])
         ws = np.array(ws).ravel()
@@ -255,6 +388,7 @@ class FactorValidAllocate(Allocate):
 
         return ws
 
+
 class MzFixRiskBootAllocate(Allocate):
 
     def __init__(self, globalid, assets, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
@@ -262,19 +396,123 @@ class MzFixRiskBootAllocate(Allocate):
         if cpu_count is None:
             count = int(multiprocessing.cpu_count()) // 2
             cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
+            self._cpu_count = cpu_count
         else:
-            self.__cpu_count = cpu_count
-        self.__bootstrap_count = bootstrap_count
+            self._cpu_count = cpu_count
+        self._bootstrap_count = bootstrap_count
         self.risk = risk
 
-
     def allocate_algo(self, day, df_inc, bound):
-        risk, returns, ws, sharpe = PF.markowitz_bootstrap_fixrisk(df_inc, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        risk, returns, ws, sharpe = PF.markowitz_bootstrap_fixrisk(df_inc, bound, self.risk, cpu_count = self._cpu_count, bootstrap_count = self._bootstrap_count)
         # risk, returns, ws, sharpe = PF.markowitz_fixrisk(df_inc, bound, self.risk)
         ws = dict(zip(df_inc.columns.ravel(), ws))
         return ws
 
+
+class MzFixRiskBootBlAllocate(MzBootBlAllocate):
+
+    def __init__(self, globalid, assets, views, reindex, lookback, risk, period=1, bound=None, cpu_count=None, bootstrap_count=0):
+
+        super(MzFixRiskBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound, cpu_count, bootstrap_count)
+
+        self._risk = risk
+
+    @property
+    def risk(self):
+
+        return self._risk
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        P, eta, alpha = self.load_bl_view(day, df_inc.columns)
+        risk, returns, ws, sharpe = self.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, self.cpu_count, self.bootstrap_count)
+
+        return ws
+
+    def markowitz_bootstrap_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, cpu_count, bootstrap_count):
+
+        os.environ['OMP_NUM_THREADS'] = '1'
+
+        cpu_count = self.get_cpu_count(cpu_count)
+
+        look_back = len(df_inc)
+        loop_num = self.get_loop_num(bootstrap_count, look_back)
+
+        day_indices = self.create_day_indices(look_back, loop_num)
+
+        process_indices = [[] for i in range(0, cpu_count)]
+        for m in range(0, len(day_indices)):
+            process_indices[m % cpu_count].append(list(day_indices[m]))
+
+        args = (df_inc, P, eta, alpha, bound, target_risk)
+        func = partial(self.m_markowitz_bl_fixrisk, *args)
+
+        risk, ret, wss, sharpe = self.m_calc_func(len(df_inc.columns), process_indices, func)
+        ws = wss / loop_num
+        ws = dict(zip(df_inc.columns.ravel(), ws))
+
+        return risk, ret, ws, sharpe
+
+    def m_markowitz_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, queue, random_index):
+
+        for index in random_index:
+            tmp_df_inc = df_inc.iloc[index]
+            ev_vol = self.calc_ev_vol(tmp_df_inc)
+            ev_ret = self.calc_ev_ret(tmp_df_inc, ev_vol, P, eta, alpha)
+            risk, returns, ws, sharpe = self.markowitz_bl_fixrisk(ev_vol, ev_ret, P, eta, alpha, bound, target_risk)
+            queue.put((risk, returns, ws, sharpe))
+
+    def markowitz_bl_fixrisk(self, ev_vol, ev_ret, P, eta, alpha, bound, target_risk):
+
+        num_assets = ev_ret.shape[0]
+        w0 = [1.0/num_assets] * num_assets
+
+        bnds = [(bound[i]['lower'], bound[i]['upper']) for i in range(len(bound))]
+
+        asset_sum1_limit = 0.0
+        sum1_limit_assets = []
+        for asset in range(len(bound)):
+            if bound[asset]['sum1'] != 0.0:
+                sum1_limit_assets.append(asset)
+                asset_sum1_limit = bound[asset]['sum1']
+
+        cons = [
+            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0},
+            {'type': 'ineq', 'fun': lambda x: target_risk - np.sqrt(np.dot(x,np.dot(ev_vol, x)))},
+        ]
+        if asset_sum1_limit > 0.0:
+            cons.append({'type': 'ineq', 'fun': lambda x: asset_sum1_limit - np.sum(x[sum1_limit_assets])})
+        cons = tuple(cons)
+
+        res = scipy.optimize.minimize(self.risk_budget_objective, w0, args=[ev_ret, ev_vol, target_risk], method='SLSQP', bounds=bnds, constraints=cons, options={'disp': False, 'eps': 1e-3})
+
+        final_risk = np.sqrt(np.dot(res.x,np.dot(ev_vol, res.x)))
+        final_return = np.dot(res.x, ev_ret)
+        final_ws = res.x
+        final_sharp = (final_return - Const.rf) / final_risk
+
+        return final_risk, final_return, final_ws, final_sharp
+
+    def calc_ev_vol(self, df_inc):
+
+        ev_vol = df_inc.cov().values
+
+        return ev_vol
+
+    def calc_ev_ret(self, df_inc, ev_vol, P, eta, alpha):
+
+        ev_ret = df_inc.mean().values
+        if eta.size != 0:
+            initialvalue = np.mean(df_inc.T.values, axis=1)
+            expected_return = fin.black_litterman(initialvalue, ev_vol, P, eta, alpha)
+            ev_ret = expected_return.reshape(-1)
+
+        return ev_ret
+
+    def risk_budget_objective(self, x, pars):
+
+        ev_ret = pars[0]
+        return -np.dot(ev_ret, x)
 
 
 class MzFixRiskBootWaveletAllocate(Allocate):
@@ -284,10 +522,10 @@ class MzFixRiskBootWaveletAllocate(Allocate):
         if cpu_count is None:
             count = int(multiprocessing.cpu_count()) // 2
             cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
+            self._cpu_count = cpu_count
         else:
-            self.__cpu_count = cpu_count
-        self.__bootstrap_count = bootstrap_count
+            self._cpu_count = cpu_count
+        self._bootstrap_count = bootstrap_count
         self.risk = risk
         self.wavelet_assets = wavelet_assets
 
@@ -298,7 +536,7 @@ class MzFixRiskBootWaveletAllocate(Allocate):
         wavelet_df_inc[wavelet_df_inc > 0] = 0.0
         print(wavelet_df_inc)
         risk, returns, ws, sharpe = PF.markowitz_r_spe(wavelet_df_inc, wavelet_bound)
-        #risk, returns, ws, sharpe = PF.markowitz_bootstrap_smooth(wavelet_df_inc, wavelet_bound, 26, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        #risk, returns, ws, sharpe = PF.markowitz_bootstrap_smooth(wavelet_df_inc, wavelet_bound, 26, cpu_count = self._cpu_count, bootstrap_count = self._bootstrap_count)
         wavelet_ws = dict(zip(wavelet_df_inc.columns.ravel(), ws))
         cols = []
         for asset_id in df_inc.columns:
@@ -320,7 +558,7 @@ class MzFixRiskBootWaveletAllocate(Allocate):
             asset_bound['upper'] = 1.0
             fix_risk_asset_bound.append(asset_bound)
 
-        risk, returns, fix_risk_asset_ws, sharpe = PF.markowitz_bootstrap_fixrisk(fix_risk_asset_inc, fix_risk_asset_bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
+        risk, returns, fix_risk_asset_ws, sharpe = PF.markowitz_bootstrap_fixrisk(fix_risk_asset_inc, fix_risk_asset_bound, self.risk, cpu_count = self._cpu_count, bootstrap_count = self._bootstrap_count)
         fix_risk_asset_ws = dict(zip(fix_risk_asset_inc.columns.ravel(), fix_risk_asset_ws))
         if fix_risk_asset_ws['120000039'] < 0.25:
             fix_risk_asset_ws['wavelet_inc'] = fix_risk_asset_ws['wavelet_inc'] + fix_risk_asset_ws['120000039']
@@ -334,7 +572,6 @@ class MzFixRiskBootWaveletAllocate(Allocate):
                 final_ws[key] = fix_risk_asset_ws[key]
 
         return final_ws
-
 
     def allocate(self):
 
@@ -362,7 +599,6 @@ class MzFixRiskBootWaveletAllocate(Allocate):
         return pos_df
 
 
-
     def load_wavelet_allocate_data(self, day ,asset_ids):
 
         reindex = self.index[self.index <= day][-1 * self.lookback:]
@@ -385,29 +621,29 @@ class MzFixRiskBootWaveletAllocate(Allocate):
         return df_inc, bound
 
 
-class MzFixRiskBootWaveletBlAllocate(MzBlAllocate):
+class MzFixRiskBootWaveletBlAllocate(MzFixRiskBootBlAllocate):
 
-    def __init__(self, globalid, assets, wavelet_assets, views, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
-        super(MzFixRiskBootWaveletBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
-        if cpu_count is None:
-            count = int(multiprocessing.cpu_count()) // 2
-            cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
-        else:
-            self.__cpu_count = cpu_count
-        self.__bootstrap_count = bootstrap_count
-        self.risk = risk
-        self.wavelet_assets = wavelet_assets
+    def __init__(self, globalid, assets, wavelet_assets, views, reindex, lookback, risk, period=1, bound=None, cpu_count=None, bootstrap_count=0):
 
+        super(MzFixRiskBootWaveletBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, risk, period, bound, cpu_count, bootstrap_count)
+
+        self._wavelet_assets = wavelet_assets
+
+    @property
+    def wavelet_assets(self):
+
+        return self._wavelet_assets
 
     def allocate_algo(self, day, df_inc, bound):
+
         wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, list(self.assets.keys()))
         df_inc = df_inc + wavelet_df_inc
-        P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        risk, returns, ws, sharpe = PF.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha ,bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
-        ws = dict(zip(df_inc.columns.ravel(), ws))
-        return ws
 
+        P, eta, alpha = self.load_bl_view(day, df_inc.columns)
+
+        risk, returns, ws, sharpe = self.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha ,bound, self.risk, self.cpu_count, self.bootstrap_count)
+
+        return ws
 
     def load_wavelet_allocate_data(self, day ,asset_ids):
 
@@ -430,30 +666,6 @@ class MzFixRiskBootWaveletBlAllocate(MzBlAllocate):
         return df_inc, bound
 
 
-
-class MzFixRiskBootBlAllocate(MzBlAllocate):
-
-    def __init__(self, globalid, assets, views, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
-        super(MzFixRiskBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
-        if cpu_count is None:
-            count = int(multiprocessing.cpu_count()) // 2
-            cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
-        else:
-            self.__cpu_count = cpu_count
-        self.__bootstrap_count = bootstrap_count
-        self.risk = risk
-
-
-    def allocate_algo(self, day, df_inc, bound):
-
-        P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        risk, returns, ws, sharpe = PF.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
-        ws = dict(zip(df_inc.columns.ravel(), ws))
-
-        return ws
-
-
 class FactorValidAllocate(Allocate):
 
 
@@ -469,9 +681,9 @@ class FactorValidAllocate(Allocate):
         if cpu_count is None:
             count = int(multiprocessing.cpu_count()) // 2
             cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
+            self._cpu_count = cpu_count
         else:
-            self.__cpu_count = cpu_count
+            self._cpu_count = cpu_count
 
     def allocate(self):
 
@@ -479,7 +691,7 @@ class FactorValidAllocate(Allocate):
         asset_ids = list(self.assets.keys())
         pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
 
-        pool = Pool(self.__cpu_count)
+        pool = Pool(self._cpu_count)
         wss = pool.map(self.allocate_algo, adjust_days)
         pool.close()
         pool.join()
@@ -518,6 +730,7 @@ class FactorValidAllocate(Allocate):
         ws = dict(zip(sfe.index, stock_weights))
 
         return ws
+
 
 class FactorIndexAllocate(Allocate):
 
@@ -585,21 +798,27 @@ class FactorIndexAllocate(Allocate):
         return ws
 
 
-class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
+class MzLayerFixRiskBootBlAllocate(MzFixRiskBootBlAllocate):
 
-    def __init__(self, globalid, assets, views, reindex, lookback, risk, period = 1, bound = None, cpu_count = None, bootstrap_count = 0):
-        super(MzLayerFixRiskBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
-        if cpu_count is None:
-            count = int(multiprocessing.cpu_count()) // 2
-            cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
-        else:
-            self.__cpu_count = cpu_count
-        self.__bootstrap_count = bootstrap_count
-        self.risk = risk
+    def __init__(self, globalid, assets, views, reindex, lookback, risk, period=1, bound=None, cpu_count=None, bootstrap_count=0):
 
+        super(MzLayerFixRiskBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, risk, period, bound, cpu_count, bootstrap_count)
 
     def allocate_algo(self, day, df_inc, bound):
+
+        df_inc_layer, layer_ws = self.load_a_layer(day, df_inc)
+
+        P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
+
+        bound = self.load_a_layer_bound(day, df_inc_layer.columns)
+
+        risk, returns, ws, sharpe = self.markowitz_bootstrap_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, self.cpu_count, self.bootstrap_count)
+
+        ws = self.calc_a_layer_weight(ws, layer_ws)
+
+        return ws
+
+    def load_a_layer(self, day, df_inc):
 
         layer_assets_1 = ['120000053', '120000056','120000058','120000073']
         layer_assets_2 = ['MZ.FA0010', 'MZ.FA0050','MZ.FA0070']
@@ -614,18 +833,23 @@ class MzLayerFixRiskBootBlAllocate(MzBlAllocate):
 
         df_inc['ALayer'] = df_alayer_inc
         df_inc_layer = df_inc[df_inc.columns.difference(layer_assets)]
-        P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
+
+        return df_inc_layer, layer_ws
+
+    def load_a_layer_bound(self, day, asset_ids):
 
         bound = []
         allocate_asset_ids = []
-        for asset_id in df_inc_layer.columns:
+        for asset_id in asset_ids:
             asset_bound = AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict()
             if asset_bound['upper'] > 0:
                 bound.append(asset_bound)
-                allocate_asset_ids.append(asset_id)
+                # allocate_asset_ids.append(asset_id)
 
-        risk, returns, ws, sharpe = PF.markowitz_bootstrap_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
-        ws = dict(zip(df_inc_layer.columns.ravel(), ws))
+        return bound
+
+    def calc_a_layer_weight(self, ws, layer_ws):
+
         for asset in layer_ws.index:
             ws[asset] = ws['ALayer'] * layer_ws.loc[asset]
         del ws['ALayer']
@@ -806,56 +1030,85 @@ class CppiAllocate(Allocate):
         return var
 
 
-class MzLayerFixRiskSmoothBootBlAllocate(MzBlAllocate):
+class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
 
     def __init__(self, globalid, assets, views, reindex, lookback, risk, smooth, period=1, bound=None, cpu_count=None, bootstrap_count=0):
-        super(MzLayerFixRiskSmoothBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound)
-        if cpu_count is None:
-            count = int(multiprocessing.cpu_count()) // 2
-            cpu_count = count if count > 0 else 1
-            self.__cpu_count = cpu_count
-        else:
-            self.__cpu_count = cpu_count
-        self.__bootstrap_count = bootstrap_count
-        self.__smooth = smooth
-        self.__risk = risk
+
+        super(MzLayerFixRiskSmoothBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, risk, period, bound, cpu_count, bootstrap_count)
+
+        self._smooth = smooth
+
+    @property
+    def smooth(self):
+
+        return self._smooth
 
     def allocate_algo(self, day, df_inc, bound):
 
-        layer_assets_1 = ['120000053', '120000056','120000058','120000073']
-        layer_assets_2 = ['MZ.FA0010', 'MZ.FA0050','MZ.FA0070']
-        layer_assets = layer_assets_1 + layer_assets_2
+        df_inc_layer, layer_ws = self.load_a_layer(day, df_inc)
 
-        layer_assets = dict([(asset_id , Asset(asset_id)) for asset_id in layer_assets])
-        layer_bounds = {}
-        for asset in layer_assets.keys():
-            layer_bounds[asset] = self.bound[asset]
-        rp_allocate = RpAllocate('ALC.000001', layer_assets, self.index, self.lookback, bound = layer_bounds)
-        layer_ws, df_alayer_inc = rp_allocate.allocate_day(day)
-
-        df_inc['ALayer'] = df_alayer_inc
-        df_inc_layer = df_inc[df_inc.columns.difference(layer_assets)]
         P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
 
-        bound = []
-        allocate_asset_ids = []
-        for asset_id in df_inc_layer.columns:
-            asset_bound = AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict()
-            if asset_bound['upper'] > 0:
-                bound.append(asset_bound)
-                allocate_asset_ids.append(asset_id)
+        bound = self.load_a_layer_bound(day, df_inc_layer.columns)
 
-        risk, returns, ws, sharpe = PF.markowitz_bootstrap_smooth_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.__risk, self.__smooth, cpu_count = self.__cpu_count, bootstrap_count = self.__bootstrap_count)
-        ws = dict(zip(df_inc_layer.columns.ravel(), ws))
-        for asset in layer_ws.index:
-            ws[asset] = ws['ALayer'] * layer_ws.loc[asset]
-        del ws['ALayer']
+        risk, returns, ws, sharpe = self.markowitz_bootstrap_smooth_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, self.smooth, self.cpu_count, self.bootstrap_count)
+
+        ws = self.calc_a_layer_weight(ws, layer_ws)
 
         return ws
 
+    def markowitz_bootstrap_smooth_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, smooth, cpu_count, bootstrap_count):
+
+        os.environ['OMP_NUM_THREADS'] = '1'
+
+        cpu_count = self.get_cpu_count(cpu_count)
+
+        look_back = len(df_inc)
+        smooth, look_back_smooth = self.calc_look_back_smooth(smooth, look_back)
+        loop_num = self.get_loop_num(bootstrap_count, look_back_smooth)
+
+        day_indices = self.create_smooth_day_indices(look_back, look_back_smooth, smooth, loop_num)
+
+        process_indices = [[] for i in range(0, cpu_count)]
+        for m in range(len(day_indices)):
+            process_indices[m % cpu_count].append(list(day_indices[m]))
+
+        args = (df_inc, P, eta, alpha, bound, target_risk)
+        func = partial(self.m_markowitz_bl_fixrisk, *args)
+
+        risk, ret, wss, sharpe = self.m_calc_func(len(df_inc.columns), process_indices, func)
+        ws = wss / loop_num
+        ws = dict(zip(df_inc_layer.columns.ravel(), ws))
+
+        return risk, ret, ws, sharpe
+
+    def calc_look_back_smooth(self, smooth, look_back):
+
+        if smooth % 2:
+            smooth += 1
+        smooth = min(smooth, look_back)
+        look_back_smooth = look_back - smooth // 2
+
+        return smooth, look_back_smooth
+
+    def create_smooth_day_indices(self, look_back, look_back_smooth, smooth, loop_num):
+
+        rep_num = loop_num * (look_back_smooth // 2) // look_back_smooth
+
+        day_indices = list(range(smooth, look_back)) * rep_num
+        for i in range(smooth):
+            day_index = [i] * round((i+1)/(smooth+1)*rep_num)
+            day_indices.extend(day_index)
+        day_indices.sort()
+        random.shuffle(day_indices)
+
+        day_indices = np.array(day_indices)
+        day_indices = day_indices.reshape(len(day_indices) // (look_back_smooth // 2), look_back_smooth // 2)
+
+        return day_indices
+
 
 if __name__ == '__main__':
-
 
     print(MonetaryAllocate.all_monetary_fund_globalid())
 
@@ -893,3 +1146,4 @@ if __name__ == '__main__':
         views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = 0.5) if asset_id in view_df.columns else View(None, asset_id, confidence = 0.5)
 
     allocate = MzBootBlAllocate('ALC.000002', assets, views, trade_date, 26)
+
