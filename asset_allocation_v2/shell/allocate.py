@@ -226,9 +226,10 @@ class Allocate(object):
         pos_df = pd.DataFrame(0, index=adjust_days, columns=asset_ids)
 
         pool = multiprocessing.Pool(self.cpu_count)
-
         pos = pool.map(self.allocate_pos_day, adjust_days.to_list())
-        # pos_df = pd.DataFrame(pos).reindex(asset_ids, axis='columns').fillna(0.0)
+        pool.close()
+        pool.join()
+
         pos_df.loc[:] = pd.DataFrame(pos).fillna(0.0)
 
         return pos_df
@@ -237,8 +238,7 @@ class Allocate(object):
 
         asset_ids = list(self.assets.keys())
         df_inc, bound = self.load_allocate_data(day, asset_ids)
-        ws = self.allocate_algo(day, df_inc, bound)
-        pos = pd.Series(ws, name=day)
+        pos = self.allocate_algo(day, df_inc, bound).rename(day)
 
         return pos
 

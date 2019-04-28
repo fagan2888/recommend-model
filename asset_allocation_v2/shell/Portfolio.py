@@ -66,7 +66,7 @@ def markowitz_r_spe_bl(funddfr, P, eta, alpha, bounds):
     final_return = 0
     final_ws = []
     final_ws = list(1.0 * np.ones(len(funddfr.columns)) / len(funddfr.columns))
-    final_sharp = -inf
+    final_sharp = -np.inf
     final_codes = []
 
     codes = funddfr.columns

@@ -98,6 +98,7 @@ class RpAllocate(Allocate):
         return ws
 
 
+'''new'''
 class MzBlAllocate(Allocate):
 
     def __init__(self, globalid, assets, views, reindex, lookback, period=1, bound=None):
@@ -111,9 +112,10 @@ class MzBlAllocate(Allocate):
         return self._views
 
     def allocate_algo(self, day, df_inc, bound):
+
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        risk, returns, ws, sharpe = self.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
-        ws = dict(zip(df_inc.columns.ravel(), ws))
+        ws = self.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
+        ws = pd.Series(ws, index=df_inc.columns)
 
         return ws
 
@@ -140,7 +142,7 @@ class MzBlAllocate(Allocate):
         final_return = 0
         final_ws = []
         final_ws = list(1.0 * np.ones(len(funddfr.columns)) / len(funddfr.columns))
-        final_sharp = -np.inf
+        final_sharpe = -np.inf
         final_codes = []
 
         codes = funddfr.columns
@@ -149,23 +151,23 @@ class MzBlAllocate(Allocate):
             return_rate.append(funddfr[code].values)
 
         if eta.size == 0:
-            risks, returns, ws = fin.efficient_frontier_spe(return_rate, bounds)
+            risk, ret, ws = fin.efficient_frontier_spe(return_rate, bounds)
         else:
-            risks, returns, ws = fin.efficient_frontier_spe_bl(return_rate, P, eta, alpha, bounds)
+            risk, ret, ws = fin.efficient_frontier_spe_bl(return_rate, P, eta, alpha, bounds)
 
-        for j in range(0, len(risks)):
+        for j in range(len(risk)):
             if risks[j] == 0:
                 continue
-            sharp = (returns[j] - Const.rf) / risks[j]
-            if sharp > final_sharp:
-                final_risk = risks[j]
-                final_return = returns[j]
+            sharpe = (ret[j] - Const.rf) / risk[j]
+            if sharpe > final_sharp:
+                final_risk = risk[j]
+                final_return = ret[j]
                 final_ws = ws[j]
-                final_sharp = sharp
+                final_sharpe = sharpe
 
-        final_res = np.append(final_ws, np.array([final_risk, final_ret, final_sharpe]))
+        # final_res = np.append(final_ws, np.array([final_risk, final_ret, final_sharpe]))
 
-        return final_risk, final_return, final_ws, final_sharp
+        return final_ws
 
 
 '''old'''
@@ -190,6 +192,7 @@ class MzBootAllocate(Allocate):
         return ws
 
 
+'''new'''
 class MzBootBlAllocate(MzBlAllocate):
 
     def __init__(self, globalid, assets, views, reindex, lookback, period=1, bound=None, cpu_count=None, bootstrap_count=0):
@@ -212,7 +215,7 @@ class MzBootBlAllocate(MzBlAllocate):
     def allocate_algo(self, day, df_inc, bound):
 
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        risk, ret, ws, sharpe = self.markowitz_bootstrap_bl(df_inc, P, eta, alpha, bound, self.bootstrap_count)
+        ws = self.markowitz_bootstrap_bl(df_inc, P, eta, alpha, bound, self.bootstrap_count)
 
         return ws
 
@@ -225,9 +228,10 @@ class MzBootBlAllocate(MzBlAllocate):
 
         args = (df_inc, P, eta, alpha, bound)
         v_markowitz_random_bl = np.vectorize(partial(self.markowitz_random_bl, *args), signature='(n)->(m)')
-        res = np.mean(v_markowitz_random_bl(day_indices), axis=0)
+        ws = np.mean(v_markowitz_random_bl(day_indices), axis=0)
+        ws = pd.Series(ws, index=df_inc.columns, name=trade_date)
 
-        return self.unpack_res(res, df_inc.columns.ravel())
+        return ws
 
     def get_cpu_count(self, cpu_count):
 
@@ -260,18 +264,18 @@ class MzBootBlAllocate(MzBlAllocate):
     def markowitz_random_bl(self, df_inc, P, eta, alpha, bound, random_index):
 
         tmp_df_inc = df_inc.iloc[random_index]
-        res= self.markowitz_r_spe_bl(tmp_df_inc, P, eta, alpha, bound)
+        ws = self.markowitz_r_spe_bl(tmp_df_inc, P, eta, alpha, bound)
 
-        return res
+        return ws
 
-    def unpack_res(self, res, keys):
+    # def unpack_res(self, res, keys):
 
-        risk = res[-3]
-        ret = res[-2]
-        ws = dict(zip(keys, res[:-3]))
-        sharpe = res[-1]
+        # risk = res[-3]
+        # ret = res[-2]
+        # ws = dict(zip(keys, res[:-3]))
+        # sharpe = res[-1]
 
-        return risk, ret, ws, sharpe
+        # return risk, ret, ws, sharpe
 
 
 class MzBootDownRiskAllocate(Allocate):
@@ -379,6 +383,7 @@ class MzFixRiskBootAllocate(Allocate):
         return ws
 
 
+'''new'''
 class MzFixRiskBootBlAllocate(MzBootBlAllocate):
 
     def __init__(self, globalid, assets, views, reindex, lookback, risk, period=1, bound=None, cpu_count=None, bootstrap_count=0):
@@ -395,7 +400,7 @@ class MzFixRiskBootBlAllocate(MzBootBlAllocate):
     def allocate_algo(self, day, df_inc, bound):
 
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        risk, returns, ws, sharpe = self.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
+        ws = self.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
 
         return ws
 
@@ -408,18 +413,19 @@ class MzFixRiskBootBlAllocate(MzBootBlAllocate):
 
         args = (df_inc, P, eta, alpha, bound, target_risk, self.calc_ev_cov)
         v_markowitz_random_bl_fixrisk = np.vectorize(partial(self.markowitz_random_bl_fixrisk, *args), signature='(n)->(m)')
-        res = np.mean(v_markowitz_random_bl_fixrisk(day_indices), axis=0)
+        ws = np.mean(v_markowitz_random_bl_fixrisk(day_indices), axis=0)
+        ws = pd.Series(ws, index=df_inc.columns)
 
-        return self.unpack_res(res, df_inc.columns.ravel())
+        return ws
 
     def markowitz_random_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, func_ev_cov, random_index):
 
         tmp_df_inc = df_inc.iloc[random_index.tolist()]
         ev_cov = func_ev_cov(tmp_df_inc)
         ev_ret = self.calc_ev_ret(tmp_df_inc, ev_cov, P, eta, alpha)
-        res = self.markowitz_bl_fixrisk(ev_cov, ev_ret, bound, target_risk)
+        ws = self.markowitz_bl_fixrisk(ev_cov, ev_ret, bound, target_risk)
 
-        return res
+        return ws
 
     def markowitz_bl_fixrisk(self, ev_cov, ev_ret, bound, target_risk):
 
@@ -445,14 +451,13 @@ class MzFixRiskBootBlAllocate(MzBootBlAllocate):
 
         res = scipy.optimize.minimize(self.risk_budget_objective, w0, args=(ev_ret, ev_cov, target_risk), method='SLSQP', bounds=bnds, constraints=cons, options={'disp': False, 'eps': 1e-3})
 
-        final_risk = np.sqrt(np.dot(res.x, np.dot(ev_cov, res.x)))
-        final_ret = np.dot(res.x, ev_ret)
-        final_ws = res.x
-        final_sharpe = (final_ret - Const.rf) / final_risk
+        # final_risk = np.sqrt(np.dot(res.x, np.dot(ev_cov, res.x)))
+        # final_ret = np.dot(res.x, ev_ret)
+        # final_ws = res.x
+        # final_sharpe = (final_ret - Const.rf) / final_risk
+        # final_res = np.append(final_ws, np.array([final_risk, final_ret, final_sharpe]))
 
-        final_res = np.append(final_ws, np.array([final_risk, final_ret, final_sharpe]))
-
-        return final_res
+        return res.x
 
     def calc_ev_cov(self, df_inc):
 
@@ -582,6 +587,7 @@ class MzFixRiskBootWaveletAllocate(Allocate):
         return df_inc, bound
 
 
+'''new'''
 class MzFixRiskBootWaveletBlAllocate(MzFixRiskBootBlAllocate):
 
     def __init__(self, globalid, assets, wavelet_assets, views, reindex, lookback, risk, period=1, bound=None, cpu_count=None, bootstrap_count=0):
@@ -599,10 +605,8 @@ class MzFixRiskBootWaveletBlAllocate(MzFixRiskBootBlAllocate):
 
         wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, list(self.assets.keys()))
         df_inc = df_inc + wavelet_df_inc
-
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-
-        risk, returns, ws, sharpe = self.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha ,bound, self.risk, self.bootstrap_count)
+        ws = self.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
 
         return ws
 
@@ -759,6 +763,7 @@ class FactorIndexAllocate(Allocate):
         return ws
 
 
+'''new'''
 class MzLayerFixRiskBootBlAllocate(MzFixRiskBootBlAllocate):
 
     def __init__(self, globalid, assets, views, reindex, lookback, risk, period=1, bound=None, cpu_count=None, bootstrap_count=0):
@@ -768,11 +773,8 @@ class MzLayerFixRiskBootBlAllocate(MzFixRiskBootBlAllocate):
     def allocate_algo(self, day, df_inc, bound):
 
         df_inc_layer, layer_ws, bound = self.load_a_layer(day, df_inc)
-
         P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
-
-        risk, returns, ws, sharpe = self.markowitz_bootstrap_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, self.bootstrap_count)
-
+        ws = self.markowitz_bootstrap_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, self.bootstrap_count)
         ws = self.calc_a_layer_weight(ws, layer_ws)
 
         return ws
@@ -806,8 +808,8 @@ class MzLayerFixRiskBootBlAllocate(MzFixRiskBootBlAllocate):
     def calc_a_layer_weight(self, ws, layer_ws):
 
         for asset in layer_ws.index:
-            ws[asset] = ws['ALayer'] * layer_ws.loc[asset]
-        del ws['ALayer']
+            ws.loc[asset] = ws.loc['ALayer'] * layer_ws.loc[asset]
+        ws.drop(labels=['ALayer'], inplace=True)
 
         return ws
 
@@ -985,6 +987,7 @@ class CppiAllocate(Allocate):
         return var
 
 
+'''new'''
 class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
 
     def __init__(self, globalid, assets, views, reindex, lookback, risk, smooth, period=1, bound=None, cpu_count=None, bootstrap_count=0):
@@ -1002,12 +1005,12 @@ class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
 
         df_inc_layer, layer_ws, bound = self.load_a_layer(day, df_inc)
         P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
-        risk, ret, ws, sharpe = self.markowitz_bootstrap_smooth_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, self.smooth, self.bootstrap_count)
+        ws = self.markowitz_smooth_bootstrap_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, self.smooth, self.bootstrap_count)
         ws = self.calc_a_layer_weight(ws, layer_ws)
 
         return ws
 
-    def markowitz_bootstrap_smooth_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, smooth, bootstrap_count):
+    def markowitz_smooth_bootstrap_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, smooth, bootstrap_count):
 
         look_back = len(df_inc)
         smooth, look_back_smooth = self.calc_look_back_smooth(smooth, look_back)
@@ -1017,9 +1020,10 @@ class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
 
         args = (df_inc, P, eta, alpha, bound, target_risk, self.calc_ev_cov)
         v_markowitz_random_bl_fixrisk = np.vectorize(partial(self.markowitz_random_bl_fixrisk, *args), signature='(n)->(m)')
-        res = np.mean(v_markowitz_random_bl_fixrisk(day_indices), axis=0)
+        ws = np.mean(v_markowitz_random_bl_fixrisk(day_indices), axis=0)
+        ws = pd.Series(ws, index=df_inc.columns)
 
-        return self.unpack_res(res, df_inc.columns.ravel())
+        return ws
 
     def calc_look_back_smooth(self, smooth, look_back):
 
