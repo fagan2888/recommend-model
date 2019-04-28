@@ -1058,7 +1058,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MzFixRiskBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, bound = bounds)
-        df = allocate.allocate()
+        df = allocate.m_allocate()
 
     elif algo == 11:
 
@@ -1086,7 +1086,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MzFixRiskBootWaveletBlAllocate('ALC.000001', assets, wavelet_assets, views, trade_date, lookback, upper_risk, bound = bounds)
-        df = allocate.allocate()
+        df = allocate.m_allocate()
 
 
     elif algo == 13:
@@ -1182,7 +1182,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MzLayerFixRiskSmoothBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, smooth, bound=bounds)
-        df = allocate.allocate()
+        df = allocate.m_allocate()
 
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
