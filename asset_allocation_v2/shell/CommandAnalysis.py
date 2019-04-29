@@ -833,16 +833,17 @@ def online_turnover_freq(ctx):
 @click.pass_context
 def index_nav(ctx):
 
-    index_ids = ['120000001', '120000002', '120000009' , '120000010', '120000011', '120000016' ,'120000017' ,'120000039', '120000080', '120000081','120000082' ,'ERI000001', 'ERI000002']
+    index_ids = ['120000001', '120000002', '120000009' , '120000010', '120000011', '120000014','120000016' ,'120000017' ,'120000039', '120000080', '120000081','120000082' ,'ERI000001', 'ERI000002']
     data = {}
-    for _id in index_ids[0:-2]:
-        data[_id] = base_ra_index_nav.load_series(_id)
-    for _id in index_ids[-2:]:
+    #for _id in index_ids:
+    #    data[_id] = base_ra_index_nav.load_series(_id)
+    for _id in index_ids:
         data[_id] = base_exchange_rate_index_nav.load_series(_id)
     df = pd.DataFrame(data)
     #df = df[df.index>='2018-01-01']
     #df = df/df.iloc[0]
-
+    #week_trade_date = ATradeDate.week_trade_date()
+    #df = df.loc[df.index & week_trade_date]
     df.to_csv('tmp/index_nav.csv')
 
 
@@ -871,7 +872,7 @@ def benchmark(ctx):
     bench_df = pd.DataFrame(data)
     benchmark_df = pd.concat([bench_df,df],axis = 1, join_axes = [bench_df.index])
 
-    benchmark_df = benchmark_df[benchmark_df.index >= '2013-01-01']
+    #benchmark_df = benchmark_df[benchmark_df.index >= '2013-01-01']
     benchmark_df = benchmark_df / benchmark_df.iloc[0]
     #print(df.tail())
     benchmark_df.to_csv('benchmark.csv')
@@ -888,29 +889,26 @@ def benchmark(ctx):
         dfs.append(df)
 
     df = pd.concat(dfs, axis = 1)
-    df = df[df.index >= '2013-01-01']
+    #df = df[df.index >= '2013-01-01']
     online_df = df / df.iloc[0]
     df.to_csv('./online_nav.csv')
 
-    online_df.head()
+    #print(online_df.head())
     conn.close()
 
-    conn  = MySQLdb.connect(**config.db_asset)
-    conn.autocommit(True)
-    sql = "select ra_date as date, ra_nav as nav from ra_portfolio_nav where ra_portfolio_id = 'PO.000070' and ra_type = 8"
-    po_df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
-    po_df = po_df[po_df.index >= '2013-01-01']
+    #conn  = MySQLdb.connect(**config.db_asset)
+    #conn.autocommit(True)
+    #sql = "select ra_date as date, ra_nav as nav from ra_portfolio_nav where ra_portfolio_id = 'PO.000070' and ra_type = 8"
+    #po_df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
+    #po_df = po_df[po_df.index >= '2013-01-01']
 
-    df = pd.concat([online_df, benchmark_df], axis = 1, join_axes = [benchmark_df.index])
-    print(df.shape, po_df.shape)
-    df = pd.concat([df, po_df], axis = 1, join_axes = [df.index])
-    df = df[df.index >= '2018-01-01']
+    df = pd.concat([online_df, benchmark_df], axis = 1, join_axes = [online_df.index])
+    #print(df.shape, po_df.shape)
+    #df = pd.concat([df, po_df], axis = 1, join_axes = [df.index])
+    #df = df[df.index >= '2018-01-01']
     df = df / df.iloc[0]
     df = df.fillna(method='pad')
     #print(df.head())
-
-
-
     df.to_csv('./online_benchmark.csv')
 
 

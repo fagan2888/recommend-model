@@ -982,17 +982,18 @@ def yao(highlow, alloc):
     index = df_high.index.union(df_high_riskmgr.index)
 
     if risk > 1.0 and high.startswith('MZ.00007'):
-        df_high_riskmgr.loc['2019-04-19', 'ERI000001'] = 1.0
-        df_high_riskmgr.loc['2019-04-19', 'ERI000002'] = 1.0
-        df_high_riskmgr.loc['2019-04-19', '120000053'] = 1.0
-        df_high_riskmgr.loc['2019-04-19', '120000056'] = 1.0
-        df_high_riskmgr.loc['2019-04-19', '120000058'] = 1.0
-        df_high_riskmgr.loc['2019-04-19', '120000073'] = 1.0
-        df_high_riskmgr.loc['2019-04-19', '120000081'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', 'ERI000001'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', 'ERI000002'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', '120000053'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', '120000056'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', '120000058'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', '120000073'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', '120000081'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', '120000010'] = 1.0
 
-        df_high_riskmgr.loc['2019-04-19', 'MZ.FA0010'] = 1.0
-        df_high_riskmgr.loc['2019-04-19', 'MZ.FA0050'] = 1.0
-        df_high_riskmgr.loc['2019-04-19', 'MZ.FA0070'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', 'MZ.FA0010'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', 'MZ.FA0050'] = 1.0
+        df_high_riskmgr.loc['2019-04-26', 'MZ.FA0070'] = 1.0
     #print(df_high_riskmgr.tail())
 
     data_h = {}
@@ -1002,38 +1003,40 @@ def yao(highlow, alloc):
         for column in df_high.columns:
             data_h[column] = df_high[column] * df_high_riskmgr[column]
 
+
     df_h = pd.DataFrame(data_h)
+
     a_assets = ['120000053', '120000056', '120000058', '120000073', 'MZ.FA0010', 'MZ.FA0050', 'MZ.FA0070', 'MZ.FA1010']
     if high.startswith('MZ.00007'):
         if risk == 10.0:
-            overflow = df_h.loc['2019-04-19', '120000014'] - 0.2098
+            overflow = df_h.loc['2019-04-26', '120000014'] - 0.2098
         elif risk == 9.0:
-            overflow = df_h.loc['2019-04-19', '120000014'] - 0.2102
+            overflow = df_h.loc['2019-04-26', '120000014'] - 0.2102
         elif risk == 8.0:
-            overflow = df_h.loc['2019-04-19', '120000014'] - 0.2008
+            overflow = df_h.loc['2019-04-26', '120000014'] - 0.2008
         elif risk == 7.0:
-            overflow = df_h.loc['2019-04-19', '120000014'] - 0.2094
+            overflow = df_h.loc['2019-04-26', '120000014'] - 0.2094
         elif risk == 6.0:
-            overflow = df_h.loc['2019-04-19', '120000014'] - 0.2127
+            overflow = df_h.loc['2019-04-26', '120000014'] - 0.2127
         elif risk == 5.0:
-            overflow = df_h.loc['2019-04-19', '120000014'] - 0.2062
+            overflow = df_h.loc['2019-04-26', '120000014'] - 0.2062
         elif risk == 4.0:
-            overflow = df_h.loc['2019-04-19', '120000014'] - 0.2021
+            overflow = df_h.loc['2019-04-26', '120000014'] - 0.2021
         elif risk == 3.0:
-            overflow = df_h.loc['2019-04-19', '120000014'] - 0.1623
+            overflow = df_h.loc['2019-04-26', '120000014'] - 0.1623
         elif risk == 2.0:
-            overflow = df_h.loc['2019-04-19', '120000014'] - 0.1274
+            overflow = df_h.loc['2019-04-26', '120000014'] - 0.1274
 
         if risk > 1.0: 
-            df_h.loc['2019-04-19', '120000014'] = df_h.loc['2019-04-19', '120000014'] - overflow 
-            a_weight = df_h.loc['2019-04-19', a_assets]
+            df_h.loc['2019-04-26', '120000014'] = df_h.loc['2019-04-26', '120000014'] - overflow 
+            a_weight = df_h.loc['2019-04-26', a_assets]
             a_weight = a_weight / a_weight.sum()
-            df_h.loc['2019-04-19', a_assets] = df_h.loc['2019-04-19', a_assets] + overflow * a_weight
+            df_h.loc['2019-04-26', a_assets] = df_h.loc['2019-04-26', a_assets] + overflow * a_weight
 
     #if high.startswith('MZ.00008'):
     #    if risk > 1.0:
-    #        df_h.loc['2019-04-19', 'MZ.FA1010'] = df_h.loc['2019-04-19', 'MZ.FA1010'] + 0.005 * risk
-    #        df_h.loc['2019-04-19', '120000014'] = df_h.loc['2019-04-19', '120000014'] - 0.005 * risk
+    #        df_h.loc['2019-04-26', 'MZ.FA1010'] = df_h.loc['2019-04-26', 'MZ.FA1010'] + 0.005 * risk
+    #        df_h.loc['2019-04-26', '120000014'] = df_h.loc['2019-04-26', '120000014'] - 0.005 * risk
 
     # 用货币补足空仓部分， 因为我们的数据库结构无法表示所有资产空
     # 仓的情况（我们不存储仓位为0的资产）；所以我们需要保证任何一
