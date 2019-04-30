@@ -44,9 +44,10 @@ class AssetCovariance:
             self.index_ids,
             begin_date=self.reindex_total[0].strftime('%Y%m%d'),
             end_date=self.reindex_total[-1].strftime('%Y%m%d'),
-            is_fillna=False
+            fill_method=None
         )
-        self._df_index_inc = self.df_index_nav.fillna(method='pad').pct_change().iloc[1:]
+        # self._df_index_inc = self.df_index_nav.fillna(method='pad').pct_change().iloc[1:]
+        self._df_index_inc = self.df_index_nav.pct_change(fill_method='pad').iloc[1:]
         self._df_index_inc[self.df_index_nav.isna().iloc[1:]] = np.nan
         self._reindex_total = self.df_index_nav.index
 

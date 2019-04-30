@@ -617,8 +617,6 @@ def markowitz_day(day, lookback, assets, bootstrap,  cpu_count, blacklitterman, 
     return markowitz_r(df_inc, day, assets, bootstrap, cpu_count, blacklitterman, markowitz_id)
 
 
-
-
 def markowitz_r(df_inc, day, limits, bootstrap, cpu_count, blacklitterman, markowitz_id):
     '''perform markowitz
     '''
@@ -1165,7 +1163,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     elif algo == 19:
 
-        # Layer Fix Risk Boot Smooth Bl
+        # Layer Fix Risk Smooth Boot Bl
 
         lookback = int(argv.get('lookback', '28'))
         upper_risk = float(argv.get('upper_risk', 0.015))
@@ -1181,7 +1179,44 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
-        allocate = MzLayerFixRiskSmoothBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, upper_risk, smooth, bound=bounds)
+        allocate = MzLayerFixRiskSmoothBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, smooth, upper_risk, bound=bounds)
+        df = allocate.m_allocate()
+
+    elif algo == 20:
+
+        # Risk Parity
+        lookback = int(argv.get('lookback', '26'))
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+
+        layer_assets_1 = ['120000053', '120000056','120000058','120000073']
+        layer_assets_2 = ['MZ.FA0010', 'MZ.FA0050','MZ.FA0070']
+        layer_assets = layer_assets_1 + layer_assets_2
+        layer_assets = dict([(asset_id , Asset(asset_id)) for asset_id in layer_assets])
+
+        allocate = RpAllocate('ALC.000001', layer_assets, trade_date, lookback, bound=bounds)
+        df = allocate.allocate()
+
+    elif algo == 21:
+
+        # Layer Fix Risk Cov Smooth Boot Bl
+
+        lookback = int(argv.get('lookback', '28'))
+        upper_risk = float(argv.get('upper_risk', 0.015))
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+        smooth = int(argv.get('smooth', '4'))
+        cov_algo = argv.get('cov_algo', 'empirical')
+
+        asset_ids = list(assets.keys())
+        asset_ids.append('ALayer')
+        views = {}
+        for asset_id in asset_ids:
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzLayerFixRiskCovSmoothBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, smooth, upper_risk, cov_algo, bound=bounds)
         df = allocate.m_allocate()
 
     else:

@@ -125,7 +125,8 @@ class StockPortfolioData:
 
         self.ser_index_nav = caihui_tq_qt_index.load_index_nav(
             index_ids=[self.index_id],
-            reindex=self.reindex_total
+            reindex=self.reindex_total,
+            fill_method='pad'
         )[self.index_id]
 
     def __load_stock_historical_share(self):

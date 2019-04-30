@@ -1,6 +1,6 @@
 #coding=utf-8
 '''
-Modified on: Apr. 12, 2018
+Modified on: Apr. 12, 2019
 Editor: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -44,7 +44,7 @@ def load_index_daily_data(secode, start_date=None, end_date=None):
     return df
 
 
-def load_index_nav(index_ids, begin_date=None, end_date=None, reindex=None, is_fillna=True):
+def load_index_nav(index_ids, begin_date=None, end_date=None, reindex=None, fill_method=None):
 
     if isinstance(index_ids, str):
         index_ids = [index_ids]
@@ -58,34 +58,28 @@ def load_index_nav(index_ids, begin_date=None, end_date=None, reindex=None, is_f
         if isinstance(index_ids, np.ndarray):
             index_ids = index_ids.reshape(-1).tolist()
 
-    if reindex is not None:
-
-        reindex_sorted = reindex.sort_values()
-        if begin_date is None:
-            begin_date = reindex_sorted[0].strftime('%Y%m%d')
-        if end_date is None:
-            end_date = reindex_sorted[-1].strftime('%Y%m%d')
-
     cpu_count = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(cpu_count//2)
 
-    kwargs = {'begin_date': begin_date, 'end_date': end_date}
-    res = pool.map(functools.partial(load_index_nav_ser, **kwargs), index_ids)
+    res = pool.map(load_index_nav_ser, index_ids)
 
     pool.close()
     pool.join()
 
     df = pd.DataFrame(res, index=index_ids).T
+    if fill_method is not None:
+        df.fillna(method=fill_method, inplace=True)
 
+    if begin_date is not None:
+        df = df.loc[begin_date:]
+    if end_date is not None:
+        df = df.loc[:end_date]
     if reindex is not None:
-        if is_fillna:
-            df = df.reindex(reindex, method='pad')
-        else:
-            df = df.reindex(reindex)
+        df = df.reindex(reindex)
 
     return df
 
-def load_index_nav_ser(index_id, begin_date=None, end_date=None):
+def load_index_nav_ser(index_id):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
@@ -97,10 +91,6 @@ def load_index_nav_ser(index_id, begin_date=None, end_date=None):
     ]
 
     s = select(columns).where(t.c.SECODE==index_id)
-    if begin_date is not None:
-        s = s.where(t.c.TRADEDATE>=begin_date)
-    if end_date is not None:
-        s = s.where(t.c.TRADEDATE<=end_date)
 
     df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
     ser = df.nav.rename(index_id)

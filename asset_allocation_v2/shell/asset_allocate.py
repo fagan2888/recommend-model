@@ -30,6 +30,7 @@ from multiprocessing import Pool
 from functools import partial
 import random
 from ipdb import set_trace
+from sklearn.covariance import empirical_covariance, ledoit_wolf
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -411,17 +412,17 @@ class MzFixRiskBootBlAllocate(MzBootBlAllocate):
 
         day_indices = self.create_day_indices(look_back, loop_num)
 
-        args = (df_inc, P, eta, alpha, bound, target_risk, self.calc_ev_cov)
+        args = (df_inc, P, eta, alpha, bound, target_risk)
         v_markowitz_random_bl_fixrisk = np.vectorize(partial(self.markowitz_random_bl_fixrisk, *args), signature='(n)->(m)')
         ws = np.mean(v_markowitz_random_bl_fixrisk(day_indices), axis=0)
         ws = pd.Series(ws, index=df_inc.columns)
 
         return ws
 
-    def markowitz_random_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, func_ev_cov, random_index):
+    def markowitz_random_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, random_index):
 
         tmp_df_inc = df_inc.iloc[random_index.tolist()]
-        ev_cov = func_ev_cov(tmp_df_inc)
+        ev_cov = self.calc_ev_cov(tmp_df_inc)
         ev_ret = self.calc_ev_ret(tmp_df_inc, ev_cov, P, eta, alpha)
         ws = self.markowitz_bl_fixrisk(ev_cov, ev_ret, bound, target_risk)
 
@@ -990,7 +991,7 @@ class CppiAllocate(Allocate):
 '''new'''
 class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
 
-    def __init__(self, globalid, assets, views, reindex, lookback, risk, smooth, period=1, bound=None, cpu_count=None, bootstrap_count=0):
+    def __init__(self, globalid, assets, views, reindex, lookback, smooth, risk, period=1, bound=None, cpu_count=None, bootstrap_count=0):
 
         super(MzLayerFixRiskSmoothBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, risk, period, bound, cpu_count, bootstrap_count)
 
@@ -1018,7 +1019,7 @@ class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
 
         day_indices = self.create_smooth_day_indices(look_back, look_back_smooth, smooth, loop_num)
 
-        args = (df_inc, P, eta, alpha, bound, target_risk, self.calc_ev_cov)
+        args = (df_inc, P, eta, alpha, bound, target_risk)
         v_markowitz_random_bl_fixrisk = np.vectorize(partial(self.markowitz_random_bl_fixrisk, *args), signature='(n)->(m)')
         ws = np.mean(v_markowitz_random_bl_fixrisk(day_indices), axis=0)
         ws = pd.Series(ws, index=df_inc.columns)
@@ -1049,6 +1050,63 @@ class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
         day_indices = day_indices.reshape(len(day_indices) // (look_back_smooth // 2), look_back_smooth // 2)
 
         return day_indices
+
+
+class MzLayerFixRiskCovSmoothBootBlAllocate(MzLayerFixRiskSmoothBootBlAllocate):
+
+    def __init__(self, globalid, assets, views, reindex, lookback, smooth, risk, cov_algo, period=1, bound=None, cpu_count=None, bootstrap_count=0):
+
+        super(MzLayerFixRiskCovSmoothBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, smooth, risk, period, bound, cpu_count, bootstrap_count)
+
+        if cov_algo is not None:
+            if not hasattr(self, f'calc_ev_cov_{cov_algo}'):
+                raise ValueError
+            self.calc_ev_cov = getattr(self, f'calc_ev_cov_{cov_algo}')
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        df_inc_layer, layer_ws, bound = self.load_a_layer(day, df_inc)
+        P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
+        ev_cov = self.calc_ev_cov(df_inc_layer)
+        ws = self.markowitz_smooth_bootstrap_bl_fixrisk_cov(df_inc_layer, ev_cov, P, eta, alpha, bound, self.risk, self.smooth, self.bootstrap_count)
+        ws = self.calc_a_layer_weight(ws, layer_ws)
+
+        return ws
+
+    def markowitz_smooth_bootstrap_bl_fixrisk_cov(self, df_inc, ev_cov, P, eta, alpha, bound, target_risk, smooth, bootstrap_count):
+
+        look_back = len(df_inc)
+        smooth, look_back_smooth = self.calc_look_back_smooth(smooth, look_back)
+        loop_num = self.get_loop_num(bootstrap_count, look_back_smooth)
+
+        day_indices = self.create_smooth_day_indices(look_back, look_back_smooth, smooth, loop_num)
+
+        args = (df_inc, ev_cov, P, eta, alpha, bound, target_risk)
+        v_markowitz_random_bl_fixrisk_cov = np.vectorize(partial(self.markowitz_random_bl_fixrisk_cov, *args), signature='(n)->(m)')
+        ws = np.mean(v_markowitz_random_bl_fixrisk_cov(day_indices), axis=0)
+        ws = pd.Series(ws, index=df_inc.columns)
+
+        return ws
+
+    def markowitz_random_bl_fixrisk_cov(self, df_inc, ev_cov, P, eta, alpha, bound, target_risk, random_index):
+
+        tmp_df_inc = df_inc.iloc[random_index.tolist()]
+        ev_ret = self.calc_ev_ret(tmp_df_inc, ev_cov, P, eta, alpha)
+        ws = self.markowitz_bl_fixrisk(ev_cov, ev_ret, bound, target_risk)
+
+        return ws
+
+    def calc_ev_cov_empirical(self, df_inc):
+
+        ev_cov = empirical_covariance(df_inc)
+
+        return ev_cov
+
+    def calc_ev_cov_ledoit_wolf(self, df_inc):
+
+        ev_cov = ledoit_wolf(df_inc, assume_centered=False)[0]
+
+        return ev_cov
 
 
 if __name__ == '__main__':
