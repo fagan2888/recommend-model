@@ -102,6 +102,7 @@ class StockPortfolioData:
         self.df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_price(
             stock_ids=self.stock_pool_total.index,
             reindex=self.reindex_total
+            fill_method='pad'
         )
         self.df_stock_ret = self.df_stock_prc.pct_change().iloc[1:]
 
@@ -115,12 +116,14 @@ class StockPortfolioData:
 
         self.stock_market_data = caihui_tq_sk_dquoteindic.load_stock_market_data(
             stock_ids=self.stock_pool.index,
-            reindex=self.reindex_total
+            reindex=self.reindex_total,
+            fill_method='pad'
         )
 
         self.stock_financial_data = caihui_tq_sk_finindic.load_stock_financial_data(
             stock_ids=self.stock_pool.index,
-            reindex=self.reindex_total
+            reindex=self.reindex_total,
+            fill_method='pad'
         )
 
         self.ser_index_nav = caihui_tq_qt_index.load_index_nav(
@@ -286,7 +289,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
         reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back-1:]
 
-        # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex)
+        # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex, fill_method='pad')
         df_stock_prc = self.df_stock_prc.reindex(index=reindex, columns=stock_ids)
 
         if not fillna:
@@ -300,7 +303,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
         reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back-1:]
 
-        # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex)
+        # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex, fill_method='pad')
         # df_stock_ret = df_stock_prc.pct_change().iloc[1:]
         df_stock_ret = self.df_stock_ret.reindex(index=reindex[1:], columns=stock_ids)
 

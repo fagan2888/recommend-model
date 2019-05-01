@@ -8,7 +8,6 @@ Contact: sushixun@licaimofang.com
 import logging
 from sqlalchemy import MetaData, Table, select, func
 import multiprocessing
-import functools
 import numpy as np
 import pandas as pd
 from . import database

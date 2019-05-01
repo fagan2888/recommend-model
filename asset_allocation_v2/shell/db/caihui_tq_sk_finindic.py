@@ -1,7 +1,7 @@
 #coding=utf-8
 '''
 Created on: Mar. 6, 2019
-Modified on: Mar. 24, 2019
+Modified on: May. 1, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -9,7 +9,6 @@ Contact: sushixun@licaimofang.com
 import logging
 from sqlalchemy import MetaData, Table, select, func
 import multiprocessing
-import functools
 import numpy as np
 import pandas as pd
 from . import database
@@ -18,7 +17,7 @@ from . import database
 logger = logging.getLogger(__name__)
 
 
-def load_stock_financial_data(stock_ids, begin_date=None, end_date=None, reindex=None):
+def load_stock_financial_data(stock_ids, begin_date=None, end_date=None, reindex=None, fill_method='pad'):
 
     if isinstance(stock_ids, str):
         stock_ids = [stock_ids]
@@ -32,31 +31,28 @@ def load_stock_financial_data(stock_ids, begin_date=None, end_date=None, reindex
         if isinstance(stock_ids, np.ndarray):
             stock_ids = stock_ids.reshape(-1).tolist()
 
-    if reindex is not None:
-
-        reindex_sorted = reindex.sort_values()
-        if begin_date is None:
-            begin_date = reindex_sorted[0].strftime('%Y%m%d')
-        if end_date is None:
-            end_date = reindex_sorted[-1].strftime('%Y%m%d')
-
     cpu_count = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(cpu_count//2)
 
-    kwargs = {'begin_date': begin_date, 'end_date': end_date}
-    res = pool.map(functools.partial(load_stock_financial_data_df, **kwargs), stock_ids)
+    res = pool.map(load_stock_financial_data_df, stock_ids)
 
     pool.close()
     pool.join()
 
     df = pd.concat(res).unstack()
+    if fill_method is not None:
+        df.fillna(method=fill_method, inplace=True)
 
+    if begin_date is not None:
+        df = df.loc[begin_date:]
+    if end_date is not None:
+        df = df.loc[:end_date]
     if reindex is not None:
-        df = df.reindex(reindex, method='pad')
+        df = df.reindex(reindex)
 
     return df
 
-def load_stock_financial_data_df(stock_id, begin_date=None, end_date=None):
+def load_stock_financial_data_df(stock_id):
 
     engine = database.connection('caihui')
     metadata = MetaData(bind=engine)
@@ -93,10 +89,6 @@ def load_stock_financial_data_df(stock_id, begin_date=None, end_date=None):
     ]
 
     s = select(columns).where(t.c.SECODE==stock_id)
-    if begin_date is not None:
-        s = s.where(t.c.TRADEDATE>=begin_date)
-    if end_date is not None:
-        s = s.where(t.c.TRADEDATE<=end_date)
 
     df = pd.read_sql(s, engine, index_col=['trade_date', 'stock_id'], parse_dates=['trade_date'])
 
