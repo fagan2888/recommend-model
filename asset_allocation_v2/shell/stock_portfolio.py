@@ -1,7 +1,7 @@
 #coding=utf-8
 '''
 Created on: Mar. 11, 2019
-Modified on: Apr. 11, 2019
+Modified on: May. 5, 2019
 Author: Shixun Su, Boyang Zhou
 Contact: sushixun@licaimofang.com
 '''
@@ -101,7 +101,7 @@ class StockPortfolioData:
 
         self.df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_price(
             stock_ids=self.stock_pool_total.index,
-            reindex=self.reindex_total
+            reindex=self.reindex_total,
             fill_method='pad'
         )
         self.df_stock_ret = self.df_stock_prc.pct_change().iloc[1:]
@@ -245,8 +245,8 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
             if considering_status:
                 for _, merge_info in self.df_merge_info.loc[self.df_merge_info.trade_date==trade_date].iterrows():
 
-                    pos = stock_pos_adjusted.loc[merge_info.old_stock_id] * \
-                        (merge_info.ratio * merge_info.new_stock_price / merge_info.old_stock_price)
+                    pos = stock_pos_adjusted.loc[merge_info.old_stock_id] \
+                        * (merge_info.conversion_ratio * merge_info.new_stock_price / merge_info.old_stock_price)
 
                     stock_pos_adjusted.loc[merge_info.new_stock_id] = pos
                     stock_pos_adjusted.loc[merge_info.old_stock_id] = 0.0
@@ -326,6 +326,13 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         ].loc[:, ['stock_id', 'stock_code']].set_index('stock_id').sort_index()
 
         return stock_pool
+
+    def _calc_portfolio_size(self, size, percentage, lower_bound=1):
+
+        portfolio_size = round(size * percentage)
+        portfolio_size = int(max(portfolio_size, lower_bound))
+
+        return portfolio_size
 
     def portfolio_analysis(self, reindex=None):
 
@@ -480,7 +487,7 @@ class StockPortfolioLowVolatility(StockPortfolio):
         ser_stock_volatility = df_stock_ret.std()
 
         # Low volatility condition quantile as percentage
-        portfolio_size = round(stock_ids.size * percentage)
+        portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
         low_volatility_stock_ids = ser_stock_volatility.sort_values(ascending=True).iloc[:portfolio_size].index
 
         ser_low_volatility_stock_weight = 1.0 / ser_stock_volatility.loc[low_volatility_stock_ids]
@@ -522,7 +529,7 @@ class StockPortfolioMomentum(StockPortfolioMarketCap):
             / df_stock_ret.std()
 
         # Momentum condition quantile as percentage
-        portfolio_size = round(stock_ids.size * percentage)
+        portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
         momentum_stock_ids = ser_stock_momentum.sort_values(ascending=False).iloc[:portfolio_size].index
 
         ser_momentum_stock_weight = ser_stock_momentum.loc[momentum_stock_ids]
@@ -557,7 +564,7 @@ class StockPortfolioSmallSize(StockPortfolioMarketCap):
 
         ser_stock_free_float_market_cap = self._calc_stock_free_float_market_cap(trade_date, stock_ids)
 
-        portfolio_size = round(stock_ids.size * self.percentage)
+        portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
         small_size_stock_ids = ser_stock_free_float_market_cap.sort_values(ascending=True).iloc[:portfolio_size].index
 
         # Small size condition quantile as percentage
@@ -607,7 +614,7 @@ class StockPortfolioLowBeta(StockPortfolio):
         ser_stock_beta = df_stock_ret.apply(calc_stock_benchmark_cov) / (benchmark_inc_std ** 2)
 
         # Low beta condition quantile as percentage
-        portfolio_size = round(stock_ids.size * percentage)
+        portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
         low_beta_stock_ids = ser_stock_beta.sort_values(ascending=True).iloc[:portfolio_size].index
 
         ser_low_beta_stock_weight = 1.0 / ser_stock_beta.loc[low_beta_stock_ids]
@@ -657,7 +664,7 @@ class StockPortfolioHighBeta(StockPortfolioLowBeta):
         ser_stock_beta = df_stock_ret.apply(calc_stock_benchmark_cov) / (benchmark_inc_std ** 2)
 
         # High beta condition quantile as percentage
-        portfolio_size = round(stock_ids.size * percentage)
+        portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
         high_beta_stock_ids = ser_stock_beta.sort_values(ascending=False).iloc[:portfolio_size].index
 
         ser_high_beta_stock_weight = ser_stock_beta.loc[high_beta_stock_ids]
@@ -732,7 +739,9 @@ class StockPortfolioLowBetaLowVolatility(StockPortfolioLowBeta, StockPortfolioLo
 
 class StockPortfolioSectorNeutral(StockPortfolioMarketCap):
 
-    _kwargs_list = []
+    _kwargs_list = [
+        'percentage'
+    ]
 
     def __init__(self, index_id, reindex, look_back, **kwargs):
 
@@ -743,18 +752,21 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketCap):
 
         stock_ids = self._load_stock_pool(trade_date).index
 
-        _, ser_sector_neutral_stock_weight = self._calc_sector_neutral(trade_date, stock_ids)
+        sector_neutral_stock_ids, ser_sector_neutral_stock_weight = self._calc_sector_neutral(trade_date, stock_ids, self.percentage)
 
         stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
-        stock_pos.loc[stock_ids] = ser_sector_neutral_stock_weight.fillna(0.0)
+        stock_pos.loc[sector_neutral_stock_ids] = ser_sector_neutral_stock_weight.fillna(0.0)
 
         return stock_pos
 
-    def _calc_sector_neutral(self, trade_date, stock_ids, **kwargs):
+    def _calc_sector_neutral(self, trade_date, stock_ids, percentage, **kwargs):
 
         ser_industry_free_float_market_cap = self._calc_industry_free_float_market_cap(trade_date, stock_ids)
 
+        sector_neutral_stock_ids = pd.Index([], name='stock_id')
         ser_sector_neutral_stock_weight = pd.Series(index=stock_ids, name=trade_date)
+
+        ser_percentage_by_industry = self._calc_percentage_by_industry(stock_ids, percentage)
 
         for sw_industry_code in ser_industry_free_float_market_cap.index:
 
@@ -767,13 +779,21 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketCap):
             if not hasattr(self, func_name):
                 raise AttributeError(f'\'{class_name}\'object has no attribute \'{func_name}\'')
             calc_func = getattr(self, func_name)
-            _, ser_stock_weight_by_industry = calc_func(trade_date, sw_industry_stock_ids, percentage=1.0)
+            stock_ids_by_industry, ser_stock_weight_by_industry = calc_func(
+                trade_date,
+                sw_industry_stock_ids,
+                ser_percentage_by_industry.loc[sw_industry_code]
+            )
 
-            ser_sector_neutral_stock_weight.loc[sw_industry_stock_ids] = ser_stock_weight_by_industry * ser_industry_free_float_market_cap.loc[sw_industry_code]
+            sector_neutral_stock_ids = sector_neutral_stock_ids.append(stock_ids_by_industry)
+            ser_sector_neutral_stock_weight.loc[stock_ids_by_industry] = ser_stock_weight_by_industry \
+                * ser_industry_free_float_market_cap.loc[sw_industry_code]
 
+        sector_neutral_stock_ids = sector_neutral_stock_ids.sort_values()
+        ser_sector_neutral_stock_weight = ser_sector_neutral_stock_weight.loc[sector_neutral_stock_ids]
         ser_sector_neutral_stock_weight.loc[:] /= ser_sector_neutral_stock_weight.sum()
 
-        return stock_ids, ser_sector_neutral_stock_weight
+        return sector_neutral_stock_ids, ser_sector_neutral_stock_weight
 
     def _calc_industry_free_float_market_cap(self, trade_date, stock_ids, **kwargs):
 
@@ -785,10 +805,26 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketCap):
 
         return ser_industry_free_float_market_cap
 
+    def _calc_percentage_by_industry(self, stock_ids, percentage):
+
+        portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
+
+        ser_size = self.df_stock_industry.loc[stock_ids].groupby(['sw_level1_code']).size()
+        ser_portfolio_size = ser_size.apply(partial(self._calc_portfolio_size, percentage=percentage))
+
+        delta_size = ser_portfolio_size.sum() - portfolio_size
+        ser_portfolio_size.loc[ser_portfolio_size.sort_values(ascending=False).iloc[:abs(delta_size)].index] -= np.sign(delta_size)
+
+        ser_percentage = (ser_portfolio_size / ser_size).rename('percentage')
+
+        return ser_percentage
+
 
 class StockPortfolioSectorNeutralLowVolatility(StockPortfolioSectorNeutral, StockPortfolioLowVolatility):
 
-    _kwargs_list = []
+    _kwargs_list = [
+        'percentage'
+    ]
 
     def __init__(self, index_id, reindex, look_back, **kwargs):
 
@@ -798,6 +834,7 @@ class StockPortfolioSectorNeutralLowVolatility(StockPortfolioSectorNeutral, Stoc
 class StockPortfolioSectorNeutralLowBeta(StockPortfolioSectorNeutral, StockPortfolioLowBeta):
 
     _kwargs_list = [
+        'percentage',
         'benchmark_id'
     ]
 

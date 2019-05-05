@@ -26,7 +26,7 @@ def load():
         t.c.new_stock_id,
         t.c.old_stock_price,
         t.c.new_stock_price,
-        t.c.ratio
+        t.c.conversion_ratio
     ]
 
     s = select(columns)
