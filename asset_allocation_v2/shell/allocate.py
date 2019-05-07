@@ -1,5 +1,9 @@
 #coding=utf8
-
+'''
+Modified on: May. 7, 2019
+Editor: Shixun Su
+Contact: sushixun@licaimofang.com
+'''
 
 import string
 import os
@@ -190,11 +194,9 @@ class Allocate(object):
     def bound(self):
         return self.__bound
 
-
     def allocate(self):
 
-
-        adjust_days = self.index[self.lookback - 1::self.period]
+        adjust_days = self.index[self.lookback::self.period]
         asset_ids = list(self.assets.keys())
         pos_df = pd.DataFrame(0, index = adjust_days, columns = asset_ids)
 
@@ -219,13 +221,69 @@ class Allocate(object):
 
         return pos_df
 
+    def allocate_day(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
+        ws = self.allocate_algo(day, df_inc, bound)
+        ws = pd.Series(ws)
+        inc = np.dot(df_inc, ws)
+
+        return ws, inc
+
+    def load_allocate_data(self, day, asset_ids):
+
+        reindex = self.index[self.index <= day][-self.lookback-1:]
+
+        bound = []
+        allocate_asset_ids = []
+        for asset_id in asset_ids:
+            asset_bound = AssetBound.get_asset_day_bound(asset_id, day, self.bound).to_dict()
+            if asset_bound['upper'] > 0:
+                bound.append(asset_bound)
+                allocate_asset_ids.append(asset_id)
+
+        data = {}
+        for asset_id in allocate_asset_ids:
+            data[asset_id] = self.assets[asset_id].nav(reindex = reindex)
+        df_nav = pd.DataFrame(data).fillna(method='pad')
+        df_inc = df_nav.pct_change().iloc[1:]
+
+        return df_inc, bound
+
+    def allocate_algo(self, day, df_inc, bound):
+
+        ws = [1.0 / len(df_inc.columns)] * len(df_inc.columns)
+
+        ws = dict(list(zip(df_inc.columns.ravel(), ws)))
+
+        return ws
+
+    def nav_update(self):
+        return
+
+    def turnover_update(self):
+        return
+
+    def load_db(self):
+        pass
+
+    def to_db(self):
+        pass
+
+
+class AllocateNew(Allocate):
+
+    def __init__(self, globalid, assets=None, reindex=None, lookback=None, period=1, bound=None):
+
+        super(AllocateNew, self).__init__(globalid, assets, reindex, lookback, period, bound)
+
     def m_allocate(self):
 
-        adjust_days = self.index[self.lookback-1::self.period]
+        adjust_days = self.index[self.lookback::self.period]
         asset_ids = list(self.assets.keys())
         pos_df = pd.DataFrame(0, index=adjust_days, columns=asset_ids)
-
-        pool = multiprocessing.Pool(self.cpu_count)
+        pool = multiprocessing.Pool(multiprocessing.cpu_count()//2)
         pos = pool.map(self.allocate_pos_day, adjust_days.to_list())
         pool.close()
         pool.join()
@@ -242,19 +300,9 @@ class Allocate(object):
 
         return pos
 
-    def allocate_day(self, day):
+    def load_allocate_data_daily(self, day, asset_ids):
 
-        asset_ids = list(self.assets.keys())
-        df_inc, bound = self.load_allocate_data(day, asset_ids)
-        ws = self.allocate_algo(day, df_inc, bound)
-        ws = pd.Series(ws)
-        inc = np.dot(df_inc, ws)
-
-        return ws, inc
-
-    def load_allocate_data(self, day ,asset_ids):
-
-        reindex = self.index[self.index <= day][-1 * self.lookback:]
+        reindex = self.index[self.index <= day][-self.lookback-1:]
 
         bound = []
         allocate_asset_ids = []
@@ -268,32 +316,19 @@ class Allocate(object):
         for asset_id in allocate_asset_ids:
             data[asset_id] = self.assets[asset_id].nav(reindex = reindex)
         df_nav = pd.DataFrame(data).fillna(method='pad')
-        df_inc  = df_nav.pct_change().fillna(0.0)
+        df_inc = df_nav.pct_change().iloc[1:]
+
+        reindex = self.index[self.index<=day][-self.lookback-1:]
+        reindex = ATradeDate.trade_date(begin_date=reindex[0], end_date=reindex[-1])
+
+        data = {}
+        for asset_id in df_inc.columns:
+            data[asset_id] = self.assets[asset_id].nav(reindex=reindex)
+
+        df_nav = pd.DataFrame(data).fillna(method='pad')
+        df_inc = df_nav.pct_change().iloc[1:]
 
         return df_inc, bound
-
-
-    def allocate_algo(self, day, df_inc, bound):
-
-        ws = [1.0 / len(df_inc.columns)] * len(df_inc.columns)
-
-        ws = dict(list(zip(df_inc.columns.ravel(), ws)))
-
-        return ws
-
-
-    def nav_update(self):
-        return
-
-    def turnover_update(self):
-        return
-
-
-    def load_db(self):
-        pass
-
-    def to_db(self):
-        pass
 
 
 if __name__ == '__main__':

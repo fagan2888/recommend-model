@@ -71,7 +71,6 @@ class Asset(object):
             self.__nav_sr = Asset.load_nav_series(self.__globalid)
         return self.__nav_sr.copy()
 
-
     @property
     def origin_nav_df(self):
         nav_df = self.origin_nav_sr.to_frame()

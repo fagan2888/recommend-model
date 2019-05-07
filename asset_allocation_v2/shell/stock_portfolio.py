@@ -2,7 +2,7 @@
 '''
 Created on: Mar. 11, 2019
 Modified on: May. 5, 2019
-Author: Shixun Su, Boyang Zhou
+Author: Shixun Su, Boyang Zhou, Ning Yang
 Contact: sushixun@licaimofang.com
 '''
 
