@@ -12,6 +12,8 @@ from functools import partial
 import multiprocessing
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
+from cvxopt import matrix, solvers
 import math
 import hashlib
 import re
@@ -19,11 +21,14 @@ import copy
 # from ipdb import set_trace
 sys.path.append('shell')
 from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_qt_skdailyprice, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic, caihui_tq_sk_sharestruchg
-from db import factor_ml_merge_list, asset_sp_stock_portfolio_nav
+from db import factor_financial_statement, factor_ml_merge_list, asset_sp_stock_portfolio_nav
 from trade_date import ATradeDate
+import calc_covariance
+import calc_financial_descriptor
 from util_timestamp import *
 from statistic_tools_multifactor import *
-
+from db import database
+from config import *
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +131,10 @@ class StockPortfolioData:
             fill_method='pad'
         )
 
+        self.stock_financial_statement = self.__load_financial_statement()
+
+        self.stock_financial_descriptor = calc_financial_descriptor.calc_financial_descriptor(self.stock_financial_statement)
+
         self.ser_index_nav = caihui_tq_qt_index.load_index_nav(
             index_ids=[self.index_id],
             reindex=self.reindex_total,
@@ -146,6 +155,41 @@ class StockPortfolioData:
         df_stock_historical_share.drop('company_id', axis='columns', inplace=True)
 
         return df_stock_historical_share
+
+    def __load_financial_statement(self):
+        # default: statement_type = '408001000'
+        def wind_code(x):
+            if x[0] == '0':
+                return x + '.SZ'
+            elif x[0] == '3':
+                return x + '.SZ'
+            elif x[0] == '6':
+                return x + '.SH'
+            else:
+                return '000000'
+
+        stock_pool = self.stock_pool.reset_index().copy()
+        stock_pool['WIND_CODE'] = stock_pool.stock_code.map(lambda x: wind_code(x))
+
+        columns_BS = 'WIND_CODE, ACTUAL_ANN_DT, REPORT_PERIOD, TOT_SHRHLDR_EQY_EXCL_MIN_INT, TOT_ASSETS'
+        columns_IS = 'WIND_CODE, REPORT_PERIOD, NET_PROFIT_AFTER_DED_NR_LP, OPER_REV, LESS_OPER_COST'
+        columns_CF = 'WIND_CODE, REPORT_PERIOD, DEPR_FA_COGA_DPBA, AMORT_INTANG_ASSETS, AMORT_LT_DEFERRED_EXP, NET_CASH_FLOWS_OPER_ACT, DECR_INVENTORIES, DECR_OPER_PAYABLE, INCR_OPER_PAYABLE, OTHERS'
+
+        data_BS = factor_financial_statement.load_financial_statement_data(stock_ids=stock_pool.WIND_CODE, table_name='asharebalancesheet', statement_columns_str=columns_BS)
+        data_IS = factor_financial_statement.load_financial_statement_data(stock_ids=stock_pool.WIND_CODE, table_name='ashareincome', statement_columns_str=columns_IS)
+        data_CF = factor_financial_statement.load_financial_statement_data(stock_ids=stock_pool.WIND_CODE, table_name='asharecashflow', statement_columns_str=columns_CF)
+
+        data_FS = pd.merge(data_BS, data_IS, how='left', on=['WIND_CODE', 'REPORT_PERIOD'])
+        data_FS = pd.merge(data_FS, data_CF, how='left', on=['WIND_CODE', 'REPORT_PERIOD'])
+
+        data_FS = pd.merge(data_FS, stock_pool[['WIND_CODE', 'stock_id']], how='left', on='WIND_CODE')
+
+        descriptor = ['TOT_SHRHLDR_EQY_EXCL_MIN_INT', 'TOT_ASSETS', 'NET_PROFIT_AFTER_DED_NR_LP', 'OPER_REV', 'LESS_OPER_COST',
+                      'DEPR_FA_COGA_DPBA', 'AMORT_INTANG_ASSETS', 'AMORT_LT_DEFERRED_EXP', 'NET_CASH_FLOWS_OPER_ACT', 'DECR_INVENTORIES',
+                      'DECR_OPER_PAYABLE','INCR_OPER_PAYABLE', 'OTHERS']
+        data_FS[descriptor] = data_FS[descriptor].astype(np.float)
+
+        return data_FS
 
 
 class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
@@ -168,6 +212,9 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         'df_stock_historical_share',
         'stock_market_data',
         'stock_financial_data'
+        'stock_financial_statement',
+        'stock_financial_descriptor',
+        'ser_index_nav'
     ]
 
     _instance_variable_list = [
@@ -910,6 +957,246 @@ class StockPortfolioIndustryMomentum(StockPortfolioIndustry, StockPortfolioMomen
         super(StockPortfolioIndustryMomentum, self).__init__(index_id, reindex, look_back, **kwargs)
 
 
+class StockPortfolioFamaMacbethRegression(StockPortfolio):
+
+    _kwargs_list = [
+        'trading_frequency',
+        'percentage'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioFamaMacbethRegression, self).__init__(index_id, reindex, look_back, **kwargs)
+
+        self.finished_regression = self._load_factor_return_daily()
+        self.factor_return_daily = self._fama_macbeth_regression_daily()
+        self.reindex_regression = list(self.factor_return_daily.index)
+        self.residual_return = self._calc_residual_return()
+
+
+    def _calc_stock_pos(self, trade_date):
+        # calculate factor weight
+        all_style = ['VALUE', 'QUALITY', 'GROWTH', 'LSIZE', 'LIQUIDITY', 'BETA', 'STREV']
+        # 调仓频率
+        trade_date_num = list(self.reindex).index(trade_date)
+        calc_pos_num = (trade_date_num // self.trading_frequency) * self.trading_frequency
+        calc_pos_date = self.reindex[calc_pos_num]
+        if calc_pos_date not in self.reindex_regression:
+            optimal_weight_t = pd.Series(1 / len(all_style), index=all_style)
+        else:
+            regression_date_num = self.reindex_regression.index(calc_pos_date)
+            if regression_date_num < self.trading_frequency * 50:
+                optimal_weight_t = pd.Series(1/len(all_style), index=all_style)
+            else:
+                residual_return_t = self.residual_return.loc[:calc_pos_date, all_style].iloc[:-1].iloc[::-self.trading_frequency].sort_index().copy()
+                covariance_t = calc_covariance.calc_covariance(data=residual_return_t, lookback_period=128, H_L_vol=32, Lags_vol=2, H_L_corr=64, Lags_corr=2, Predict_period=1)
+                P_t = matrix(covariance_t)
+                q_t = matrix(np.zeros((covariance_t.shape[0], 1)))
+                G_t = matrix(np.eye(covariance_t.shape[0]) * -1)
+                h_t = matrix(np.zeros(covariance_t.shape[0]))
+                A_t = matrix(np.ones(covariance_t.shape[0]).reshape(1, -1))
+                b_t = matrix([1.0])
+                solvers.options['show_progress'] = False  # Notice
+                sol = solvers.qp(P=P_t, q=q_t, G=G_t, h=h_t, A=A_t, b=b_t)
+                opt_t = np.array(sol['x']).T[0]
+                optimal_weight_t = pd.Series(opt_t, index=all_style)
+        # calc_pos_date 为保证交易的可行性，使用前一天的因子暴露来计算今天收盘时的股票仓位
+        last_trade_num = list(self.reindex_total).index(calc_pos_date) - 1
+        last_trade_date = list(self.reindex_total)[last_trade_num]
+
+        stock_ids = self._load_stock_pool(trade_date).index
+        data_FS_t = self._select_report_period(last_trade_date=last_trade_date, stock_ids=stock_ids, select_method='radical')
+        data_value_t = self._calc_value_descriptor(last_trade_date=last_trade_date, stock_ids=stock_ids)
+        data_numerical_t = self._calc_numerical_descriptor(last_trade_date=last_trade_date, stock_ids=stock_ids)
+        data_industry_t = self.df_stock_industry[['sw_level1_name']].reindex(stock_ids).rename(columns={'sw_level1_name': 'INDUSTRY'}).copy()
+        data_descriptor_t = pd.concat([data_FS_t, data_value_t, data_numerical_t, data_industry_t], axis=1, join='outer', sort=False)
+        data_descriptor_t['LSIZE'] = np.log(data_descriptor_t.negotiable_market_value)
+        financial_descriptor = ['pe_ttm', 'pb', 'ps_ttm', 'pc_ttm', 'dy', 'evebitda', 'QUALITY_ROA', 'QUALITY_ROE',
+                                'QUALITY_ACCF', 'QUALITY_GPM', 'QUALITY_VERN', 'QUALITY_AGRO', 'GROWTH_EGRO',
+                                'GROWTH_CGRO', 'GROWTH_GPGRO', 'GROWTH_GPMGRO', 'GROWTH_ATOGRO']
+        liquidity_descriptor = ['STOM', 'STOQ', 'STOA']
+        all_descriptor = financial_descriptor + liquidity_descriptor
+        data_descriptor_t = self._z_score_cbi(data=data_descriptor_t, columns=financial_descriptor, industry_column='INDUSTRY')
+        data_descriptor_t = self._z_score(data=data_descriptor_t, columns=all_descriptor)
+        data_descriptor_t['VALUE'] = data_descriptor_t[['pe_ttm', 'pb', 'ps_ttm', 'pc_ttm', 'dy', 'evebitda']].mean(axis=1, skipna=True)
+        data_descriptor_t['QUALITY'] = data_descriptor_t[['QUALITY_ROA', 'QUALITY_ROE', 'QUALITY_ACCF', 'QUALITY_GPM', 'QUALITY_VERN', 'QUALITY_AGRO']].mean(axis=1, skipna=True)
+        data_descriptor_t['GROWTH'] = data_descriptor_t[['GROWTH_EGRO', 'GROWTH_CGRO', 'GROWTH_GPGRO', 'GROWTH_GPMGRO', 'GROWTH_ATOGRO']].mean(axis=1, skipna=True)
+        data_descriptor_t['LIQUIDITY'] = data_descriptor_t[['STOM', 'STOQ', 'STOA']].mean(axis=1, skipna=True)
+
+        all_style = ['VALUE', 'QUALITY', 'GROWTH', 'LSIZE', 'LIQUIDITY', 'BETA', 'STREV']
+        data_descriptor_t = self._z_score(data=data_descriptor_t, columns=all_style)
+        data_descriptor_t[['LSIZE', 'LIQUIDITY', 'STREV']] = - data_descriptor_t[['LSIZE', 'LIQUIDITY', 'STREV']]
+        data_descriptor_t[all_style] = data_descriptor_t[all_style].fillna(0.0)
+        data_descriptor_t['SCORE'] = 0.0
+        for j_num, j_style in enumerate(all_style):
+            data_descriptor_t['SCORE'] = data_descriptor_t['SCORE'] + optimal_weight_t[j_style] * data_descriptor_t[j_style]
+        data_descriptor_t.sort_values(by='SCORE', ascending=False, inplace=True)
+        select_num_t = int(data_descriptor_t.shape[0] * self.percentage)
+        stock_pos = pd.Series(1.0/select_num_t, index=data_descriptor_t.iloc[:select_num_t].index, name=trade_date)
+        return stock_pos
+
+    def _load_factor_return_daily(self):
+        conn = pymysql.connect(host=db_multi_factor['host'], user=db_multi_factor['user'], passwd=db_multi_factor['passwd'], database='multi_factor', charset='utf8')
+        sql_table = 'SELECT table_name FROM information_schema.TABLES WHERE table_name = "factor_return_daily"'
+        if conn.cursor().execute(sql_table):  # 存在表
+            factor_return_daily = pd.read_sql(sql='select * from factor_return_daily', con=conn, parse_dates=['trade_date'])
+            finished_regression = list(factor_return_daily.trade_date)
+        else:  # 不存在表
+            finished_regression = []
+        conn.close()
+        return finished_regression
+
+    def _fama_macbeth_regression_daily(self):
+        # notice trading_frequency
+        factor_return_daily = pd.DataFrame()
+        for last_trade_date, trade_date in zip(self.reindex[:-self.trading_frequency], self.reindex[self.trading_frequency:]):
+            if trade_date in self.finished_regression:
+                continue
+            stock_ids = self._load_stock_pool(last_trade_date).index
+            data_FS_t = self._select_report_period(last_trade_date=last_trade_date, stock_ids=stock_ids, select_method='radical')
+            data_value_t = self._calc_value_descriptor(last_trade_date=last_trade_date, stock_ids=stock_ids)
+            data_numerical_t = self._calc_numerical_descriptor(last_trade_date=last_trade_date, stock_ids=stock_ids)
+            data_industry_t = self.df_stock_industry[['sw_level1_name']].reindex(stock_ids).rename(columns={'sw_level1_name': 'INDUSTRY'}).copy()
+            data_price_t = self.df_stock_prc.loc[[last_trade_date, trade_date], list(stock_ids)].copy()
+            data_return_t = data_price_t.pct_change().iloc[1]
+            data_return_t.name = 'NEXT_RETURN'
+            data_return_t = pd.DataFrame(data_return_t)  # check that
+            data_descriptor_t = pd.concat([data_FS_t, data_value_t, data_numerical_t, data_industry_t, data_return_t], axis=1, join='outer', sort=False)
+            data_descriptor_t['LSIZE'] = np.log(data_descriptor_t.negotiable_market_value)
+            financial_descriptor = ['pe_ttm', 'pb', 'ps_ttm', 'pc_ttm', 'dy', 'evebitda', 'QUALITY_ROA', 'QUALITY_ROE',
+                                    'QUALITY_ACCF', 'QUALITY_GPM', 'QUALITY_VERN', 'QUALITY_AGRO', 'GROWTH_EGRO',
+                                    'GROWTH_CGRO', 'GROWTH_GPGRO', 'GROWTH_GPMGRO', 'GROWTH_ATOGRO']
+            liquidity_descriptor = ['STOM', 'STOQ', 'STOA']
+            all_descriptor = financial_descriptor + liquidity_descriptor
+            data_descriptor_t = self._z_score_cbi(data=data_descriptor_t, columns=financial_descriptor, industry_column='INDUSTRY')
+            data_descriptor_t = self._z_score(data=data_descriptor_t, columns=all_descriptor)
+            data_descriptor_t['VALUE'] = data_descriptor_t[['pe_ttm', 'pb', 'ps_ttm', 'pc_ttm', 'dy', 'evebitda']].mean(axis=1, skipna=True)
+            data_descriptor_t['QUALITY'] = data_descriptor_t[['QUALITY_ROA', 'QUALITY_ROE', 'QUALITY_ACCF', 'QUALITY_GPM', 'QUALITY_VERN', 'QUALITY_AGRO']].mean(axis=1, skipna=True)
+            data_descriptor_t['GROWTH'] = data_descriptor_t[['GROWTH_EGRO', 'GROWTH_CGRO', 'GROWTH_GPGRO', 'GROWTH_GPMGRO', 'GROWTH_ATOGRO']].mean(axis=1, skipna=True)
+            data_descriptor_t['LIQUIDITY'] = data_descriptor_t[['STOM', 'STOQ', 'STOA']].mean(axis=1, skipna=True)
+
+            all_style = ['VALUE', 'QUALITY', 'GROWTH', 'LSIZE', 'LIQUIDITY', 'BETA', 'STREV']
+            data_descriptor_t = self._z_score(data=data_descriptor_t, columns=all_style)
+            data_descriptor_t[['LSIZE', 'LIQUIDITY', 'STREV']] = - data_descriptor_t[['LSIZE', 'LIQUIDITY', 'STREV']]
+            data_descriptor_t[all_style] = data_descriptor_t[all_style].fillna(0.0)
+            data_descriptor_t.dropna(subset=['NEXT_RETURN'], inplace=True)
+            # OLS
+            data_dummies = pd.get_dummies(data_descriptor_t.INDUSTRY)
+            industry_t = list(data_dummies.columns)
+            data_descriptor_t = pd.merge(data_dummies, data_descriptor_t, left_index=True, right_index=True, sort=False)
+            factor_t = industry_t + all_style
+            X = data_descriptor_t[factor_t].values
+            Y = data_descriptor_t.NEXT_RETURN.values
+            ols_results = sm.OLS(Y, X).fit()
+            factor_return_dict = dict(zip(['trade_date']+factor_t, [trade_date]+list(ols_results.params)))
+            factor_return_daily = factor_return_daily.append(pd.DataFrame(factor_return_dict, index=[0]), ignore_index=True, sort=False)
+        # 写入数据库
+        if not factor_return_daily.empty:
+            factor_return_daily.trade_date = pd.to_datetime(factor_return_daily.trade_date).astype(pd.Timestamp)
+            factor_return_daily = factor_return_daily[all_style+['trade_date']]
+        conn = database.connection('factor')
+        if len(self.finished_regression) != 0:
+            factor_return_daily_exist = pd.read_sql(sql='select * from factor_return_daily', con=conn, parse_dates=['trade_date'])
+            factor_return_daily = factor_return_daily.append(factor_return_daily_exist, ignore_index=True, sort=False)
+        factor_return_daily = factor_return_daily.drop_duplicates(subset=['trade_date'], keep='first').sort_values(by=['trade_date'])
+        factor_return_daily.trade_date = factor_return_daily.trade_date.map(lambda x: pd.Timestamp.strftime(x, '%Y-%m-%d'))
+        pd.io.sql.to_sql(factor_return_daily, 'factor_return_daily', con=conn, if_exists='replace', index=False)
+        factor_return_daily.trade_date = pd.to_datetime(factor_return_daily.trade_date).astype(pd.Timestamp)
+        return factor_return_daily.set_index('trade_date')
+
+    def _calc_residual_return(self):
+        residual_return = pd.DataFrame()
+        for last_trade_date, trade_date in zip(self.reindex_regression[:-self.trading_frequency], self.reindex_regression[self.trading_frequency:]):
+            expected_return_t = self.factor_return_daily.loc[:last_trade_date].mean(axis=0)
+            real_return_t = self.factor_return_daily.loc[trade_date]
+            residual_return_t = pd.DataFrame(real_return_t - expected_return_t).T
+            residual_return_t['trade_date'] = trade_date
+            residual_return = residual_return.append(residual_return_t, ignore_index=True)
+        return residual_return.set_index('trade_date')
+
+    def _select_report_period(self, last_trade_date, stock_ids, select_method='radical'):
+        stock_financial_descriptor = self.stock_financial_descriptor.copy()
+        if select_method == 'radical':
+            data_FS = stock_financial_descriptor.loc[stock_financial_descriptor.ACTUAL_ANN_DT <= last_trade_date].copy()
+            data_FS = data_FS.sort_values(by=['WIND_CODE', 'ACTUAL_ANN_DT'], ascending=False).drop_duplicates(subset=['WIND_CODE'], keep='first')
+        else:
+            if last_trade_date.month < 5:
+                report_period_t = pd.Timestamp(last_trade_date.year - 1, 9, 30)
+            elif last_trade_date.month < 9:
+                report_period_t = pd.Timestamp(last_trade_date.year, 3, 31)
+            elif last_trade_date.month < 11:
+                report_period_t = pd.Timestamp(last_trade_date.year, 6, 30)
+            else:
+                report_period_t = pd.Timestamp(last_trade_date.year, 9, 30)
+            data_FS = stock_financial_descriptor.loc[stock_financial_descriptor.REPORT_PERIOD == report_period_t].copy()
+        data_FS.set_index('stock_id', inplace=True)
+        return data_FS.reindex(stock_ids)
+
+    def _calc_value_descriptor(self, last_trade_date, stock_ids):
+        data_financial = self.stock_financial_data.loc[last_trade_date].swaplevel(i=-2, j=-1).unstack().copy()
+        data_financial = data_financial.astype(np.float)
+        columns_retain = ['negotiable_market_value', 'pe_ttm', 'pb', 'ps_ttm', 'pc_ttm', 'dy', 'evebitda']
+        data_financial = data_financial[columns_retain]
+        data_financial[['pe_ttm', 'pb', 'ps_ttm', 'pc_ttm', 'evebitda']] = 1.0 / data_financial[['pe_ttm', 'pb', 'ps_ttm', 'pc_ttm', 'evebitda']]
+        data_financial[['dy']] = data_financial[['dy']].fillna(0.0)
+        return data_financial.reindex(stock_ids)
+
+    def _calc_numerical_descriptor(self, last_trade_date, stock_ids):
+        # beta
+        def calc_beta(stock, benchmark):
+            weight_t = (0.5 ** (1 / 63)) ** (np.arange(len(stock) - 1, -1, -1))
+            y = stock * weight_t
+            x = benchmark * weight_t
+            beta = sm.OLS(y, sm.add_constant(x)).fit().params[1]
+            return beta
+
+        def calc_rs(data):
+            weight_t = (0.5 ** (1 / 63)) ** (np.arange(len(data) - 1, -1, -1))
+            relative_strength = np.dot(data, weight_t)
+            return relative_strength
+
+        df_stock_ret = self._load_stock_return(last_trade_date, stock_ids, fillna=True).fillna(0.0)
+        df_stock_ret['benchmark'] = df_stock_ret.mean(axis=1)
+
+        df_beta = df_stock_ret[stock_ids].apply(lambda x: calc_beta(x, df_stock_ret.benchmark))
+        df_beta = pd.DataFrame(df_beta, columns=['BETA'])
+
+        df_rs = df_stock_ret.sub(df_stock_ret.benchmark, axis=0)[stock_ids].rolling(63).apply(lambda x: calc_rs(x), 'raw=True')
+        df_strev = pd.DataFrame(df_rs.iloc[-3:].mean(), columns=['STREV'])
+
+        df_turnover = self.stock_market_data.loc[:last_trade_date].iloc[-256:].volume.copy() / self.stock_market_data.loc[:last_trade_date].iloc[-256:].market_share.copy() / 100
+        df_stom = pd.DataFrame(np.log(df_turnover.iloc[-21:].mean() * 21), columns=['STOM'])
+        df_stoq = pd.DataFrame(np.log(df_turnover.iloc[-63:].mean() * 21), columns=['STOQ'])
+        df_stoa = pd.DataFrame(np.log(df_turnover.iloc[-256:].mean() * 21), columns=['STOA'])
+
+        df_numerical_descriptor = pd.concat([df_beta, df_strev, df_stom, df_stoq, df_stoa], axis=1, join='outer', sort=False)
+        return df_numerical_descriptor.reindex(stock_ids)
+
+    def _z_score(self, data, columns):
+        df = data.copy()
+        for i_column in columns:
+            loc_t = df[i_column].isin([np.nan, - np.inf, np.inf])
+            df.loc[loc_t, i_column] = np.nan
+            df.loc[df[i_column] > df[i_column].mean(skipna=True) + 3 * df[i_column].std(skipna=True), i_column] = df[i_column].mean(skipna=True) + 3 * df[i_column].std(skipna=True)
+            df.loc[df[i_column] < df[i_column].mean(skipna=True) - 3 * df[i_column].std(skipna=True), i_column] = df[i_column].mean(skipna=True) - 3 * df[i_column].std(skipna=True)
+            df[i_column] = (df[i_column] - df[i_column].mean(skipna=True)) / df[i_column].std(skipna=True)
+        return df
+
+    def _z_score_cbi(self, data, columns, industry_column='sw_level1_name'):
+        df = data.copy()
+        df.dropna(subset=[industry_column], inplace=True)
+        industry_t = list(df[industry_column].unique())
+        df_filter = pd.DataFrame()
+        for i_industry in industry_t:
+            loc_t = df[industry_column] == i_industry
+            df_t = df.loc[loc_t].copy()
+            if len(df_t.shape) == 2:
+                if df_t.shape[0] >= 15:
+                    df_t = self._z_score(data=df_t, columns=columns)
+                    df_filter = df_filter.append(df_t, ignore_index=False)
+        return df_filter
+
+
 def func(algo, index_id, trade_dates, look_back, sw_industry_code, **kwargs):
 
     class_name = f'StockPortfolio{algo}'
@@ -943,7 +1230,7 @@ def multiprocessing_calc_portfolio_nav_by_industry(algo, index_id, trade_dates, 
 if __name__ == '__main__':
 
     index_id = '2070000191'
-    begin_date = '2018-12-28'
+    begin_date = '2019-03-04'
     end_date = '2019-03-29'
     look_back = 244
 
@@ -986,6 +1273,9 @@ if __name__ == '__main__':
 
     # dict_portfolio['SectorNeutralLowBeta'] = StockPortfolioSectorNeutralLowBeta(index_id, trade_dates, look_back, benchmark_id='CS.000905')
     # df_portfolio_nav['SectorNeutralLowBeta'] = dict_portfolio['SectorNeutralLowBeta'].calc_portfolio_nav()
+
+    dict_portfolio['FamaMacbethRegression'] = StockPortfolioFamaMacbethRegression(index_id, trade_dates, look_back, trading_frequency=10, percentage=0.15)
+    df_portfolio_nav['FamaMacbethRegression'] = dict_portfolio['FamaMacbethRegression'].calc_portfolio_nav()
 
     # df_portfolio_nav.to_csv('df_portfolio_nav.csv')
     # set_trace()
