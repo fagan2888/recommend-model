@@ -40,15 +40,15 @@ def load_stock_financial_data(stock_ids, begin_date=None, end_date=None, reindex
     pool.join()
 
     df = pd.concat(res).unstack()
+
     if fill_method is not None:
         df.fillna(method=fill_method, inplace=True)
-
     if begin_date is not None:
         df = df.loc[begin_date:]
     if end_date is not None:
         df = df.loc[:end_date]
     if reindex is not None:
-        df = df.reindex(reindex)
+        df = df.reindex(reindex, method=fill_method)
 
     return df
 
