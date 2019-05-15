@@ -9,6 +9,7 @@ import logging
 from sqlalchemy import MetaData, Table, select, func
 import pandas as pd
 from . import database
+from . import util_db
 
 
 logger = logging.getLogger(__name__)
@@ -16,17 +17,7 @@ logger = logging.getLogger(__name__)
 
 def load_a_stock_ipo_info(stock_ids=None, begin_date=None, end_date=None):
 
-    if isinstance(stock_ids, str):
-        stock_ids = [stock_ids]
-    elif isinstance(stock_ids, (tuple, set)):
-        stock_ids = list(stock_ids)
-    elif isinstance(stock_ids, dict):
-        stock_ids = list(stock_ids.values())
-    else:
-        if isinstance(stock_ids, (pd.Index, pd.Series, pd.DataFrame)):
-            stock_ids = stock_ids.values
-        if isinstance(stock_ids, np.ndarray):
-            stock_ids = stock_ids.reshape(-1).tolist()
+    stock_ids = util_db.to_list(stock_ids)
 
     if begin_date is not None:
         begin_date = pd.Timestamp(begin_date).strftime('%Y%m%d')

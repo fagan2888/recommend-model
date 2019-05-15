@@ -28,7 +28,7 @@ def load_a_trade_date(exch_market_id='SSE', begin_date=None, end_date=None):
 
     df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
     ix = df.index
-    ix.sort_values(inplace=True)
+    ix = ix.sort_values()
 
     if begin_date is not None:
         ix = ix[ix>=begin_date]

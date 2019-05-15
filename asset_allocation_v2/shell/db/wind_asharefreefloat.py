@@ -9,6 +9,7 @@ import logging
 from sqlalchemy import MetaData, Table, select, func
 import pandas as pd
 from . import database
+from . import util_db
 
 
 logger = logging.getLogger(__name__)
@@ -16,17 +17,7 @@ logger = logging.getLogger(__name__)
 
 def load_a_stock_free_float_share(stock_ids=None, begin_date=None, end_date=None):
 
-    if isinstance(stock_ids, str):
-        stock_ids = [stock_ids]
-    elif isinstance(stock_ids, (tuple, set)):
-        stock_ids = list(stock_ids)
-    elif isinstance(stock_ids, dict):
-        stock_ids = list(stock_ids.values())
-    else:
-        if isinstance(stock_ids, (pd.Index, pd.Series, pd.DataFrame)):
-            stock_ids = stock_ids.values
-        if isinstance(stock_ids, np.ndarray):
-            stock_ids = stock_ids.reshape(-1).tolist()
+    stock_ids = util_db.to_list(stock_ids)
 
     if begin_date is not None:
         begin_date = pd.Timestamp(begin_date).strftime('%Y%m%d')
@@ -40,20 +31,17 @@ def load_a_stock_free_float_share(stock_ids=None, begin_date=None, end_date=None
     columns = [
         t.c.S_INFO_WINDCODE.label('stock_id'),
         t.c.CHANGE_DT.label('trade_date'),
-        t.c.CHANGE_DT1.label('trade_date1'),
-        t.c.ANN_DT.label('ann_date'),
+        # t.c.ANN_DT.label('ann_date'),
         t.c.S_SHARE_FREESHARES.label('free_float_share')
     ]
 
     s = select(columns)
     if stock_ids is not None:
         s = s.where(t.c.S_INFO_WINDCODE.in_(stock_ids))
-    if begin_date is not None:
-        s = s.where(t.c.S_IPO_LISTDATE>=begin_date)
-    if end_date is not None:
-        s = s.where(t.c.S_IPO_LISTDATE<=end_date)
 
-    df = pd.read_sql(s, engine, index_col=['trade_date', 'stock_id'], parse_dates=['trade_date', 'trade_date1', 'ann_date'])
+    df = pd.read_sql(s, engine, parse_dates=['trade_date'])
+    df.drop_duplicates(subset=['stock_id', 'trade_date'])
+    df.set_index(['stock_id', 'trade_date'], inplace=True)
     df.sort_index(inplace=True)
 
     return df
