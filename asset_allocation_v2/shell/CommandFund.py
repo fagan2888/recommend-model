@@ -25,6 +25,7 @@ from Const import datapath
 from sqlalchemy import *
 from tabulate import tabulate
 from db import database, base_ra_fund_nav, base_ra_index, base_ra_fund, base_ra_index_nav
+import MySQLdb
 
 import traceback, code
 
@@ -36,6 +37,28 @@ def fund(ctx):
     '''fund pool group
     '''
     pass
+
+@fund.command()
+@click.pass_context
+def nofee_fund(ctx):
+    conn  = MySQLdb.connect(**config.db_base)
+    conn.autocommit(True)
+    sql = 'select fi_code, fi_name, fi_yingmi_subscribe_status from fund_infos'
+    all_fund = pd.read_sql(sql, conn, index_col = ['fi_code']).dropna()
+    sql = 'select ff_code, ff_type, ff_fee from fund_fee'
+    fee_fund = pd.read_sql(sql, conn, index_col = ['ff_code'])
+    no_fee_codes = []
+    for k, v in fee_fund.groupby(level = [0]):
+        if 5 not in v.ff_type.ravel():
+            no_fee_codes.append(k)
+    codes = fee_fund.loc[no_fee_codes].index & all_fund.index
+    no_fee_fund = all_fund.loc[codes].drop_duplicates()
+    sql = 'select ra_code from ra_fund where ra_type = 1'
+    stock_fund = pd.read_sql(sql, conn, index_col = ['ra_code'])
+    no_fee_fund = no_fee_fund.loc[stock_fund.index & no_fee_fund.index]
+    print(no_fee_fund)
+    conn.close()
+
 
 @fund.command()
 @click.option('--id', 'optid', help='specify ra corr id (e.g. 500001,500002')

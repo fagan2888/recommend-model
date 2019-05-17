@@ -197,7 +197,6 @@ class MzBootAllocate(Allocate):
         self._bootstrap_count = bootstrap_count
 
     def allocate_algo(self, day, df_inc, bound):
-
         risk, returns, ws, sharpe = PF.markowitz_bootstrap(df_inc, bound, cpu_count = self._cpu_count, bootstrap_count = self._bootstrap_count)
         ws = dict(zip(df_inc.columns.ravel(), ws))
 

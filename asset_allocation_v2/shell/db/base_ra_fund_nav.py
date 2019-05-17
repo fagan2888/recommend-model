@@ -8,6 +8,7 @@ import pandas as pd
 # import sys
 import logging
 from . import database
+from ipdb import set_trace
 
 from dateutil.parser import parse
 

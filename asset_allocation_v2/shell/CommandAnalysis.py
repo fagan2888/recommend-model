@@ -835,15 +835,20 @@ def index_nav(ctx):
 
     index_ids = ['120000001', '120000002', '120000009' , '120000010', '120000011', '120000014','120000016' ,'120000017' ,'120000039', '120000080', '120000081','120000082' ,'ERI000001', 'ERI000002']
     data = {}
-    #for _id in index_ids:
-    #    data[_id] = base_ra_index_nav.load_series(_id)
-    for _id in index_ids:
+    for _id in index_ids[0:-2]:
+        data[_id] = base_ra_index_nav.load_series(_id)
+    for _id in index_ids[-2:]:
         data[_id] = base_exchange_rate_index_nav.load_series(_id)
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(data).dropna()
+    dates = ATradeDate.month_trade_date()
+    dates = df.index & dates
+    df.loc[dates].pct_change().dropna().corr().to_csv('./tmp/corr.csv')
     #df = df[df.index>='2018-01-01']
     #df = df/df.iloc[0]
     #week_trade_date = ATradeDate.week_trade_date()
     #df = df.loc[df.index & week_trade_date]
+    df = df.loc[dates].pct_change().dropna()
+    print(df)
     df.to_csv('tmp/index_nav.csv')
 
 
@@ -1722,3 +1727,43 @@ def money_pool_rank(ctx):
     df = pd.DataFrame(ranks, index = money_inc.index)
     print(df)
     df.to_csv('货币组合每月排名百分比.csv')
+
+#调仓频率与次数
+@analysis.command()
+@click.pass_context
+def could_market(ctx):
+
+    index_ids = ['120000001', '120000002', '120000009' , '120000010', '120000011', '120000014','120000016' ,'120000017' ,'120000039', '120000080', '120000081','120000082' ,'ERI000001', 'ERI000002']
+    data = {}
+    for _id in index_ids[0:-2]:
+        data[_id] = base_ra_index_nav.load_series(_id)
+    for _id in index_ids[-2:]:
+        data[_id] = base_exchange_rate_index_nav.load_series(_id)
+    df = pd.DataFrame(data).dropna()
+    dates = ATradeDate.week_trade_date()
+    dates = df.index & dates
+    df = df.loc[dates].pct_change().dropna()
+    df = df[['120000001', '120000010', 'ERI000001']]
+    inc = df.rolling(4).sum().dropna()
+    ds = []
+    datas = []
+    for i in range(10, len(inc)):
+        d = inc.index[i]
+        d1 = inc.index[i - 5]
+        d2 = inc.index[i - 10]
+        data = []
+        ds.append(d)
+        for col in inc.columns:
+            if inc.loc[d, col] > 0 and inc.loc[d1, col] > 0 and inc.loc[d2, col] > 0:
+                data.append(1)
+            else:
+                data.append(0)
+        datas.append(data)
+    df = pd.DataFrame(datas, index = ds)
+    df.columns = inc.columns
+    df['120000010'][df['120000010'] == 1] = 2
+    df['ERI000001'][df['ERI000001'] == 1] = 3
+    df['none'] = 0
+    df['none'][df.sum(axis = 1) == 0] = 4
+    print(df)
+    df.to_csv('tmp/could_market.csv')

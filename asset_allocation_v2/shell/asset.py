@@ -140,7 +140,7 @@ class Asset(object):
                 # 基金资产
                 #
                 sr = base_ra_fund_nav.load_series(
-                    asset_id, reindex=reindex, begin_date=begin_date, end_date=end_date)
+                        asset_id[3:], reindex=reindex, begin_date=begin_date, end_date=end_date)
             elif prefix == 'RS':
                 #
                 # 修型资产
