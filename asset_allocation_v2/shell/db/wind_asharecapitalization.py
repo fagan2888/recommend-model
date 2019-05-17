@@ -1,6 +1,7 @@
 #coding=utf-8
 '''
 Created on: May. 14, 2019
+Modified on: May. 17, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -9,7 +10,6 @@ import logging
 from sqlalchemy import MetaData, Table, select, func
 import pandas as pd
 from . import database
-# from . import wind_asharecalendar
 from . import util_db
 
 
@@ -42,14 +42,20 @@ def load_a_stock_total_share(stock_ids=None, begin_date=None, end_date=None, rei
         s = s.where(t.c.S_INFO_WINDCODE.in_(stock_ids))
 
     df = pd.read_sql(s, engine, parse_dates=['change_date', 'change_date1', 'ann_date'])
-    df['trade_date'] = df[['change_date', 'ann_date']].apply(max, axis='columns')
+    df['begin_date'] = df[['change_date', 'ann_date']].apply(max, axis='columns')
     df.sort_values(
-        by=['stock_id', 'trade_date', 'change_date'],
+        by=['stock_id', 'begin_date', 'change_date'],
         ascending=[True, True, False],
         inplace=True
     )
-    df.drop(df[(df.stock_id==df.shift(1).stock_id) & (df.change_date<=df.shift(1).change_date)].index, inplace=True)
-    df.set_index(['stock_id', 'trade_date'], inplace=True)
+    df.drop(
+        df.loc[
+            (df.stock_id==df.shift(1).stock_id) & \
+            (df.change_date<=df.shift(1).change_date)
+        ].index,
+        inplace=True
+    )
+    df.set_index(['stock_id', 'begin_date'], inplace=True)
     df.drop(['change_date', 'change_date1', 'ann_date'], axis='columns', inplace=True)
 
     # ix = pd.date_range(

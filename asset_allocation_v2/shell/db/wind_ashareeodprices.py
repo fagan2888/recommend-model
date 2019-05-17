@@ -11,14 +11,15 @@ import multiprocessing
 import numpy as np
 import pandas as pd
 import functools
+# from ipdb import set_trace
+# from time import perf_counter
 from . import database
 from . import util_db
+
 
 logger = logging.getLogger(__name__)
 
 
-from ipdb import set_trace
-from time import perf_counter
 def load_a_stock_adj_price(stock_ids, begin_date=None, end_date=None, reindex=None, fill_method=None):
 
     stock_ids = util_db.to_list(stock_ids)
@@ -64,7 +65,58 @@ def load_a_stock_adj_price_ser(stock_id):
 
     columns = [
         t.c.TRADE_DT.label('trade_date'),
-        t.c.S_DQ_ADJCLOSE.label('prc')
+        t.c.S_DQ_ADJCLOSE.label('adj_prc')
+    ]
+
+    s = select(columns).where(t.c.S_INFO_WINDCODE==stock_id)
+
+    df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
+    ser = df.adj_prc.rename(stock_id)
+
+    # print(perf_counter()-start)
+
+    return ser
+
+def load_a_stock_price(stock_ids, begin_date=None, end_date=None, reindex=None, fill_method=None):
+
+    stock_ids = util_db.to_list(stock_ids)
+
+    if begin_date is not None:
+        begin_date = pd.Timestamp(begin_date)
+    if end_date is not None:
+        end_date = pd.Timestamp(end_date)
+
+    cpu_count = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(cpu_count//2)
+
+    res = pool.map(load_a_stock_price_ser, stock_ids)
+
+    pool.close()
+    pool.join()
+
+    df = pd.DataFrame(res, index=stock_ids).T
+    df.sort_index(inplace=True)
+
+    if fill_method is not None:
+        df.fillna(method=fill_method, inplace=True)
+    if begin_date is not None:
+        df = df.loc[begin_date:]
+    if end_date is not None:
+        df = df.loc[:end_date]
+    if reindex is not None:
+        df = df.reindex(reindex)
+
+    return df
+
+def load_a_stock_price_ser(stock_id):
+
+    engine = database.connection('wind')
+    metadata = MetaData(bind=engine)
+    t = Table('AShareEODPrices', metadata, autoload=True)
+
+    columns = [
+        t.c.TRADE_DT.label('trade_date'),
+        t.c.S_DQ_CLOSE.label('prc')
     ]
 
     s = select(columns).where(t.c.S_INFO_WINDCODE==stock_id)
@@ -72,10 +124,7 @@ def load_a_stock_adj_price_ser(stock_id):
     df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
     ser = df.prc.rename(stock_id)
 
-    # print(perf_counter()-start)
-
     return ser
-
 
 def load_a_stock_status(stock_ids, begin_date=None, end_date=None, reindex=None):
 

@@ -1,6 +1,7 @@
 #coding=utf-8
 '''
 Created on: May. 8, 2019
+Modified on: May. 17, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -15,14 +16,9 @@ from . import util_db
 logger = logging.getLogger(__name__)
 
 
-def load_a_stock_free_float_share(stock_ids=None, begin_date=None, end_date=None):
+def load_a_stock_free_float_share(stock_ids=None):
 
     stock_ids = util_db.to_list(stock_ids)
-
-    if begin_date is not None:
-        begin_date = pd.Timestamp(begin_date).strftime('%Y%m%d')
-    if end_date is not None:
-        end_date = pd.Timestamp(end_date).strftime('%Y%m%d')
 
     engine = database.connection('wind')
     metadata = MetaData(bind=engine)
@@ -30,7 +26,7 @@ def load_a_stock_free_float_share(stock_ids=None, begin_date=None, end_date=None
 
     columns = [
         t.c.S_INFO_WINDCODE.label('stock_id'),
-        t.c.CHANGE_DT.label('trade_date'),
+        t.c.CHANGE_DT.label('change_date'),
         # t.c.ANN_DT.label('ann_date'),
         t.c.S_SHARE_FREESHARES.label('free_float_share')
     ]
@@ -39,10 +35,22 @@ def load_a_stock_free_float_share(stock_ids=None, begin_date=None, end_date=None
     if stock_ids is not None:
         s = s.where(t.c.S_INFO_WINDCODE.in_(stock_ids))
 
-    df = pd.read_sql(s, engine, parse_dates=['trade_date'])
-    df.drop_duplicates(subset=['stock_id', 'trade_date'])
-    df.set_index(['stock_id', 'trade_date'], inplace=True)
-    df.sort_index(inplace=True)
+    df = pd.read_sql(s, engine, parse_dates=['change_date'])
+    df['begin_date'] = df['change_date']
+    df.sort_values(
+        by=['stock_id', 'begin_date', 'change_date'],
+        ascending=[True, True, False],
+        inplace=True
+    )
+    df.drop(
+        df.loc[
+            (df.stock_id==df.shift(1).stock_id) & \
+            (df.change_date<=df.shift(1).change_date)
+        ].index,
+        inplace=True
+    )
+    df.set_index(['stock_id', 'begin_date'], inplace=True)
+    df.drop(['change_date'], axis='columns', inplace=True)
 
     return df
 
@@ -50,5 +58,4 @@ def load_a_stock_free_float_share(stock_ids=None, begin_date=None, end_date=None
 if __name__ == '__main__':
 
     load_a_stock_free_float_share('601598.SH')
-    load_a_stock_free_float_share(begin_date='2019-01-01', end_date='2019-04-30')
 

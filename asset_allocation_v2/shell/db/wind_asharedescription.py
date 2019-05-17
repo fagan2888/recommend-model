@@ -6,7 +6,7 @@ Contact: sushixun@licaimofang.com
 '''
 
 import logging
-from sqlalchemy import MetaData, Table, select, func
+from sqlalchemy import MetaData, Table, select, func, tuple_
 import pandas as pd
 from . import database
 from . import util_db

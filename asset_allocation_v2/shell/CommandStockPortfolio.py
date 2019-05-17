@@ -162,10 +162,10 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     class_stock_portfolio.portfolio_analysis()
     if stock_portfolio_type == 1:
         dict_benchmark = {
-            '2070000043': 'SH.000050',
-            '2070000060': 'CS.000300',
-            '2070000187': 'CS.000905',
-            '2070000191': 'CS.000906'
+            '000016.SH': 'SH.000016',
+            '000300.SH': 'CS.000300',
+            '000905.SH': 'CS.000905',
+            '000906.SH': 'CS.000906'
         }
         benchmark_id = dict_benchmark[kwargs['index_id']]
         class_stock_portfolio.portfolio_statistic(benchmark_id)

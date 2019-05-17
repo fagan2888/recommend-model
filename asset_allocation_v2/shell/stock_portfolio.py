@@ -1,7 +1,7 @@
 #coding=utf-8
 '''
 Created on: Mar. 11, 2019
-Modified on: May. 5, 2019
+Modified on: May. 17, 2019
 Author: Shixun Su, Boyang Zhou, Ning Yang
 Contact: sushixun@licaimofang.com
 '''
@@ -21,6 +21,11 @@ import copy
 # from ipdb import set_trace
 sys.path.append('shell')
 from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_qt_skdailyprice, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic, caihui_tq_sk_sharestruchg
+from db import wind_asharecalendar
+from db import wind_aindexeodprices, wind_aindexmembers
+from db import wind_asharedescription, wind_ashareeodprices
+from db import wind_asharecapitalization, wind_asharefreefloat, wind_ashareeodderivativeindicator
+from db import wind_ashareipo, wind_asharestockswap
 from db import factor_financial_statement, factor_ml_merge_list, asset_sp_stock_portfolio_nav
 from trade_date import ATradeDate
 import calc_covariance
@@ -54,7 +59,7 @@ class MetaClassPropertyFuncGenerater(type):
             else:
                 data = getattr(self, '_data')
                 if not hasattr(data, variable):
-                    raise AttributeError(f'\'{self.__cls__.__name__}\'object has no attribute \'{variable}\'')
+                    raise AttributeError(f'\'{self.__class__.__name__}\'object has no attribute \'{variable}\'')
 
             return getattr(data, variable)
 
@@ -66,7 +71,7 @@ class MetaClassPropertyFuncGenerater(type):
         def func(self):
 
             if not hasattr(self, f'_{variable}'):
-                raise AttributeError(f'\'{self.__cls__.__name__}\'object has no attribute \'{variable}\'')
+                raise AttributeError(f'\'{self.__class__.__name__}\'object has no attribute \'{variable}\'')
 
             return getattr(self, f'_{variable}')
 
@@ -87,74 +92,101 @@ class StockPortfolioData:
             lookback=self.look_back+1
         ).rename('trade_date')
 
-        self.df_index_historical_constituents = caihui_tq_ix_comp.load_index_historical_constituents(
+        self.ser_index_nav = wind_aindexeodprices.load_a_index_nav(
+            index_ids=self.index_id,
+            reindex=self.reindex_total,
+            fill_method='pad'
+        )[self.index_id]
+
+        self.df_index_historical_constituents = wind_aindexmembers.load_a_index_historical_constituents(
             self.index_id,
-            begin_date=self.reindex[0].strftime('%Y%m%d'),
-            end_date=self.reindex[-1].strftime('%Y%m%d')
+            begin_date=self.reindex[0],
+            end_date=self.reindex[-1]
         )
-        self.stock_pool = self.df_index_historical_constituents.loc[:, ['stock_id', 'stock_code']] \
-            .drop_duplicates(subset=['stock_id']).set_index('stock_id').sort_index()
 
-        df_merge_info = factor_ml_merge_list.load()
-        self.df_merge_info = df_merge_info.loc[
-            (df_merge_info.trade_date.isin(self.reindex)) & \
-            (df_merge_info.old_stock_id.isin(self.stock_pool.index))
-        ]
+        self.stock_pool = wind_asharedescription.load_a_stock_code_info(
+            stock_ids=self.df_index_historical_constituents.stock_id.drop_duplicates()
+        )
 
-        stock_pool_total = pd.concat([self.stock_pool, caihui_tq_sk_basicinfo.load_stock_code_info(self.df_merge_info.new_stock_id)])
-        self.stock_pool_total = stock_pool_total.loc[~stock_pool_total.index.duplicated()]
+        self.df_stock_swap = wind_asharestockswap.load_a_stock_swap(
+            transferer_stock_ids=self.stock_pool.index
+        )
 
-        self.df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_price(
+        self.stock_pool_total = wind_asharedescription.load_a_stock_code_info(
+            stock_ids=self.stock_pool.index.union(self.df_stock_swap.targetcomp_stock_id)
+        )
+
+        self.df_stock_prc = wind_ashareeodprices.load_a_stock_adj_price(
             stock_ids=self.stock_pool_total.index,
             reindex=self.reindex_total,
             fill_method='pad'
         )
         self.df_stock_ret = self.df_stock_prc.pct_change().iloc[1:]
 
-        self.df_stock_status = caihui_tq_qt_skdailyprice.load_stock_status(
+        self.df_stock_status = wind_ashareeodprices.load_a_stock_status(
             stock_ids=self.stock_pool_total.index,
             reindex=self.reindex_total
         )
 
-        self.df_stock_industry = caihui_tq_sk_basicinfo.load_stock_industry(stock_ids=self.stock_pool.index)
-        self.df_stock_historical_share = self.__load_stock_historical_share()
+        self.df_stock_total_share, self.df_stock_free_float_share, self.df_stock_total_market_value = self.__load_stock_share_and_market_value()
 
-        self.stock_market_data = caihui_tq_sk_dquoteindic.load_stock_market_data(
+        # self.stock_market_data = caihui_tq_sk_dquoteindic.load_stock_market_data(
+            # stock_ids=self.stock_pool.index,
+            # reindex=self.reindex_total,
+            # fill_method='pad'
+        # )
+
+        # self.stock_financial_data = caihui_tq_sk_finindic.load_stock_financial_data(
+            # stock_ids=self.stock_pool.index,
+            # reindex=self.reindex_total,
+            # fill_method='pad'
+        # )
+
+        # self.stock_financial_statement = self.__load_financial_statement()
+
+        # self.stock_financial_descriptor = calc_financial_descriptor.calc_financial_descriptor(self.stock_financial_statement)
+
+        set_trace()
+
+    def __load_stock_share_and_market_value(self):
+
+        df_stock_total_share = wind_asharecapitalization.load_a_stock_total_share(
+            stock_ids=self.stock_pool.index
+        )
+
+        df_stock_free_float_share = wind_asharefreefloat.load_a_stock_free_float_share(
+            stock_ids=self.stock_pool.index
+        )
+
+        df_stock_total_market_value = wind_ashareeodderivativeindicator.load_a_stock_total_market_value(
             stock_ids=self.stock_pool.index,
-            reindex=self.reindex_total,
+            reindex=self.reindex,
             fill_method='pad'
         )
 
-        self.stock_financial_data = caihui_tq_sk_finindic.load_stock_financial_data(
-            stock_ids=self.stock_pool.index,
-            reindex=self.reindex_total,
-            fill_method='pad'
+        df_stock_ipo = wind_ashareipo.load_a_stock_ipo_info(
+            stock_ids=self.stock_pool.index
         )
 
-        self.stock_financial_statement = self.__load_financial_statement()
+        for stock_id, stock_ipo in df_stock_ipo.iterrows():
 
-        self.stock_financial_descriptor = calc_financial_descriptor.calc_financial_descriptor(self.stock_financial_statement)
+            trade_date = trade_date_before(stock_ipo.ipo_date)
+            if trade_date not in self.reindex:
+                continue
+            df_stock_total_share.loc[(stock_id, trade_date), :] = df_stock_total_share.loc[(stock_id, stock_ipo.ipo_date)]
+            df_stock_free_float_share.loc[(stock_id, trade_date), :] = stock_ipo.ipo_amount
+            df_stock_total_market_value.loc[trade_date, stock_id] = \
+                df_stock_total_share.loc[(stock_id, trade_date), 'total_share'] * stock_ipo.ipo_price
 
-        self.ser_index_nav = caihui_tq_qt_index.load_index_nav(
-            index_ids=[self.index_id],
-            reindex=self.reindex_total,
-            fill_method='pad'
-        )[self.index_id]
+        df_stock_total_share = df_stock_total_share.sort_index().reset_index()
+        df_stock_total_share.loc[:, 'end_date'] = df_stock_total_share.begin_date.shift(-1)
+        df_stock_total_share.loc[df_stock_total_share.stock_id!=df_stock_total_share.stock_id.shift(-1), 'end_date'] = np.nan
 
-    def __load_stock_historical_share(self):
+        df_stock_free_float_share = df_stock_free_float_share.sort_index().reset_index()
+        df_stock_free_float_share.loc[:, 'end_date'] = df_stock_free_float_share.begin_date.shift(-1)
+        df_stock_free_float_share.loc[df_stock_free_float_share.stock_id!=df_stock_free_float_share.stock_id.shift(-1), 'end_date'] = np.nan
 
-        ser_stock_company_id = caihui_tq_sk_basicinfo.load_stock_company_id(stock_ids=self.stock_pool.index) \
-            .reset_index().set_index('company_id').stock_id
-
-        df_stock_historical_share = caihui_tq_sk_sharestruchg.load_company_historical_share(
-            company_ids=ser_stock_company_id.index,
-            begin_date=self.reindex[0].strftime('%Y%m%d'),
-            end_date=self.reindex[-1].strftime('%Y%m%d')
-        )
-        df_stock_historical_share['stock_id'] = df_stock_historical_share.company_id.map(ser_stock_company_id)
-        df_stock_historical_share.drop('company_id', axis='columns', inplace=True)
-
-        return df_stock_historical_share
+        return df_stock_total_share, df_stock_free_float_share, df_stock_total_market_value
 
     def __load_financial_statement(self):
         # default: statement_type = '408001000'
@@ -201,20 +233,22 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         'reindex',
         'look_back',
         'reindex_total',
+        'ser_index_nav',
         'df_index_historical_constituents',
         'stock_pool',
-        'df_merge_info',
+        'df_stock_swap',
         'stock_pool_total',
         'df_stock_prc',
         'df_stock_ret',
         'df_stock_status',
         'df_stock_industry',
-        'df_stock_historical_share',
+        'df_stock_total_share',
+        'df_stock_free_float_share',
+        'df_stock_total_market_value',
         'stock_market_data',
-        'stock_financial_data'
+        'stock_financial_data',
         'stock_financial_statement',
-        'stock_financial_descriptor',
-        'ser_index_nav'
+        'stock_financial_descriptor'
     ]
 
     _instance_variable_list = [
@@ -290,13 +324,13 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
             ser_turnover.loc[trade_date] = (stock_pos_adjusted - stock_pos).abs().sum()
 
             if considering_status:
-                for _, merge_info in self.df_merge_info.loc[self.df_merge_info.trade_date==trade_date].iterrows():
+                for _, stock_swap in self.df_stock_swap.loc[self.df_stock_swap.equity_registration_date==trade_date].iterrows():
 
-                    pos = stock_pos_adjusted.loc[merge_info.old_stock_id] \
-                        * (merge_info.conversion_ratio * merge_info.new_stock_price / merge_info.old_stock_price)
+                    pos = stock_pos_adjusted.loc[stock_swap.transferer_stock_id] \
+                        * (stock_swap.conversion_ratio * stock_swap.targetcomp_conversion_prc / stock_swap.transferer_stock_prc)
 
-                    stock_pos_adjusted.loc[merge_info.new_stock_id] = pos
-                    stock_pos_adjusted.loc[merge_info.old_stock_id] = 0.0
+                    stock_pos_adjusted.loc[stock_swap.targetcomp_stock_id] = pos
+                    stock_pos_adjusted.loc[stock_swap.transferer_stock_id] = 0.0
 
             # df_stock_pos_adjusted.loc[trade_date] = stock_pos_adjusted
             arr_stock_pos_adjusted = np.append(arr_stock_pos_adjusted, stock_pos_adjusted.values.reshape(1, -1), axis=0)
@@ -361,18 +395,18 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
         return df_stock_ret
 
-    def _load_stock_pool(self, trade_date):
+    def _load_stock_ids(self, trade_date):
 
         trade_date = trade_date_after(trade_date)
 
         # stock_pool = caihui_tq_ix_comp.load_index_constituents(self.index_id, date=trade_date.strftime('%Y%m%d'))
-        stock_pool = self.df_index_historical_constituents.loc[
-            (self.df_index_historical_constituents.selected_date<=trade_date) & \
-            ((self.df_index_historical_constituents.out_date>trade_date) | \
-            (self.df_index_historical_constituents.out_date=='1900-01-01'))
-        ].loc[:, ['stock_id', 'stock_code']].set_index('stock_id').sort_index()
+        stock_ids = self.df_index_historical_constituents.loc[
+            (self.df_index_historical_constituents.in_date<=trade_date) & \
+            ((self.df_index_historical_constituents.out_date>=trade_date) | \
+            (self.df_index_historical_constituents.out_date.isna()))
+        ].set_index('stock_id').index.sort_values()
 
-        return stock_pool
+        return stock_ids
 
     def _calc_portfolio_size(self, size, percentage, lower_bound=1):
 
@@ -425,56 +459,75 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         return
 
 
-class StockPortfolioMarketCap(StockPortfolio):
+class StockPortfolioMarketValue(StockPortfolio):
 
     _kwargs_list = []
 
     def __init__(self, index_id, reindex, look_back, **kwargs):
 
-        super(StockPortfolioMarketCap, self).__init__(index_id, reindex, look_back, **kwargs)
+        super(StockPortfolioMarketValue, self).__init__(index_id, reindex, look_back, **kwargs)
 
     # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000300
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
-        _, ser_market_cap_stock_weight = self._calc_market_cap(trade_date, stock_ids)
+        _, ser_market_value_stock_weight = self._calc_market_value(trade_date, stock_ids)
 
         stock_pos = pd.Series(index=stock_ids, name=trade_date)
-        stock_pos.loc[:] = (ser_market_cap_stock_weight).fillna(0.0)
+        stock_pos.loc[:] = (ser_market_value_stock_weight).fillna(0.0)
 
         return stock_pos
 
-    def _calc_market_cap(self, trade_date, stock_ids, **kwargs):
+    def _calc_market_value(self, trade_date, stock_ids, **kwargs):
 
-        ser_stock_free_float_market_cap = self._calc_stock_free_float_market_cap(trade_date, stock_ids)
+        ser_stock_free_float_market_value = self._calc_stock_free_float_market_value(trade_date, stock_ids)
 
-        ser_market_cap_stock_weight = ser_stock_free_float_market_cap
-        ser_market_cap_stock_weight /= ser_market_cap_stock_weight.sum()
+        ser_market_value_stock_weight = ser_stock_free_float_market_value
+        ser_market_value_stock_weight /= ser_market_value_stock_weight.sum()
 
-        return stock_ids, ser_market_cap_stock_weight
+        return stock_ids, ser_market_value_stock_weight
 
-    def _calc_stock_free_float_market_cap(self, trade_date, stock_ids):
+    def _calc_stock_free_float_market_value(self, trade_date, stock_ids):
 
         df_stock_share = self._load_stock_share(trade_date, stock_ids)
-        ser_stock_total_market_cap = self.stock_financial_data['total_market_cap'].loc[trade_date, stock_ids]
+        ser_stock_total_market_value = self.df_stock_total_market_value.loc[trade_date, stock_ids]
 
         ser_free_float_weight = df_stock_share.free_float_share / df_stock_share.total_share
         ser_free_float_weight.loc[:] = ser_free_float_weight.apply(self._weight_adjustment_algo)
 
-        ser_stock_free_float_market_cap = (ser_stock_total_market_cap * ser_free_float_weight).rename('free_float_market_cap')
+        ser_stock_free_float_market_value = (ser_stock_total_market_value * ser_free_float_weight).rename('free_float_market_value')
 
-        return ser_stock_free_float_market_cap
+        return ser_stock_free_float_market_value
 
     def _load_stock_share(self, trade_date, stock_ids):
 
-        df_stock_share = self.df_stock_historical_share.loc[
-            (self.df_stock_historical_share.begin_date<=trade_date) & \
-            ((self.df_stock_historical_share.end_date>=trade_date) | \
-            (self.df_stock_historical_share.end_date=='1900-01-01'))
-        ].sort_values(by='begin_date').drop_duplicates(subset=['stock_id'], keep='last').set_index('stock_id').reindex(stock_ids)
+        df_stock_share = pd.DataFrame(index=stock_ids, columns=['total_share', 'free_float_share'])
+
+        # get_data = partial(self._get_data, trade_date=trade_date)
+        # df_stock_share.loc[:, 'total_share'] = self.df_stock_total_share.loc[stock_ids].total_share.groupby(level=0).apply(get_data)
+        # df_stock_share.loc[:, 'free_float_share'] = self.df_stock_free_float_share.loc[stock_ids].free_float_share.groupby(level=0).apply(get_data)
+
+        df_stock_share.loc[:, 'total_share'] = self.df_stock_total_share.loc[
+            (self.df_stock_total_share.begin_date<=trade_date) & \
+            ((self.df_stock_total_share.end_date>trade_date) | \
+            (self.df_stock_total_share.end_date.isna()))
+        ].set_index('stock_id').reindex(stock_ids).total_share
+
+        df_stock_share.loc[:, 'free_float_share'] = self.df_stock_free_float_share.loc[
+            (self.df_stock_free_float_share.begin_date<=trade_date) & \
+            ((self.df_stock_free_float_share.end_date>trade_date) | \
+            (self.df_stock_free_float_share.end_date.isna()))
+        ].set_index('stock_id').reindex(stock_ids).free_float_share
 
         return df_stock_share
+
+    def _get_data(self, ser, trade_date):
+
+        ser = ser.loc[ser.name]
+        data = ser.iloc[ser.index.get_loc(trade_date, method='pad')]
+
+        return data
 
     def _weight_adjustment_algo(self, weight):
 
@@ -498,7 +551,7 @@ class StockPortfolioEqualWeight(StockPortfolio):
 
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
         stock_pos = pd.Series(1.0/stock_ids.size, index=stock_ids, name=trade_date)
 
@@ -518,7 +571,7 @@ class StockPortfolioLowVolatility(StockPortfolio):
     # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000803
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
         low_volatility_stock_ids, ser_low_volatility_stock_weight = self._calc_low_volatility(trade_date, stock_ids, self.percentage)
 
@@ -543,7 +596,7 @@ class StockPortfolioLowVolatility(StockPortfolio):
         return low_volatility_stock_ids, ser_low_volatility_stock_weight
 
 
-class StockPortfolioMomentum(StockPortfolioMarketCap):
+class StockPortfolioMomentum(StockPortfolioMarketValue):
 
     _kwargs_list = [
         'percentage',
@@ -557,7 +610,7 @@ class StockPortfolioMomentum(StockPortfolioMarketCap):
     # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/H30260
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
         momentum_stock_ids, _ = self._calc_momentum(trade_date, stock_ids, self.percentage)
         _, ser_market_cap_stock_weight = self._calc_market_cap(trade_date, momentum_stock_ids)
@@ -586,7 +639,7 @@ class StockPortfolioMomentum(StockPortfolioMarketCap):
         return momentum_stock_ids, ser_momentum_stock_weight
 
 
-class StockPortfolioSmallSize(StockPortfolioMarketCap):
+class StockPortfolioSmallSize(StockPortfolioMarketValue):
 
     _kwargs_list = [
         'percentage'
@@ -598,7 +651,7 @@ class StockPortfolioSmallSize(StockPortfolioMarketCap):
 
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
         small_size_stock_ids, ser_small_size_stock_weight = self._calc_small_size(trade_date, stock_ids, self.percentage)
 
@@ -641,7 +694,7 @@ class StockPortfolioLowBeta(StockPortfolio):
     # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000829
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
         low_beta_stock_ids, ser_low_beta_stock_weight = self._calc_low_beta(trade_date, stock_ids, self.percentage)
 
@@ -691,7 +744,7 @@ class StockPortfolioHighBeta(StockPortfolioLowBeta):
     # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000828
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
         high_beta_stock_ids, ser_high_beta_stock_weight = self._calc_high_beta(trade_date, stock_ids, self.percentage)
 
@@ -734,7 +787,7 @@ class StockPortfolioHighBetaAndLowBeta(StockPortfolioHighBeta):
 
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
         high_beta_and_low_beta_stock_ids, ser_high_beta_and_low_beta_stock_weight = self._calc_high_beta_and_low_beta(trade_date, stock_ids, self.percentage)
 
@@ -773,7 +826,7 @@ class StockPortfolioLowBetaLowVolatility(StockPortfolioLowBeta, StockPortfolioLo
     # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/930985
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
         low_beta_stock_ids, _ = self._calc_low_beta(trade_date, stock_ids, self.percentage_low_beta)
         low_beta_low_volatility_stock_ids, _ = self._calc_low_volatility(trade_date, low_beta_stock_ids, self.percentage_low_volatility)
@@ -784,7 +837,7 @@ class StockPortfolioLowBetaLowVolatility(StockPortfolioLowBeta, StockPortfolioLo
         return stock_pos
 
 
-class StockPortfolioSectorNeutral(StockPortfolioMarketCap):
+class StockPortfolioSectorNeutral(StockPortfolioMarketValue):
 
     _kwargs_list = [
         'percentage'
@@ -797,7 +850,7 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketCap):
     # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/930846
     def _calc_stock_pos(self, trade_date):
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
 
         sector_neutral_stock_ids, ser_sector_neutral_stock_weight = self._calc_sector_neutral(trade_date, stock_ids, self.percentage)
 
@@ -902,7 +955,7 @@ class StockPortfolioIndustry(StockPortfolio):
 
     def _calc_stock_pos(self, trade_date):
 
-        sw_industry_stock_ids = self._load_stock_pool(trade_date).index
+        sw_industry_stock_ids = self._load_stock_ids(trade_date)
 
         class_name = self.__class__.__name__
         algo = re.sub('StockPortfolioIndustry', '', class_name, count=1)
@@ -918,10 +971,10 @@ class StockPortfolioIndustry(StockPortfolio):
 
         return stock_pos
 
-    def _load_stock_pool(self, trade_date):
+    def _load_stock_ids(self, trade_date):
 
-        stock_pool = super(StockPortfolioIndustry, self)._load_stock_pool(trade_date)
-
+        stock_ids = super(StockPortfolioIndustry, self)._load_stock_ids(trade_date)
+        '''bug'''
         stock_ids_by_industry = self._load_stock_ids_by_industry()
         stock_pool = stock_pool.reindex(stock_ids_by_industry)
 
@@ -973,7 +1026,6 @@ class StockPortfolioFamaMacbethRegression(StockPortfolio):
         self.reindex_regression = list(self.factor_return_daily.index)
         self.residual_return = self._calc_residual_return()
 
-
     def _calc_stock_pos(self, trade_date):
         # calculate factor weight
         all_style = ['VALUE', 'QUALITY', 'GROWTH', 'LSIZE', 'LIQUIDITY', 'BETA', 'STREV']
@@ -1004,7 +1056,7 @@ class StockPortfolioFamaMacbethRegression(StockPortfolio):
         last_trade_num = list(self.reindex_total).index(calc_pos_date) - 1
         last_trade_date = list(self.reindex_total)[last_trade_num]
 
-        stock_ids = self._load_stock_pool(trade_date).index
+        stock_ids = self._load_stock_ids(trade_date)
         data_FS_t = self._select_report_period(last_trade_date=last_trade_date, stock_ids=stock_ids, select_method='radical')
         data_value_t = self._calc_value_descriptor(last_trade_date=last_trade_date, stock_ids=stock_ids)
         data_numerical_t = self._calc_numerical_descriptor(last_trade_date=last_trade_date, stock_ids=stock_ids)
@@ -1052,7 +1104,7 @@ class StockPortfolioFamaMacbethRegression(StockPortfolio):
         for last_trade_date, trade_date in zip(self.reindex[:-self.trading_frequency], self.reindex[self.trading_frequency:]):
             if trade_date in self.finished_regression:
                 continue
-            stock_ids = self._load_stock_pool(last_trade_date).index
+            stock_ids = self._load_stock_ids(last_trade_date)
             data_FS_t = self._select_report_period(last_trade_date=last_trade_date, stock_ids=stock_ids, select_method='radical')
             data_value_t = self._calc_value_descriptor(last_trade_date=last_trade_date, stock_ids=stock_ids)
             data_numerical_t = self._calc_numerical_descriptor(last_trade_date=last_trade_date, stock_ids=stock_ids)
@@ -1239,7 +1291,7 @@ if __name__ == '__main__':
     dict_portfolio = {}
     df_portfolio_nav = pd.DataFrame()
 
-    # dict_portfolio['MarketCap'] = StockPortfolioMarketCap(index_id, trade_dates, look_back)
+    # dict_portfolio['MarketCap'] = StockPortfolioMarketValue(index_id, trade_dates, look_back)
     # df_portfolio_nav['MarketCap'] = dict_portfolio['MarketCap'].calc_portfolio_nav()
 
     # dict_portfolio['EqualWeight'] = StockPortfolioEqualWeight(index_id, trade_dates, look_back)
@@ -1274,8 +1326,8 @@ if __name__ == '__main__':
     # dict_portfolio['SectorNeutralLowBeta'] = StockPortfolioSectorNeutralLowBeta(index_id, trade_dates, look_back, benchmark_id='CS.000905')
     # df_portfolio_nav['SectorNeutralLowBeta'] = dict_portfolio['SectorNeutralLowBeta'].calc_portfolio_nav()
 
-    dict_portfolio['FamaMacbethRegression'] = StockPortfolioFamaMacbethRegression(index_id, trade_dates, look_back, trading_frequency=10, percentage=0.15)
-    df_portfolio_nav['FamaMacbethRegression'] = dict_portfolio['FamaMacbethRegression'].calc_portfolio_nav()
+    # dict_portfolio['FamaMacbethRegression'] = StockPortfolioFamaMacbethRegression(index_id, trade_dates, look_back, trading_frequency=10, percentage=0.15)
+    # df_portfolio_nav['FamaMacbethRegression'] = dict_portfolio['FamaMacbethRegression'].calc_portfolio_nav()
 
     # df_portfolio_nav.to_csv('df_portfolio_nav.csv')
     # set_trace()
