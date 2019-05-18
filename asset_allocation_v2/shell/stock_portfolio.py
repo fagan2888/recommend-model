@@ -116,17 +116,16 @@ class StockPortfolioData:
             stock_ids=self.stock_pool.index.union(self.df_stock_swap.targetcomp_stock_id)
         )
 
-        self.df_stock_prc = wind_ashareeodprices.load_a_stock_adj_price(
-            stock_ids=self.stock_pool_total.index,
-            reindex=self.reindex_total,
-            fill_method='pad'
+        self.df_stock_ipo = wind_ashareipo.load_a_stock_ipo_info(
+            stock_ids=self.stock_pool.index
         )
-        self.df_stock_ret = self.df_stock_prc.pct_change().iloc[1:]
 
         self.df_stock_status = wind_ashareeodprices.load_a_stock_status(
             stock_ids=self.stock_pool_total.index,
             reindex=self.reindex_total
         )
+
+        self.df_stock_prc, self.df_stock_ret = self.__load_stock_price_and_return()
 
         self.df_stock_total_share, self.df_stock_free_float_share, self.df_stock_total_market_value = self.__load_stock_share_and_market_value()
 
@@ -146,7 +145,25 @@ class StockPortfolioData:
 
         # self.stock_financial_descriptor = calc_financial_descriptor.calc_financial_descriptor(self.stock_financial_statement)
 
-        set_trace()
+    def __load_stock_price_and_return(self):
+
+        df_stock_prc = wind_ashareeodprices.load_a_stock_adj_price(
+            stock_ids=self.stock_pool_total.index,
+            reindex=self.reindex_total,
+            fill_method='pad'
+        )
+
+        for stock_id, stock_ipo in self.df_stock_ipo.iterrows():
+
+            trade_date = trade_date_before(stock_ipo.ipo_date)
+            if trade_date not in self.reindex:
+                continue
+
+            df_stock_prc.loc[trade_date, stock_id] = stock_ipo.ipo_price
+
+        df_stock_ret = df_stock_prc.pct_change().iloc[1:]
+
+        return df_stock_prc, df_stock_ret
 
     def __load_stock_share_and_market_value(self):
 
@@ -164,15 +181,12 @@ class StockPortfolioData:
             fill_method='pad'
         )
 
-        df_stock_ipo = wind_ashareipo.load_a_stock_ipo_info(
-            stock_ids=self.stock_pool.index
-        )
-
-        for stock_id, stock_ipo in df_stock_ipo.iterrows():
+        for stock_id, stock_ipo in self.df_stock_ipo.iterrows():
 
             trade_date = trade_date_before(stock_ipo.ipo_date)
             if trade_date not in self.reindex:
                 continue
+
             df_stock_total_share.loc[(stock_id, trade_date), :] = df_stock_total_share.loc[(stock_id, stock_ipo.ipo_date)]
             df_stock_free_float_share.loc[(stock_id, trade_date), :] = stock_ipo.ipo_amount
             df_stock_total_market_value.loc[trade_date, stock_id] = \
@@ -1281,7 +1295,7 @@ def multiprocessing_calc_portfolio_nav_by_industry(algo, index_id, trade_dates, 
 
 if __name__ == '__main__':
 
-    index_id = '2070000191'
+    index_id = '000906.SH'
     begin_date = '2019-03-04'
     end_date = '2019-03-29'
     look_back = 244

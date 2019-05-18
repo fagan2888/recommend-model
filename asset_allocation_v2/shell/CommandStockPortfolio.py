@@ -197,7 +197,7 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 @click.option('--name', 'optname', default='', help='stock portfolio name')
 @click.option('--type', 'opttype', default='1', help='stock portfolio type')
 @click.option('--algo', 'optalgo', default='MarketCap', help='stock portfolio algo')
-@click.option('--argv', 'optargv', default='index_id:2070000191:指数ID,look_back:120:回测时长,period:day:调整间隔', help='stock portfolio argv')
+@click.option('--argv', 'optargv', default='index_id:000906.SH:指数ID,look_back:120:回测时长,period:day:调整间隔', help='stock portfolio argv')
 @click.option('--override/--no-override', 'optoverride', default=False, help='override existing stock portfolio or not')
 @click.pass_context
 def create(ctx, optid, optname, opttype, optalgo, optargv, optoverride):
