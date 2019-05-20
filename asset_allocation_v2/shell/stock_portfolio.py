@@ -31,7 +31,7 @@ from trade_date import ATradeDate
 import calc_covariance
 import calc_financial_descriptor
 from util_timestamp import *
-from statistic_tools_multifactor import *
+import statistic_tools_multifactor
 from db import database
 from config import *
 
@@ -188,7 +188,11 @@ class StockPortfolioData:
                 continue
 
             df_stock_total_share.loc[(stock_id, trade_date), :] = df_stock_total_share.loc[(stock_id, stock_ipo.ipo_date)]
-            df_stock_free_float_share.loc[(stock_id, trade_date), :] = stock_ipo.ipo_amount
+            try:
+                df_stock_free_float_share.loc[(stock_id, trade_date), :] = df_stock_free_float_share.loc[(stock_id, stock_ipo.ipo_date)]
+            except KeyError:
+                pass
+            # df_stock_free_float_share.loc[(stock_id, trade_date), :] = stock_ipo.ipo_amount
             df_stock_total_market_value.loc[trade_date, stock_id] = \
                 df_stock_total_share.loc[(stock_id, trade_date), 'total_share'] * stock_ipo.ipo_price
 
@@ -203,32 +207,19 @@ class StockPortfolioData:
         return df_stock_total_share, df_stock_free_float_share, df_stock_total_market_value
 
     def __load_financial_statement(self):
-        # default: statement_type = '408001000'
-        def wind_code(x):
-            if x[0] == '0':
-                return x + '.SZ'
-            elif x[0] == '3':
-                return x + '.SZ'
-            elif x[0] == '6':
-                return x + '.SH'
-            else:
-                return '000000'
 
-        stock_pool = self.stock_pool.reset_index().copy()
-        stock_pool['WIND_CODE'] = stock_pool.stock_code.map(lambda x: wind_code(x))
+        # default: statement_type = '408001000'
 
         columns_BS = 'WIND_CODE, ACTUAL_ANN_DT, REPORT_PERIOD, TOT_SHRHLDR_EQY_EXCL_MIN_INT, TOT_ASSETS'
         columns_IS = 'WIND_CODE, REPORT_PERIOD, NET_PROFIT_AFTER_DED_NR_LP, OPER_REV, LESS_OPER_COST'
         columns_CF = 'WIND_CODE, REPORT_PERIOD, DEPR_FA_COGA_DPBA, AMORT_INTANG_ASSETS, AMORT_LT_DEFERRED_EXP, NET_CASH_FLOWS_OPER_ACT, DECR_INVENTORIES, DECR_OPER_PAYABLE, INCR_OPER_PAYABLE, OTHERS'
 
-        data_BS = factor_financial_statement.load_financial_statement_data(stock_ids=stock_pool.WIND_CODE, table_name='asharebalancesheet', statement_columns_str=columns_BS)
-        data_IS = factor_financial_statement.load_financial_statement_data(stock_ids=stock_pool.WIND_CODE, table_name='ashareincome', statement_columns_str=columns_IS)
-        data_CF = factor_financial_statement.load_financial_statement_data(stock_ids=stock_pool.WIND_CODE, table_name='asharecashflow', statement_columns_str=columns_CF)
+        data_BS = factor_financial_statement.load_financial_statement_data(stock_ids=self.stock_pool.index, table_name='asharebalancesheet', statement_columns_str=columns_BS)
+        data_IS = factor_financial_statement.load_financial_statement_data(stock_ids=self.stock_pool.index, table_name='ashareincome', statement_columns_str=columns_IS)
+        data_CF = factor_financial_statement.load_financial_statement_data(stock_ids=self.stock_pool.index, table_name='asharecashflow', statement_columns_str=columns_CF)
 
         data_FS = pd.merge(data_BS, data_IS, how='left', on=['WIND_CODE', 'REPORT_PERIOD'])
         data_FS = pd.merge(data_FS, data_CF, how='left', on=['WIND_CODE', 'REPORT_PERIOD'])
-
-        data_FS = pd.merge(data_FS, stock_pool[['WIND_CODE', 'stock_id']], how='left', on='WIND_CODE')
 
         descriptor = ['TOT_SHRHLDR_EQY_EXCL_MIN_INT', 'TOT_ASSETS', 'NET_PROFIT_AFTER_DED_NR_LP', 'OPER_REV', 'LESS_OPER_COST',
                       'DEPR_FA_COGA_DPBA', 'AMORT_INTANG_ASSETS', 'AMORT_LT_DEFERRED_EXP', 'NET_CASH_FLOWS_OPER_ACT', 'DECR_INVENTORIES',
@@ -467,8 +458,8 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
             return
 
-        # OLS_compare_summary(self.ser_portfolio_nav, ser_benchmark_nav)
-        GLS_compare_summary(self.ser_portfolio_nav, ser_benchmark_nav)
+        # statistic_tools_multifactor.OLS_compare_summary(self.ser_portfolio_nav, ser_benchmark_nav)
+        statistic_tools_multifactor.GLS_compare_summary(self.ser_portfolio_nav, ser_benchmark_nav)
 
         return
 
