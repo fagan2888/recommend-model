@@ -35,6 +35,7 @@ import statistic_tools_multifactor
 from db import database
 from config import *
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,7 +106,7 @@ class StockPortfolioData:
         )
 
         self.stock_pool = wind_asharedescription.load_a_stock_code_info(
-            stock_ids=self.df_index_historical_constituents.stock_id.drop_duplicates()
+            stock_ids=self.df_index_historical_constituents.stock_id.unique()
         )
 
         self.df_stock_swap = wind_asharestockswap.load_a_stock_swap(
@@ -141,9 +142,7 @@ class StockPortfolioData:
             # fill_method='pad'
         # )
 
-        # self.stock_financial_statement = self.__load_financial_statement()
-
-        # self.stock_financial_descriptor = calc_financial_descriptor.calc_financial_descriptor(self.stock_financial_statement)
+        self.df_stock_financial_descriptor = calc_financial_descriptor.calc_financial_descriptor(self.stock_pool.index)
 
     def __load_stock_price_and_return(self):
 
@@ -206,28 +205,6 @@ class StockPortfolioData:
 
         return df_stock_total_share, df_stock_free_float_share, df_stock_total_market_value
 
-    def __load_financial_statement(self):
-
-        # default: statement_type = '408001000'
-
-        columns_BS = 'WIND_CODE, ACTUAL_ANN_DT, REPORT_PERIOD, TOT_SHRHLDR_EQY_EXCL_MIN_INT, TOT_ASSETS'
-        columns_IS = 'WIND_CODE, REPORT_PERIOD, NET_PROFIT_AFTER_DED_NR_LP, OPER_REV, LESS_OPER_COST'
-        columns_CF = 'WIND_CODE, REPORT_PERIOD, DEPR_FA_COGA_DPBA, AMORT_INTANG_ASSETS, AMORT_LT_DEFERRED_EXP, NET_CASH_FLOWS_OPER_ACT, DECR_INVENTORIES, DECR_OPER_PAYABLE, INCR_OPER_PAYABLE, OTHERS'
-
-        data_BS = factor_financial_statement.load_financial_statement_data(stock_ids=self.stock_pool.index, table_name='asharebalancesheet', statement_columns_str=columns_BS)
-        data_IS = factor_financial_statement.load_financial_statement_data(stock_ids=self.stock_pool.index, table_name='ashareincome', statement_columns_str=columns_IS)
-        data_CF = factor_financial_statement.load_financial_statement_data(stock_ids=self.stock_pool.index, table_name='asharecashflow', statement_columns_str=columns_CF)
-
-        data_FS = pd.merge(data_BS, data_IS, how='left', on=['WIND_CODE', 'REPORT_PERIOD'])
-        data_FS = pd.merge(data_FS, data_CF, how='left', on=['WIND_CODE', 'REPORT_PERIOD'])
-
-        descriptor = ['TOT_SHRHLDR_EQY_EXCL_MIN_INT', 'TOT_ASSETS', 'NET_PROFIT_AFTER_DED_NR_LP', 'OPER_REV', 'LESS_OPER_COST',
-                      'DEPR_FA_COGA_DPBA', 'AMORT_INTANG_ASSETS', 'AMORT_LT_DEFERRED_EXP', 'NET_CASH_FLOWS_OPER_ACT', 'DECR_INVENTORIES',
-                      'DECR_OPER_PAYABLE','INCR_OPER_PAYABLE', 'OTHERS']
-        data_FS[descriptor] = data_FS[descriptor].astype(np.float)
-
-        return data_FS
-
 
 class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
@@ -252,8 +229,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         'df_stock_total_market_value',
         'stock_market_data',
         'stock_financial_data',
-        'stock_financial_statement',
-        'stock_financial_descriptor'
+        'df_stock_financial_descriptor'
     ]
 
     _instance_variable_list = [
@@ -1172,9 +1148,9 @@ class StockPortfolioFamaMacbethRegression(StockPortfolio):
         return residual_return.set_index('trade_date')
 
     def _select_report_period(self, last_trade_date, stock_ids, select_method='radical'):
-        stock_financial_descriptor = self.stock_financial_descriptor.copy()
+        df_stock_financial_descriptor = self.df_stock_financial_descriptor.copy()
         if select_method == 'radical':
-            data_FS = stock_financial_descriptor.loc[stock_financial_descriptor.ACTUAL_ANN_DT <= last_trade_date].copy()
+            data_FS = df_stock_financial_descriptor.loc[df_stock_financial_descriptor.ACTUAL_ANN_DT <= last_trade_date].copy()
             data_FS = data_FS.sort_values(by=['WIND_CODE', 'ACTUAL_ANN_DT'], ascending=False).drop_duplicates(subset=['WIND_CODE'], keep='first')
         else:
             if last_trade_date.month < 5:
@@ -1185,7 +1161,7 @@ class StockPortfolioFamaMacbethRegression(StockPortfolio):
                 report_period_t = pd.Timestamp(last_trade_date.year, 6, 30)
             else:
                 report_period_t = pd.Timestamp(last_trade_date.year, 9, 30)
-            data_FS = stock_financial_descriptor.loc[stock_financial_descriptor.REPORT_PERIOD == report_period_t].copy()
+            data_FS = df_stock_financial_descriptor.loc[df_stock_financial_descriptor.REPORT_PERIOD == report_period_t].copy()
         data_FS.set_index('stock_id', inplace=True)
         return data_FS.reindex(stock_ids)
 

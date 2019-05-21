@@ -147,3 +147,16 @@ def trade_date_after(date):
 
     return trade_date_not_earlier_than(date)
 
+def closing_date_of_report_period(date):
+
+    if date.month == 3:
+        return pd.Timestamp(date.year, 4, 30)
+    elif date.month == 6:
+        return pd.Timestamp(date.year, 8, 31)
+    elif date.month == 9:
+        return pd.Timestamp(date.year, 10, 31)
+    elif date.month == 12:
+        return pd.Timestamp(date.year+1, 4, 30)
+    else:
+        raise ValueError('Invalid report period!')
+

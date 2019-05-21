@@ -32,9 +32,8 @@ def load_a_stock_balancesheet(stock_ids):
     df = pd.concat(res)
     columns_float = df.columns.drop(['stock_id', 'ann_date', 'report_period'])
     df[columns_float] = df[columns_float].astype(float)
-    
-    return df
 
+    return df
 
 def load_a_stock_balancesheet_df(stock_id):
 
@@ -47,13 +46,11 @@ def load_a_stock_balancesheet_df(stock_id):
         t.c.ANN_DT.label('ann_date'),
         t.c.REPORT_PERIOD.label('report_period'),
         t.c.TOT_SHRHLDR_EQY_EXCL_MIN_INT.label('tot_shrhldr_euqity_excl_min_int'),
-        t.c.TOT_ASSETS.label('tot_assets'),
+        t.c.TOT_ASSETS.label('tot_assets')
     ]
 
-    s = select(columns).where(t.c.S_INFO_WINDCODE  == stock_id).where(t.c.STATEMENT_TYPE == '408001000')
+    s = select(columns).where(t.c.S_INFO_WINDCODE==stock_id).where(t.c.STATEMENT_TYPE=='408001000')
     df = pd.read_sql(s, engine, parse_dates=['ann_date', 'report_period'])
 
     return df
-
-
 
