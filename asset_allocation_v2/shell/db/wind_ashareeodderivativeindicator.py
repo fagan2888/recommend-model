@@ -114,7 +114,7 @@ def load_a_stock_derivative_indicator_df(stock_id):
         t.c.S_VAL_PCF_OCFTTM.label('pocf_ttm'),
         t.c.S_VAL_PCF_NCFTTM.label('pncf_ttm'),
         t.c.S_VAL_PS_TTM.label('ps_ttm'),
-        t.c.S_PRICE_DIV_DPS.label('pdps_ttm')
+        t.c.S_PRICE_DIV_DPS.label('pdps_ttm'),
         t.c.S_DQ_FREETURNOVER.label('free_turnover')
     ]
 
