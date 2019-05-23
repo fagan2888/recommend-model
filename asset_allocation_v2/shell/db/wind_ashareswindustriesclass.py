@@ -15,7 +15,7 @@ from . import util_db
 logger = logging.getLogger(__name__)
 
 
-def load_a_stock_sw_industry_level1(stock_ids=None, date=None):
+def load_a_stock_sw_industry(stock_ids=None, date=None):
 
     stock_ids = util_db.to_list(stock_ids)
 
@@ -42,11 +42,11 @@ def load_a_stock_sw_industry_level1(stock_ids=None, date=None):
 
     df = pd.read_sql(s, engine, index_col=['stock_id'])
     df.sort_index(inplace=True)
-    df['sw_ind_lv1_code'] = df.sw_ind_code.apply(lambda x: f'{x[:-6]}000000')
+    df['sw_lv1_ind_code'] = df.sw_ind_code.apply(lambda x: f'{x[:-6]}000000')
 
     return df
 
-def load_a_stock_historical_sw_industry_level1(stock_ids):
+def load_a_stock_historical_sw_industry(stock_ids):
 
     stock_ids = util_db.to_list(stock_ids)
 
@@ -67,7 +67,7 @@ def load_a_stock_historical_sw_industry_level1(stock_ids):
 
     df = pd.read_sql(s, engine, parse_dates=['entry_date', 'remove_date'])
     df.sort_values(by=['stock_id', 'entry_date'], inplace=True)
-    df['sw_ind_lv1_code'] = df.sw_ind_code.apply(lambda x: f'{x[:-6]}000000')
+    df['sw_lv1_ind_code'] = df.sw_ind_code.apply(lambda x: f'{x[:-6]}000000')
 
     return df
 

@@ -23,7 +23,7 @@ sys.path.append('shell')
 from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_qt_skdailyprice, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic, caihui_tq_sk_sharestruchg
 from db import wind_asharecalendar
 from db import wind_aindexeodprices, wind_aindexmembers
-from db import wind_asharedescription, wind_ashareeodprices
+from db import wind_asharedescription, wind_ashareswindustriesclass, wind_ashareeodprices
 from db import wind_asharecapitalization, wind_asharefreefloat, wind_ashareeodderivativeindicator
 from db import wind_ashareipo, wind_asharestockswap
 from db import factor_financial_statement, factor_ml_merge_list, asset_sp_stock_portfolio_nav
@@ -126,6 +126,8 @@ class StockPortfolioData:
             reindex=self.reindex_total
         )
 
+        self.df_stock_historical_industry = wind_ashareswindustriesclass.load_a_stock_historical_sw_industry(stock_ids=self.stock_pool.index)
+
         self.df_stock_prc, self.df_stock_ret = self.__load_stock_price_and_return()
 
         self.df_stock_total_share, self.df_stock_free_float_share, self.df_stock_total_market_value = self.__load_stock_share_and_market_value()
@@ -142,7 +144,7 @@ class StockPortfolioData:
             # fill_method='pad'
         # )
 
-        self.df_stock_financial_descriptor = calc_financial_descriptor.calc_financial_descriptor(self.stock_pool.index)
+        # self.df_stock_financial_descriptor = calc_financial_descriptor.calc_stock_financial_descriptor(self.stock_pool.index)
 
     def __load_stock_price_and_return(self):
 
@@ -223,7 +225,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         'df_stock_prc',
         'df_stock_ret',
         'df_stock_status',
-        'df_stock_industry',
+        'df_stock_historical_industry',
         'df_stock_total_share',
         'df_stock_free_float_share',
         'df_stock_total_market_value',
@@ -347,6 +349,19 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
         raise NotImplementedError('Method \'calc_stock_pos\' is not defined.')
 
+    def _load_stock_ids(self, trade_date):
+
+        trade_date = trade_date_after(trade_date)
+
+        # stock_pool = caihui_tq_ix_comp.load_index_constituents(self.index_id, date=trade_date.strftime('%Y%m%d'))
+        stock_ids = self.df_index_historical_constituents.loc[
+            (self.df_index_historical_constituents.in_date<=trade_date) & \
+            ((self.df_index_historical_constituents.out_date>=trade_date) | \
+            (self.df_index_historical_constituents.out_date.isna()))
+        ].set_index('stock_id').index.sort_values()
+
+        return stock_ids
+
     def _load_stock_price(self, trade_date, stock_ids, fillna=True):
 
         reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back-1:]
@@ -376,18 +391,17 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
         return df_stock_ret
 
-    def _load_stock_ids(self, trade_date):
+    def _load_stock_industry(self, trade_date, stock_ids):
 
         trade_date = trade_date_after(trade_date)
 
-        # stock_pool = caihui_tq_ix_comp.load_index_constituents(self.index_id, date=trade_date.strftime('%Y%m%d'))
-        stock_ids = self.df_index_historical_constituents.loc[
-            (self.df_index_historical_constituents.in_date<=trade_date) & \
-            ((self.df_index_historical_constituents.out_date>=trade_date) | \
-            (self.df_index_historical_constituents.out_date.isna()))
-        ].set_index('stock_id').index.sort_values()
+        df_stock_industry = self.df_stock_historical_industry.loc[
+            (self.df_stock_historical_industry.entry_date<=trade_date) & \
+            ((self.df_stock_historical_industry.remove_date>=trade_date) | \
+            (self.df_stock_historical_industry.remove_date.isna()))
+        ].set_index('stock_id').sort_index().loc[stock_ids, ['sw_ind_code', 'sw_lv1_ind_code']]
 
-        return stock_ids
+        return df_stock_industry
 
     def _calc_portfolio_size(self, size, percentage, lower_bound=1):
 
@@ -594,10 +608,10 @@ class StockPortfolioMomentum(StockPortfolioMarketValue):
         stock_ids = self._load_stock_ids(trade_date)
 
         momentum_stock_ids, _ = self._calc_momentum(trade_date, stock_ids, self.percentage)
-        _, ser_market_cap_stock_weight = self._calc_market_cap(trade_date, momentum_stock_ids)
+        _, ser_market_value_stock_weight = self._calc_market_value(trade_date, momentum_stock_ids)
 
         stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
-        stock_pos.loc[momentum_stock_ids] = ser_market_cap_stock_weight.fillna(0.0)
+        stock_pos.loc[momentum_stock_ids] = ser_market_value_stock_weight.fillna(0.0)
 
         return stock_pos
 
@@ -643,13 +657,13 @@ class StockPortfolioSmallSize(StockPortfolioMarketValue):
 
     def _calc_small_size(self, trade_date, stock_ids, percentage, **kwargs):
 
-        ser_stock_free_float_market_cap = self._calc_stock_free_float_market_cap(trade_date, stock_ids)
+        ser_stock_free_float_market_value = self._calc_stock_free_float_market_value(trade_date, stock_ids)
 
         portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
-        small_size_stock_ids = ser_stock_free_float_market_cap.sort_values(ascending=True).iloc[:portfolio_size].index
+        small_size_stock_ids = ser_stock_free_float_market_value.sort_values(ascending=True).iloc[:portfolio_size].index
 
         # Small size condition quantile as percentage
-        ser_small_size_stock_weight = ser_stock_free_float_market_cap.loc[small_size_stock_ids]
+        ser_small_size_stock_weight = ser_stock_free_float_market_value.loc[small_size_stock_ids]
         ser_small_size_stock_weight /= ser_small_size_stock_weight.sum()
 
         return small_size_stock_ids, ser_small_size_stock_weight
@@ -842,16 +856,18 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketValue):
 
     def _calc_sector_neutral(self, trade_date, stock_ids, percentage, **kwargs):
 
-        ser_industry_free_float_market_cap = self._calc_industry_free_float_market_cap(trade_date, stock_ids)
+        df_stock_industry = self._load_stock_industry(trade_date, stock_ids)
+
+        ser_industry_free_float_market_value = self._calc_industry_free_float_market_value(trade_date, stock_ids)
 
         sector_neutral_stock_ids = pd.Index([], name='stock_id')
         ser_sector_neutral_stock_weight = pd.Series(index=stock_ids, name=trade_date)
 
-        ser_percentage_by_industry = self._calc_percentage_by_industry(stock_ids, percentage)
+        ser_percentage_by_industry = self._calc_percentage_by_industry(trade_date, stock_ids, percentage)
 
-        for sw_industry_code in ser_industry_free_float_market_cap.index:
+        for sw_industry_code in ser_industry_free_float_market_value.index:
 
-            sw_industry_stock_ids = stock_ids.intersection(self.df_stock_industry.index[self.df_stock_industry.sw_level1_code==sw_industry_code])
+            sw_industry_stock_ids = df_stock_industry.loc[df_stock_industry.sw_lv1_ind_code==sw_industry_code].index
 
             class_name = self.__class__.__name__
             algo = re.sub('StockPortfolioSectorNeutral', '', class_name, count=1)
@@ -868,7 +884,7 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketValue):
 
             sector_neutral_stock_ids = sector_neutral_stock_ids.append(stock_ids_by_industry)
             ser_sector_neutral_stock_weight.loc[stock_ids_by_industry] = ser_stock_weight_by_industry \
-                * ser_industry_free_float_market_cap.loc[sw_industry_code]
+                * ser_industry_free_float_market_value.loc[sw_industry_code]
 
         sector_neutral_stock_ids = sector_neutral_stock_ids.sort_values()
         ser_sector_neutral_stock_weight = ser_sector_neutral_stock_weight.loc[sector_neutral_stock_ids]
@@ -876,21 +892,21 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketValue):
 
         return sector_neutral_stock_ids, ser_sector_neutral_stock_weight
 
-    def _calc_industry_free_float_market_cap(self, trade_date, stock_ids, **kwargs):
+    def _calc_industry_free_float_market_value(self, trade_date, stock_ids, **kwargs):
 
-        ser_stock_free_float_market_cap = self._calc_stock_free_float_market_cap(trade_date, stock_ids)
-        df_stock_industry = self.df_stock_industry.loc[stock_ids]
+        ser_stock_free_float_market_value = self._calc_stock_free_float_market_value(trade_date, stock_ids)
+        df_stock_industry = self._load_stock_industry(trade_date, stock_ids)
 
-        ser_industry_free_float_market_cap = ser_stock_free_float_market_cap \
-            .rename(index=df_stock_industry.sw_level1_code).rename_axis('sw_industry_code').groupby(by='sw_industry_code').sum()
+        ser_industry_free_float_market_value = ser_stock_free_float_market_value \
+            .rename(index=df_stock_industry.sw_lv1_ind_code).rename_axis('sw_lv1_ind_code').groupby(by='sw_lv1_ind_code').sum()
 
-        return ser_industry_free_float_market_cap
+        return ser_industry_free_float_market_value
 
-    def _calc_percentage_by_industry(self, stock_ids, percentage):
+    def _calc_percentage_by_industry(self, trade_date, stock_ids, percentage):
 
         portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
 
-        ser_size = self.df_stock_industry.loc[stock_ids].groupby(['sw_level1_code']).size()
+        ser_size = self._load_stock_industry(trade_date, stock_ids).groupby(['sw_lv1_ind_code']).size()
         ser_portfolio_size = ser_size.apply(partial(self._calc_portfolio_size, percentage=percentage))
 
         delta_size = ser_portfolio_size.sum() - portfolio_size
@@ -936,7 +952,7 @@ class StockPortfolioIndustry(StockPortfolio):
 
     def _calc_stock_pos(self, trade_date):
 
-        sw_industry_stock_ids = self._load_stock_ids(trade_date)
+        sw_industry_stock_ids = self._load_stock_ids_by_industry(trade_date)
 
         class_name = self.__class__.__name__
         algo = re.sub('StockPortfolioIndustry', '', class_name, count=1)
@@ -952,18 +968,11 @@ class StockPortfolioIndustry(StockPortfolio):
 
         return stock_pos
 
-    def _load_stock_ids(self, trade_date):
+    def _load_stock_ids_by_industry(self, trade_date):
 
-        stock_ids = super(StockPortfolioIndustry, self)._load_stock_ids(trade_date)
-        '''bug'''
-        stock_ids_by_industry = self._load_stock_ids_by_industry()
-        stock_pool = stock_pool.reindex(stock_ids_by_industry)
-
-        return stock_pool
-
-    def _load_stock_ids_by_industry(self):
-
-        stock_ids_by_industry = self.df_stock_industry.index[self.df_stock_industry.sw_level1_code==self.sw_industry_code]
+        stock_ids = self._load_stock_ids(trade_date)
+        df_stock_industry = self._load_stock_industry(trade_date, stock_ids)
+        stock_ids_by_industry = df_stock_industry.loc[df_stock_industry.sw_lv1_ind_code==self.sw_industry_code].index
 
         return stock_ids_by_industry
 

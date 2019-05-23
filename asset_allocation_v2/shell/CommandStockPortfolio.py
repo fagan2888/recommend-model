@@ -133,7 +133,7 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     if stock_portfolio_id[:3] != 'CS.' and stock_portfolio_id[-2:] != '00':
 
         algo = f'Industry{algo}'
-        kwargs['sw_industry_code'] = f'{stock_portfolio_id[-2:]}0000'
+        # kwargs['sw_industry_code'] = f'{stock_portfolio_id[-2:]}0000'
 
     try:
 
