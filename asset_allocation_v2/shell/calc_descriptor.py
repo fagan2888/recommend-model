@@ -19,7 +19,34 @@ from util_timestamp import closing_date_of_report_period
 logger = logging.getLogger(__name__)
 
 
-def calc_stock_financial_descriptor(stock_ids_total):
+def calc_numerical_descriptor(df_return, df_derivative_indicator, stock_ids):
+
+    stock_ids_t = list(stock_ids)
+    df_return_t = df_return.reindex(stock_ids_t+['benchmark'], axis=1).fillna(0.0)
+    df_alpha_t = df_return_t.sub(df_return_t.benchmark, axis=0).reindex(stock_ids_t, axis=1)
+    df_derivative_indicator_t = df_derivative_indicator.reindex(stock_ids_t, axis=1, level=1).copy()
+    # short_term_reverse middle_term_momentum
+    df_rs_s = df_alpha_t.iloc[-70:].rolling(63).apply(lambda x: calc_rs(x, half_life=10), 'raw=True')
+    df_rs_m = df_alpha_t.rolling(252).apply(lambda x: calc_rs(x, half_life=63), 'raw=True')
+    df_strev = pd.DataFrame(df_rs_s.iloc[-3:].mean(), columns=['short_term_reverse'])
+    df_mtm = pd.DataFrame(df_rs_m.iloc[-20:-10].mean(), columns=['middle_term_momentum'])
+    # beta
+    df_beta = df_return_t.reindex(stock_ids_t, axis=1).apply(lambda x: calc_beta(x, df_return_t.benchmark))
+    df_beta = pd.DataFrame(df_beta, columns=['beta'])
+    # turnover
+    df_turnover = df_derivative_indicator_t['free_turnover'].reindex(stock_ids_t, axis=1) / 100.0
+    df_stom = pd.DataFrame(np.log(df_turnover.iloc[-21:].mean(skipna=True).replace(0, np.nan) * 21), columns=['monthly_turnover'])
+    df_stoq = pd.DataFrame(np.log(df_turnover.iloc[-63:].mean(skipna=True).replace(0, np.nan) * 21), columns=['quarterly_turnover'])
+    df_stoa = pd.DataFrame(np.log(df_turnover.iloc[-252:].mean(skipna=True).replace(0, np.nan) * 21), columns=['annual_turnover'])
+    #
+    df_mv = df_derivative_indicator_t['free_float_market_value'].reindex(stock_ids_t, axis=1)
+    df_linear_size = pd.DataFrame(np.log(df_mv.iloc[-1].rename('linear_size')))
+    # concat
+    df_numerical_descriptor = pd.concat([df_strev, df_mtm, df_beta, df_stom, df_stoq, df_stoa, df_linear_size], axis=1, join='outer', sort=False)
+    return df_numerical_descriptor
+
+
+def calc_financial_descriptor(stock_ids_total):
 
     df_BS = wind_asharebalancesheet.load_a_stock_balancesheet(stock_ids=stock_ids_total)
     df_IS = wind_ashareincome.load_a_stock_income(stock_ids=stock_ids_total)
@@ -47,7 +74,7 @@ def calc_stock_financial_descriptor(stock_ids_total):
         df_FS[f'{column_ttm}_ttm'] = (df_FS[column_ttm] - df_FS[f'{column_ttm}_comp']).add(df_FS[f'{column_ttm}_lfy'], fill_value=0)
 
     df_FS['roa'] = 2 * df_FS['net_cash_flows_oper_act_ttm'] / (df_FS['tot_assets'] + df_FS['tot_assets_comp'])
-    df_FS['roe'] = 2 * df_FS['net_profit_after_ded_nr_lp_ttm'] / (df_FS['net_profit_after_ded_nr_lp'] + df_FS['net_profit_after_ded_nr_lp_ttm'])
+    df_FS['roe'] = 2 * df_FS['net_profit_after_ded_nr_lp_ttm'] / (df_FS['tot_shrhldr_euqity_excl_min_int'] + df_FS['tot_shrhldr_euqity_excl_min_int_comp'])
     df_FS['cash_flow_accrual'] = 2 * (df_FS['wc_cf_ttm'] - df_FS['d_a_ttm']) / (df_FS['tot_assets'] + df_FS['tot_assets_comp'])
     df_FS['gross_profit_margin'] = (df_FS['oper_rev_ttm'] - df_FS['less_oper_cost_ttm']) / df_FS['oper_rev_ttm']
     df_FS['assets_turnover'] = 2 * df_FS['oper_rev_ttm'] / (df_FS['tot_assets'] + df_FS['tot_assets_comp'])
@@ -107,29 +134,17 @@ def e_vol(data):
 
     return fun_std
 
-def select_fs(df_FS, trade_date):
+def calc_beta(stock, benchmark):
+    weight_t = (0.5 ** (1 / 63)) ** (np.arange(len(stock) - 1, -1, -1))
+    y = stock * weight_t
+    x = benchmark * weight_t
+    beta = sm.OLS(y, sm.add_constant(x)).fit().params[1]
+    return beta
 
-    df_FS_t = df_FS.loc[data_fs.ann_date < trade_date].copy()
-    df_FS_t.sort_values(by=['stock_id', 'ann_date'], ascending=False, inplace=True)
-    df_FS_t.drop_duplicates(subset=['stock_id'], keep='first', inplace=True)
-
-    return df_FS_t
-
-def z_score(df, columns, weight=None):
-
-    df_t = df.copy()
-    for column in columns:
-        loc_t = df_t[column].isin([np.nan, - np.inf, np.inf])
-        df_t.loc[loc_t, column] = np.nan
-        # limit outliers
-        df_t.loc[df_t[column] > df_t[column].mean(skipna=True) + 3 * df_t[column].std(skipna=True), column] = df_t[column].mean(skipna=True) + 3 * df_t[column].std(skipna=True)
-        df_t.loc[df_t[column] < df_t[column].mean(skipna=True) - 3 * df_t[column].std(skipna=True), column] = df_t[column].mean(skipna=True) - 3 * df_t[column].std(skipna=True)
-        # calculate factor exposures
-        cap_weighted_mean = np.dot(df_t.loc[~loc_t, column], df_t.loc[~loc_t, weight]) / df_t.loc[~loc_t, weight].sum()
-        equal_weighted_std = df_t.loc[~loc_t, column].std()
-        df_t[column] = (df_t[column] - cap_weighted_mean) / equal_weighted_std
-
-    return df_t
+def calc_rs(data, half_life):
+    weight_t = (0.5 ** (1 / half_life)) ** (np.arange(len(data) - 1, -1, -1))
+    relative_strength = np.dot(data, weight_t)
+    return relative_strength
 
 
 if __name__ == '__main__':
