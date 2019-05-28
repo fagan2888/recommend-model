@@ -149,9 +149,11 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     click.echo(click.style(f'\n Stock data for stock portfolio {stock_portfolio_id} loaded.', fg='yellow'))
 
     if stock_portfolio_type == 0:
-        class_stock_portfolio.calc_portfolio_nav(considering_status=False)
+        class_stock_portfolio.calc_portfolio_nav(considering_status=False, considering_fee=False)
     elif stock_portfolio_type == 1:
-        class_stock_portfolio.calc_portfolio_nav()
+        class_stock_portfolio.calc_portfolio_nav(considering_status=True, considering_fee=False)
+    elif stock_portfolio_type == 2:
+        class_stock_portfolio.calc_portfolio_nav(considering_status=True, considering_fee=True)
     else:
         click.echo(click.style(f'\n Type {stock_portfolio_type} is unknown for stock portfolio {stock_portfolio_id}.', fg='red'))
 

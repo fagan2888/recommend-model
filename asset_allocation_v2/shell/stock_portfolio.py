@@ -12,6 +12,7 @@ from functools import partial
 import multiprocessing
 import numpy as np
 import pandas as pd
+import scipy.cluster.hierarchy as hierarchy
 import statsmodels.api as sm
 from cvxopt import matrix, solvers
 import math
@@ -86,6 +87,11 @@ class StockPortfolioData:
         self.index_id = index_id
 
         self.reindex = reindex
+        self.trade_dates = ATradeDate.trade_date(
+            begin_date=self.reindex[0],
+            end_date=self.reindex[-1]
+        ).rename('trade_date')
+
         self.look_back = look_back
         self.reindex_total = ATradeDate.trade_date(
             begin_date=self.reindex[0],
@@ -157,7 +163,7 @@ class StockPortfolioData:
         for stock_id, stock_ipo in self.df_stock_ipo.iterrows():
 
             trade_date = trade_date_before(stock_ipo.ipo_date)
-            if trade_date not in self.reindex:
+            if trade_date not in self.trade_dates:
                 continue
 
             df_stock_prc.loc[trade_date, stock_id] = stock_ipo.ipo_price
@@ -178,14 +184,14 @@ class StockPortfolioData:
 
         df_stock_total_market_value = wind_ashareeodderivativeindicator.load_a_stock_total_market_value(
             stock_ids=self.stock_pool.index,
-            reindex=self.reindex,
+            reindex=self.trade_dates,
             fill_method='pad'
         )
 
         for stock_id, stock_ipo in self.df_stock_ipo.iterrows():
 
             trade_date = trade_date_before(stock_ipo.ipo_date)
-            if trade_date not in self.reindex:
+            if trade_date not in self.trade_dates:
                 continue
 
             df_stock_total_share.loc[(stock_id, trade_date), :] = df_stock_total_share.loc[(stock_id, stock_ipo.ipo_date)]
@@ -215,6 +221,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
     _variable_list_in_data = [
         'index_id',
         'reindex',
+        'trade_dates',
         'look_back',
         'reindex_total',
         'ser_index_nav',
@@ -271,19 +278,19 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         self._ser_portfolio_inc = None
         self._ser_turnover = None
 
-    def calc_portfolio_nav(self, considering_status=True):
+    def calc_portfolio_nav(self, considering_status=False, considering_fee=False):
 
         self.calc_stock_pos_days()
 
-        # df_stock_pos_adjusted = pd.DataFrame(index=self.reindex, columns=self.stock_pool.index)
+        # df_stock_pos_adjusted = pd.DataFrame(index=self.trade_dates, columns=self.stock_pool.index)
         # df_stock_pos_adjusted.loc[self.reindex[0]] = self.df_stock_pos.loc[self.reindex[0], :].fillna(0.0)
         stock_pos_adjusted = self.df_stock_pos.loc[self.reindex[0], :].reindex(self.stock_pool_total.index).fillna(0.0)
         arr_stock_pos_adjusted = np.array(stock_pos_adjusted.values.reshape(1, -1))
-        ser_portfolio_nav = pd.Series(1.0, index=self.reindex, name='nav')
-        ser_portfolio_inc = pd.Series(0.0, index=self.reindex, name='inc')
-        ser_turnover = pd.Series(0.0, index=self.reindex, name='turnover')
+        ser_portfolio_nav = pd.Series(1.0, index=self.trade_dates, name='nav')
+        ser_portfolio_inc = pd.Series(0.0, index=self.trade_dates, name='inc')
+        ser_turnover = pd.Series(0.0, index=self.trade_dates, name='turnover')
 
-        for last_trade_date, trade_date in zip(self.reindex[:-1], self.reindex[1:]):
+        for last_trade_date, trade_date in zip(self.trade_dates[:-1], self.trade_dates[1:]):
 
             stock_pos = stock_pos_adjusted * (self.df_stock_prc.loc[trade_date] / self.df_stock_prc.loc[last_trade_date]).fillna(1.0)
 
@@ -292,19 +299,32 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
             ser_portfolio_nav.loc[trade_date] = ser_portfolio_nav.loc[last_trade_date] * nav
 
             stock_pos.loc[:] = stock_pos / nav
-            stock_pos_standard = self.df_stock_pos.loc[trade_date].fillna(0.0)
-            if considering_status:
-                stock_status = self.df_stock_status.loc[trade_date]
+
+            if trade_date in self.reindex:
+
+                stock_pos_standard = self.df_stock_pos.loc[trade_date].fillna(0.0)
+                if considering_status:
+                    stock_status = self.df_stock_status.loc[trade_date]
+                else:
+                    stock_status = pd.Series(0, index=self.stock_pool_total.index, name=trade_date)
+
+                index_adjustable_stock = stock_status.loc[stock_status==0].index
+                sum_pos_adjustable = 1.0 - stock_pos.loc[stock_status>0].sum()
+                sum_pos_standard = 1.0 - stock_pos_standard.loc[stock_status>0].sum()
+
+                stock_pos_adjusted = copy.deepcopy(stock_pos)
+                stock_pos_adjusted.loc[index_adjustable_stock] = stock_pos_standard.loc[index_adjustable_stock] * sum_pos_adjustable / sum_pos_standard
+                ser_turnover.loc[trade_date] = (stock_pos_adjusted - stock_pos).abs().sum()
+
+                if considering_fee:
+
+                    ser_portfolio_nav.loc[trade_date] -= ser_turnover.loc[trade_date] * 0.003
+                    ser_portfolio_inc.loc[trade_date] = ser_portfolio_nav.loc[trade_date] / ser_portfolio_nav.loc[last_trade_date] - 1
+
             else:
-                stock_status = pd.Series(0, index=self.stock_pool_total.index, name=trade_date)
 
-            index_adjustable_stock = stock_status.loc[stock_status==0].index
-            sum_pos_adjustable = 1.0 - stock_pos.loc[stock_status>0].sum()
-            sum_pos_standard = 1.0 - stock_pos_standard.loc[stock_status>0].sum()
-
-            stock_pos_adjusted = copy.deepcopy(stock_pos)
-            stock_pos_adjusted.loc[index_adjustable_stock] = stock_pos_standard.loc[index_adjustable_stock] * sum_pos_adjustable / sum_pos_standard
-            ser_turnover.loc[trade_date] = (stock_pos_adjusted - stock_pos).abs().sum()
+                stock_pos_adjusted = copy.deepcopy(stock_pos)
+                ser_turnover.loc[trade_date] = 0.0
 
             if considering_status:
                 for _, stock_swap in self.df_stock_swap.loc[self.df_stock_swap.equity_registration_date==trade_date].iterrows():
@@ -318,7 +338,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
             # df_stock_pos_adjusted.loc[trade_date] = stock_pos_adjusted
             arr_stock_pos_adjusted = np.append(arr_stock_pos_adjusted, stock_pos_adjusted.values.reshape(1, -1), axis=0)
 
-        df_stock_pos_adjusted = pd.DataFrame(arr_stock_pos_adjusted, index=self.reindex, columns=self.stock_pool_total.index)
+        df_stock_pos_adjusted = pd.DataFrame(arr_stock_pos_adjusted, index=self.trade_dates, columns=self.stock_pool_total.index)
 
         # ser0_portfolio_inc = pd.Series(0.0, index=self.reindex, name='inc')
         # ser0_portfolio_nav = pd.Series(1.0, index=self.reindex, name='nav')
@@ -416,7 +436,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
             self.calc_portfolio_nav()
 
         if reindex is None:
-            reindex = self.reindex
+            reindex = self.trade_dates
 
         portfolio_return = self.ser_portfolio_nav.loc[reindex[-1]] / self.ser_portfolio_nav.loc[reindex[0]] - 1.0
         ser_free_risk_rate = pd.Series(0.00013, index=reindex[1:])
@@ -1237,6 +1257,90 @@ class StockPortfolioFamaMacbethRegression(StockPortfolio):
                     df_t = self._z_score(data=df_t, columns=columns)
                     df_filter = df_filter.append(df_t, ignore_index=False)
         return df_filter
+
+
+class StockPortfolioHRP(StockPortfolio):
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioHRP, self).__init__(index_id, reindex, look_back, **kwargs)
+
+    def _calc_stock_pos(self, trade_date):
+
+        stock_ids = self._load_stock_ids(trade_date)
+
+        HRP_stock_ids, ser_HRP_weight = self._calc_HRP(trade_date, stock_ids, 1.0)
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[HRP_stock_ids] = ser_HRP_weight.fillna(0.0)
+
+        return stock_pos
+
+    def _calc_HRP(self, trade_date, stock_ids, percentage, **kwargs):
+
+        df_stock_ret = self._load_stock_return(trade_date, stock_ids, fillna=False)
+        df_stock_ret = df_stock_ret.loc[:, df_stock_ret.isna().sum() < (df_stock_ret.shape[0] // 3)]
+        HRP_stock_ids = df_stock_ret.columns
+        ser_HRP_weight = self.HRP(df_stock_ret)
+
+        return HRP_stock_ids, ser_HRP_weight
+
+    def getIVP(self, cov, **kargs):
+        # Compute the inverse-variance percentage
+        ivp = 1.0 / np.diag(cov)
+        ivp /= ivp.sum()
+        return ivp
+
+    def getClusterVar(self, cov, cItems):
+        # Compute variance per cluster
+        cov_=cov.loc[cItems, cItems]
+        w_=self.getIVP(cov_).reshape(-1,1)
+        cVar=np.dot(np.dot(w_.T,cov_),w_)[0,0]
+        return cVar
+
+    def HRP(self, Underlying_Ret):
+
+        '''
+        The input dataframe should be the daily return data with timstamp as index of the portfolio, where are needed to be compared
+
+        Hierarchical Risk Parity Portfolio: A fucking innovative methodologies
+        Questions here: Stabilization of Graph theory is trade-off between the model risk e.g. the norm or numerical distance selection?
+        Ref: Marcos López de Prado 2015
+        '''
+
+        if not isinstance(Underlying_Ret, pd.DataFrame):
+            raise ValueError('Stock Return matrix is not a DataFrame')
+
+        Underlying_Ret_corr = Underlying_Ret.corr()
+        Underlying_Ret_cov = Underlying_Ret.cov()
+
+        Corr_Distance = ((1 - Underlying_Ret_corr) / 2) ** 0.5
+        Corr_Distance_Linker = hierarchy.linkage(Corr_Distance, 'single')
+
+        leaves_list = hierarchy.leaves_list(Corr_Distance_Linker)
+        sorted_index = Underlying_Ret_cov.index[leaves_list]
+
+        Underlying_Alloocated_Weight = pd.Series(1, index=sorted_index)
+        # initialize all items in one cluster
+        cItems = [sorted_index.to_list()]
+
+        while len(cItems) > 0:
+            # bi-section
+            cItems = [i[j:k] for i in cItems for j, k in ((0, len(i) // 2), (len(i) // 2, len(i))) if len(i) > 1]
+            for i in range(0, len(cItems), 2):
+                # cluster 1
+                cItems0 = cItems[i]
+                # cluster 2
+                cItems1 = cItems[i + 1]
+                cVar0 = self.getClusterVar(Underlying_Ret_cov, cItems0)
+                cVar1 = self.getClusterVar(Underlying_Ret_cov, cItems1)
+                alpha = 1 - cVar0 / (cVar0 + cVar1)
+                # weight 1
+                Underlying_Alloocated_Weight[cItems0] *= alpha
+                # weight 2
+                Underlying_Alloocated_Weight[cItems1] *= 1 - alpha
+
+        return Underlying_Alloocated_Weight.sort_index()
 
 
 def func(algo, index_id, trade_dates, look_back, sw_industry_code, **kwargs):
