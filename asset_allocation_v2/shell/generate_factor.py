@@ -65,13 +65,14 @@ def calc_non_linear_size(df):
     return df_t[['non_linear_size']]
 
 
-def generate_stock_factor(begin_date=None, end_date=None, trade_date=None, percentage=0.8, calc_method='z-score'):
-    if calc_method == 'raw':
-        percentage = 1.0
-    if (calc_method != 'z-score') and (calc_method != 'raw'):
+def generate_stock_factor(begin_date=None, end_date=None, trade_date=None, percentage=1.0, calc_method='z_score'):
+    
+    if (calc_method != 'z_score') and (calc_method != 'raw'):
         return 'wrong calc_method'
+    
     look_back = 300  # > 256+21
-    table_name = 'stock_factor' + '_' + calc_method + '_' + str(percentage)
+    table_name = 'stock_factor' + '_' + calc_method
+    
     if begin_date is None:
         reindex = [pd.Timestamp(trade_date)]
     else:
@@ -87,7 +88,7 @@ def generate_stock_factor(begin_date=None, end_date=None, trade_date=None, perce
     df_price = wind_ashareeodprices.load_a_stock_adj_price(stock_ids=stock_ids_total, reindex=reindex_total)
     df_price['benchmark'] = wind_aindexeodprices.load_a_index_nav(index_ids='000985.CSI', reindex=reindex_total)
     df_return = df_price.sort_index().pct_change().iloc[1:]
-    df_sw = wind_ashareswindustriesclass.load_a_stock_historical_sw_industry(stock_ids=stock_ids_total) # load_a_stock_historical_sw_industry
+    df_sw = wind_ashareswindustriesclass.load_a_stock_historical_sw_industry(stock_ids=stock_ids_total)
     # load existing tradedate
     existing_tradedate = generate_factor_database.query_table(table_name=table_name)
     df_descriptor = pd.DataFrame()
@@ -118,7 +119,7 @@ def generate_stock_factor(begin_date=None, end_date=None, trade_date=None, perce
         
         select_num = int(df_descriptor_t.shape[0]*percentage)
         df_descriptor_t = df_descriptor_t.sort_values(by=['weight'],ascending=False).iloc[:select_num]
-        df_descriptor_t.dropna(subset=['sw_lv1_ind_code'], inplace=True)
+        df_descriptor_t.dropna(subset=['sw_lv1_ind_code', 'weight'], inplace=True)
         
         financial_descriptor = [
             'book_to_price', 'earnings_to_price', 'ocf_to_price', 'ncf_to_price', 'sales_to_price', 'dividend_yield',
@@ -126,22 +127,39 @@ def generate_stock_factor(begin_date=None, end_date=None, trade_date=None, perce
             'gross_profit_growth', 'gross_profit_margin_growth', 'assets_turnover_growth','earnings_volatility', 'assets_growth'
         ]
         numerical_descriptor = ['short_term_reverse', 'middle_term_momentum', 'beta', 'monthly_turnover', 'quarterly_turnover', 'annual_turnover']
-        all_descriptor = financial_descriptor + ['linear_size', 'non_linear_size'] + numerical_descriptor
+        style = ['value', 'quality_earnings', 'quality_risk', 'growth', 'liquidity']
+        all_descriptor = financial_descriptor + ['linear_size', 'non_linear_size'] + numerical_descriptor + style
         # size
         df_descriptor_t = z_score(df=df_descriptor_t, columns=['linear_size'], weight='weight')
         df_descriptor_t['non_linear_size'] = calc_non_linear_size(df=df_descriptor_t)
         df_descriptor_t = z_score(df=df_descriptor_t, columns=['non_linear_size'], weight='weight')
-        if calc_method == 'z-score':
+        if calc_method == 'z_score':
             # 对基本面因子进行分行业的标准化处理
             df_descriptor_t = z_score_cbi(df=df_descriptor_t, columns=financial_descriptor, industry='sw_lv1_ind_code', weight='weight', min_count=30)
             # 对基本面因子和数值因子进行标准化处理
             df_descriptor_t = z_score(df=df_descriptor_t, columns=financial_descriptor + numerical_descriptor, weight='weight')
-            df_descriptor_t[all_descriptor] = df_descriptor_t[all_descriptor].fillna(df_descriptor_t[all_descriptor].mean())
+            # add style
+            df_descriptor_t['value'] = df_descriptor_t[['book_to_price', 'earnings_to_price', 'ocf_to_price', 'ncf_to_price']].mean(axis=1, skipna=True)
+            df_descriptor_t['quality_earnings'] = df_descriptor_t[['roa', 'roe', 'gross_profit_margin', 'assets_turnover']].mean(axis=1, skipna=True)
+            df_descriptor_t['cash_flow_accrual'] = - df_descriptor_t['cash_flow_accrual']
+            df_descriptor_t['quality_risk'] = df_descriptor_t[['cash_flow_accrual', 'earnings_volatility', 'assets_growth']].mean(axis=1, skipna=True)
+            df_descriptor_t['growth'] = df_descriptor_t[['earnings_growth', 'ocf_growth', 'gross_profit_growth', 'gross_profit_margin_growth', 'assets_turnover_growth']].mean(axis=1, skipna=True)
+            df_descriptor_t['liquidity'] = df_descriptor_t[['monthly_turnover', 'quarterly_turnover', 'annual_turnover']].mean(axis=1, skipna=True)
+            df_descriptor_t['cash_flow_accrual'] = - df_descriptor_t['cash_flow_accrual']
+            # 对风格因子进行标准化处理
+            df_descriptor_t = z_score(df=df_descriptor_t, columns=style, weight='weight')
+            df_descriptor_t[all_descriptor] = df_descriptor_t[all_descriptor].fillna(df_descriptor_t[all_descriptor].mean()) 
+            
         df_descriptor_t['trade_date'] = i_tradedate
-        columns_retain = ['trade_date', 'sw_lv1_ind_code'] + financial_descriptor + ['linear_size', 'non_linear_size'] + numerical_descriptor
+        if calc_method == 'z_score':
+            columns_retain = ['trade_date', 'sw_lv1_ind_code', 'weight'] + financial_descriptor + ['linear_size', 'non_linear_size'] + numerical_descriptor + style
+        else:
+            columns_retain = ['trade_date', 'sw_lv1_ind_code', 'weight'] + financial_descriptor + ['linear_size', 'non_linear_size'] + numerical_descriptor
+        
         df_descriptor = df_descriptor.append(df_descriptor_t[columns_retain], ignore_index=False)
+    set_trace()
     # write
-    if ~df_descriptor.empty:
+    if not df_descriptor.empty:
         return_str = generate_factor_database.write_factor(df_descriptor, table_name=table_name)
     return return_str
 
