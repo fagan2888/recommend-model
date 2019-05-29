@@ -34,25 +34,12 @@ def query_table(table_name):
     return existing_tradedate
 
 
-# def write_factor(df_descriptor, table_name):
-#     df_descriptor_t = df_descriptor.reset_index().copy()
-#     engine = database.connection('multi_factor')
-#     for i in range(int(df_descriptor_t.shape[0] / 3000) + 1):
-#         df_descriptor_t2 = df_descriptor_t.iloc[3000 * i:3000 * (i + 1)]
-#         pd.io.sql.to_sql(df_descriptor_t2, table_name, con=engine, if_exists='append', index=False)
-#     return 'finished'
-
-
 def write_factor(df_descriptor, table_name):
     df = df_descriptor.reset_index().drop_duplicates(subset=['stock_id', 'trade_date']).set_index(['stock_id', 'trade_date'])
     db = database.connection('multi_factor')
     t2 = Table(table_name, MetaData(bind=db), autoload=True)
     columns = [literal_column(c) for c in (df.index.names + list(df.columns))]
     df_old = pd.DataFrame(columns=list(df.index.names)+list(df.columns)).set_index(['stock_id', 'trade_date'])
-
-    # 更新数据库
-    #print df.head()
-    #print df_old.head()
     database.batch(db, t2, df, df_old, timestamp=False)
     return 'finished'
 
