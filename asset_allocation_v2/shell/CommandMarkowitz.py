@@ -1198,16 +1198,15 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
         # Layer Fix Risk Cov Smooth Boot Bl
 
-        lookback = int(argv.get('lookback', '28'))
-        upper_risk = float(argv.get('upper_risk', 0.015))
+        lookback = int(argv.get('lookback', '26'))
+        smooth = int(argv.get('smooth', '0'))
+        upper_risk = float(argv.get('upper_risk'))
         view_df = View.load_view(argv.get('bl_view_id'))
         confidence = float(argv.get('bl_confidence'))
-        data_period = argv.get('data_period', 'day')
-        smooth = int(argv.get('smooth', '4'))
-        cov_algo = argv.get('cov_algo', 'ledoit_wolf')
+        data_period = argv.get('data_period', 'week')
+        cov_algo = argv.get('cov_algo')
 
         asset_ids = list(assets.keys())
-        asset_ids.append('ALayer')
         views = {}
         for asset_id in asset_ids:
             views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
@@ -1215,6 +1214,28 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback+1)
         assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = MzLayerFixRiskCovSmoothBootBlAllocate('ALC.000001', assets, views, trade_date, lookback, smooth=smooth, data_period=data_period, risk=upper_risk, cov_algo=cov_algo, bound=bounds)
+        df = allocate.m_allocate()
+
+    elif algo == 22:
+
+        # Layer Fix Risk Cov Smooth Boot Bl
+
+        lookback = int(argv.get('lookback', '26'))
+        smooth = int(argv.get('smooth', '0'))
+        upper_risk = float(argv.get('upper_risk'))
+        view_df = View.load_view(argv.get('bl_view_id'))
+        confidence = float(argv.get('bl_confidence'))
+        data_period = argv.get('data_period', 'week')
+        cov_algo = argv.get('cov_algo')
+
+        asset_ids = list(assets.keys())
+        views = {}
+        for asset_id in asset_ids:
+            views[asset_id] = View(None, asset_id, view_sr = view_df[asset_id], confidence = confidence) if asset_id in view_df.columns else View(None, asset_id, confidence = confidence)
+
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback+1)
+        assets = dict([(asset_id , Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = MzLayerFixRiskCovSampleBlAllocate('ALC.000001', assets, views, trade_date, lookback, smooth=smooth, data_period=data_period, risk=upper_risk, cov_algo=cov_algo, bound=bounds)
         df = allocate.m_allocate()
 
     else:

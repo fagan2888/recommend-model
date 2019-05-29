@@ -225,7 +225,7 @@ class Allocate(object):
 
         asset_ids = list(self.assets.keys())
         df_inc, bound = self.load_allocate_data(day, asset_ids)
-        ws = self.allocate_algo(day, df_inc, bound)
+        ws = self.allocate_algo(day)
         ws = pd.Series(ws)
         inc = np.dot(df_inc, ws)
 
@@ -283,8 +283,12 @@ class AllocateNew(Allocate):
         adjust_days = self.index[self.lookback::self.period]
         asset_ids = list(self.assets.keys())
         pos_df = pd.DataFrame(0, index=adjust_days, columns=asset_ids)
+
+        # for day in adjust_days:
+            # pos_df.loc[day, :] = self.allocate_algo(day)
+
         pool = multiprocessing.Pool(multiprocessing.cpu_count()//2)
-        pos = pool.map(self.allocate_pos_day, adjust_days.to_list())
+        pos = pool.map(self.allocate_algo, adjust_days.to_list())
         pool.close()
         pool.join()
 
@@ -300,9 +304,7 @@ class AllocateNew(Allocate):
 
         return pos
 
-    def load_allocate_data_daily(self, day, asset_ids):
-
-        reindex = self.index[self.index <= day][-self.lookback-1:]
+    def load_allocate_data(self, day, asset_ids, data_period='week'):
 
         bound = []
         allocate_asset_ids = []
@@ -312,23 +314,22 @@ class AllocateNew(Allocate):
                 bound.append(asset_bound)
                 allocate_asset_ids.append(asset_id)
 
+        reindex = self.index[self.index <= day][-self.lookback-1:]
+        if data_period == 'week':
+            pass
+        elif data_period == 'day':
+            reindex = ATradeDate.trade_date(begin_date=reindex[0], end_date=day)
+        else:
+            raise ValueError
+
         data = {}
         for asset_id in allocate_asset_ids:
-            data[asset_id] = self.assets[asset_id].nav(reindex = reindex)
-        df_nav = pd.DataFrame(data).fillna(method='pad')
-        df_inc = df_nav.pct_change().iloc[1:]
-
-        reindex = self.index[self.index<=day][-self.lookback-1:]
-        reindex = ATradeDate.trade_date(begin_date=reindex[0], end_date=reindex[-1])
-
-        data = {}
-        for asset_id in df_inc.columns:
             data[asset_id] = self.assets[asset_id].nav(reindex=reindex)
 
         df_nav = pd.DataFrame(data).fillna(method='pad')
         df_inc = df_nav.pct_change().iloc[1:]
 
-        return df_inc, bound
+        return df_nav, df_inc, bound
 
 
 if __name__ == '__main__':
