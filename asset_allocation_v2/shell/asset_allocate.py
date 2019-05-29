@@ -52,6 +52,7 @@ from view import View
 import Financial as fin
 import RiskParity
 import util_optimize
+from resample_tools import *
 
 import PureFactor
 import IndexFactor
@@ -91,7 +92,10 @@ class RpAllocate(AllocateNew):
 
         super(RpAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
 
-    def allocate_algo(self, day, df_inc, bound):
+    def allocate_algo(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
 
         asset_num = df_inc.shape[1]
         V = df_inc.cov()
@@ -116,15 +120,20 @@ class MzBlAllocate(AllocateNew):
 
         return self._views
 
-    def allocate_algo(self, day, df_inc, bound):
+    def allocate_algo(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
 
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
         ws = self.markowitz_r_spe_bl(df_inc, P, eta, alpha, bound)
-        ws = pd.Series(ws, index=df_inc.columns)
+        ws = pd.Series(ws, index=df_inc.columns, name=day)
 
         return ws
 
     def load_bl_view(self, day, asset_ids):
+
+        return None, pd.DataFrame([]), None
 
         confidences = []
         view = pd.Series(0, index = asset_ids)
@@ -211,14 +220,17 @@ class MzBootBlAllocate(MzBlAllocate):
 
         return self._bootstrap_count
 
-    def allocate_algo(self, day, df_inc, bound):
+    def allocate_algo(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
 
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        ws = self.markowitz_bootstrap_bl(df_inc, P, eta, alpha, bound, self.bootstrap_count)
+        ws = self.markowitz_bootstrap_bl(day, df_inc, P, eta, alpha, bound, self.bootstrap_count)
 
         return ws
 
-    def markowitz_bootstrap_bl(self, df_inc, P, eta, alpha, bound, bootstrap_count):
+    def markowitz_bootstrap_bl(self, day, df_inc, P, eta, alpha, bound, bootstrap_count):
 
         look_back = len(df_inc)
         loop_num = self.get_loop_num(bootstrap_count, look_back)
@@ -228,7 +240,7 @@ class MzBootBlAllocate(MzBlAllocate):
         args = (df_inc, P, eta, alpha, bound)
         v_markowitz_random_bl = np.vectorize(partial(self.markowitz_random_bl, *args), signature='(n)->(m)')
         ws = np.mean(v_markowitz_random_bl(day_indices), axis=0)
-        ws = pd.Series(ws, index=df_inc.columns, name=trade_date)
+        ws = pd.Series(ws, index=df_inc.columns, name=day)
 
         return ws
 
@@ -396,14 +408,17 @@ class MzFixRiskBootBlAllocate(MzBootBlAllocate):
 
         return self._risk
 
-    def allocate_algo(self, day, df_inc, bound):
+    def allocate_algo(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
 
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        ws = self.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
+        ws = self.markowitz_bootstrap_bl_fixrisk(day, df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
 
         return ws
 
-    def markowitz_bootstrap_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, bootstrap_count):
+    def markowitz_bootstrap_bl_fixrisk(self, day, df_inc, P, eta, alpha, bound, target_risk, bootstrap_count):
 
         look_back = len(df_inc)
         loop_num = self.get_loop_num(bootstrap_count, look_back)
@@ -413,7 +428,7 @@ class MzFixRiskBootBlAllocate(MzBootBlAllocate):
         args = (df_inc, P, eta, alpha, bound, target_risk)
         v_markowitz_random_bl_fixrisk = np.vectorize(partial(self.markowitz_random_bl_fixrisk, *args), signature='(n)->(m)')
         ws = np.mean(v_markowitz_random_bl_fixrisk(day_indices), axis=0)
-        ws = pd.Series(ws, index=df_inc.columns)
+        ws = pd.Series(ws, index=df_inc.columns, name=day)
 
         return ws
 
@@ -599,12 +614,15 @@ class MzFixRiskBootWaveletBlAllocate(MzFixRiskBootBlAllocate):
 
         return self._wavelet_assets
 
-    def allocate_algo(self, day, df_inc, bound):
+    def allocate_algo(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
 
         wavelet_df_inc, wavelet_bound = self.load_wavelet_allocate_data(day, list(self.assets.keys()))
         df_inc = df_inc + wavelet_df_inc
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        ws = self.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
+        ws = self.markowitz_bootstrap_bl_fixrisk(day, df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
 
         return ws
 
@@ -768,11 +786,14 @@ class MzALayerFixRiskBootBlAllocate(MzFixRiskBootBlAllocate):
 
         super(MzALayerFixRiskBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, risk, bound, bootstrap_count)
 
-    def allocate_algo(self, day, df_inc, bound):
+    def allocate_algo(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
 
         df_inc_layer, layer_ws, bound = self.load_a_layer(day, df_inc)
         P, eta, alpha = self.load_bl_view(day, df_inc_layer.columns)
-        ws = self.markowitz_bootstrap_bl_fixrisk(df_inc_layer, P, eta, alpha, bound, self.risk, self.bootstrap_count)
+        ws = self.markowitz_bootstrap_bl_fixrisk(day, df_inc_layer, P, eta, alpha, bound, self.risk, self.bootstrap_count)
         ws = self.calc_a_layer_weight(ws, layer_ws)
 
         return ws
@@ -988,7 +1009,7 @@ class CppiAllocate(Allocate):
 '''new'''
 class MzLayerFixRiskBootBlAllocate(MzFixRiskBootBlAllocate):
 
-    def __init__(self, globalid, assets, views, reindex, lookback, period=1, data_period='day', risk=None, bound=None, bootstrap_count=0):
+    def __init__(self, globalid, assets, views, reindex, lookback, period=1, data_period='week', risk=None, bound=None, bootstrap_count=0):
 
         super(MzLayerFixRiskBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, risk, bound, bootstrap_count)
 
@@ -1000,10 +1021,13 @@ class MzLayerFixRiskBootBlAllocate(MzFixRiskBootBlAllocate):
         else:
             raise ValueError
 
-    def allocate_algo(self, day, df_inc, bound):
+    def allocate_algo(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
 
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        ws = self.markowitz_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
+        ws = self.markowitz_bootstrap_bl_fixrisk(day, df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
         # ws = self.calc_layer_weight(day, ws)
 
         return ws
@@ -1023,7 +1047,7 @@ class MzLayerFixRiskBootBlAllocate(MzFixRiskBootBlAllocate):
 '''new'''
 class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
 
-    def __init__(self, globalid, assets, views, reindex, lookback, smooth=0, period=1, data_period='day', risk=None, bound=None, bootstrap_count=0):
+    def __init__(self, globalid, assets, views, reindex, lookback, smooth=0, period=1, data_period='week', risk=None, bound=None, bootstrap_count=0):
 
         super(MzLayerFixRiskSmoothBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, data_period, risk, bound, bootstrap_count)
 
@@ -1034,15 +1058,18 @@ class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
 
         return self._smooth
 
-    def allocate_algo(self, day, df_inc, bound):
+    def allocate_algo(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
 
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
-        ws = self.markowitz_smooth_bootstrap_bl_fixrisk(df_inc, P, eta, alpha, bound, self.risk, self.smooth, self.bootstrap_count)
+        ws = self.markowitz_smooth_bootstrap_bl_fixrisk(day, df_inc, P, eta, alpha, bound, self.risk, self.smooth, self.bootstrap_count)
         # ws = self.calc_layer_weight(day, ws)
 
         return ws
 
-    def markowitz_smooth_bootstrap_bl_fixrisk(self, df_inc, P, eta, alpha, bound, target_risk, smooth, bootstrap_count):
+    def markowitz_smooth_bootstrap_bl_fixrisk(self, day, df_inc, P, eta, alpha, bound, target_risk, smooth, bootstrap_count):
 
         look_back = len(df_inc)
         smooth, look_back_smooth = self.calc_look_back_smooth(smooth, look_back)
@@ -1053,7 +1080,7 @@ class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
         args = (df_inc, P, eta, alpha, bound, target_risk)
         v_markowitz_random_bl_fixrisk = np.vectorize(partial(self.markowitz_random_bl_fixrisk, *args), signature='(n)->(m)')
         ws = np.mean(v_markowitz_random_bl_fixrisk(day_indices), axis=0)
-        ws = pd.Series(ws, index=df_inc.columns)
+        ws = pd.Series(ws, index=df_inc.columns, name=day)
 
         return ws
 
@@ -1086,7 +1113,7 @@ class MzLayerFixRiskSmoothBootBlAllocate(MzLayerFixRiskBootBlAllocate):
 '''new'''
 class MzLayerFixRiskCovSmoothBootBlAllocate(MzLayerFixRiskSmoothBootBlAllocate):
 
-    def __init__(self, globalid, assets, views, reindex, lookback, smooth=0, period=1, data_period='day', risk=None, cov_algo=None, bound=None, bootstrap_count=0):
+    def __init__(self, globalid, assets, views, reindex, lookback, smooth=0, period=1, data_period='week', risk=None, cov_algo=None, bound=None, bootstrap_count=0):
 
         super(MzLayerFixRiskCovSmoothBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, smooth, period, data_period, risk, bound, bootstrap_count)
 
@@ -1106,6 +1133,59 @@ class MzLayerFixRiskCovSmoothBootBlAllocate(MzLayerFixRiskSmoothBootBlAllocate):
         ev_cov = ledoit_wolf(df_inc, assume_centered=False)[0]
 
         return ev_cov
+
+
+'''new'''
+class MzLayerFixRiskCovSampleBlAllocate(MzLayerFixRiskCovSmoothBootBlAllocate):
+
+    def __init__(self, globalid, assets, views, reindex, lookback, smooth=0, period=1, data_period='week', risk=None, cov_algo=None, bound=None, bootstrap_count=0):
+
+        data_period = 'day'
+
+        super(MzLayerFixRiskCovSampleBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, smooth, period, data_period, risk, cov_algo, bound, bootstrap_count)
+
+    def allocate_algo(self, day):
+
+        asset_ids = list(self.assets.keys())
+        df_inc, bound = self.load_allocate_data(day, asset_ids)
+        ev_cov = self.calc_ev_cov(df_inc)
+        P, eta, alpha = self.load_bl_view(day, df_inc.columns)
+        ws = self.markowitz_sample_bl_fixrisk(day, df_inc.index, df_inc.columns, ev_cov, P, eta, alpha, bound, self.risk)
+
+        return ws
+
+    def markowitz_sample_bl_fixrisk(self, day, trade_dates, asset_ids, ev_cov, P, eta, alpha, bound, risk):
+
+        # reindex = ATradeDate.trade_date(day, day, 120)
+        reindex = ATradeDate.week_trade_date(day, day, 27)
+        data = {}
+        for asset_id in asset_ids:
+            data[asset_id] = self.assets[asset_id].nav(reindex=reindex)
+        df_nav = pd.DataFrame(data).fillna(method='pad')
+
+        # copula = np.vectorize(partial(gaussian_copula, df_nav, 120, 1000), signature='()->(m,n)')(list(range(121)))
+        # copula = gaussian_copula(df_nav, 120, 120000, 0)
+        copula = gaussian_copula(df_nav, 27, 27000, 0)
+
+        ws = []
+        for i in range(1000):
+            # df_inc_resample = pd.DataFrame(copula[:, i, :], index=df_nav.index[-121:], columns=df_nav.columns)
+            # df_inc_resample = pd.DataFrame(copula[i*120:(i+1)*120], index=df_nav.index[-120:], columns=df_nav.columns)
+            df_inc_resample = pd.DataFrame(copula[i*27:(i+1)*27], index=df_nav.index[-27:], columns=df_nav.columns)
+            ws.append(self.markowitz_resample_bl_fixrisk(df_inc_resample, ev_cov, P, eta, alpha, bound, risk))
+
+        ws = np.array(ws)
+        ws = np.mean(ws, axis=0)
+        ws = pd.Series(ws, index=asset_ids, name=day)
+
+        return ws
+
+    def markowitz_resample_bl_fixrisk(self, df_inc_resample, ev_cov, P, eta, alpha, bound, target_risk):
+
+        ev_ret = self.calc_ev_ret(df_inc_resample, ev_cov, P, eta, alpha)
+        ws = self.markowitz_bl_fixrisk(ev_cov, ev_ret, bound, target_risk)
+
+        return ws
 
 
 if __name__ == '__main__':
