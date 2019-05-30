@@ -38,30 +38,30 @@ public class FundValueReader {
 
 	private List<String> date_list = new ArrayList<String>();
 	
-	public static String host = "182.92.214.1";
+	public static String host = "";
 
-	public static String port = "3306";
+	public static String port = "";
 
-	public static String database = "mofang";
+	public static String database = "";
 
-	public static String username = "jiaoyang";
+	public static String username = "";
 
-	public static String password = "Mofang123";
+	public static String password = "";
 
-	private static String DriverName = "com.mysql.jdbc.Driver";
+	private static String DriverName = "";
 
-	private static String ConnString = "jdbc:mysql://%s:%s/%s?user=%s&password=%s&useUnicode=true&characterEncoding=utf8&autoReconnect=true";
+	private static String ConnString = "";
 
 	static {
 		try {
 			Properties prop = new Properties();
 			FileInputStream fis= new FileInputStream("./conf/mofang.db");
 			prop.load(fis);
-			host = prop.getProperty("host", "182.92.214.1");
-			port = prop.getProperty("port", "3306");
-			database = prop.getProperty("database", "mofang");
-			username = prop.getProperty("username", "jiaoyang");
-			password = prop.getProperty("password", "Mofang123");
+			host = prop.getProperty("host", "");
+			port = prop.getProperty("port", "");
+			database = prop.getProperty("database", "");
+			username = prop.getProperty("username", "");
+			password = prop.getProperty("password", "");
 			fis.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();

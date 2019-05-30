@@ -5,21 +5,21 @@ import os
 import datetime
 
 db_base = {
-        "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
-        "port": 3306,
-        "user": "koudai",
-        "passwd": "Mofang123",
-        "db": "caihui",
-        "charset": "utf8"
+        "host": 1,
+        "port": 1,
+        "user": 1,
+        "passwd": 1,
+        "db": 1,
+        "charset": 1
 }
 
 db_mofang = {
-        "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
-        "port": 3306,
-        "user": "koudai",
-        "passwd": "Mofang123",
-        "db":"mofang_api",
-        "charset": "utf8"
+        "host": 1,
+        "port": 1,
+        "user": 1,
+        "passwd": 1,
+        "db": 1,
+        "charset": 1
 }
 
 conn  = MySQLdb.connect(**db_base)

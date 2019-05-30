@@ -5,12 +5,6 @@ import numpy as np
 import os
 import datetime
 db_base = {
-        "host": "rdsijnrreijnrre.mysql.rds.aliyuncs.com",
-        "port": 3306,
-        "user": "koudai",
-        "passwd": "Mofang123",
-        "db": "caihui",
-        "charset": "utf8"
 }
 conn  = MySQLdb.connect(**db_base)
 def load_index(symbol, stime, etime):

@@ -5,7 +5,7 @@ import MySQLdb
 
 infos = {}
 dates = set()
-conn = MySQLdb.connect(host='182.92.214.1', port=3306, user='jiaoyang', passwd='Mofang123', db='hedgefund', charset='utf8')
+conn = MySQLdb.connect(host='', port='', user='', passwd='', db='', charset='')
 cur = conn.cursor()
 cur.execute("select S_INFO_WINDCODE, TRADE_DT, F_AVGRETURN_THISWEEK from CHINAHEDGEFUNDPERFORMANCE")
 for record in cur.fetchall():
