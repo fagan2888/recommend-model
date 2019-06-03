@@ -1,7 +1,7 @@
 #coding=utf-8
 '''
 Created on: May. 14, 2019
-Modified on: May. 17, 2019
+Modified on: Jun. 3, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -16,14 +16,9 @@ from . import util_db
 logger = logging.getLogger(__name__)
 
 
-def load_a_stock_total_share(stock_ids=None, begin_date=None, end_date=None, reindex=None, fill_method='pad'):
+def load_a_stock_total_share(stock_ids=None):
 
     stock_ids = util_db.to_list(stock_ids)
-
-    if begin_date is not None:
-        begin_date = pd.Timestamp(begin_date).strftime('%Y%m%d')
-    if end_date is not None:
-        end_date = pd.Timestamp(end_date).strftime('%Y%m%d')
 
     engine = database.connection('wind')
     metadata = MetaData(bind=engine)

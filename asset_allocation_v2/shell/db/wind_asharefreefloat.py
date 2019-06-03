@@ -1,7 +1,7 @@
 #coding=utf-8
 '''
 Created on: May. 8, 2019
-Modified on: May. 17, 2019
+Modified on: Jun. 3, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -27,7 +27,8 @@ def load_a_stock_free_float_share(stock_ids=None):
     columns = [
         t.c.S_INFO_WINDCODE.label('stock_id'),
         t.c.CHANGE_DT.label('change_date'),
-        # t.c.ANN_DT.label('ann_date'),
+        t.c.CHANGE_DT1.label('change_date1'),
+        t.c.ANN_DT.label('ann_date'),
         t.c.S_SHARE_FREESHARES.label('free_float_share')
     ]
 
@@ -35,8 +36,8 @@ def load_a_stock_free_float_share(stock_ids=None):
     if stock_ids is not None:
         s = s.where(t.c.S_INFO_WINDCODE.in_(stock_ids))
 
-    df = pd.read_sql(s, engine, parse_dates=['change_date'])
-    df['begin_date'] = df['change_date']
+    df = pd.read_sql(s, engine, parse_dates=['change_date', 'change_date1', 'ann_date'])
+    df['begin_date'] = df[['change_date', 'ann_date']].apply(max, axis='columns')
     df.sort_values(
         by=['stock_id', 'begin_date', 'change_date'],
         ascending=[True, True, False],
@@ -50,7 +51,7 @@ def load_a_stock_free_float_share(stock_ids=None):
         inplace=True
     )
     df.set_index(['stock_id', 'begin_date'], inplace=True)
-    df.drop(['change_date'], axis='columns', inplace=True)
+    df.drop(['change_date', 'change_date1', 'ann_date'], axis='columns', inplace=True)
 
     return df
 
