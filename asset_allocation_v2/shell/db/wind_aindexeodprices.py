@@ -35,7 +35,6 @@ def load_a_index_nav(index_ids, begin_date=None, end_date=None, reindex=None, fi
     pool.join()
 
     df = pd.DataFrame(res, index=index_ids).T
-    df.sort_index(inplace=True)
 
     if fill_method is not None:
         df.fillna(method=fill_method, inplace=True)
@@ -62,7 +61,7 @@ def load_a_index_nav_ser(index_id):
     s = select(columns).where(t.c.S_INFO_WINDCODE==index_id)
 
     df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
-    ser = df.nav.rename(index_id)
+    ser = df.nav.sort_index().rename(index_id)
 
     return ser
 

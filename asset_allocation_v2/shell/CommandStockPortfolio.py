@@ -106,13 +106,21 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
         'percentage_low_volatility'
     ]
 
+    list_pd_index_arg = [
+        'stock_portfolio_ids'
+    ]
+
     for arg in list_int_arg:
         if kwargs.get(arg) is not None:
             kwargs[arg] = int(kwargs.get(arg))
 
     for arg in list_float_arg:
         if kwargs.get(arg) is not None:
-            kwargs[arg] =float(kwargs.get(arg))
+            kwargs[arg] = float(kwargs.get(arg))
+
+    for arg in list_pd_index_arg:
+        if kwargs.get(arg) is not None:
+            kwargs[arg] = pd.Index([s.strip() for s in kwargs.get(arg).split(',')])
 
     period = kwargs.get('period', 'day')
 
@@ -137,7 +145,11 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 
     try:
 
-        class_name = f'StockPortfolio{algo}'
+        if stock_portfolio_id[:3] == 'SP.' or stock_portfolio_id == 'CS.':
+            class_name = f'StockPortfolio{algo}'
+        elif stock_portfolio_id[:3] == 'FP.':
+            class_name = f'FactorPortfolio{algo}'
+
         cls = getattr(stock_portfolio, class_name)
 
     except AttributeError:
@@ -169,7 +181,7 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
             '000905.SH': 'CS.000905',
             '000906.SH': 'CS.000906'
         }
-        benchmark_id = dict_benchmark[kwargs['index_id']]
+        benchmark_id = dict_benchmark[kwargs.get('index_id', '000906.SH')]
         class_stock_portfolio.portfolio_statistic(benchmark_id)
 
     engine = database.connection('asset')

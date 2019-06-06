@@ -36,7 +36,6 @@ def load_a_stock_total_market_value(stock_ids, begin_date=None, end_date=None, r
     pool.join()
 
     df = pd.DataFrame(res, index=stock_ids).T
-    df.sort_index(inplace=True)
 
     if fill_method is not None:
         df.fillna(method=fill_method, inplace=True)
@@ -63,7 +62,7 @@ def load_a_stock_total_market_value_ser(stock_id):
     s = select(columns).where(t.c.S_INFO_WINDCODE==stock_id)
 
     df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
-    ser = df.total_market_value.rename(stock_id)
+    ser = df.total_market_value.sort_index().rename(stock_id)
 
     return ser
 
@@ -84,7 +83,7 @@ def load_a_stock_derivative_indicator(stock_ids, begin_date=None, end_date=None,
     pool.close()
     pool.join()
 
-    df = pd.concat(res).unstack().sort_index()
+    df = pd.concat(res).unstack()
 
     if fill_method is not None:
         df.fillna(method=fill_method, inplace=True)
@@ -120,6 +119,7 @@ def load_a_stock_derivative_indicator_df(stock_id):
     s = select(columns).where(t.c.S_INFO_WINDCODE==stock_id)
 
     df = pd.read_sql(s, engine, index_col=['trade_date', 'stock_id'], parse_dates=['trade_date'])
+    df.sort_index(inplace=True)
 
     return df
 

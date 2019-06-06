@@ -42,7 +42,6 @@ def load_a_stock_adj_price(stock_ids, begin_date=None, end_date=None, reindex=No
     pool.join()
 
     df = pd.DataFrame(res, index=stock_ids).T
-    df.sort_index(inplace=True)
 
     if fill_method is not None:
         df.fillna(method=fill_method, inplace=True)
@@ -71,7 +70,7 @@ def load_a_stock_adj_price_ser(stock_id):
     s = select(columns).where(t.c.S_INFO_WINDCODE==stock_id)
 
     df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
-    ser = df.adj_prc.rename(stock_id)
+    ser = df.adj_prc.sort_index().rename(stock_id)
 
     # print(perf_counter()-start)
 
@@ -95,7 +94,6 @@ def load_a_stock_price(stock_ids, begin_date=None, end_date=None, reindex=None, 
     pool.join()
 
     df = pd.DataFrame(res, index=stock_ids).T
-    df.sort_index(inplace=True)
 
     if fill_method is not None:
         df.fillna(method=fill_method, inplace=True)
@@ -122,7 +120,7 @@ def load_a_stock_price_ser(stock_id):
     s = select(columns).where(t.c.S_INFO_WINDCODE==stock_id)
 
     df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
-    ser = df.prc.rename(stock_id)
+    ser = df.prc.sort_index().rename(stock_id)
 
     return ser
 
@@ -176,7 +174,7 @@ def load_a_stock_status_ser(stock_id, begin_date=None, end_date=None):
 
     df = pd.read_sql(s, engine, index_col=['trade_date'], parse_dates=['trade_date'])
     if df.size > 0:
-        ser = df.apply(status_algo, axis='columns').rename(stock_id)
+        ser = df.apply(status_algo, axis='columns').sort_index().rename(stock_id)
     else:
         ser = pd.Series(name=stock_id)
 

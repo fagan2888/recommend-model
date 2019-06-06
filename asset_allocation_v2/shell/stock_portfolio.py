@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import scipy.cluster.hierarchy as hierarchy
 import statsmodels.api as sm
+import cvxopt
 from cvxopt import matrix, solvers
 import math
 import hashlib
@@ -21,16 +22,17 @@ import re
 import copy
 # from ipdb import set_trace
 sys.path.append('shell')
-from db import caihui_tq_ix_comp, caihui_tq_qt_index, caihui_tq_qt_skdailyprice, caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic, caihui_tq_sk_sharestruchg
+from db import caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic
 from db import wind_asharecalendar
 from db import wind_aindexeodprices, wind_aindexmembers
 from db import wind_asharedescription, wind_ashareswindustriesclass, wind_ashareeodprices
 from db import wind_asharecapitalization, wind_asharefreefloat, wind_ashareeodderivativeindicator
 from db import wind_ashareipo, wind_asharestockswap
-from db import factor_financial_statement, factor_ml_merge_list, asset_sp_stock_portfolio_nav
+from db import factor_financial_statement
+from db import asset_sp_stock_portfolio, asset_sp_stock_portfolio_nav, asset_sp_stock_portfolio_pos
 from trade_date import ATradeDate
 import calc_covariance
-import calc_financial_descriptor
+import calc_descriptor
 from util_timestamp import *
 import statistic_tools_multifactor
 from db import database
@@ -87,13 +89,14 @@ class StockPortfolioData:
         self.index_id = index_id
 
         self.reindex = reindex
+        self.look_back = look_back
+
         self.trade_dates = ATradeDate.trade_date(
             begin_date=self.reindex[0],
             end_date=self.reindex[-1]
         ).rename('trade_date')
 
-        self.look_back = look_back
-        self.reindex_total = ATradeDate.trade_date(
+        self.trade_dates_total = ATradeDate.trade_date(
             begin_date=self.reindex[0],
             end_date=self.reindex[-1],
             lookback=self.look_back+1
@@ -101,7 +104,7 @@ class StockPortfolioData:
 
         self.ser_index_nav = wind_aindexeodprices.load_a_index_nav(
             index_ids=self.index_id,
-            reindex=self.reindex_total,
+            reindex=self.trade_dates_total,
             fill_method='pad'
         )[self.index_id]
 
@@ -129,34 +132,36 @@ class StockPortfolioData:
 
         self.df_stock_status = wind_ashareeodprices.load_a_stock_status(
             stock_ids=self.stock_pool_total.index,
-            reindex=self.reindex_total
+            reindex=self.trade_dates_total
         )
 
-        self.df_stock_historical_industry = wind_ashareswindustriesclass.load_a_stock_historical_sw_industry(stock_ids=self.stock_pool.index)
+        self.df_stock_historical_industry = wind_ashareswindustriesclass.load_a_stock_historical_sw_industry(
+            stock_ids=self.stock_pool.index
+        )
 
-        self.df_stock_prc, self.df_stock_ret = self.__load_stock_price_and_return()
+        self.df_stock_prc, self.df_stock_ret = self._load_stock_price_and_return()
 
-        self.df_stock_total_share, self.df_stock_free_float_share, self.df_stock_total_market_value = self.__load_stock_share_and_market_value()
+        self.df_stock_total_share, self.df_stock_free_float_share, self.df_stock_total_market_value = self._load_stock_share_and_market_value()
 
         # self.stock_market_data = caihui_tq_sk_dquoteindic.load_stock_market_data(
             # stock_ids=self.stock_pool.index,
-            # reindex=self.reindex_total,
+            # reindex=self.trade_dates_total,
             # fill_method='pad'
         # )
 
         # self.stock_financial_data = caihui_tq_sk_finindic.load_stock_financial_data(
             # stock_ids=self.stock_pool.index,
-            # reindex=self.reindex_total,
+            # reindex=self.trade_dates_total,
             # fill_method='pad'
         # )
 
-        # self.df_stock_financial_descriptor = calc_financial_descriptor.calc_stock_financial_descriptor(self.stock_pool.index)
+        # self.df_stock_financial_descriptor = calc_descriptor.calc_stock_financial_descriptor(self.stock_pool.index)
 
-    def __load_stock_price_and_return(self):
+    def _load_stock_price_and_return(self):
 
         df_stock_prc = wind_ashareeodprices.load_a_stock_adj_price(
             stock_ids=self.stock_pool_total.index,
-            reindex=self.reindex_total,
+            reindex=self.trade_dates_total,
             fill_method='pad'
         )
 
@@ -172,7 +177,7 @@ class StockPortfolioData:
 
         return df_stock_prc, df_stock_ret
 
-    def __load_stock_share_and_market_value(self):
+    def _load_stock_share_and_market_value(self):
 
         df_stock_total_share = wind_asharecapitalization.load_a_stock_total_share(
             stock_ids=self.stock_pool.index
@@ -221,17 +226,18 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
     _variable_list_in_data = [
         'index_id',
         'reindex',
-        'trade_dates',
         'look_back',
-        'reindex_total',
+        'trade_dates',
+        'trade_dates_total',
         'ser_index_nav',
         'df_index_historical_constituents',
         'stock_pool',
-        'df_stock_swap',
         'stock_pool_total',
+        'df_stock_ipo',
+        'df_stock_swap',
+        'df_stock_status',
         'df_stock_prc',
         'df_stock_ret',
-        'df_stock_status',
         'df_stock_historical_industry',
         'df_stock_total_share',
         'df_stock_free_float_share',
@@ -367,7 +373,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
     def _calc_stock_pos(self, trade_date):
 
-        raise NotImplementedError('Method \'calc_stock_pos\' is not defined.')
+        raise NotImplementedError('Method \'_calc_stock_pos\' is not defined.')
 
     def _load_stock_ids(self, trade_date):
 
@@ -384,7 +390,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
     def _load_stock_price(self, trade_date, stock_ids, fillna=True):
 
-        reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back-1:]
+        reindex = self.trade_dates_total[self.trade_dates_total<=trade_date][-self.look_back-1:]
 
         # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex, fill_method='pad')
         df_stock_prc = self.df_stock_prc.reindex(index=reindex, columns=stock_ids)
@@ -398,7 +404,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
     def _load_stock_return(self, trade_date, stock_ids, fillna=True):
 
-        reindex = self.reindex_total[self.reindex_total<=trade_date][-self.look_back-1:]
+        reindex = self.trade_dates_total[self.trade_dates_total<=trade_date][-self.look_back-1:]
 
         # df_stock_prc = caihui_tq_sk_dquoteindic.load_stock_prc(stock_ids=stock_ids, reindex=reindex, fill_method='pad')
         # df_stock_ret = df_stock_prc.pct_change().iloc[1:]
@@ -1063,8 +1069,8 @@ class StockPortfolioFamaMacbethRegression(StockPortfolio):
                 opt_t = np.array(sol['x']).T[0]
                 optimal_weight_t = pd.Series(opt_t, index=all_style)
         # calc_pos_date 为保证交易的可行性，使用前一天的因子暴露来计算今天收盘时的股票仓位
-        last_trade_num = list(self.reindex_total).index(calc_pos_date) - 1
-        last_trade_date = list(self.reindex_total)[last_trade_num]
+        last_trade_num = list(self.trade_dates_total).index(calc_pos_date) - 1
+        last_trade_date = list(self.trade_dates_total)[last_trade_num]
 
         stock_ids = self._load_stock_ids(trade_date)
         data_FS_t = self._select_report_period(last_trade_date=last_trade_date, stock_ids=stock_ids, select_method='radical')
@@ -1285,17 +1291,23 @@ class StockPortfolioHRP(StockPortfolio):
 
         return HRP_stock_ids, ser_HRP_weight
 
-    def getIVP(self, cov, **kargs):
+    def _calc_ivp(self, cov):
+
         # Compute the inverse-variance percentage
+
         ivp = 1.0 / np.diag(cov)
         ivp /= ivp.sum()
+
         return ivp
 
-    def getClusterVar(self, cov, cItems):
+    def _calc_cluster_var(self, cov, cItems):
+
         # Compute variance per cluster
-        cov_=cov.loc[cItems, cItems]
-        w_=self.getIVP(cov_).reshape(-1,1)
-        cVar=np.dot(np.dot(w_.T,cov_),w_)[0,0]
+
+        cov = cov.loc[cItems, cItems]
+        w = self._calc_ivp(cov).reshape(-1, 1)
+        cVar = np.dot(np.dot(w.T, cov), w)[0, 0]
+
         return cVar
 
     def HRP(self, Underlying_Ret):
@@ -1314,7 +1326,7 @@ class StockPortfolioHRP(StockPortfolio):
         Underlying_Ret_corr = Underlying_Ret.corr()
         Underlying_Ret_cov = Underlying_Ret.cov()
 
-        Corr_Distance = ((1 - Underlying_Ret_corr) / 2) ** 0.5
+        Corr_Distance = np.sqrt((1.0 - Underlying_Ret_corr) / 2.0)
         Corr_Distance_Linker = hierarchy.linkage(Corr_Distance, 'single')
 
         leaves_list = hierarchy.leaves_list(Corr_Distance_Linker)
@@ -1332,8 +1344,8 @@ class StockPortfolioHRP(StockPortfolio):
                 cItems0 = cItems[i]
                 # cluster 2
                 cItems1 = cItems[i + 1]
-                cVar0 = self.getClusterVar(Underlying_Ret_cov, cItems0)
-                cVar1 = self.getClusterVar(Underlying_Ret_cov, cItems1)
+                cVar0 = self._calc_cluster_var(Underlying_Ret_cov, cItems0)
+                cVar1 = self._calc_cluster_var(Underlying_Ret_cov, cItems1)
                 alpha = 1 - cVar0 / (cVar0 + cVar1)
                 # weight 1
                 Underlying_Alloocated_Weight[cItems0] *= alpha
@@ -1341,6 +1353,369 @@ class StockPortfolioHRP(StockPortfolio):
                 Underlying_Alloocated_Weight[cItems1] *= 1 - alpha
 
         return Underlying_Alloocated_Weight.sort_index()
+
+
+class FactorPortfolioData(StockPortfolioData):
+
+    def __init__(self, stock_portfolio_ids, reindex, look_back):
+
+        self.stock_portfolio_ids = stock_portfolio_ids
+
+        df_stock_portfolio_info = asset_sp_stock_portfolio.load_by_id(
+            portfolio_ids=self.stock_portfolio_ids
+        )
+        if not (df_stock_portfolio_info.sp_type==1).all():
+            raise ValueError('Types of Stock Portfolios should be 1.')
+
+        self.reindex = reindex
+        self.look_back = look_back
+
+        self.trade_dates = ATradeDate.trade_date(
+            begin_date=self.reindex[0],
+            end_date=self.reindex[-1]
+        ).rename('trade_date')
+
+        self.trade_dates_total = ATradeDate.trade_date(
+            begin_date=self.reindex[0],
+            end_date=self.reindex[-1],
+            lookback=self.look_back+1
+        ).rename('trade_date')
+
+        self.df_factor_prc = asset_sp_stock_portfolio_nav.load_portfolio_nav(
+            portfolio_ids=stock_portfolio_ids,
+            reindex=self.trade_dates_total
+        )
+        self.df_factor_ret = self.df_factor_prc.pct_change().iloc[1:]
+
+        self.df_stock_portfolio_pos = asset_sp_stock_portfolio_pos.load_portfolio_pos(
+            portfolio_ids=stock_portfolio_ids,
+            reindex=self.trade_dates
+        ).swaplevel(0, 1).pos.unstack()
+
+        self.stock_pool = wind_asharedescription.load_a_stock_code_info(
+            stock_ids=self.df_stock_portfolio_pos.columns
+        )
+
+        self.stock_pool_total = self.stock_pool.copy(deep=True)
+
+        self.df_stock_swap = wind_asharestockswap.load_a_stock_swap(
+            transferer_stock_ids=self.stock_pool.index
+        )
+
+        self.df_stock_ipo = wind_ashareipo.load_a_stock_ipo_info(
+            stock_ids=self.stock_pool.index
+        )
+
+        self.df_stock_status = wind_ashareeodprices.load_a_stock_status(
+            stock_ids=self.stock_pool_total.index,
+            reindex=self.trade_dates_total
+        )
+
+        self.df_stock_prc, self.df_stock_ret = self._load_stock_price_and_return()
+
+
+class FactorPortfolio(StockPortfolio, metaclass=MetaClassPropertyFuncGenerater):
+
+    _ref_list = {}
+
+    _variable_list_in_data = [
+        'stock_portfolio_ids',
+        'reindex',
+        'look_back',
+        'trade_dates',
+        'trade_dates_total',
+        'df_factor_prc',
+        'df_factor_ret',
+        'df_stock_portfolio_pos',
+        'stock_pool',
+        'stock_pool_total',
+        'df_stock_ipo',
+        'df_stock_swap',
+        'df_stock_status',
+        'df_stock_prc',
+        'df_stock_ret'
+    ]
+
+    _instance_variable_list = [
+        'df_factor_pos',
+        'df_stock_pos',
+        'df_stock_pos_adjusted',
+        'ser_portfolio_nav',
+        'ser_portfolio_inc',
+        'ser_turnover'
+    ]
+
+    _kwargs_list = []
+
+    def __init__(self, stock_portfolio_ids, reindex, look_back, **kwargs):
+
+        for key in self._kwargs_list:
+
+            if key not in kwargs:
+                raise TypeError(f'__init__() missing 1 required positional argument: \'{key}\'')
+            value = kwargs.get(key)
+            setattr(self, f'_{key}', value)
+            setattr(self.__class__, key, property(MetaClassPropertyFuncGenerater.generate_func_for_instance_variable(key)))
+
+        ref = f'{stock_portfolio_ids}, {reindex}, {look_back}'
+        sha1 = hashlib.sha1()
+        sha1.update(ref.encode('utf-8'))
+        ref = sha1.hexdigest()
+
+        if ref in FactorPortfolio._ref_list:
+            self._data = FactorPortfolio._ref_list[ref]
+        else:
+            self._data = FactorPortfolio._ref_list[ref] = FactorPortfolioData(stock_portfolio_ids, reindex, look_back)
+
+        self._df_factor_pos = None
+        self._df_stock_pos = None
+        self._df_stock_pos_adjusted = None
+
+        self._ser_portfolio_nav = None
+        self._ser_portfolio_inc = None
+        self._ser_turnover = None
+
+    def calc_portfolio_nav(self, considering_status=True, considering_fee=False):
+
+        self.calc_factor_pos_days()
+        ser_portfolio_nav = super(FactorPortfolio, self).calc_portfolio_nav(considering_status, considering_fee)
+
+        return ser_portfolio_nav
+
+    def _calc_stock_pos(self, trade_date):
+
+        # Reference: http://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.dot.html
+        # self @ other <=> self.dot(other)
+        stock_pos = self.df_factor_pos.loc[trade_date].fillna(0.0) @ self.df_stock_portfolio_pos.loc[trade_date].fillna(0.0)
+        stock_pos /= stock_pos.sum()
+        # stock_pos = np.dot(self.df_factor_pos.loc[trade_date], self.df_stock_portfolio_pos.loc[trade_date])
+
+        return stock_pos
+
+    def calc_factor_pos_days(self):
+
+        if self.df_factor_pos is not None:
+            return self.df_factor_pos
+
+        ser_reindex = pd.Series(self.reindex, index=self.reindex)
+        df_factor_pos = pd.DataFrame(index=self.reindex, columns=self.stock_portfolio_ids)
+        df_factor_pos.loc[:, :] = ser_reindex.apply(self._calc_factor_pos)
+
+        self._df_factor_pos = df_factor_pos
+
+        return df_factor_pos
+
+    def _calc_factor_pos(self, trade_date):
+
+        raise NotImplementedError('Method \'_calc_factor_pos\' is not defined.')
+
+    def _load_factor_return(self, trade_date, factor_ids, fillna=True):
+
+        reindex = self.trade_dates_total[self.trade_dates_total<=trade_date][-self.look_back-1:]
+
+        df_factor_ret = self.df_factor_ret.reindex(index=reindex[1:], columns=factor_ids)
+
+        return df_factor_ret
+
+
+class FactorPortfolioEqualWeight(FactorPortfolio):
+
+    _kwargs_list = []
+
+    def __init__(self, stock_portfolio_ids, reindex, look_back, **kwargs):
+
+        super(FactorPortfolioEqualWeight, self).__init__(stock_portfolio_ids, reindex, look_back, **kwargs)
+
+    def _calc_factor_pos(self, trade_date):
+
+        factor_pos = pd.Series(1.0/self.stock_portfolio_ids.size, index=self.stock_portfolio_ids, name=trade_date)
+
+        return factor_pos
+
+
+class FactorPortfolioMaxDecorrelation(FactorPortfolio):
+
+    _kwargs_list = []
+
+    def __init__(self, stock_portfolio_ids, reindex, look_back, **kwargs):
+
+        super(FactorPortfolioMaxDecorrelation, self).__init__(stock_portfolio_ids, reindex, look_back, **kwargs)
+
+    def _calc_factor_pos(self, trade_date):
+
+        max_decorrelation_weight = self._calc_max_decorrelation(trade_date, self.stock_portfolio_ids)
+
+        factor_pos = max_decorrelation_weight.reindex(self.stock_portfolio_ids).fillna(0.0).rename(trade_date)
+
+        return factor_pos
+
+    def _calc_max_decorrelation(self, trade_date, factor_ids):
+
+        df_factor_ret = self._load_factor_return(trade_date, factor_ids, fillna=False)
+        corr_mat = df_factor_ret.corr()
+        max_decorrelation_weight = FactorPortfolioMaxDecorrelation.max_decorrelation_portfolio(corr_mat)
+
+        return max_decorrelation_weight
+
+    @staticmethod
+    def max_decorrelation_portfolio(corr_mat, allow_short=False):
+
+        '''
+        Computes the maximum decorrelation portfolio.
+
+        Note: As the variance is not invariant with respect
+        to leverage, it is not possible to construct non-trivial
+        market neutral minimum variance portfolios. This is because
+        the variance approaches zero with decreasing leverage,
+        i.e. the market neutral portfolio with minimum variance
+        is not invested at all.
+
+        Parameters
+        ----------
+        corr_mat: pandas.DataFrame
+            Correlation matrix of asset returns.
+        allow_short: bool, optional
+            If 'False' construct a long-only portfolio.
+            If 'True' allow shorting, i.e. negative weights.
+
+        Returns
+        -------
+        weights: pandas.Series
+            Optimal asset weights.
+        '''
+
+        if not isinstance(corr_mat, pd.DataFrame):
+            raise TypeError("Covariance matrix is not a DataFrame")
+
+        n = corr_mat.shape[0]
+
+        P = cvxopt.matrix(corr_mat.values)
+        q = cvxopt.matrix(0.0, (n, 1))
+
+        # Constraints Gx <= h
+        if not allow_short:
+            # x >= 0
+            G = cvxopt.matrix(-np.identity(n))
+            h = cvxopt.matrix(0.0, (n, 1))
+        else:
+            G = None
+            h = None
+
+        # Constraints Ax = b
+        # sum(x) = 1
+        A = cvxopt.matrix(1.0, (1, n))
+        b = cvxopt.matrix(1.0)
+
+        # Solve
+        cvxopt.solvers.options['show_progress'] = False
+        sol = cvxopt.solvers.qp(P, q, G, h, A, b)
+
+        if sol['status'] != 'optimal':
+            warnings.warn("Convergence problem")
+
+        # Put weights into a labeled series
+        weights = pd.Series(sol['x'], index=corr_mat.index)
+
+        return weights
+
+
+# ValueError: domain error
+class FactorPortfolioTangency(FactorPortfolio):
+
+    _kwargs_list = []
+
+    def __init__(self, stock_portfolio_ids, reindex, look_back, **kwargs):
+
+        super(FactorPortfolioTangency, self).__init__(stock_portfolio_ids, reindex, look_back, **kwargs)
+
+    def _calc_factor_pos(self, trade_date):
+
+        tangency_weight = self._calc_tangency(trade_date, self.stock_portfolio_ids)
+
+        factor_pos = tangency_weight.reindex(self.stock_portfolio_ids).fillna(0.0).rename(trade_date)
+
+        return factor_pos
+
+    def _calc_tangency(self, trade_date, factor_ids):
+
+        df_factor_ret = self._load_factor_return(trade_date, factor_ids, fillna=False)
+        cov_mat = df_factor_ret.cov()
+        exp_rets = df_factor_ret.mean()
+        tangency_weight = FactorPortfolioTangency.tangency_portfolio(cov_mat, exp_rets)
+
+        return tangency_weight
+
+    @staticmethod
+    def tangency_portfolio(cov_mat, exp_rets, allow_short=False):
+
+        '''
+        Computes a tangency portfolio, i.e. a maximum Sharpe ratio portfolio.
+
+        Note: As the Sharpe ratio is not invariant with respect
+        to leverage, it is not possible to construct non-trivial
+        market neutral tangency portfolios. This is because for
+        a positive initial Sharpe ratio the sharpe grows unbound
+        with increasing leverage.
+
+        Parameters
+        ----------
+        cov_mat: pandas.DataFrame
+            Covariance matrix of asset returns.
+        exp_rets: pandas.Series
+            Expected asset returns (often historical returns).
+        allow_short: bool, optional
+            If 'False' construct a long-only portfolio.
+            If 'True' allow shorting, i.e. negative weights.
+
+        Returns
+        -------
+        weights: pandas.Series
+            Optimal asset weights.
+        '''
+
+        if not isinstance(cov_mat, pd.DataFrame):
+            raise TypeError("Covariance matrix is not a DataFrame")
+
+        if not isinstance(exp_rets, pd.Series):
+            raise TypeError("Expected returns is not a Series")
+
+        if not cov_mat.index.equals(exp_rets.index):
+            raise ValueError("Indices do not match")
+
+        n = cov_mat.shape[0]
+
+        P = cvxopt.matrix(cov_mat.values)
+        q = cvxopt.matrix(0.0, (n, 1))
+
+        # Constraints Gx <= h
+        if not allow_short:
+            # exp_rets*x >= 1 and x >= 0
+            G = cvxopt.matrix(np.vstack((-exp_rets.values, -np.identity(n))))
+            h = cvxopt.matrix(np.vstack((-1.0, np.zeros((n, 1)))))
+        else:
+            # exp_rets*x >= 1
+            G = cvxopt.matrix(-exp_rets.values).T
+            h = cvxopt.matrix(-1.0)
+
+        # Constraints Ax = b
+        # sum(x) = 1
+        A = cvxopt.matrix(1.0, (1, n))
+        b = cvxopt.matrix(1.0)
+
+        # Solve
+        cvxopt.solvers.options['show_progress'] = False
+        sol = cvxopt.solvers.qp(P, q, G, h, A, b)
+
+        if sol['status'] != 'optimal':
+            warnings.warn("Convergence problem")
+
+        # Put weights into a labeled series
+        weights = pd.Series(sol['x'], index=cov_mat.index)
+
+        # Rescale weights, so that sum(weights) = 1
+        weights /= weights.sum()
+
+        return weights
 
 
 def func(algo, index_id, trade_dates, look_back, sw_industry_code, **kwargs):
@@ -1376,58 +1751,68 @@ def multiprocessing_calc_portfolio_nav_by_industry(algo, index_id, trade_dates, 
 if __name__ == '__main__':
 
     index_id = '000906.SH'
-    begin_date = '2019-03-04'
+    stock_portfolio_ids = pd.Index(['SP.000000', 'SP.000100', 'SP.000200', 'SP.000400', 'SP.000800', 'SP.000900'])
+
+    begin_date = '2013-03-04'
     end_date = '2019-03-29'
     look_back = 244
-
-    trade_dates = ATradeDate.trade_date(begin_date=begin_date, end_date=end_date).rename('trade_date')
+    reindex = ATradeDate.trade_date(begin_date=begin_date, end_date=end_date).rename('trade_date')
 
     dict_portfolio = {}
     df_portfolio_nav = pd.DataFrame()
 
-    # dict_portfolio['MarketCap'] = StockPortfolioMarketValue(index_id, trade_dates, look_back)
+    # dict_portfolio['MarketCap'] = StockPortfolioMarketValue(index_id, reindex, look_back)
     # df_portfolio_nav['MarketCap'] = dict_portfolio['MarketCap'].calc_portfolio_nav()
 
-    # dict_portfolio['EqualWeight'] = StockPortfolioEqualWeight(index_id, trade_dates, look_back)
+    # dict_portfolio['EqualWeight'] = StockPortfolioEqualWeight(index_id, reindex, look_back)
     # df_portfolio_nav['EqualWeight'] = dict_portfolio['EqualWeight'].calc_portfolio_nav()
 
-    # dict_portfolio['LowVolatility'] = StockPortfolioLowVolatility(index_id, trade_dates, look_back, percentage=0.3)
+    # dict_portfolio['LowVolatility'] = StockPortfolioLowVolatility(index_id, reindex, look_back, percentage=0.3)
     # df_portfolio_nav['LowVolatility'] = dict_portfolio['LowVolatility'].calc_portfolio_nav()
     # dict_portfolio['LowVolatility'].portfolio_analysis()
     # dict_portfolio['LowVolatility'].portfolio_statistic('CS.000906')
 
-    # dict_portfolio['Momentum'] = StockPortfolioMomentum(index_id, trade_dates, look_back, percentage=0.3, exclusion=20)
+    # dict_portfolio['Momentum'] = StockPortfolioMomentum(index_id, reindex, look_back, percentage=0.3, exclusion=20)
     # tdf_portfolio_nav['Momentum'] = dict_portfolio['Momentum'].calc_portfolio_nav()
 
-    # dict_portfolio['SmallSize'] = StockPortfolioSmallSize(index_id, trade_dates, look_back, percentage=0.3)
+    # dict_portfolio['SmallSize'] = StockPortfolioSmallSize(index_id, reindex, look_back, percentage=0.3)
     # df_portfolio_nav['SmallSize'] = dict_portfolio['SmallSize'].calc_portfolio_nav()
 
-    # dict_portfolio['LowBeta'] = StockPortfolioLowBeta(index_id, trade_dates, look_back, percentage=0.3, benchmark_id='CS.000906')
+    # dict_portfolio['LowBeta'] = StockPortfolioLowBeta(index_id, reindex, look_back, percentage=0.3, benchmark_id='CS.000906')
     # df_portfolio_nav['LowBeta'] = dict_portfolio['LowBeta'].calc_portfolio_nav()
 
-    # dict_portfolio['HighBeta'] = StockPortfolioHighBeta(index_id, trade_dates, look_back, percentage=0.3, benchmark_id='CS.000906')
+    # dict_portfolio['HighBeta'] = StockPortfolioHighBeta(index_id, reindex, look_back, percentage=0.3, benchmark_id='CS.000906')
     # df_portfolio_nav['HighBeta'] = dict_portfolio['HighBeta'].calc_portfolio_nav()
 
-    # dict_portfolio['HighBetaAndLowBeta'] = StockPortfolioHighBetaAndLowBeta(index_id, trade_dates, look_back, percentage=0.6, benchmark_id='CS.000906', factor_weight={'high_beta': 0.5, 'low_beta':0.5})
+    # dict_portfolio['HighBetaAndLowBeta'] = StockPortfolioHighBetaAndLowBeta(index_id, reindex, look_back, percentage=0.6, benchmark_id='CS.000906', factor_weight={'high_beta': 0.5, 'low_beta':0.5})
     # df_portfolio_nav['HighBetaAndLowBeta'] = dict_portfolio['HighBetaAndLowBeta'].calc_portfolio_nav()
 
-    # dict_portfolio['LowBetaLowVolatility'] = StockPortfolioLowBetaLowVolatility(index_id, trade_dates, look_back, percentage_low_beta=0.6, percentage_low_volatility=0.5, benchmark_id='CS.000906')
+    # dict_portfolio['LowBetaLowVolatility'] = StockPortfolioLowBetaLowVolatility(index_id, reindex, look_back, percentage_low_beta=0.6, percentage_low_volatility=0.5, benchmark_id='CS.000906')
     # df_portfolio_nav['LowBetaLowVolatility'] = dict_portfolio['LowBetaLowVolatility'].calc_portfolio_nav()
 
-    # dict_portfolio['SectorNeutralLowVolatility'] = StockPortfolioSectorNeutralLowVolatility(index_id, trade_dates, look_back)
+    # dict_portfolio['SectorNeutralLowVolatility'] = StockPortfolioSectorNeutralLowVolatility(index_id, reindex, look_back)
     # df_portfolio_nav['SectorNeutralLowVolatility'] = dict_portfolio['SectorNeutralLowVolatility'].calc_portfolio_nav()
 
-    # dict_portfolio['SectorNeutralLowBeta'] = StockPortfolioSectorNeutralLowBeta(index_id, trade_dates, look_back, benchmark_id='CS.000905')
+    # dict_portfolio['SectorNeutralLowBeta'] = StockPortfolioSectorNeutralLowBeta(index_id, reindex, look_back, benchmark_id='CS.000905')
     # df_portfolio_nav['SectorNeutralLowBeta'] = dict_portfolio['SectorNeutralLowBeta'].calc_portfolio_nav()
 
-    # dict_portfolio['FamaMacbethRegression'] = StockPortfolioFamaMacbethRegression(index_id, trade_dates, look_back, trading_frequency=10, percentage=0.15)
+    # dict_portfolio['FamaMacbethRegression'] = StockPortfolioFamaMacbethRegression(index_id, reindex, look_back, trading_frequency=10, percentage=0.15)
     # df_portfolio_nav['FamaMacbethRegression'] = dict_portfolio['FamaMacbethRegression'].calc_portfolio_nav()
+
+    # dict_portfolio['FactorEqualWeight'] = FactorPortfolioEqualWeight(stock_portfolio_ids, reindex, look_back)
+    # df_portfolio_nav['FactorEqualWeight'] = dict_portfolio['FactorEqualWeight'].calc_portfolio_nav()
+
+    # dict_portfolio['FactorMaxDecorrelation'] = FactorPortfolioMaxDecorrelation(stock_portfolio_ids, reindex, look_back)
+    # df_portfolio_nav['FactorMaxDecorrelation'] = dict_portfolio['FactorMaxDecorrelation'].calc_portfolio_nav()
+
+    # dict_portfolio['FactorTangency']= FactorPortfolioTangency(stock_portfolio_ids, reindex, look_back)
+    # df_portfolio_nav['FactorTangency'] = dict_portfolio['FactorTangency'].calc_portfolio_nav()
 
     # df_portfolio_nav.to_csv('df_portfolio_nav.csv')
     # set_trace()
 
-    # multiprocessing_calc_portfolio_nav_by_industry('IndustryLowVolatility', index_id, trade_dates, look_back, percentage=0.30)
+    # multiprocessing_calc_portfolio_nav_by_industry('IndustryLowVolatility', index_id, reindex, look_back, percentage=0.30)
 
-    # multiprocessing_calc_portfolio_nav_by_industry('IndustryMomentum', index_id, trade_dates, look_back, percentage=0.3, exclusion=30)
+    # multiprocessing_calc_portfolio_nav_by_industry('IndustryMomentum', index_id, reindex, look_back, percentage=0.3, exclusion=30)
     # set_trace()
 
