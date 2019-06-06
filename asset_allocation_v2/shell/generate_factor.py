@@ -103,10 +103,10 @@ class YNStockFactor:
 
         df_descriptor = pd.merge(df_financial_descriptor, df_numerical_descriptor, how='left', left_index=True, right_index=True)
 
-        df_derivative_descriptor = self.df_derivative_indicator.loc[trade_date, ['free_float_market_value', 'pb', 'pe_ttm', 'pocf_ttm', 'pncf_ttm', 'ps_ttm', 'pdps_ttm']].unstack().T.reindex(stock_ids)
+        df_derivative_descriptor = self.df_derivative_indicator.loc[trade_date, ['float_market_value', 'pb', 'pe_ttm', 'pocf_ttm', 'pncf_ttm', 'ps_ttm', 'pdps_ttm']].unstack().T.reindex(stock_ids)
         df_derivative_descriptor[['pb', 'pe_ttm', 'pocf_ttm', 'pncf_ttm', 'ps_ttm', 'pdps_ttm']] = 1.0 / df_derivative_descriptor[['pb', 'pe_ttm', 'pocf_ttm', 'pncf_ttm', 'ps_ttm', 'pdps_ttm']]
         df_derivative_descriptor.loc[:, 'pdps_ttm'] = df_derivative_descriptor['pdps_ttm'].fillna(0.0)
-        df_derivative_descriptor.rename(columns={'pb': 'book_to_price', 'pe_ttm': 'earnings_to_price', 'pocf_ttm': 'ocf_to_price','pncf_ttm': 'ncf_to_price', 'ps_ttm': 'sales_to_price', 'pdps_ttm': 'dividend_yield', 'free_float_market_value': 'weight'}, inplace=True)
+        df_derivative_descriptor.rename(columns={'pb': 'book_to_price', 'pe_ttm': 'earnings_to_price', 'pocf_ttm': 'ocf_to_price','pncf_ttm': 'ncf_to_price', 'ps_ttm': 'sales_to_price', 'pdps_ttm': 'dividend_yield', 'float_market_value': 'weight'}, inplace=True)
 
         df_descriptor = pd.merge(df_descriptor, df_derivative_descriptor, how='left', left_index=True, right_index=True)
         df_descriptor = pd.merge(df_descriptor, df_sw, how='left', left_index=True, right_index=True)

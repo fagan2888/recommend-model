@@ -106,7 +106,7 @@ def load_a_stock_derivative_indicator_df(stock_id):
         t.c.S_INFO_WINDCODE.label('stock_id'),
         t.c.TRADE_DT.label('trade_date'),
         t.c.S_VAL_MV.label('total_market_value'),
-        t.c.S_VAL_MV.label('free_float_market_value'),
+        t.c.S_DQ_MV.label('float_market_value'),
         t.c.S_VAL_PB_NEW.label('pb'),
         t.c.S_VAL_PE_TTM.label('pe_ttm'),
         t.c.S_VAL_PCF_OCFTTM.label('pocf_ttm'),

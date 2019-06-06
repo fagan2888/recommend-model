@@ -40,7 +40,7 @@ def calc_stock_numerical_descriptor(df_return, df_derivative_indicator, stock_id
     df_stoq = pd.DataFrame(np.log(df_turnover.iloc[-63:].mean(skipna=True).replace(0, np.nan) * 21), columns=['quarterly_turnover'])
     df_stoa = pd.DataFrame(np.log(df_turnover.iloc[-252:].mean(skipna=True).replace(0, np.nan) * 21), columns=['annual_turnover'])
     #
-    df_mv = df_derivative_indicator_t['free_float_market_value'].reindex(stock_ids_t, axis=1)
+    df_mv = df_derivative_indicator_t['float_market_value'].reindex(stock_ids_t, axis=1)
     df_linear_size = pd.DataFrame(np.log(df_mv.iloc[-1].rename('linear_size')))
     # concat
     df_numerical_descriptor = pd.concat([df_strev, df_mtm, df_beta, df_stom, df_stoq, df_stoa, df_linear_size], axis=1, join='outer', sort=False)
