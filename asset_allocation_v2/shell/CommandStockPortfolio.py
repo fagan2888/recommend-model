@@ -1,7 +1,7 @@
 #coding=utf-8
 '''
 Created on: Mar. 19, 2019
-Modified on: Apr. 8, 2019
+Modified on: Jun. 11, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -103,7 +103,8 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     list_float_arg = [
         'percentage',
         'percentage_low_beta',
-        'percentage_low_volatility'
+        'percentage_low_volatility',
+        'percentage_high_dividend'
     ]
 
     list_pd_index_arg = [
@@ -145,10 +146,12 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
 
     try:
 
-        if stock_portfolio_id[:3] == 'SP.' or stock_portfolio_id == 'CS.':
+        if stock_portfolio_id[:3] == 'SP.' or stock_portfolio_id[:3] == 'CS.':
             class_name = f'StockPortfolio{algo}'
         elif stock_portfolio_id[:3] == 'FP.':
             class_name = f'FactorPortfolio{algo}'
+        else:
+            class_name = algo
 
         cls = getattr(stock_portfolio, class_name)
 
@@ -176,13 +179,16 @@ def pos_n_nav_update(stock_portfolio_info, begin_date, end_date):
     class_stock_portfolio.portfolio_analysis()
     if stock_portfolio_type == 1:
         dict_benchmark = {
-            '000016.SH': 'SH.000016',
-            '000300.SH': 'CS.000300',
-            '000905.SH': 'CS.000905',
-            '000906.SH': 'CS.000906'
+            '000016.SH': 'h00016.SH',
+            '000300.SH': 'h00300.CSI',
+            '000905.SH': 'h00905.CSI',
+            '000906.SH': 'h00906.CSI'
         }
         benchmark_id = dict_benchmark[kwargs.get('index_id', '000906.SH')]
-        class_stock_portfolio.portfolio_statistic(benchmark_id)
+        try:
+            class_stock_portfolio.portfolio_statistic(benchmark_id)
+        except np.linalg.LinAlgError:
+            print('numpy.linalg.LinAlgError: Matrix is not positive definite')
 
     engine = database.connection('asset')
     metadata = MetaData(bind=engine)

@@ -1,6 +1,7 @@
 #coding=utf-8
 '''
-Created at Dec. 28, 2018
+Created on: Dec. 28, 2018
+Modified on: Jun. 11, 2019
 Author: Shixun Su
 Contact: sushixun@licaimofang.com
 '''
@@ -12,6 +13,7 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 from ipdb import set_trace
 sys.path.append('shell')
+from db import wind_aindexmembers
 from trade_date import ATradeDate
 
 
@@ -159,4 +161,30 @@ def closing_date_of_report_period(date):
         return pd.Timestamp(date.year+1, 4, 30)
     else:
         raise ValueError('Invalid report period!')
+
+class IndexAdjustmentDate:
+
+    _adjustment_dates_dict = {}
+
+    @staticmethod
+    def load_adjustment_dates(index_id):
+
+        if index_id in IndexAdjustmentDate._adjustment_dates_dict:
+            return IndexAdjustmentDate._adjustment_dates_dict[index_id]
+        else:
+            df = wind_aindexmembers.load_a_index_historical_constituents(index_id)
+            ser = df.in_date.groupby(df.in_date).count()
+            IndexAdjustmentDate._adjustment_dates_dict[index_id] = ser.loc[ser>5].index.map(trade_date_before)
+            return IndexAdjustmentDate._adjustment_dates_dict[index_id]
+
+def last_adjustment_date(date, index_id):
+
+    adjustment_dates = IndexAdjustmentDate.load_adjustment_dates(index_id)
+
+    try:
+        date = adjustment_dates[adjustment_dates.get_loc(date, method='pad')]
+    except KeyError:
+        return np.nan
+
+    return date
 

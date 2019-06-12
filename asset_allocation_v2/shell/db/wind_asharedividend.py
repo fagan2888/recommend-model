@@ -28,6 +28,7 @@ def load_a_stock_dividend(stock_ids=None):
         t.c.EQY_RECORD_DT.label('eqy_record_date'),
         t.c.EX_DT.label('ex_date'),
         t.c.DVD_ANN_DT.label('dvd_ann_date'),
+        t.c.ANN_DT.label('ann_date'),
         t.c.STK_DVD_PER_SH.label('stock_dvd_per_sh'),
         t.c.CASH_DVD_PER_SH_PRE_TAX.label('cash_dvd_per_sh_pre_tax'),
         t.c.CASH_DVD_PER_SH_AFTER_TAX.label('cash_dvd_per_sh_after_tax'),
@@ -41,7 +42,7 @@ def load_a_stock_dividend(stock_ids=None):
     if stock_ids is not None:
         s = s.where(t.c.S_INFO_WINDCODE.in_(stock_ids))
 
-    df = pd.read_sql(s, engine, parse_dates=['eqy_record_date', 'ex_date', 'dvd_ann_date'])
+    df = pd.read_sql(s, engine, parse_dates=['eqy_record_date', 'ex_date', 'dvd_ann_date', 'ann_date'])
     df.sort_values(by=['stock_id', 'eqy_record_date'], inplace=True)
 
     return df

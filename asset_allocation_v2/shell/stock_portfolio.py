@@ -1,7 +1,7 @@
 #coding=utf-8
 '''
 Created on: Mar. 11, 2019
-Modified on: May. 17, 2019
+Modified on: Jun. 12, 2019
 Author: Shixun Su, Boyang Zhou, Ning Yang
 Contact: sushixun@licaimofang.com
 '''
@@ -26,7 +26,7 @@ from db import caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_fi
 from db import wind_asharecalendar
 from db import wind_aindexeodprices, wind_aindexmembers
 from db import wind_asharedescription, wind_ashareswindustriesclass, wind_ashareeodprices
-from db import wind_asharecapitalization, wind_asharefreefloat, wind_ashareeodderivativeindicator
+from db import wind_asharecapitalization, wind_asharefreefloat, wind_ashareeodderivativeindicator, wind_asharedividend
 from db import wind_ashareipo, wind_asharestockswap
 from db import factor_financial_statement
 from db import asset_sp_stock_portfolio, asset_sp_stock_portfolio_nav, asset_sp_stock_portfolio_pos
@@ -121,6 +121,7 @@ class StockPortfolioData:
         self.df_stock_swap = wind_asharestockswap.load_a_stock_swap(
             transferer_stock_ids=self.stock_pool.index
         )
+        self.df_stock_swap.dropna(inplace=True)
 
         self.stock_pool_total = wind_asharedescription.load_a_stock_code_info(
             stock_ids=self.stock_pool.index.union(self.df_stock_swap.targetcomp_stock_id)
@@ -142,6 +143,14 @@ class StockPortfolioData:
         self.df_stock_prc, self.df_stock_ret = self._load_stock_price_and_return()
 
         self.df_stock_total_share, self.df_stock_free_float_share, self.df_stock_total_market_value = self._load_stock_share_and_market_value()
+
+        self.df_dividend = wind_asharedividend.load_a_stock_dividend(
+            stock_ids=self.stock_pool.index
+        )
+
+        self.df_pdps_ttm = wind_ashareeodderivativeindicator.load_a_stock_derivative_indicator(
+            stock_ids=self.stock_pool.index
+        ).pdps_ttm
 
         # self.stock_market_data = caihui_tq_sk_dquoteindic.load_stock_market_data(
             # stock_ids=self.stock_pool.index,
@@ -168,7 +177,7 @@ class StockPortfolioData:
         for stock_id, stock_ipo in self.df_stock_ipo.iterrows():
 
             trade_date = trade_date_before(stock_ipo.ipo_date)
-            if trade_date not in self.trade_dates:
+            if trade_date not in self.trade_dates_total:
                 continue
 
             df_stock_prc.loc[trade_date, stock_id] = stock_ipo.ipo_price
@@ -189,24 +198,33 @@ class StockPortfolioData:
 
         df_stock_total_market_value = wind_ashareeodderivativeindicator.load_a_stock_total_market_value(
             stock_ids=self.stock_pool.index,
-            reindex=self.trade_dates,
+            reindex=self.trade_dates_total,
             fill_method='pad'
         )
 
         for stock_id, stock_ipo in self.df_stock_ipo.iterrows():
 
             trade_date = trade_date_before(stock_ipo.ipo_date)
-            if trade_date not in self.trade_dates:
+            if trade_date not in self.trade_dates_total:
                 continue
 
-            df_stock_total_share.loc[(stock_id, trade_date), :] = df_stock_total_share.loc[(stock_id, stock_ipo.ipo_date)]
+            try:
+                df_stock_total_share.loc[(stock_id, trade_date), :] = df_stock_total_share.loc[(stock_id, stock_ipo.ipo_date)]
+            except KeyError:
+                pass
+
             try:
                 df_stock_free_float_share.loc[(stock_id, trade_date), :] = df_stock_free_float_share.loc[(stock_id, stock_ipo.ipo_date)]
             except KeyError:
                 pass
+
             # df_stock_free_float_share.loc[(stock_id, trade_date), :] = stock_ipo.ipo_amount
-            df_stock_total_market_value.loc[trade_date, stock_id] = \
-                df_stock_total_share.loc[(stock_id, trade_date), 'total_share'] * stock_ipo.ipo_price
+
+            try:
+                df_stock_total_market_value.loc[trade_date, stock_id] = \
+                    df_stock_total_share.loc[(stock_id, trade_date), 'total_share'] * stock_ipo.ipo_price
+            except KeyError:
+                pass
 
         df_stock_total_share = df_stock_total_share.sort_index().reset_index()
         df_stock_total_share.loc[:, 'end_date'] = df_stock_total_share.begin_date.shift(-1)
@@ -221,7 +239,7 @@ class StockPortfolioData:
 
 class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
-    _ref_list = {}
+    _ref_dict = {}
 
     _variable_list_in_data = [
         'index_id',
@@ -244,7 +262,9 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         'df_stock_total_market_value',
         'stock_market_data',
         'stock_financial_data',
-        'df_stock_financial_descriptor'
+        'df_stock_financial_descriptor',
+        'df_dividend',
+        'df_pdps_ttm'
     ]
 
     _instance_variable_list = [
@@ -272,10 +292,10 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         sha1.update(ref.encode('utf-8'))
         ref = sha1.hexdigest()
 
-        if ref in StockPortfolio._ref_list:
-            self._data = StockPortfolio._ref_list[ref]
+        if ref in StockPortfolio._ref_dict:
+            self._data = StockPortfolio._ref_dict[ref]
         else:
-            self._data = StockPortfolio._ref_list[ref] = StockPortfolioData(index_id, reindex, look_back)
+            self._data = StockPortfolio._ref_dict[ref] = StockPortfolioData(index_id, reindex, look_back)
 
         self._df_stock_pos = None
         self._df_stock_pos_adjusted = None
@@ -363,9 +383,19 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         if self.df_stock_pos is not None:
             return self.df_stock_pos
 
-        ser_reindex = pd.Series(self.reindex, index=self.reindex)
-        df_stock_pos = pd.DataFrame(index=self.reindex, columns=self.stock_pool.index)
-        df_stock_pos.loc[:, :] = ser_reindex.apply(self._calc_stock_pos)
+        # ser_reindex = pd.Series(self.reindex, index=self.reindex)
+        # df_stock_pos = pd.DataFrame(index=self.reindex, columns=self.stock_pool.index)
+        # df_stock_pos.loc[:, :] = ser_reindex.apply(self._calc_stock_pos)
+
+        cpu_count = multiprocessing.cpu_count()
+        pool = multiprocessing.Pool(cpu_count//2)
+
+        res = pool.map(self._calc_stock_pos, self.reindex.to_list())
+
+        pool.close()
+        pool.join()
+
+        df_stock_pos = pd.DataFrame(res)
 
         self._df_stock_pos = df_stock_pos
 
@@ -458,6 +488,9 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
 
         print(f'max drawdown: {max_drawdown}, begin date: {max_drawdown_begin_date}, end date: {max_drawdown_end_date}.')
 
+        turnover = self.ser_turnover.mean()
+        print(f'turnover per day: {turnover}.')
+
         return portfolio_return, sharpe_ratio
 
     def portfolio_statistic(self, benchmark_id):
@@ -465,13 +498,13 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         if self.ser_portfolio_nav is None:
             self.calc_portfolio_nav()
 
-        ser_benchmark_nav = asset_sp_stock_portfolio_nav.load(benchmark_id) \
-            .nav.rename(benchmark_id)
+        # ser_benchmark_nav = asset_sp_stock_portfolio_nav.load(benchmark_id) \
+            # .nav.rename(benchmark_id)
+
+        ser_benchmark_nav = wind_aindexeodprices.load_a_index_nav_ser(benchmark_id)
 
         if ser_benchmark_nav.size == 0:
-
             print(f'Benchmark {benchmark_id} doesn\'t exist.')
-
             return
 
         # statistic_tools_multifactor.OLS_compare_summary(self.ser_portfolio_nav, ser_benchmark_nav)
@@ -606,6 +639,7 @@ class StockPortfolioLowVolatility(StockPortfolio):
         df_stock_ret = self._load_stock_return(trade_date, stock_ids, fillna=False)
 
         ser_stock_volatility = df_stock_ret.std()
+        ser_stock_volatility.loc[df_stock_ret.isna().sum()>(df_stock_ret.shape[0]//2)] = np.nan
 
         # Low volatility condition quantile as percentage
         portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
@@ -708,9 +742,11 @@ class StockPortfolioLowBeta(StockPortfolio):
 
         super(StockPortfolioLowBeta, self).__init__(index_id, reindex, look_back, **kwargs)
 
-        df_benchmark_nav = asset_sp_stock_portfolio_nav.load(self.benchmark_id)
-        self._ser_benchmark_nav = df_benchmark_nav.nav.rename(self.benchmark_id)
-        self._ser_benchmark_inc = df_benchmark_nav.inc.rename(self.benchmark_id)
+        # df_benchmark_nav = asset_sp_stock_portfolio_nav.load(self.benchmark_id)
+        # self._ser_benchmark_nav = df_benchmark_nav.nav.rename(self.benchmark_id)
+        # self._ser_benchmark_inc = df_benchmark_nav.inc.rename(self.benchmark_id)
+        self._ser_benchmark_nav = self.ser_index_nav
+        self._ser_benchmark_inc = self._ser_benchmark_nav.pct_change().iloc[1:]
 
     # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000829
     def _calc_stock_pos(self, trade_date):
@@ -897,6 +933,7 @@ class StockPortfolioSectorNeutral(StockPortfolioMarketValue):
 
             class_name = self.__class__.__name__
             algo = re.sub('StockPortfolioSectorNeutral', '', class_name, count=1)
+            algo = re.sub('New', '', algo, count=1)
             func_name = '_calc' + re.sub('(?P<l>[A-Z]+)', lambda x: '_'+x.group('l').lower(), algo)
 
             if not hasattr(self, func_name):
@@ -964,6 +1001,285 @@ class StockPortfolioSectorNeutralLowBeta(StockPortfolioSectorNeutral, StockPortf
     def __init__(self, index_id, reindex, look_back, **kwargs):
 
         super(StockPortfolioSectorNeutralLowBeta, self).__init__(index_id, reindex, look_back, **kwargs)
+
+
+class StockPortfolioHighDividend(StockPortfolio):
+
+    _kwargs_list = [
+        'percentage'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioHighDividend, self).__init__(index_id, reindex, look_back, **kwargs)
+
+    def _calc_stock_pos(self, trade_date):
+
+        stock_ids = self._load_stock_ids(trade_date)
+
+        high_dividend_stock_ids, ser_high_dividend_stock_weight = self._calc_high_dividend(trade_date, stock_ids, self.percentage)
+
+        # low_volatility_stock_id, low_volatility_volatility = self._calc_low_volatility(trade_date, ser_pdps_ttm_selected.index, self.low_volatility_percentage)
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[high_dividend_stock_ids] = ser_high_dividend_stock_weight.fillna(0.0)
+
+        return stock_pos
+
+    def _calc_high_dividend(self, trade_date, stock_ids, percentage):
+
+        df_stock_dividend_recent3years = self._load_stock_dividend_recent3years(trade_date, stock_ids)
+
+        ser_stock_dividend_num_recent3years = df_stock_dividend_recent3years.stock_id.groupby(df_stock_dividend_recent3years.stock_id).count()
+        ser_stock_dividend_num_recent3years.loc[ser_stock_dividend_num_recent3years>0] = 0
+        ser_stock_dividend_num_recent3years = ser_stock_dividend_num_recent3years.reindex(stock_ids).fillna(0)
+
+        ser_pdps_ttm = self._load_stock_pdps_ttm(trade_date, stock_ids)
+
+        df = pd.DataFrame({'dividend_num':ser_stock_dividend_num_recent3years, 'pdps_ttm': ser_pdps_ttm})
+
+        portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
+        high_dividend_stock_ids = df.sort_values(by=['dividend_num', 'pdps_ttm'], ascending=False).iloc[:portfolio_size].index
+
+        ser_high_dividend_stock_weight = ser_pdps_ttm.loc[high_dividend_stock_ids]
+        ser_high_dividend_stock_weight /= ser_high_dividend_stock_weight.sum()
+
+        return high_dividend_stock_ids, ser_high_dividend_stock_weight
+
+    def _load_stock_pdps_ttm(self, trade_date, stock_ids):
+
+        df_pdps_ttm = self.df_pdps_ttm.loc[trade_date+relativedelta(years=-3):trade_date, stock_ids]
+        df_pdps_ttm = 1.0 / df_pdps_ttm
+
+        ser_pdps_ttm_recent3years_avg = df_pdps_ttm.mean(axis=0)
+
+        return ser_pdps_ttm_recent3years_avg
+
+    def _load_stock_dividend_recent3years(self, trade_date, stock_ids):
+
+        df_stock_dividend_recent3years = self.df_dividend.loc[
+            (self.df_dividend.ann_date<=trade_date) &
+            (self.df_dividend.ann_date>=trade_date+relativedelta(years=-3, month=1, day=1)) &
+            (self.df_dividend.stock_id.isin(stock_ids)) &
+            (self.df_dividend.cash_dvd_per_sh_pre_tax>0.0)
+        ]
+
+        return df_stock_dividend_recent3years
+
+
+class StockPortfolioHighDividendLowVolatility(StockPortfolioHighDividend, StockPortfolioLowVolatility):
+
+    _kwargs_list = [
+        'percentage_high_dividend',
+        'percentage_low_volatility'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioHighDividendLowVolatility, self).__init__(index_id, reindex, look_back, **kwargs)
+
+    def _calc_stock_pos(self, trade_date):
+
+        stock_ids = self._load_stock_ids(trade_date)
+
+        high_dividend_stock_ids, ser_high_dividend_stock_weight = self._calc_high_dividend(trade_date, stock_ids, self.percentage_high_dividend)
+        high_dividend_low_volatility_stock_ids, ser_low_volatility_stock_weight = self._calc_low_volatility(trade_date, high_dividend_stock_ids, self.percentage_low_volatility)
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[high_dividend_low_volatility_stock_ids] = ser_low_volatility_stock_weight.fillna(0.0)
+
+        return stock_pos
+
+    def _calc_high_dividend(self, trade_date, stock_ids, percentage):
+
+        df_stock_dividend_recent3years = self._load_stock_dividend_recent3years(trade_date, stock_ids)
+
+        ser_stock_dividend_num_recent3years = df_stock_dividend_recent3years.stock_id.groupby(df_stock_dividend_recent3years.stock_id).count()
+        ser_stock_dividend_num_recent3years.loc[ser_stock_dividend_num_recent3years>3] = 3
+        ser_stock_dividend_num_recent3years = ser_stock_dividend_num_recent3years.reindex(stock_ids).fillna(0)
+
+        ser_pdps_ttm = self._load_stock_pdps_ttm(trade_date, stock_ids)
+
+        df = pd.DataFrame({'dividend_num':ser_stock_dividend_num_recent3years, 'pdps_ttm': ser_pdps_ttm})
+
+        portfolio_size = self._calc_portfolio_size(stock_ids.size, percentage)
+        high_dividend_stock_ids = df.sort_values(by=['dividend_num', 'pdps_ttm'], ascending=False).iloc[:portfolio_size].index
+
+        ser_high_dividend_stock_weight = ser_pdps_ttm.loc[high_dividend_stock_ids]
+        ser_high_dividend_stock_weight /= ser_high_dividend_stock_weight.sum()
+
+        return high_dividend_stock_ids, ser_high_dividend_stock_weight
+
+    def _load_stock_pdps_ttm(self, trade_date, stock_ids):
+
+        df_pdps_ttm = self.df_pdps_ttm.loc[trade_date+relativedelta(years=-3):trade_date, stock_ids]
+
+        ser_pdps_ttm_recent3years_avg = df_pdps_ttm.mean(axis=0)
+
+        return ser_pdps_ttm_recent3years_avg
+
+    def _load_stock_dividend_recent3years(self, trade_date, stock_ids):
+
+        df_stock_dividend_recent3years = self.df_dividend.loc[
+            (self.df_dividend.ann_date<=trade_date) &
+            (self.df_dividend.ann_date>=trade_date+relativedelta(years=-3, month=1, day=1)) &
+            (self.df_dividend.stock_id.isin(stock_ids)) &
+            (self.df_dividend.cash_dvd_per_sh_pre_tax>0.0)
+        ]
+
+        return df_stock_dividend_recent3years
+
+
+class StockPortfolioLowVolatilityNew(StockPortfolioLowVolatility):
+
+    _kwargs_list = [
+        'percentage'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioLowVolatilityNew, self).__init__(index_id, reindex, look_back, **kwargs)
+
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/000803
+    def _calc_stock_pos(self, trade_date):
+
+        stock_ids = self._load_stock_ids(trade_date)
+
+        last_adjustment_trade_date = last_adjustment_date(trade_date, self.index_id)
+        last_adjusted_stock_ids = self._load_stock_ids(last_adjustment_trade_date)
+
+        low_volatility_stock_ids, _ = self._calc_low_volatility(last_adjustment_trade_date, last_adjusted_stock_ids, self.percentage)
+        low_volatility_stock_ids = low_volatility_stock_ids.intersection(stock_ids)
+        _, ser_low_volatility_stock_weight = self._calc_low_volatility(trade_date, low_volatility_stock_ids, 1.0)
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[low_volatility_stock_ids] = ser_low_volatility_stock_weight.fillna(0.0)
+
+        return stock_pos
+
+
+class StockPortfolioLowBetaLowVolatilityNew(StockPortfolioLowBetaLowVolatility):
+
+    _kwargs_list = [
+        'percentage_low_beta',
+        'percentage_low_volatility',
+        'benchmark_id'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioLowBetaLowVolatilityNew, self).__init__(index_id, reindex, look_back, **kwargs)
+
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/930985
+    def _calc_stock_pos(self, trade_date):
+
+        stock_ids = self._load_stock_ids(trade_date)
+
+        last_adjustment_trade_date = last_adjustment_date(trade_date, self.index_id)
+        last_adjusted_stock_ids = self._load_stock_ids(last_adjustment_trade_date)
+
+        low_beta_stock_ids, _ = self._calc_low_beta(last_adjustment_trade_date, last_adjusted_stock_ids, self.percentage_low_beta)
+        low_beta_stock_ids = low_beta_stock_ids.intersection(stock_ids)
+        low_beta_low_volatility_stock_ids, _ = self._calc_low_volatility(trade_date, low_beta_stock_ids, self.percentage_low_volatility)
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[low_beta_low_volatility_stock_ids] = 1.0 / low_beta_low_volatility_stock_ids.size
+
+        return stock_pos
+
+
+class StockPortfolioSectorNeutralNew(StockPortfolioSectorNeutral):
+
+    _kwargs_list = [
+        'percentage'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioSectorNeutralNew, self).__init__(index_id, reindex, look_back, **kwargs)
+
+    # Reference: http://www.csindex.com.cn/zh-CN/indices/index-detail/930846
+    def _calc_stock_pos(self, trade_date):
+
+        stock_ids = self._load_stock_ids(trade_date)
+
+        last_adjustment_trade_date = last_adjustment_date(trade_date, self.index_id)
+        last_adjusted_stock_ids = self._load_stock_ids(last_adjustment_trade_date)
+
+        sector_neutral_stock_ids, _ = self._calc_sector_neutral(last_adjustment_trade_date, last_adjusted_stock_ids, self.percentage)
+        sector_neutral_stock_ids = sector_neutral_stock_ids.intersection(stock_ids)
+        _, ser_sector_neutral_stock_weight = self._calc_sector_neutral(trade_date, sector_neutral_stock_ids, 1.0)
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[sector_neutral_stock_ids] = ser_sector_neutral_stock_weight.fillna(0.0)
+
+        return stock_pos
+
+
+class StockPortfolioSectorNeutralLowVolatilityNew(StockPortfolioSectorNeutralNew, StockPortfolioLowVolatility):
+
+    _kwargs_list = [
+        'percentage'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioSectorNeutralLowVolatilityNew, self).__init__(index_id, reindex, look_back, **kwargs)
+
+
+class StockPortfolioHighDividendNew(StockPortfolioHighDividend):
+
+    _kwargs_list = [
+        'percentage'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioHighDividendNew, self).__init__(index_id, reindex, look_back, **kwargs)
+
+    def _calc_stock_pos(self, trade_date):
+
+        stock_ids = self._load_stock_ids(trade_date)
+
+        last_adjustment_trade_date = last_adjustment_date(trade_date, self.index_id)
+        last_adjusted_stock_ids = self._load_stock_ids(last_adjustment_trade_date)
+
+        high_dividend_stock_ids, _ = self._calc_high_dividend(last_adjustment_trade_date, last_adjusted_stock_ids, self.percentage)
+        high_dividend_stock_ids = high_dividend_stock_ids.intersection(stock_ids)
+        _, ser_high_dividend_stock_weight = self._calc_high_dividend(trade_date, high_dividend_stock_ids, 1.0)
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[high_dividend_stock_ids] = ser_high_dividend_stock_weight.fillna(0.0)
+
+        return stock_pos
+
+
+class StockPortfolioHighDividendLowVolatilityNew(StockPortfolioHighDividendLowVolatility):
+
+    _kwargs_list = [
+        'percentage_high_dividend',
+        'percentage_low_volatility'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+
+        super(StockPortfolioHighDividendLowVolatilityNew, self).__init__(index_id, reindex, look_back, **kwargs)
+
+    def _calc_stock_pos(self, trade_date):
+
+        stock_ids = self._load_stock_ids(trade_date)
+
+        last_adjustment_trade_date = last_adjustment_date(trade_date, self.index_id)
+        last_adjusted_stock_ids = self._load_stock_ids(last_adjustment_trade_date)
+
+        high_dividend_stock_ids, ser_high_dividend_stock_weight = self._calc_high_dividend(last_adjustment_trade_date, last_adjusted_stock_ids, self.percentage_high_dividend)
+        high_dividend_stock_ids = high_dividend_stock_ids.intersection(stock_ids)
+        high_dividend_low_volatility_stock_ids, ser_low_volatility_stock_weight = self._calc_low_volatility(trade_date, high_dividend_stock_ids, self.percentage_low_volatility)
+
+        stock_pos = pd.Series(0.0, index=stock_ids, name=trade_date)
+        stock_pos.loc[high_dividend_low_volatility_stock_ids] = ser_low_volatility_stock_weight.fillna(0.0)
+
+        return stock_pos
 
 
 class StockPortfolioIndustry(StockPortfolio):
@@ -1401,6 +1717,7 @@ class FactorPortfolioData(StockPortfolioData):
         self.df_stock_swap = wind_asharestockswap.load_a_stock_swap(
             transferer_stock_ids=self.stock_pool.index
         )
+        self.df_stock_swap.dropna(inplace=True)
 
         self.df_stock_ipo = wind_ashareipo.load_a_stock_ipo_info(
             stock_ids=self.stock_pool.index
@@ -1416,7 +1733,7 @@ class FactorPortfolioData(StockPortfolioData):
 
 class FactorPortfolio(StockPortfolio, metaclass=MetaClassPropertyFuncGenerater):
 
-    _ref_list = {}
+    _ref_dict = {}
 
     _variable_list_in_data = [
         'stock_portfolio_ids',
@@ -1462,10 +1779,10 @@ class FactorPortfolio(StockPortfolio, metaclass=MetaClassPropertyFuncGenerater):
         sha1.update(ref.encode('utf-8'))
         ref = sha1.hexdigest()
 
-        if ref in FactorPortfolio._ref_list:
-            self._data = FactorPortfolio._ref_list[ref]
+        if ref in FactorPortfolio._ref_dict:
+            self._data = FactorPortfolio._ref_dict[ref]
         else:
-            self._data = FactorPortfolio._ref_list[ref] = FactorPortfolioData(stock_portfolio_ids, reindex, look_back)
+            self._data = FactorPortfolio._ref_dict[ref] = FactorPortfolioData(stock_portfolio_ids, reindex, look_back)
 
         self._df_factor_pos = None
         self._df_stock_pos = None
