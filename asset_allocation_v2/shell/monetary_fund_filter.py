@@ -104,4 +104,5 @@ if __name__ == '__main__':
 
     mff = MonetaryFundFilter()
     mff.handle()
+    print(mff.fund_scale)
 

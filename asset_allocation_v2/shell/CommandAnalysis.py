@@ -883,7 +883,7 @@ def benchmark(ctx):
 
     dfs = []
     for i in range(0, 10):
-        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 9' % i
         df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
         df.columns = ['risk_' + str(i)]
         dfs.append(df)
@@ -1166,8 +1166,11 @@ def allocate_benchmark_comp(ctx):
     cols = ['风险1', '风险2', '风险3', '风险4', '风险5', '风险6', '风险7', '风险8', '风险9', '风险10','风险1比较基准','风险2比较基准', '风险3比较基准', '风险4比较基准', '风险5比较基准', '风险6比较基准', '风险7比较基准', '风险8比较基准', '风险9比较基准', '风险10比较基准']
     df = df[cols]
 
+    df.to_csv('online_benchmark.csv', encoding='gbk')
+
     result_df = pd.DataFrame(columns = df.columns)
     last_day = df.index[-1]
+    print(last_day)
     result_df.loc[df.index[-1].strftime('%Y-%m-%d') + ' 当日'] = df.pct_change().iloc[-1]
     result_df.loc[df.index[-1].strftime('%Y-%m-%d') + ' 过去一周'] = df.loc[last_day] / df.loc[last_day - timedelta(weeks = 1)] - 1
     result_df.loc[df.index[-1].strftime('%Y-%m-%d') + ' 过去一月'] = df.loc[last_day] / df.loc[last_day - timedelta(days = 31)] - 1
@@ -1243,7 +1246,7 @@ def pool_rank(ctx):
         ra_pool_nav_t = ra_pool_nav.loc[ra_pool_nav.ra_pool.isin(ra_pool)].copy()
         dates = pd.date_range(datetime.now().date() - timedelta(400) , datetime.now().date())
         dates = dates[0:-1]
-        #print(dates)
+        print(dates)
         date_list_begin = [dates[-2].strftime('%Y-%m-%d'), dates[-7].strftime('%Y-%m-%d'), dates[-31].strftime('%Y-%m-%d'), dates[-91].strftime('%Y-%m-%d'), dates[-182].strftime('%Y-%m-%d') , dates[-365].strftime('%Y-%m-%d')]
         date_end = dates[-1].strftime('%Y-%m-%d')
         ra_pool_nav_t = ra_pool_nav_t.reset_index()
@@ -1449,8 +1452,8 @@ def average_allocate_test(ctx):
     df = pd.DataFrame(data, index=ds)
     df.to_csv('average_allocate_test.csv')
 
-def user_holding_risk_asset(ctx):
-    dates = pd.date_range('2016-07-01','2019-04-16')
+def user_holding_risk_asset():
+    dates = pd.date_range('2016-07-01','2019-06-11')
     month_last_days = []
     for k, v in dates.groupby(dates.strftime('%Y-%m')).items():
         month_last_days.append(v[-1])
@@ -1482,6 +1485,7 @@ def user_holding_risk_asset(ctx):
     df = df.groupby(level = [0,1]).sum()
     df = df.unstack()
     df = df / (1e8)
+    df.index.name = 'date'
     df.to_csv('user_holding.csv')
     print(df)
     session.commit()
@@ -1493,7 +1497,7 @@ def user_holding_risk_asset(ctx):
 @click.pass_context
 def user_holding_fund_company(ctx):
 
-    ctx.invoke(user_holding_risk_asset)
+    #user_holding_risk_asset()
 
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
@@ -1532,7 +1536,7 @@ def user_holding_fund_company(ctx):
     df = df.unstack().fillna(0.0)
 
     user_holding_df = pd.read_csv('user_holding.csv', index_col = ['date'], parse_dates = ['date'])
-    user_holding_df = user_holding_df.iloc[1:-1].fillna(0.0) * 10000
+    user_holding_df = user_holding_df.iloc[1:].fillna(0.0) * 10000
 
 
     alloc_id_risk = {
@@ -1567,3 +1571,37 @@ def user_holding_fund_company(ctx):
     df = pd.concat(dfs ,axis = 0)
     print(df)
     df.to_csv('company_amount.csv', encoding='gbk')
+
+
+#宏观观点数据
+@analysis.command()
+@click.pass_context
+def ra_bl_view(ctx):
+    db = database.connection('asset')
+    metadata = MetaData(bind =  db)
+    t = Table('ra_bl_view', metadata, autoload = True)
+    columns = [
+        t.c.bl_date,
+        t.c.bl_index_id,
+        t.c.bl_view,
+    ]
+
+    s = select(columns).where(t.c.globalid == 'BL.000001')
+    df = pd.read_sql(s, db, index_col = ['bl_date', 'bl_index_id'], parse_dates = True)
+    df = df.unstack()
+    df.to_csv('macro_view.csv')
+    pass
+
+
+#宏观观点数据
+@analysis.command()
+@click.pass_context
+def pool_nav(ctx):
+    nav_pool = asset_ra_pool_nav.load_series('11210100')
+    portfolio_nav = asset_ra_portfolio_nav.load_series('PO.000010', 9)
+    nav_pool = nav_pool.reindex(nav_pool.index | portfolio_nav.index).fillna(method = 'pad').loc[portfolio_nav.index].drop_duplicates()
+    nav_pool = nav_pool[nav_pool.index >= '2012-08-03']
+    nav_pool = nav_pool / nav_pool.iloc[0]
+    print(nav_pool)
+    nav_pool.to_csv('tmp.csv')
+    pass

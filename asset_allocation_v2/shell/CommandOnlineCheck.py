@@ -236,14 +236,14 @@ def check(ctx):
     if mz_asset_nav_check(targetDate):
         pass
     else:
-        return
+        pass
     print()
 
     #检查宏观观点
     if macroview_check(targetDate):
         pass
     else:
-        return
+        pass
     print()
 
     #检查协方差矩阵
@@ -268,7 +268,7 @@ def check(ctx):
     if turnover_check(targetDate):
         pass
     else:
-        return
+        pass
     print()
 
 

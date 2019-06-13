@@ -35,8 +35,6 @@ def load(id_, index_id):
         t.c.bl_date,
         t.c.bl_view,
     ]
-
     s = select(columns).where(t.c.globalid == id_).where(t.c.bl_index_id == index_id)
     df = pd.read_sql(s, db, index_col = ['bl_date'], parse_dates = True)
-
     return df

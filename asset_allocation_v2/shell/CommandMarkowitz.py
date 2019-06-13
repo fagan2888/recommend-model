@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-# from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzALayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, CppiAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzALayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, CppiAllocate, LastMonthViewIndexAllocate, RaViewIndexAllocate
 from asset_allocate import *
 from trade_date import ATradeDate
 from view import View
@@ -926,10 +926,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = df.T
         df = df.groupby(df.index).sum()
         df = df.T
-        #trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
-        #df = df.reindex(trade_date)
-        #df = df.fillna(method = 'pad')
-        #df = df.dropna()
+        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        df = df.reindex(trade_date)
+        df = df.fillna(method = 'pad')
+        df = df.dropna()
 
     elif algo == 2:
 
@@ -1238,6 +1238,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         allocate = MzLayerFixRiskCovSampleBlAllocate('ALC.000001', assets, views, trade_date, lookback, smooth=smooth, data_period=data_period, risk=upper_risk, cov_algo=cov_algo, bound=bounds)
         df = allocate.m_allocate()
 
+
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
@@ -1267,15 +1268,15 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
     #
     df = df.round(4)             # 四舍五入到万分位
 
+    print(df.tail(26))
     # 不需要进行四周平滑的algo id
-    no_rolling_algos = [1, 16, 17, 18, 19]
+    no_rolling_algos = [1, 16, 17, 18, 19, 22]
     if algo in no_rolling_algos:
         pass
     else:
     #每四周做平滑
         df = df.rolling(window = 4, min_periods = 1).mean()
 
-    print(df.tail(26))
     if optappend:
         df = df.iloc[3:,:]
 
