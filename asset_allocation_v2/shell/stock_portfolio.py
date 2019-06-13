@@ -20,7 +20,7 @@ import math
 import hashlib
 import re
 import copy
-# from ipdb import set_trace
+from ipdb import set_trace
 sys.path.append('shell')
 from db import caihui_tq_sk_basicinfo, caihui_tq_sk_dquoteindic, caihui_tq_sk_finindic
 from db import wind_asharecalendar
@@ -37,6 +37,8 @@ from util_timestamp import *
 import statistic_tools_multifactor
 from db import database
 from config import *
+from db import factor_sf_stock_factor_exposure
+import statsmodels.api as sm
 
 
 logger = logging.getLogger(__name__)
@@ -304,7 +306,7 @@ class StockPortfolio(metaclass=MetaClassPropertyFuncGenerater):
         self._ser_portfolio_inc = None
         self._ser_turnover = None
 
-    def calc_portfolio_nav(self, considering_status=False, considering_fee=False):
+    def calc_portfolio_nav(self, considering_status=False, considering_fee=True):
 
         self.calc_stock_pos_days()
 
@@ -2035,6 +2037,90 @@ class FactorPortfolioTangency(FactorPortfolio):
         return weights
 
 
+class StockPortfolioMultiFactor(StockPortfolio):
+
+    _kwargs_list = [
+        'factor_weighted_method',
+        'select_num',
+        'style_factor',
+        'trading_frequency'
+    ]
+
+    def __init__(self, index_id, reindex, look_back, **kwargs):
+        super(StockPortfolioMultiFactor, self).__init__(index_id, reindex, look_back, **kwargs)
+        self.df_stock_factor_exposure = factor_sf_stock_factor_exposure.load_a_stock_factor_exposure(stock_ids=self.stock_pool.index, style_factor=self.style_factor)
+        self.df_factor_return = factor_sf_stock_factor_exposure.load_factor_return(self.style_factor)
+        self.df_factor_residual_return = self._calc_residual_return()
+
+    def _calc_stock_pos(self, trade_date):
+        # calculate factor weight
+        min_count = 50
+        change_pos_dates_t = self.reindex[::self.trading_frequency].copy()
+        temp_variable = 0
+        if trade_date not in change_pos_dates_t:
+            change_pos_dates_t = change_pos_dates_t[change_pos_dates_t < trade_date]
+            trade_date = change_pos_dates_t[-1]
+        else:
+            temp_variable = 1
+        last_trade_date = self.reindex_total[list(self.reindex_total).index(trade_date) - 1]
+        df_factor_residual_return_t = self.df_factor_residual_return.loc[:last_trade_date].iloc[::-self.trading_frequency].sort_index().copy()
+        if df_factor_residual_return_t.shape[0] < min_count:
+            ser_weight_t = pd.Series(data=1/len(self.style_factor), index=self.style_factor)
+            negative_factor = ['quality_risk', 'linear_size', 'non_linear_size', 'liquidity', 'short_term_reverse']
+            for i_index in ser_weight_t.index:
+                if i_index in negative_factor:
+                    ser_weight_t[i_index] = -1 * ser_weight_t[i_index]
+        else:
+            if self.factor_weighted_method == 'sharpe_ratio':
+                numerator_t = self.df_factor_return.loc[:trade_date].iloc[:-1].mean()
+                denominator_t = df_factor_residual_return_t.std()
+                ser_weight_t = numerator_t / denominator_t
+            elif self.factor_weighted_method == 'min_variance':
+                negative_factor = ['quality_risk', 'linear_size', 'non_linear_size', 'liquidity', 'short_term_reverse']
+                for i_index in df_factor_residual_return_t.columns:
+                    if i_index in negative_factor:
+                        df_factor_residual_return_t[i_index] = -1 * df_factor_residual_return_t[i_index]
+                covariance_t = calc_covariance.calc_covariance(data=df_factor_residual_return_t, lookback_period=128, H_L_vol=32, Lags_vol=2, H_L_corr=64, Lags_corr=2, Predict_period=1)
+                P_t = matrix(covariance_t)
+                q_t = matrix(np.zeros((covariance_t.shape[0], 1)))
+                G_t = matrix(np.eye(covariance_t.shape[0]) * -1)
+                h_t = matrix(np.zeros(covariance_t.shape[0]))
+                A_t = matrix(np.ones(covariance_t.shape[0]).reshape(1, -1))
+                b_t = matrix([1.0])
+                solvers.options['show_progress'] = False  # Notice
+                sol = solvers.qp(P=P_t, q=q_t, G=G_t, h=h_t, A=A_t, b=b_t)
+                opt_t = np.array(sol['x']).T[0]
+                ser_weight_t = pd.Series(opt_t, index=df_factor_residual_return_t.columns)
+                #
+                negative_factor = ['quality_risk', 'linear_size', 'non_linear_size', 'liquidity', 'short_term_reverse']
+                for i_index in ser_weight_t.index:
+                    if i_index in negative_factor:
+                        ser_weight_t[i_index] = -1 * ser_weight_t[i_index]
+            ser_weight_t = ser_weight_t / ser_weight_t.abs().sum()
+        # calculate stock score
+        if temp_variable == 1:
+            print(ser_weight_t)
+        stock_ids = self._load_stock_ids(trade_date)
+        df_stock_factor_exposure_t = self.df_stock_factor_exposure.loc[last_trade_date].reindex(stock_ids).copy()
+        df_stock_factor_exposure_t['score'] = 0.0
+        for i_style in self.style_factor:
+            df_stock_factor_exposure_t['score'] = df_stock_factor_exposure_t['score'] + df_stock_factor_exposure_t[i_style] * ser_weight_t[i_style]
+        df_stock_factor_exposure_t.sort_values(by='score', inplace=True, ascending=False)
+        stock_pos = pd.Series(1.0 / self.select_num, index=df_stock_factor_exposure_t.iloc[:self.select_num].index, name=trade_date)
+        return stock_pos
+
+    def _calc_residual_return(self):
+        trade_dates = self.df_factor_return.sort_index().index
+        df_factor_residual_return = pd.DataFrame()
+        for last_trade_date, trade_date in zip(trade_dates[:-self.trading_frequency], trade_dates[self.trading_frequency:]):
+            expected_return_t = self.df_factor_return.loc[:last_trade_date].mean(axis=0)
+            real_return_t = self.df_factor_return.loc[trade_date]
+            df_factor_residual_return_t = pd.DataFrame(real_return_t - expected_return_t).T
+            df_factor_residual_return_t['trade_date'] = trade_date
+            df_factor_residual_return = df_factor_residual_return.append(df_factor_residual_return_t, ignore_index=True)
+        return df_factor_residual_return.set_index('trade_date')
+
+
 def func(algo, index_id, trade_dates, look_back, sw_industry_code, **kwargs):
 
     class_name = f'StockPortfolio{algo}'
@@ -2077,6 +2163,10 @@ if __name__ == '__main__':
 
     dict_portfolio = {}
     df_portfolio_nav = pd.DataFrame()
+    style_factor=['value', 'dividend_yield', 'quality_earnings', 'quality_risk', 'growth', 'linear_size', 'beta', 'liquidity']
+    dict_portfolio['MultiFactor'] = StockPortfolioMultiFactor(index_id, trade_dates, look_back, factor_weighted_method='sharpe_ratio', select_num=100, style_factor=style_factor, trading_frequency=10)
+    df_portfolio_nav['MultiFactor'] = dict_portfolio['MultiFactor'].calc_portfolio_nav()
+    set_trace()
 
     # dict_portfolio['MarketCap'] = StockPortfolioMarketValue(index_id, reindex, look_back)
     # df_portfolio_nav['MarketCap'] = dict_portfolio['MarketCap'].calc_portfolio_nav()
