@@ -237,9 +237,8 @@ def GLS_compare_summary(Y, X):
     Reference: help(statsmodels.regression.linear_model.get_robustcov_results)
     '''
     OLS_resid = sm.regression.linear_model.OLS(Y, X).fit(cov_type='HC1').resid
-    rho = IV2SLS(OLS_resid[1:],OLS_resid[:-1], None, None).fit().params[0]
+    rho = IV2SLS(OLS_resid[1:], OLS_resid[:-1], None, None).fit().params[0]
     sigma = rho ** sp.linalg.toeplitz(np.arange(len(OLS_resid)))
-
 
     GLS = sm.regression.linear_model.GLS(Y, X, sigma)
     # TODO: The same as statsmodels.regression.linear_model.RegressionResults.get_robustcov_results

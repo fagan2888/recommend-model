@@ -74,7 +74,7 @@ class YNStockFactor:
         df_descriptor = pd.concat(res)
         # write
         if not df_descriptor.empty:
-            return_str = factor_sf_stock_factor_exposure.write_factor(df_descriptor, table_name=table_name)
+            factor_sf_stock_factor_exposure.write_factor(df_descriptor, table_name=table_name)
 
         return df_descriptor
 

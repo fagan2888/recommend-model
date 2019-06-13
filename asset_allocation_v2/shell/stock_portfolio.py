@@ -30,15 +30,12 @@ from db import wind_asharecapitalization, wind_asharefreefloat, wind_ashareeodde
 from db import wind_ashareipo, wind_asharestockswap
 from db import factor_financial_statement
 from db import asset_sp_stock_portfolio, asset_sp_stock_portfolio_nav, asset_sp_stock_portfolio_pos
+from db import factor_sf_stock_factor_exposure
 from trade_date import ATradeDate
 import calc_covariance
 import calc_descriptor
 from util_timestamp import *
 import statistic_tools_multifactor
-from db import database
-from config import *
-from db import factor_sf_stock_factor_exposure
-import statsmodels.api as sm
 
 
 logger = logging.getLogger(__name__)
