@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzALayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, CppiAllocate, LastMonthViewIndexAllocate, RaViewIndexAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzALayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, CppiAllocate
 from asset_allocate import *
 from trade_date import ATradeDate
 from view import View
@@ -1227,6 +1227,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         confidence = float(argv.get('bl_confidence'))
         data_period = argv.get('data_period', 'week')
         cov_algo = argv.get('cov_algo')
+        '''
 
         asset_ids = list(assets.keys())
         views = {}
@@ -1239,6 +1240,11 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = allocate.m_allocate()
 
 
+=======
+        allocate = RaViewIndexAllocate('ALC.000001', assets, trade_date, lookback)
+        df = allocate.allocate()
+        '''
+        pass
     else:
         click.echo(click.style("\n unknow algo %d for %s\n" % (algo, markowitz_id), fg='red'))
         return;
