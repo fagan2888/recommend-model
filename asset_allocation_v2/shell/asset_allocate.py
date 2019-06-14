@@ -940,16 +940,21 @@ class CppiAllocate(Allocate):
                 view = bond_view.iloc[-1].ravel()[0]
             a = ws['PO.LRB010']
             b = ws['PO.IB0010']
-            if view == 1:
-                ws['120000039'] = ws['120000039'] * 0.5
-                ws['PO.LRB010'] = (1 - ws['120000039']) * a/(a+b)
-                ws['PO.IB0010'] = (1 - ws['120000039']) * b/(a+b)
-            elif view == -1:
-                ws['120000039'] = ws['120000039'] * 1.5
-                ws['PO.LRB010'] = (1 - ws['120000039']) * a/(a+b)
-                ws['PO.IB0010'] = (1 - ws['120000039']) * b/(a+b)
+            if a + b == 0.0:
+                ws['120000039'] = 1.0
+                ws['PO.LRB010'] = 0.0
+                ws['PO.IB0010'] = 0.0
             else:
-                pass
+                if view == 1:
+                    ws['120000039'] = ws['120000039'] * 0.5
+                    ws['PO.LRB010'] = (1 - ws['120000039']) * a/(a+b)
+                    ws['PO.IB0010'] = (1 - ws['120000039']) * b/(a+b)
+                elif view == -1:
+                    ws['120000039'] = ws['120000039'] * 1.5
+                    ws['PO.LRB010'] = (1 - ws['120000039']) * a/(a+b)
+                    ws['PO.IB0010'] = (1 - ws['120000039']) * b/(a+b)
+                else:
+                    pass
 
             for asset_id in list(ws.keys()):
                 pos_df.loc[day, asset_id] = ws[asset_id]

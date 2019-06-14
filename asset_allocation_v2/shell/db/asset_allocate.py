@@ -105,6 +105,20 @@ class on_online_cov(Base):
     created_at = Column(DateTime)
 
 
+class ra_pool_fund(Base):
+
+    __tablename__ = 'ra_pool_fund'
+
+    ra_pool = Column(String, primary_key = True)
+    ra_category = Column(Integer, primary_key = True)
+    ra_date = Column(Date, primary_key = True)
+    ra_fund_id = Column(Integer, primary_key = True)
+    ra_fund_code = Column(String)
+    ra_fund_level = Column(Integer)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
 
 
 def load_mz_markowitz_bounds(globalid):
