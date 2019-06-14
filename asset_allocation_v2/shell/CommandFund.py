@@ -230,3 +230,20 @@ def type_command(ctx, optid, optfund, optlist):
 
     for _, corr in df_corr.iterrows():
         corr_update(corr, codes)
+
+
+
+@fund.command()
+@click.pass_context
+def similar_corr_fund(ctx):
+    start_date = '2018-06-01'
+    end_date = '2019-06-01'
+    index = DBData.trade_date_lookback_index(end_date=end_date, lookback=52)
+    df_nav_bond = DBData.bond_fund_value(start_date, end_date)
+    df_nav_bond = df_nav_bond.reindex(index, method='pad')
+    df_nav_bond = df_nav_bond.dropna()
+    df_inc_bond = df_nav_bond.pct_change().fillna(0.0)
+    corr = df_inc_bond.corr()
+    corr = corr.loc['519782']
+    corr = corr.sort_values(ascending=False)
+    print(corr.head(100))

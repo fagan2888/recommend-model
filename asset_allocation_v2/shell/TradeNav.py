@@ -689,6 +689,7 @@ class TradeNav(object):
             amount = ((self.df_share['share'] + self.df_share['share_buying']) * self.df_share['nav'] + self.df_share['amount_bonusing']).sum()
             amount += (self.df_redeem['share'] * self.df_redeem['nav'] - self.df_redeem['fee']).sum() + self.cash
             self.nav[day] = amount
+            #print(day, amount)
             #
             # 记录业绩归因
             #

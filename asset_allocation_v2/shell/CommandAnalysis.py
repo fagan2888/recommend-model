@@ -25,7 +25,7 @@ from sqlalchemy import MetaData, Table, select, func, literal_column
 from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav, base_ra_fund_nav, asset_mz_highlow_pos, asset_ra_pool_nav, asset_ra_portfolio_pos, asset_allocate
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav, base_ra_fund_nav, asset_mz_highlow_pos, asset_ra_pool_nav, asset_allocate
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
@@ -1502,7 +1502,7 @@ def user_holding_risk_asset():
 @click.pass_context
 def user_holding_fund_company(ctx):
 
-    #user_holding_risk_asset()
+    user_holding_risk_asset()
 
     engine = database.connection('asset')
     Session = sessionmaker(bind=engine)
@@ -1767,3 +1767,61 @@ def could_market(ctx):
     df['none'][df.sum(axis = 1) == 0] = 4
     print(df)
     df.to_csv('tmp/could_market.csv')
+
+
+#基金池导入portfolio
+@analysis.command()
+@click.pass_context
+def pool_to_portfolio(ctx):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql_t = 'select ra_date, ra_fund_id, ra_fund_code from ra_pool_fund where ra_pool = 12201 and ra_category = 21'
+    df = pd.read_sql(sql=sql_t, con=session.bind, index_col = ['ra_date'])
+    session.commit()
+    #print(df)
+
+    portfolio_id = 'PO.IND130'
+    records = []
+    for i in range(0, len(df.index)):
+        date = df.index[i]
+        ra_portfolio_pos = asset_allocate.ra_portfolio_pos()
+        ra_portfolio_pos.ra_date = date
+        ra_portfolio_pos.ra_portfolio_id = portfolio_id
+        ra_portfolio_pos.ra_pool_id = 1111010111
+        ra_portfolio_pos.ra_fund_id = df.iloc[i].loc['ra_fund_id']
+        ra_portfolio_pos.ra_fund_code = df.iloc[i].loc['ra_fund_code']
+        ra_portfolio_pos.ra_fund_type = 11101
+        ra_portfolio_pos.ra_fund_ratio = 1.0 / len(df.loc[[date]])
+        ra_portfolio_pos.updated_at = datetime.now()
+        ra_portfolio_pos.created_at = datetime.now()
+        records.append(ra_portfolio_pos)
+
+    session.add_all(records)
+    session.commit()
+    session.close()
+
+
+#导出C类基金
+@analysis.command()
+@click.pass_context
+def bond_fund_c(ctx):
+
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql_t = 'select ra_code, ra_name from ra_fund where ra_type = 2'
+    df = pd.read_sql(sql=sql_t, con=session.bind, index_col = ['ra_code'])
+    session.commit()
+    codes = []
+    for code in df.index:
+        name = df.loc[code][0]
+        if 'C' == str.upper(name[-1]):
+            #print(name)
+            codes.append(code)
+    #print(df.loc[codes])
+    #df.loc[codes].to_csv('c_bond_code.csv')
+    for code in codes:
+        ser = base_ra_fund_nav.load_series(code).dropna()
+        print(ser.index[0])

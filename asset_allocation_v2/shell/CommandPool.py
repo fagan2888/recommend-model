@@ -398,9 +398,7 @@ def fund_update_corr_jensen(pool, adjust_points, optlimit, optcalc):
 
 def fund_lowliest_elimination(df_pre_fund, df_indicator, df_label, ratio, limit):
 
-    #categories = ['largecap','smallcap','rise','decline','oscillation','growth','value']
-    #print df_label.head()
-    #set_trace()
+    '''
     data = {}
     for category in df_label.columns:
         index_codes = df_label[df_label[category] == 1].index
@@ -412,14 +410,62 @@ def fund_lowliest_elimination(df_pre_fund, df_indicator, df_label, ratio, limit)
             eliminate_num = int(ratio * len(pre_fund))
             pre_fund = pre_fund.sort_values(by='jensen', ascending=False)[0:len(pre_fund) - eliminate_num]
             df_tmp = df_tmp.loc[df_tmp.index.difference(pre_fund.index)]
-            df_tmp = df_tmp.sort_values(by='jensen', ascending=False)
+            df_tmp = df_tmp.sort_values(by='sharpe', ascending=False)
             df_tmp = pd.concat([pre_fund, df_tmp], axis = 0)
             #print pre_fund
             #print df_tmp[0:limit]
+            limit = 20
             data[category] = df_tmp[0:limit]
 
-    df_result = pd.concat(data, names=['category','code'])
+    data = {}
+    c_bond_fund = pd.read_csv('c_bond_code.csv', index_col = ['ra_code'])
+    c_bond_codes = []
+    for code in c_bond_fund.index:
+        c_bond_codes.append('%06d' % code)
+    c_bond_codes = set(c_bond_codes) & set(df_indicator.index.tolist())
+    for category in df_label.columns:
+        codes = set(df_indicator.index.tolist())
+        for columns in df_indicator.columns:
+            if 'stability' == columns:
+                continue
+            indicator = df_indicator[columns]
+            indicator = indicator.sort_values(ascending = False)
+            if(len(c_bond_codes) < 15):
+                threshold = len(indicator)
+            else:
+                threshold = int(len(indicator) / 5)
+            #threshold = 50
+            codes = set(indicator.index[0:threshold].tolist()) & codes
+        indicator = df_indicator.loc[codes]
+        indicator = indicator.sort_values(by='sharpe', ascending = False)
+        c_codes = set(c_bond_codes) & set(indicator.index.tolist())
+        indicator = indicator.loc[c_codes]
+        #print(indicator)
+        data[category] = indicator.iloc[0:20]
+    '''
 
+    data = {}
+    c_bond_fund = pd.read_csv('c_bond_code.csv', index_col = ['ra_code'])
+    c_bond_codes = []
+    for code in c_bond_fund.index:
+        c_bond_codes.append('%06d' % code)
+    c_bond_codes = set(c_bond_codes) & set(df_indicator.index.tolist())
+    for category in df_label.columns:
+        #codes = set(df_indicator.index.tolist())
+        index_codes = df_label[df_label[category] == 1].index
+        df_indicator_tmp = df_indicator.loc[index_codes]
+        codes = set(df_indicator_tmp.index.tolist()) & c_bond_codes
+        df_indicator_tmp = df_indicator_tmp.loc[codes]
+        if(len(df_indicator_tmp) == 0):
+            df_indicator_tmp.loc['070009'] = 0
+        limit = 10
+        data[category] = df_indicator_tmp.sort_values(by='sharpe', ascending=False)[0:limit]
+    df_result = pd.concat(data, names=['category','code'])
+    return df_result
+
+
+def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
+    df_result = pd.concat(data, names=['category','code'])
     return df_result
 
 
@@ -434,15 +480,63 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
         # 计算每个调仓点的最新配置
         #
         data_fund = {}
+        '''
+        adjust_points = [
+               '2009-06-01',
+               '2009-12-30',
+               '2010-06-01',
+               '2010-12-30',
+               '2011-06-01',
+               '2011-12-30',
+               '2012-06-01',
+               '2012-12-30',
+               '2013-05-10',
+               '2013-08-09',
+               '2013-11-08',
+               '2014-02-07',
+               '2014-05-09',
+               '2014-08-08',
+               '2014-11-07',
+               '2015-02-06',
+               '2015-05-08',
+               '2015-08-07',
+               '2015-11-06',
+               '2016-02-05',
+               '2016-05-13',
+               '2016-08-12',
+               '2017-02-23',
+               '2017-06-30',
+               '2017-10-13',
+               '2017-11-10',
+               '2018-10-10',
+               ]
+        adjust_points = [
+                '2012-08-03',
+                '2013-02-01',
+                '2013-08-02',
+                '2014-01-30',
+                '2014-08-01',
+                '2015-01-30',
+                '2015-07-31',
+                '2016-01-29',
+                '2016-07-29',
+                '2017-01-26',
+                '2017-07-28',
+                '2018-01-26',
+                '2018-07-27',
+                '2019-01-25'
+               ]
+        '''
+        adjust_points = pd.to_datetime(pd.Series(adjust_points))
+        #print(adjust_points)
         with click.progressbar(length=len(adjust_points), label=('calc pool %s' % (pool.id)).ljust(30)) as bar:
             for day in adjust_points:
-                #print day
+                print(day)
                 bar.update(1)
                 if pool['ra_fund_type'] == 1:
                     df_indicator, df_label = LabelAsset.label_asset_stock_per_day(day, lookback, limit)
                 else:
                     df_indicator, df_label = LabelAsset.label_asset_bond_per_day(day, lookback, limit)
-
                 fund_dates = np.array(list(data_fund.keys()))
                 fund_date = fund_dates[fund_dates < day]
                 fund_date = list(fund_date)
@@ -451,7 +545,6 @@ def fund_update(pool, adjust_points, optlimit, opteliminateratio, optcalc):
                     data_fund[day] = fund_lowliest_elimination(None, df_indicator, df_label, opteliminateratio, optlimit)
                 else:
                     data_fund[day] = fund_lowliest_elimination(data_fund[fund_date[-1]], df_indicator, df_label, opteliminateratio, optlimit)
-
 
         df_fund = pd.concat(data_fund, names=['ra_date', 'ra_category', 'ra_fund_code'])
 
