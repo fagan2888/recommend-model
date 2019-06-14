@@ -974,7 +974,7 @@ class CppiAllocate(Allocate):
         tmp_benchmark_ret = 0
         tmp_overret = tmp_ret - tmp_benchmark_ret
 
-        tmp_dd = 1 - df_nav.iloc[-1] / df_nav.max()
+        tmp_dd = 1 - df_nav.iloc[-1] / df_nav.iloc[-30:].max()
         money_pos = df_pos.iloc[-1].loc['120000039']
         # print(tmp_dd)
 
