@@ -41,7 +41,7 @@ from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import database, asset_mz_markowitz, asset_mz_markowitz_alloc, asset_mz_markowitz_argv,  asset_mz_markowitz_asset, asset_mz_markowitz_criteria, asset_mz_markowitz_nav, asset_mz_markowitz_pos, asset_mz_markowitz_sharpe, asset_wt_filter_nav
 from db import asset_ra_pool, asset_ra_pool_nav, asset_rs_reshape, asset_rs_reshape_nav, asset_rs_reshape_pos
-from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl, asset_stock
+from db import base_ra_index, base_ra_index_nav, base_ra_fund, base_ra_fund_nav, base_trade_dates, base_exchange_rate_index_nav, asset_ra_bl, asset_stock, asset_ra_bl_view
 from db.asset_stock_factor import *
 from util import xdict
 from util.xdebug import dd
@@ -918,7 +918,7 @@ class CppiAllocate(Allocate):
         pos_df = pd.DataFrame(columns=asset_ids)
 
         # allocate monetary fund for first 3 years
-        edate_3m = sdate + timedelta(90)
+        edate_3m = sdate + timedelta(30)
         edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
         pre_3m = adjust_days[adjust_days <= edate_3m]
         adjust_days = adjust_days[adjust_days > edate_3m]
@@ -926,16 +926,34 @@ class CppiAllocate(Allocate):
         pos_df = pos_df.fillna(0.0)
         pos_df['120000039'] = 1.0
 
+        self.bond_view =  asset_ra_bl_view.load('BL.000002','120000010')
+        self.bond_view.sort_index(inplace = True)
         self.pos_df = pos_df
         for day in adjust_days:
+            print(day)
 
             df_inc, bound = self.load_allocate_data(day, asset_ids)
             ws = self.allocate_algo(day, df_inc, bound)
+            view = 0
+            bond_view = self.bond_view.loc[self.bond_view.index <= day.date()]
+            if len(bond_view) > 0:
+                view = bond_view.iloc[-1].ravel()[0]
+            a = ws['PO.LRB010']
+            b = ws['PO.IB0010']
+            if view == 1:
+                ws['120000039'] = ws['120000039'] * 0.5
+                ws['PO.LRB010'] = (1 - ws['120000039']) * a/(a+b)
+                ws['PO.IB0010'] = (1 - ws['120000039']) * b/(a+b)
+            elif view == -1:
+                ws['120000039'] = ws['120000039'] * 1.5
+                ws['PO.LRB010'] = (1 - ws['120000039']) * a/(a+b)
+                ws['PO.IB0010'] = (1 - ws['120000039']) * b/(a+b)
+            else:
+                pass
 
             for asset_id in list(ws.keys()):
                 pos_df.loc[day, asset_id] = ws[asset_id]
             self.pos_df = pos_df
-
         return pos_df
 
     def allocate_algo(self, day, df_inc, bound):
@@ -965,15 +983,14 @@ class CppiAllocate(Allocate):
             ws = CppiAllocate.cppi_alloc(tmp_overret, tmp_ret, lr)
         # print(day, ws)
         # print(day, tmp_overret, tmp_ret)
-
         return ws
 
     @staticmethod
     def money_alloc():
 
         ws = {}
-        ws['120000010'] = 0.0
-        ws['120000011'] = 0.0
+        ws['PO.IB0010'] = 0.0
+        ws['PO.LRB010'] = 0.0
         ws['120000039'] = 1.0
 
         return ws
@@ -982,27 +999,44 @@ class CppiAllocate(Allocate):
     def cppi_alloc(overret, tnav, lr):
 
         ws = {}
-        ws_b = (overret - 1) / tnav / 2 * lr
-        ws_m = 1 - ws_b * 2
-        if ws_m > 0.25:
-            ws['120000010'] = ws_b
-            ws['120000011'] = ws_b
+        ws_b = (overret - 1 + 0.006) / tnav * lr
+        ws_m = 1 - ws_b
+        if ws_m > 0.20:
+            ws['PO.IB0010'] = ws_b * 0.2
+            ws['PO.LRB010'] = ws_b * 0.8
             ws['120000039'] = ws_m
         else:
-            ws['120000010'] = 0.375
-            ws['120000011'] = 0.375
-            ws['120000039'] = 0.25
+            ws['PO.IB0010'] = 0.8 * 0.2
+            ws['PO.LRB010'] = 0.8 * 0.8
+            ws['120000039'] = 0.2
 
         return ws
 
     @staticmethod
     def bond_var(period, percent, day):
-        df_nav = base_ra_index_nav.load_series('120000010')
+        
+        df_nav = base_ra_index_nav.load_series('120000011')
         df_inc = df_nav.pct_change(period)
         df_inc = df_inc.dropna()
         df_inc = df_inc[df_inc.index < day]
         df_inc = df_inc.iloc[-365*5:]
         var = np.percentile(df_inc, percent)
+
+        #ib_inc = Asset('PO.IB0010').nav().pct_change()
+        #lrb_inc = Asset('PO.LRB010').nav().pct_change()
+        #dates = ib_inc.index & lrb_inc.index
+        #ib_inc = ib_inc.loc[dates]
+        #lrb_inc = lrb_inc.loc[dates]
+        #ib_lrb_inc = ib_inc * 0.2 + lrb_inc * 0.8
+        #ib_lrb_inc = ib_lrb_inc.reindex(df_inc.index).fillna(0.0)
+        #ib_lrb_inc[ib_lrb_inc == 0] = df_inc[ib_lrb_inc == 0]
+        #df_inc = ib_lrb_inc
+        #df_nav = (df_inc + 1).cumprod()
+        #df_inc = df_nav.pct_change(period).fillna(0.0)
+        #df_inc = df_inc[df_inc.index < day]
+        #df_inc = df_inc.iloc[-365*5:]
+        #var = np.percentile(df_inc, percent)
+
         return var
 
 
