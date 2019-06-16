@@ -224,7 +224,7 @@ class Allocate(object):
     def allocate_day(self, day):
 
         asset_ids = list(self.assets.keys())
-        df_inc, bound = self.load_allocate_data(day, asset_ids)
+        _, df_inc, bound = self.load_allocate_data(day, asset_ids)
         ws = self.allocate_algo(day)
         ws = pd.Series(ws)
         inc = np.dot(df_inc, ws)

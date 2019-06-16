@@ -133,8 +133,6 @@ class MzBlAllocate(AllocateNew):
 
     def load_bl_view(self, day, asset_ids):
 
-        return None, pd.DataFrame([]), None
-
         confidences = []
         view = pd.Series(0, index = asset_ids)
         for asset_id in asset_ids:
@@ -809,6 +807,7 @@ class MzALayerFixRiskBootBlAllocate(MzFixRiskBootBlAllocate):
         for asset in layer_assets.keys():
             layer_bounds[asset] = self.bound[asset]
         rp_allocate = RpAllocate('ALC.000001', layer_assets, self.index, self.lookback, bound = layer_bounds)
+        
         layer_ws, df_alayer_inc = rp_allocate.allocate_day(day)
 
         df_inc['ALayer'] = df_alayer_inc

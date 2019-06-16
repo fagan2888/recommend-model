@@ -926,10 +926,10 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         df = df.T
         df = df.groupby(df.index).sum()
         df = df.T
-        trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
-        df = df.reindex(trade_date)
-        df = df.fillna(method = 'pad')
-        df = df.dropna()
+        #trade_date = ATradeDate.week_trade_date(begin_date = sdate, lookback=lookback)
+        #df = df.reindex(trade_date)
+        #df = df.fillna(method = 'pad')
+        #df = df.dropna()
 
     elif algo == 2:
 
