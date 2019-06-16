@@ -133,8 +133,6 @@ class MzBlAllocate(AllocateNew):
 
     def load_bl_view(self, day, asset_ids):
 
-        return None, pd.DataFrame([]), None
-
         confidences = []
         view = pd.Series(0, index = asset_ids)
         for asset_id in asset_ids:
@@ -918,7 +916,7 @@ class CppiAllocate(Allocate):
         pos_df = pd.DataFrame(columns=asset_ids)
 
         # allocate monetary fund for first 3 years
-        edate_3m = sdate + timedelta(30)
+        edate_3m = sdate + timedelta(31)
         edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
         pre_3m = adjust_days[adjust_days <= edate_3m]
         adjust_days = adjust_days[adjust_days > edate_3m]
