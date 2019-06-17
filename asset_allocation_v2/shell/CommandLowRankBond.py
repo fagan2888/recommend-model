@@ -75,17 +75,17 @@ def low_rank_bond_fund(ctx):
     conn = pymysql.connect(host='192.168.88.12', user='public', passwd='h76zyeTfVqAehr5J', database='wind', charset='utf8')
 
     sql_t = 'select * from chinamutualfundassetportfolio'
-    #chinamutualfundassetportfolio = pd.read_sql(sql=sql_t, con=conn, index_col = ['OBJECT_ID'])
+    #chinamutualfundassetportfolio = pd.read_sql(sql=sql_t, con=conn)
     #chinamutualfundassetportfolio.to_csv('./data/chinamutualfundassetportfolio.csv')
     chinamutualfundassetportfolio = pd.read_csv('./data/chinamutualfundassetportfolio.csv')
 
     sql_t = 'select * from chinamutualfundbondportfolio'
-    #chinamutualfundbondportfolio = pd.read_sql(sql=sql_t, con=conn, index_col = ['OBJECT_ID'])
+    #chinamutualfundbondportfolio = pd.read_sql(sql=sql_t, con=conn)
     #chinamutualfundbondportfolio.to_csv('./data/chinamutualfundbondportfolio.csv')
     chinamutualfundbondportfolio = pd.read_csv('./data/chinamutualfundbondportfolio.csv')
 
     sql_t = 'select * from ChinaMutualFundSector'
-    #ChinaMutualFundSector = pd.read_sql(sql=sql_t, con=conn, index_col = ['OBJECT_ID'])
+    #ChinaMutualFundSector = pd.read_sql(sql=sql_t, con=conn)
     #ChinaMutualFundSector.to_csv('./data/ChinaMutualFundSector.csv')
     ChinaMutualFundSector = pd.read_csv('./data/ChinaMutualFundSector.csv')
 
@@ -107,31 +107,31 @@ def low_rank_bond_fund(ctx):
     2001010306	增强指数型债券基金
     '''
 
-    #ChinaMutualFundSector_selected_Criteria_List = ['2001010301000000', '2001010302000000', '2001010305000000', '2001010306000000', '2001010303000000', '2001010304000000']
-    ChinaMutualFundSector_selected_Criteria_List = ['2001010301000000', '2001010302000000', '2001010305000000', '2001010306000000']
+    ChinaMutualFundSector_selected_Criteria_List = ['2001010301000000', '2001010302000000', '2001010305000000', '2001010306000000', '2001010303000000', '2001010304000000']
     # TODO: Time series fund type
-
     ChinaMutualFundSector_selected = ChinaMutualFundSector[ChinaMutualFundSector.S_INFO_SECTOR.isin(ChinaMutualFundSector_selected_Criteria_List)] 
     ChinaMutualFundSector_selected = ChinaMutualFundSector_selected[ChinaMutualFundSector_selected.F_INFO_WINDCODE.map(lambda x: x.split('.')[1]) == 'OF']
-    C_type_mutual_fund = ChinaMutualFundDescription[['C' == name[-1] for name in ChinaMutualFundDescription.F_INFO_NAME]]
-
+    C_type_mutual_fund = ChinaMutualFundDescription[['C' in ChinaMutualFundDescription.F_INFO_NAME[i] for i in range(ChinaMutualFundDescription.shape[0])]]
     ChinaMutualFundSector_selected = ChinaMutualFundSector_selected[ChinaMutualFundSector_selected.F_INFO_WINDCODE.isin(set(C_type_mutual_fund.F_INFO_WINDCODE).intersection(set(ChinaMutualFundSector_selected.F_INFO_WINDCODE)))]
 
-    chinamutualfundassetportfolio_selected_by_asset_type_pool = chinamutualfundassetportfolio[(chinamutualfundassetportfolio.F_PRT_CORPBONDTONAV.fillna(value=0) > 70) & (chinamutualfundassetportfolio.F_PRT_COVERTBONDTONAV.fillna(value=0) < 25)]
+    ChinaMutualFundSector_selected_test = ChinaMutualFundSector[ChinaMutualFundSector.S_INFO_SECTOR.isin(['2001010303000000', '2001010304000000'])] 
+    ChinaMutualFundSector_selected_test = ChinaMutualFundDescription[ChinaMutualFundDescription.F_INFO_WINDCODE.isin(ChinaMutualFundSector_selected_test.F_INFO_WINDCODE)]
 
     # Selection Criteria II: Asset Allocation criteria e.g. Corporate bond NAV percentage
     chinamutualfundassetportfolio_criteria_1 = chinamutualfundassetportfolio.pivot_table('F_PRT_CORPBONDTONAV', 'F_PRT_ENDDATE', 'S_INFO_WINDCODE')
     chinamutualfundassetportfolio_criteria_2 = chinamutualfundassetportfolio.pivot_table('F_PRT_COVERTBONDTONAV', 'F_PRT_ENDDATE', 'S_INFO_WINDCODE')
+    chinamutualfundassetportfolio_criteria_3 = chinamutualfundassetportfolio.pivot_table('F_PRT_CORPBONDTONAV', 'F_PRT_ENDDATE', 'S_INFO_WINDCODE')
+    chinamutualfundassetportfolio_criteria_4 = chinamutualfundassetportfolio.pivot_table('F_PRT_CORPBONDTONAV', 'F_PRT_ENDDATE', 'S_INFO_WINDCODE')
+
 
     chinamutualfundassetportfolio_selected = chinamutualfundassetportfolio_criteria_1.copy()
-    #chinamutualfundassetportfolio_selected = chinamutualfundassetportfolio_selected[chinamutualfundassetportfolio_selected > 80]
+    chinamutualfundassetportfolio_selected = chinamutualfundassetportfolio_selected[chinamutualfundassetportfolio_selected > 60]
     chinamutualfundassetportfolio_selected_ = chinamutualfundassetportfolio_selected.dropna(axis=1, thresh=1)
     chinamutualfundassetportfolio_selected_ = chinamutualfundassetportfolio_selected_.dropna(axis=0, thresh=1)
     # 
     Mutual_Fund_Selected_Pool = chinamutualfundassetportfolio_selected_[list(chinamutualfundassetportfolio_selected_.columns.intersection(ChinaMutualFundSector_selected.F_INFO_WINDCODE))]
     Mutual_Fund_Selected_Pool_ = Mutual_Fund_Selected_Pool.dropna(axis=1, thresh=1)
     Mutual_Fund_Selected_Pool_ = Mutual_Fund_Selected_Pool_.dropna(axis=0, thresh=1)
-   
     #Mutual_Fund_Selected_Pool_.columns = Mutual_Fund_Selected_Pool_.columns.map(lambda x: x.split('.')[0])
 
     # Selection Criteria III: Bond Credit Rating criteria e.g. AAA & A-
@@ -144,7 +144,6 @@ def low_rank_bond_fund(ctx):
     chinamutualfundbondportfolio_rating_high_credit_list = [ 'AAA', 'AAA+']
     chinamutualfundbondportfolio_rating_lower_credit_list = list(set(list(chinamutualfundbondportfolio_rating.B_INFO_CREDITRATING.drop_duplicates().values)).symmetric_difference(set(chinamutualfundbondportfolio_rating_high_credit_list)))
     chinamutualfundbondportfolio_F_PRT_ENDDATE_list = pd.DataFrame(chinamutualfundbondportfolio_rating.F_PRT_ENDDATE.drop_duplicates().reset_index(drop = True))
-
 
     # Selection Criteria III-I: Split the credit rating preference
     chinamutualfundbondportfolio_rating_lower_credit_rating_selected = chinamutualfundbondportfolio_rating[chinamutualfundbondportfolio_rating.B_INFO_CREDITRATING.isin(chinamutualfundbondportfolio_rating_lower_credit_list)]
@@ -168,8 +167,8 @@ def low_rank_bond_fund(ctx):
 
     # In[2] Countinue_ Rule based fund pool selection
     # Selection Criteria III-II: Split the credit rating preference
-    Fund_high_credit_rating = chinamutualfundbondportfolio_rating_high_credit_rating_selected_Assistant_[(chinamutualfundbondportfolio_rating_high_credit_rating_selected_Assistant_ > 5) | (chinamutualfundbondportfolio_rating_high_credit_rating_selected_Assistant_ < 100)]
-    Fund_lower_credit_rating = chinamutualfundbondportfolio_rating_lower_credit_rating_selected_Assistant_[(chinamutualfundbondportfolio_rating_lower_credit_rating_selected_Assistant_ > 15) | (chinamutualfundbondportfolio_rating_lower_credit_rating_selected_Assistant_ < 40)]
+    Fund_high_credit_rating = chinamutualfundbondportfolio_rating_high_credit_rating_selected_Assistant_[(chinamutualfundbondportfolio_rating_high_credit_rating_selected_Assistant_ > 10) | (chinamutualfundbondportfolio_rating_high_credit_rating_selected_Assistant_ < 100)]
+    Fund_lower_credit_rating = chinamutualfundbondportfolio_rating_lower_credit_rating_selected_Assistant_[(chinamutualfundbondportfolio_rating_lower_credit_rating_selected_Assistant_ > 15) | (chinamutualfundbondportfolio_rating_lower_credit_rating_selected_Assistant_ < 30)]
 
     Fund_high_low_credit_rating = Fund_high_credit_rating[list(set(Fund_high_credit_rating.columns).intersection(Fund_lower_credit_rating.columns))] * Fund_lower_credit_rating[list(set(Fund_high_credit_rating.columns).intersection(Fund_lower_credit_rating.columns))]
     Fund_high_low_credit_rating_pool = Fund_high_low_credit_rating[list(set(Mutual_Fund_Selected_Pool_.columns).intersection(Fund_high_low_credit_rating.columns))] * Mutual_Fund_Selected_Pool_[list(set(Mutual_Fund_Selected_Pool_.columns).intersection(Fund_high_low_credit_rating.columns))]
@@ -188,7 +187,6 @@ def low_rank_bond_fund(ctx):
     # Adds the last calender days at the end of months described above
     Fund_high_low_credit_rating_pool_selected.index = [pd.Timestamp(Fund_high_low_credit_rating_pool_selected.index.map(pd.Timestamp).strftime('%Y')[i] + Fund_high_low_credit_rating_pool_selected.index.map(pd.Timestamp).strftime('%m')[i] + str(calendar.monthrange(year = int(Fund_high_low_credit_rating_pool_selected.index.map(pd.Timestamp).strftime('%Y')[i]), month = int(Fund_high_low_credit_rating_pool_selected.index.map(pd.Timestamp).strftime('%m')[i]))[1])) for i in range(Fund_high_low_credit_rating_pool_selected.shape[0])]
     # ra_fund_nva is a calender days recored net asset value datasets, here deletes the fund which initial established after the first day of 2018
-
     ra_fund_nav_ = ra_fund_nav.dropna(axis=1, thresh = (pd.Timestamp.today() - pd.Timestamp('20180101')).days )
     ra_fund_nav_.index = ra_fund_nav_.index.map(pd.Timestamp)
     ra_fund_nav_ = ra_fund_nav_[ra_fund_nav_.index.isin(tradedate_list)]
@@ -224,7 +222,7 @@ def low_rank_bond_fund(ctx):
     start_date = pd.Timestamp('20120801')
 
     Regression_Period = 1
-    Holding_Period = 1.2
+    Holding_Period = 3
     #ra_fund_nav_selected = ra_fund_nav_.copy()
 
     Weight_index_Momentum_Time_Series_ = pd.DataFrame()
@@ -240,25 +238,24 @@ def low_rank_bond_fund(ctx):
     #    ra_fund_nav_selected = ra_fund_nav_selected / ra_fund_nav_selected.iloc[0,:]
 
         ra_fund_nav_selected = ra_fund_nav_selected.dropna(axis=1, how='any')
-
-        ra_fund_nav_selected_credit_exposure_criteria = Fund_high_low_credit_rating_pool_selected[Fund_high_low_credit_rating_pool_selected.index == ra_fund_nav_selected.index[0]]
-        codes = list(set(ra_fund_nav_selected_credit_exposure_criteria.columns).intersection(set(ra_fund_nav_selected.columns)))
-        ra_fund_nav_selected_credit_exposure_criteria = ra_fund_nav_selected_credit_exposure_criteria[codes]
-        ra_fund_nav_selected = ra_fund_nav_selected[codes]
         
-        ra_fund_nav_selected_ = ra_fund_nav_selected.multiply(ra_fund_nav_selected_credit_exposure_criteria.iloc[0], axis=1)
+        ra_fund_nav_selected_credit_exposure_criteria = Fund_high_low_credit_rating_pool_selected[Fund_high_low_credit_rating_pool_selected.index == ra_fund_nav_selected.index[0]]
+        ra_fund_nav_selected_credit_exposure_criteria = ra_fund_nav_selected_credit_exposure_criteria[list(set(ra_fund_nav_selected_credit_exposure_criteria.columns).intersection(set(ra_fund_nav_selected.columns)))]
+
+        ra_fund_nav_selected_ = ra_fund_nav_selected.multiply(ra_fund_nav_selected_credit_exposure_criteria, axis=1)
         ra_fund_nav_selected_ = ra_fund_nav_selected_.applymap(lambda x: np.nan if x == 0 else x)
         ra_fund_nav_selected_ = ra_fund_nav_selected_.dropna(axis=1, how='any')
 
-            
+        
         Weight_index_Momentum = Momentum_EW(ra_fund_nav_selected_.pct_change().dropna(), R=Regression_Period, H=Holding_Period)
 
     #    print(ra_fund_nav_selected.index[0], ra_fund_nav_selected.index[-1])
     #    print(Weight_index_Momentum.index)
-    #   
+    #    
         Weight_index_Momentum_Time_Series = Weight_index_Momentum.T
         Weight_index_Momentum_Time_Series_ = pd.merge(Weight_index_Momentum_Time_Series_, Weight_index_Momentum_Time_Series, left_index=True, right_index=True, how = 'outer')
     
+    set_trace()
     Weight_index_Momentum_Time_Series_ = Weight_index_Momentum_Time_Series_.T
     Weight_index_Momentum_Time_Series_.index = Weight_index_Momentum_Time_Series_.index.map(pd.Timestamp)
     Weight_index_Momentum_Time_Series_ = Weight_index_Momentum_Time_Series_.div(Weight_index_Momentum_Time_Series_.sum(axis=1), axis=0)
@@ -318,7 +315,6 @@ def low_rank_bond_fund(ctx):
 
     # In[1]: Condition in Credit rating Write data to database
 
-    print(ra_portfolio_pos)
 
     conn = pymysql.connect(host='192.168.88.254', user='root', passwd='Mofang123', database='asset_allocation', charset='utf8')
     x = conn.cursor()

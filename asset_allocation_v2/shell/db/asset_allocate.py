@@ -120,6 +120,21 @@ class ra_pool_fund(Base):
     created_at = Column(DateTime)
 
 
+class ra_portfolio_pos(Base):
+
+    __tablename__ = 'ra_portfolio_pos'
+
+    ra_portfolio_id = Column(String, primary_key = True)
+    ra_date = Column(Date, primary_key = True)
+    ra_pool_id = Column(Integer, primary_key = True)
+    ra_fund_id = Column(Integer, primary_key = True)
+    ra_fund_code = Column(String)
+    ra_fund_type = Column(Integer)
+    ra_fund_ratio = Column(Float)
+
+    updated_at = Column(DateTime)
+    created_at = Column(DateTime)
+
 
 def load_mz_markowitz_bounds(globalid):
 

@@ -1652,3 +1652,38 @@ def portfolio_to_pool(ctx):
     session.add_all(records)
     session.commit()
     session.close()
+
+
+#基金池导入portfolio
+@analysis.command()
+@click.pass_context
+def pool_to_portfolio(ctx):
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    #sql_t = 'select ra_date, ra_fund_id, ra_fund_code from ra_pool_fund where ra_pool = 12201 and ra_category = 21'
+    sql_t = 'select ra_date, ra_fund_id, ra_fund_code from ra_pool_fund where ra_pool = 11210202'
+    df = pd.read_sql(sql=sql_t, con=session.bind, index_col = ['ra_date'])
+    session.commit()
+    #print(df)
+
+    portfolio_id = 'PO.LRB010'
+    records = []
+    for i in range(0, len(df.index)):
+        date = df.index[i]
+        ra_portfolio_pos = asset_allocate.ra_portfolio_pos()
+        ra_portfolio_pos.ra_date = date
+        ra_portfolio_pos.ra_portfolio_id = portfolio_id
+        ra_portfolio_pos.ra_pool_id = 1111010111
+        ra_portfolio_pos.ra_fund_id = df.iloc[i].loc['ra_fund_id']
+        ra_portfolio_pos.ra_fund_code = df.iloc[i].loc['ra_fund_code']
+        ra_portfolio_pos.ra_fund_type = 11101
+        ra_portfolio_pos.ra_fund_ratio = 1.0 / len(df.loc[[date]])
+        ra_portfolio_pos.updated_at = datetime.now()
+        ra_portfolio_pos.created_at = datetime.now()
+        records.append(ra_portfolio_pos)
+
+    session.add_all(records)
+    session.commit()
+    session.close()
