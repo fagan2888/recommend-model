@@ -25,7 +25,7 @@ from sqlalchemy import MetaData, Table, select, func, literal_column
 from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav, base_ra_fund_nav, asset_mz_highlow_pos, asset_ra_pool_nav
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav, base_ra_fund_nav, asset_mz_highlow_pos, asset_ra_pool_nav, asset_ra_portfolio_pos, asset_allocate
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
@@ -1605,3 +1605,50 @@ def pool_nav(ctx):
     print(nav_pool)
     nav_pool.to_csv('tmp.csv')
     pass
+
+
+#portfolio to pool
+@analysis.command()
+@click.pass_context
+def portfolio_to_pool(ctx):
+    fund_df = base_ra_fund.load()
+    fund_df = fund_df[['globalid', 'ra_code']]
+    fund_df = fund_df.set_index(['globalid'])
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    records = []
+
+    pos = asset_ra_portfolio_pos.load_fund_pos('PO.IB0010') 
+    for index in pos.index:
+        d = index[0]
+        fid = index[1]
+        code = fund_df.loc[fid].ravel()[0]
+        ra_pool_fund = asset_allocate.ra_pool_fund()
+        ra_pool_fund.ra_pool = 11210102
+        ra_pool_fund.ra_category = 0
+        ra_pool_fund.ra_date = d
+        ra_pool_fund.ra_fund_id = fid
+        ra_pool_fund.ra_fund_code = code
+        ra_pool_fund.ra_fund_level = 1
+        records.append(ra_pool_fund)
+
+    pos = asset_ra_portfolio_pos.load_fund_pos('PO.LRB010') 
+    for index in pos.index:
+        d = index[0]
+        fid = index[1]
+        code = fund_df.loc[fid].ravel()[0]
+        ra_pool_fund = asset_allocate.ra_pool_fund()
+        ra_pool_fund.ra_pool = 11210202
+        ra_pool_fund.ra_category = 0
+        ra_pool_fund.ra_date = d
+        ra_pool_fund.ra_fund_id = fid
+        ra_pool_fund.ra_fund_code = code
+        ra_pool_fund.ra_fund_level = 1
+        records.append(ra_pool_fund)
+
+    session.add_all(records)
+    session.commit()
+    session.close()
