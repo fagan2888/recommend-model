@@ -1094,6 +1094,7 @@ class CppiAllocate_fix(Allocate):
             bond_view = self.bond_view.loc[self.bond_view.index <= day.date()]
             if len(bond_view) > 0:
                 view = bond_view.iloc[-1].ravel()[0]
+                last_view = bond_view.iloc[-2].ravel()[0]
             if ws['120000039'] == 1.0:
                 #ws['120000039'] = 1.0
                 #ws['PO.LRB010'] = 0.0
@@ -1117,7 +1118,6 @@ class CppiAllocate_fix(Allocate):
             for asset_id in list(ws.keys()):
                 pos_df.loc[day, asset_id] = ws[asset_id]
             self.pos_df = pos_df
-            self.last_ws = ws
             print(day, ws)
         return pos_df
 
@@ -1143,18 +1143,20 @@ class CppiAllocate_fix(Allocate):
 
         if (tmp_dd > 0.01):
             ws = self.money_alloc()
+            self.last_ws = ws.copy()
         elif tmp_overret <= 0:
             ws = self.money_alloc()
+            self.last_ws = ws.copy()
         else:
             # 未来3个月有90%的概率战胜净值不跌到余额宝之下
             if day in self.adjust_days:
                 lr = 1 / (monetary_ret - bond_var)
                 ws = CppiAllocate_fix.cppi_alloc(tmp_overret, tmp_ret, lr, self.m_ret)
-                print(day, ws)
+                self.last_ws = ws.copy()
             else:
-                ws = self.last_ws
+                ws = self.last_ws.copy()
         # print(day, tmp_overret, tmp_ret)
-    
+        #print(day, ws)
         return ws
 
     def money_alloc(self):
