@@ -55,7 +55,7 @@ def load(gid, reindex=None):
     # df = df.unstack().fillna(0.0)
     # df.columns = df.columns.droplevel(0)
     df['ra_fund_type'] = tlsFundType(gid)
-
+    
     return df
 
 def tlsFundType(gid, default=0):

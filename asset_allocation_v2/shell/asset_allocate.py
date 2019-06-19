@@ -903,11 +903,12 @@ class MonetaryAllocate(Allocate):
 
 class CppiAllocate(Allocate):
 
-    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, forcast_days=90, money_alloc_days=1,  var_percent=10):
+    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, forcast_days=360, money_alloc_days=90,  var_percent=10):
         super(CppiAllocate, self).__init__(globalid, assets, reindex, lookback, period, bound)
         self.forcast_days = forcast_days
         self.var_percent = var_percent
         self.money_alloc_days = money_alloc_days
+        self.m_ret = 0.006 * forcast_days / 90
 
     def allocate_cppi(self):
 
@@ -918,6 +919,7 @@ class CppiAllocate(Allocate):
         pos_df = pd.DataFrame(columns=asset_ids)
 
         # allocate monetary fund for first 3 years
+        #print(self.money_alloc_days)
         edate_3m = sdate + timedelta(self.money_alloc_days)
         edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
         pre_3m = adjust_days[adjust_days <= edate_3m]
@@ -931,7 +933,6 @@ class CppiAllocate(Allocate):
         self.pos_df = pos_df
         for day in adjust_days:
             print(day)
-
             df_inc, bound = self.load_allocate_data(day, asset_ids)
             ws = self.allocate_algo(day, df_inc, bound)
             view = 0
@@ -991,8 +992,7 @@ class CppiAllocate(Allocate):
         else:
             # 未来3个月有90%的概率战胜净值不跌到余额宝之下
             lr = 1 / (monetary_ret - bond_var)
-            m_ret = 0.003*self.forcast_days/30
-            ws = CppiAllocate.cppi_alloc(tmp_overret, tmp_ret, lr, m_ret)
+            ws = CppiAllocate.cppi_alloc(tmp_overret, tmp_ret, lr, self.m_ret)
         # print(day, ws)
         # print(day, tmp_overret, tmp_ret)
         return ws
@@ -1011,8 +1011,8 @@ class CppiAllocate(Allocate):
     def cppi_alloc(overret, tnav, lr, m_ret):
 
         ws = {}
-        #ws_b = (overret - 1 + 0.006) / tnav * lr
-        ws_b = ((overret - 1) / tnav + ret) * lr
+        ws_b = (overret - 1 + m_ret) / tnav * lr
+        #ws_b = ((overret - 1) / tnav + ret) * lr
         ws_m = 1 - ws_b
         if ws_m > 0.20:
             ws['PO.IB0010'] = ws_b * 0.2

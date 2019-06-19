@@ -538,7 +538,6 @@ def kun(portfolio, alloc):
     df_raw.loc[df_raw['ra_fund_ratio'] < 0.00009999, 'ra_fund_ratio'] = 0 # 过滤掉过小的份额
     df_raw['ra_fund_ratio'] = df_raw['ra_fund_ratio'].round(4)            # 四舍五入到万分位
 
-    #print df_raw
     return df_raw
 
 @portfolio.command()
