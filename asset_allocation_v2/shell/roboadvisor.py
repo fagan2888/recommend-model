@@ -20,7 +20,7 @@ import CommandPool
 import CommandPortfolio
 import CommandCompositeAsset
 import CommandMarkowitz
-import CommandRiskManage
+#import CommandRiskManage
 import CommandTiming
 import CommandHighlow
 import CommandOnline
@@ -265,7 +265,7 @@ if __name__=='__main__':
     roboadvisor.add_command(CommandPool.pool)
     roboadvisor.add_command(CommandCompositeAsset.composite)
     roboadvisor.add_command(CommandMarkowitz.markowitz)
-    roboadvisor.add_command(CommandRiskManage.riskmgr)
+    #roboadvisor.add_command(CommandRiskManage.riskmgr)
     roboadvisor.add_command(CommandTiming.timing)
     roboadvisor.add_command(CommandHighlow.highlow)
     roboadvisor.add_command(CommandOnline.online)

@@ -37,7 +37,7 @@ from util.xdebug import dd
 
 from asset import Asset, WaveletAsset
 from allocate import Allocate, AssetBound
-from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzALayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, CppiAllocate
+from asset_allocate import AvgAllocate, MzAllocate, MzBootAllocate, MzBootBlAllocate, MzBlAllocate, MzBootDownRiskAllocate, FactorValidAllocate, MzFixRiskBootAllocate, MzFixRiskBootBlAllocate, MzFixRiskBootWaveletAllocate, MzFixRiskBootWaveletBlAllocate, FactorIndexAllocate, MzALayerFixRiskBootBlAllocate, SingleValidFactorAllocate, MonetaryAllocate, CppiAllocate, CppiAllocate_fix
 from asset_allocate import *
 from trade_date import ATradeDate
 from view import View
@@ -1160,6 +1160,16 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         assets = dict([(asset_id, Asset(asset_id)) for asset_id in list(assets.keys())])
         allocate = CppiAllocate('ALC.000001', assets, trade_date, lookback, bound=bounds, period=1)
         df = allocate.allocate_cppi()
+    elif algo == 28:
+
+        #cppi allocate
+
+        lookback = 365
+        trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback+1)
+        assets = dict([(asset_id, Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = CppiAllocate_fix('ALC.000001', assets, trade_date, lookback, bound=bounds, period=1)
+        df = allocate.allocate_cppi()
+
 
     elif algo == 19:
 
