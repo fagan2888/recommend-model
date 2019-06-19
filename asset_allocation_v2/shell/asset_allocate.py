@@ -1061,12 +1061,14 @@ class CppiAllocate_fix(Allocate):
         self.forcast_days = forcast_days
         self.var_percent = var_percent
         self.money_alloc_days = money_alloc_days
-        self.m_ret = 0.006 * forcast_days / 90
+        self.m_ret = 0.01 * forcast_days / 90
         self.last_ws = None
 
     def allocate_cppi(self):
 
-        adjust_days = self.index[self.lookback - 1::self.period]
+        adjust_days_copy = self.index[self.lookback - 1::1]
+        adjust_days = self.index[self.lookback - 1::66]
+        self.adjust_days = adjust_days
         sdate = adjust_days[0].date()
 
         asset_ids = list(self.assets.keys())
@@ -1085,7 +1087,7 @@ class CppiAllocate_fix(Allocate):
         self.bond_view =  asset_ra_bl_view.load('BL.000002','120000010')
         self.bond_view.sort_index(inplace = True)
         self.pos_df = pos_df
-        for day in adjust_days:
+        for day in adjust_days_copy:
             df_inc, bound = self.load_allocate_data(day, asset_ids)
             ws = self.allocate_algo(day, df_inc, bound)
             view = 0
@@ -1099,9 +1101,10 @@ class CppiAllocate_fix(Allocate):
                 pass
             else:
                 if view == 1:
-                    #ws['120000039'] = ws['120000039'] * 0.5
-                    #ws['PO.LRB010'] = (1 - ws['120000039']) * 0.8
-                    #ws['PO.IB0010'] = (1 - ws['120000039']) * 0.2
+                    p = min(ws['120000039'], (ws['120000039'] + ws['MZ.deposit_zgc90']) * 0.5)
+                    ws['PO.LRB010'] = ws['PO.LRB010'] + p * 0.8
+                    ws['PO.IB0010'] = ws['PO.IB0010'] + p * 0.2
+                    ws['120000039'] = ws['120000039'] - p
                     pass
                 elif view == -1:
                     no_ws = min((ws['120000039'] + ws['MZ.deposit_zgc90']) * 1.5, 1.0)
@@ -1114,6 +1117,8 @@ class CppiAllocate_fix(Allocate):
             for asset_id in list(ws.keys()):
                 pos_df.loc[day, asset_id] = ws[asset_id]
             self.pos_df = pos_df
+            self.last_ws = ws
+            print(day, ws)
         return pos_df
 
     def allocate_algo(self, day, df_inc, bound):
@@ -1142,11 +1147,13 @@ class CppiAllocate_fix(Allocate):
             ws = self.money_alloc()
         else:
             # 未来3个月有90%的概率战胜净值不跌到余额宝之下
-            lr = 1 / (monetary_ret - bond_var)
-            ws = CppiAllocate_fix.cppi_alloc(tmp_overret, tmp_ret, lr, self.m_ret)
-        print(day, ws)
+            if day in self.adjust_days:
+                lr = 1 / (monetary_ret - bond_var)
+                ws = CppiAllocate_fix.cppi_alloc(tmp_overret, tmp_ret, lr, self.m_ret)
+                print(day, ws)
+            else:
+                ws = self.last_ws
         # print(day, tmp_overret, tmp_ret)
-        self.last_ws = ws
     
         return ws
 
