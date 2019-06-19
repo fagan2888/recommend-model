@@ -506,6 +506,7 @@ def kun(portfolio, alloc):
         (pool, df_fund) = v
         tmp[k] = (pool, df_fund.unstack().reindex(index, method='pad').stack())
     pools = tmp
+    pools
     #
     # 计算基金配置比例
     #

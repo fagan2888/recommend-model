@@ -1055,122 +1055,115 @@ class CppiAllocate(Allocate):
 
 class CppiAllocate_fix(Allocate):
 
-    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, forcast_days=90, money_alloc_days=0,  var_percent=10):
+    def __init__(self, globalid, assets, reindex, lookback, period=90, bound=None, forcast_days=360, money_alloc_days=90,  var_percent=10):
         super(CppiAllocate_fix, self).__init__(globalid, assets, reindex, lookback, period, bound)
+        #self.period = period
         self.forcast_days = forcast_days
         self.var_percent = var_percent
         self.money_alloc_days = money_alloc_days
+        self.m_ret = 0.006 * forcast_days / 90
+        self.last_ws = None
 
     def allocate_cppi(self):
 
         adjust_days = self.index[self.lookback - 1::self.period]
-        sdate = adjust_days[0]#.date()
+        sdate = adjust_days[0].date()
 
         asset_ids = list(self.assets.keys())
         pos_df = pd.DataFrame(columns=asset_ids)
 
+        # allocate monetary fund for first 3 years
+        #print(self.money_alloc_days)
         edate_3m = sdate + timedelta(self.money_alloc_days)
-        #edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
+        edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
         pre_3m = adjust_days[adjust_days <= edate_3m]
-        adjust_days = adjust_days[adjust_days > edate_3m]
+        adjust_days = adjust_days[adjust_days >= edate_3m]
         pos_df = pd.DataFrame(columns=asset_ids, index=pre_3m)
         pos_df = pos_df.fillna(0.0)
-        pos_df['120000039'] = 1.0
+        pos_df['MZ.deposit_zgc90'] = 1.0
 
         self.bond_view =  asset_ra_bl_view.load('BL.000002','120000010')
         self.bond_view.sort_index(inplace = True)
         self.pos_df = pos_df
-        # MZ.deposit_zgc90,MZ.deposit_wy30,MZ.deposit_wy180
-        ws_fix = 0.0
         for day in adjust_days:
-            print(day)
-            mark = False
-            if (day - sdate).days>self.forcast_days or day==adjust_days[0]:
-                mark = True #标识存款购买
-                sdate = day
-
             df_inc, bound = self.load_allocate_data(day, asset_ids)
-            ret = (1.0 + df_inc['MZ.deposit_zgc90'].min())**365 - 1.0
-            print(ret)
-            ws = self.allocate_algo(day, df_inc, bound, ws_fix, mark, annual_ret = ret)
-            ws_fix = ws['MZ.deposit_zgc90']
-
+            ws = self.allocate_algo(day, df_inc, bound)
             view = 0
             bond_view = self.bond_view.loc[self.bond_view.index <= day.date()]
             if len(bond_view) > 0:
                 view = bond_view.iloc[-1].ravel()[0]
-            if view == 1:
+            if ws['120000039'] == 1.0:
+                #ws['120000039'] = 1.0
+                #ws['PO.LRB010'] = 0.0
+                #ws['PO.IB0010'] = 0.0
                 pass
-            elif view == -1:
-                ws['PO.LRB010'] = ws['PO.LRB010']*0.8
-                ws['PO.IB0010'] = ws['PO.IB0010']*0.8
-                ws['120000039'] = ws['120000039'] + ws['PO.LRB010']*0.2 + ws['PO.IB0010']*0.2
             else:
-                pass
+                if view == 1:
+                    #ws['120000039'] = ws['120000039'] * 0.5
+                    #ws['PO.LRB010'] = (1 - ws['120000039']) * 0.8
+                    #ws['PO.IB0010'] = (1 - ws['120000039']) * 0.2
+                    pass
+                elif view == -1:
+                    no_ws = min((ws['120000039'] + ws['MZ.deposit_zgc90']) * 1.5, 1.0)
+                    ws['PO.LRB010'] = (1.0 - no_ws) * 0.8
+                    ws['PO.IB0010'] = (1.0 - no_ws) * 0.2
+                    ws['120000039'] = 1.0 - sum(ws.values()) + ws['120000039']
+                else:
+                    pass
 
-            print(ws)
             for asset_id in list(ws.keys()):
                 pos_df.loc[day, asset_id] = ws[asset_id]
             self.pos_df = pos_df
         return pos_df
 
-    def allocate_algo(self, day, df_inc, bound, ws_fix, mark, annual_ret=0.04):
+    def allocate_algo(self, day, df_inc, bound):
 
         bond_var = CppiAllocate_fix.bond_var(self.forcast_days, self.var_percent, day)
-        monetary_ret = (1.0+annual_ret)**(self.forcast_days / 365) - 1
+        monetary_ret = 1.04**(self.forcast_days / 365) - 1
 
         df_pos = self.pos_df.copy()
         df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
         df_nav = df_nav_portfolio.portfolio
 
+        #print(day, df_pos.iloc[-1], df_inc)
+        #print()
+        #print()
         tmp_ret = df_nav.iloc[-1] / df_nav.iloc[0]
         tmp_benchmark_ret = 0
         tmp_overret = tmp_ret - tmp_benchmark_ret
 
         tmp_dd = 1 - df_nav.iloc[-1] / df_nav.iloc[-30:].max()
         #money_pos = df_pos.iloc[-1].loc['120000039']
-        #if (tmp_dd > 0.01) or (money_pos == 1.0 and tmp_dd > 0):
-        print(mark)
-        if mark:
-            lr = 1 / (monetary_ret - bond_var)
-            ws = CppiAllocate_fix.cppi_alloc(tmp_overret, tmp_ret, lr, self.forcast_days)
+        # print(tmp_dd)
+
+        if (tmp_dd > 0.01):
+            ws = self.money_alloc()
+        elif tmp_overret <= 0:
+            ws = self.money_alloc()
         else:
-            if (tmp_dd > 0.01):
-                ws = CppiAllocate_fix.money_alloc(ws_fix)
-            elif tmp_overret <= 0:
-                ws = CppiAllocate_fix.money_alloc(ws_fix)
-            else:
-                ws = CppiAllocate_fix.nomoney_alloc(ws_fix)
+            # 未来3个月有90%的概率战胜净值不跌到余额宝之下
+            lr = 1 / (monetary_ret - bond_var)
+            ws = CppiAllocate_fix.cppi_alloc(tmp_overret, tmp_ret, lr, self.m_ret)
+        print(day, ws)
+        # print(day, tmp_overret, tmp_ret)
+        self.last_ws = ws
+    
         return ws
 
-    @staticmethod
-    def money_alloc(ws_fix):
+    def money_alloc(self):
 
         ws = {}
         ws['PO.IB0010'] = 0.0
         ws['PO.LRB010'] = 0.0
-        ws['MZ.deposit_zgc90'] = ws_fix
-        ws['120000039'] = 1 - ws_fix
-
+        ws['MZ.deposit_zgc90'] = self.last_ws['MZ.deposit_zgc90']
+        ws['120000039'] = 1.0 - self.last_ws['MZ.deposit_zgc90']
         return ws
 
     @staticmethod
-    def nomoney_alloc(ws_fix):
+    def cppi_alloc(overret, tnav, lr, m_ret):
 
         ws = {}
-        ws['PO.IB0010'] = (1 - ws_fix)*0.2
-        ws['PO.LRB010'] = (1 - ws_fix)*0.8
-        ws['MZ.deposit_zgc90'] = ws_fix
-        ws['120000039'] = 0.0
-
-        return ws
-
-
-    @staticmethod
-    def cppi_alloc(overret, tnav, lr, alloc_days):
-
-        ws = {}
-        ws_b = ((overret - 1) / tnav + 0.003*alloc_days/30) * lr
+        ws_b = (overret - 1 + m_ret) / tnav * lr
         ws_m = 1 - ws_b
         if ws_m > 0.20:
             ws['PO.IB0010'] = ws_b * 0.2
@@ -1195,7 +1188,168 @@ class CppiAllocate_fix(Allocate):
         df_inc = df_inc.iloc[-365*5:]
         var = np.percentile(df_inc, percent)
 
+        #ib_inc = Asset('PO.IB0010').nav().pct_change()
+        #lrb_inc = Asset('PO.LRB010').nav().pct_change()
+        #dates = ib_inc.index & lrb_inc.index
+        #ib_inc = ib_inc.loc[dates]
+        #lrb_inc = lrb_inc.loc[dates]
+        #ib_lrb_inc = ib_inc * 0.2 + lrb_inc * 0.8
+        #ib_lrb_inc = ib_lrb_inc.reindex(df_inc.index).fillna(0.0)
+        #ib_lrb_inc[ib_lrb_inc == 0] = df_inc[ib_lrb_inc == 0]
+        #df_inc = ib_lrb_inc
+        #df_nav = (df_inc + 1).cumprod()
+        #df_inc = df_nav.pct_change(period).fillna(0.0)
+        #df_inc = df_inc[df_inc.index < day]
+        #df_inc = df_inc.iloc[-365*5:]
+        #var = np.percentile(df_inc, percent)
+
         return var
+
+
+
+#class CppiAllocate_fix(Allocate):
+
+#    def __init__(self, globalid, assets, reindex, lookback, period=1, bound=None, forcast_days=90, money_alloc_days=1, var_percent=10):
+#        super(CppiAllocate_fix, self).__init__(globalid, assets, reindex, lookback, period, bound)
+#        self.forcast_days = forcast_days
+#        self.var_percent = var_percent
+#        self.money_alloc_days = money_alloc_days
+#
+#    def allocate_cppi(self):
+#        adjust_days = self.index[self.lookback - 1::90]
+#        print(adjust_days)
+#        sdate = adjust_days[0]#.date()
+#
+#        asset_ids = list(self.assets.keys())
+#        pos_df = pd.DataFrame(columns=asset_ids)
+#
+#        edate_3m = sdate + timedelta(self.money_alloc_days)
+#        #edate_3m = datetime(edate_3m.year, edate_3m.month, edate_3m.day)
+#        pre_3m = adjust_days[adjust_days <= edate_3m]
+#        adjust_days = adjust_days[adjust_days > edate_3m]
+#        pos_df = pd.DataFrame(columns=asset_ids, index=pre_3m)
+#        pos_df = pos_df.fillna(0.0)
+#        pos_df['120000039'] = 1.0
+#
+#        self.bond_view =  asset_ra_bl_view.load('BL.000002','120000010')
+#        self.bond_view.sort_index(inplace = True)
+#        self.pos_df = pos_df
+#        # MZ.deposit_zgc90,MZ.deposit_wy30,MZ.deposit_wy180
+#        ws_fix = 0.0
+#        for day in adjust_days:
+#            print(day)
+#            mark = False
+#            if (day - sdate).days>self.forcast_days or day==adjust_days[0]:
+#                mark = True #标识存款购买
+#                sdate = day
+#
+#            df_inc, bound = self.load_allocate_data(day, asset_ids)
+#            ret = (1.0 + df_inc['MZ.deposit_zgc90'].min())**365 - 1.0
+#            print(ret)
+#            ws = self.allocate_algo(day, df_inc, bound, ws_fix, mark, annual_ret = ret)
+#            ws_fix = ws['MZ.deposit_zgc90']
+#
+#            view = 0
+#            bond_view = self.bond_view.loc[self.bond_view.index <= day.date()]
+#            if len(bond_view) > 0:
+#                view = bond_view.iloc[-1].ravel()[0]
+#            if view == 1:
+#                pass
+#            elif view == -1:
+#                ws['PO.LRB010'] = ws['PO.LRB010']*0.8
+#                ws['PO.IB0010'] = ws['PO.IB0010']*0.8
+#                ws['120000039'] = ws['120000039'] + ws['PO.LRB010']*0.2 + ws['PO.IB0010']*0.2
+#            else:
+#                pass
+#
+#            print(ws)
+#            for asset_id in list(ws.keys()):
+#                pos_df.loc[day, asset_id] = ws[asset_id]
+#            self.pos_df = pos_df
+#        return pos_df
+#
+#    def allocate_algo(self, day, df_inc, bound, ws_fix, mark, annual_ret=0.04):
+#
+#        bond_var = CppiAllocate_fix.bond_var(self.forcast_days, self.var_percent, day)
+#        monetary_ret = (1.0+annual_ret)**(self.forcast_days / 365) - 1
+#
+#        df_pos = self.pos_df.copy()
+#        df_nav_portfolio = DFUtil.portfolio_nav(df_inc, df_pos, result_col='portfolio')
+#        df_nav = df_nav_portfolio.portfolio
+#
+#        tmp_ret = df_nav.iloc[-1] / df_nav.iloc[0]
+#        tmp_benchmark_ret = 0
+#        tmp_overret = tmp_ret - tmp_benchmark_ret
+#
+#        tmp_dd = 1 - df_nav.iloc[-1] / df_nav.iloc[-30:].max()
+#        #money_pos = df_pos.iloc[-1].loc['120000039']
+#        #if (tmp_dd > 0.01) or (money_pos == 1.0 and tmp_dd > 0):
+#        print(mark)
+#        if mark:
+#            lr = 1 / (monetary_ret - bond_var)
+#            ws = CppiAllocate_fix.cppi_alloc(tmp_overret, tmp_ret, lr, self.forcast_days)
+#        else:
+#            if (tmp_dd > 0.01):
+#                ws = CppiAllocate_fix.money_alloc(ws_fix)
+#            elif tmp_overret <= 0:
+#                ws = CppiAllocate_fix.money_alloc(ws_fix)
+#            else:
+#                ws = CppiAllocate_fix.nomoney_alloc(ws_fix)
+#        return ws
+#
+#    @staticmethod
+#    def money_alloc(ws_fix):
+#
+#        ws = {}
+#        ws['PO.IB0010'] = 0.0
+#        ws['PO.LRB010'] = 0.0
+#        ws['MZ.deposit_zgc90'] = ws_fix
+#        ws['120000039'] = 1 - ws_fix
+#
+#        return ws
+#
+#    @staticmethod
+#    def nomoney_alloc(ws_fix):
+#
+#        ws = {}
+#        ws['PO.IB0010'] = (1 - ws_fix)*0.2
+#        ws['PO.LRB010'] = (1 - ws_fix)*0.8
+#        ws['MZ.deposit_zgc90'] = ws_fix
+#        ws['120000039'] = 0.0
+#
+#        return ws
+#
+#
+#    @staticmethod
+#    def cppi_alloc(overret, tnav, lr, alloc_days):
+#
+#        ws = {}
+#        ws_b = ((overret - 1) / tnav + 0.003*alloc_days/30) * lr
+#        ws_m = 1 - ws_b
+#        if ws_m > 0.20:
+#            ws['PO.IB0010'] = ws_b * 0.2
+#            ws['PO.LRB010'] = ws_b * 0.8
+#            ws['MZ.deposit_zgc90'] = ws_m
+#            ws['120000039'] = 0.0
+#        else:
+#            ws['PO.IB0010'] = 0.8 * 0.2
+#            ws['PO.LRB010'] = 0.8 * 0.8
+#            ws['MZ.deposit_zgc90'] = 0.2
+#            ws['120000039'] = 0.0
+#
+#        return ws
+#
+#    @staticmethod
+#    def bond_var(period, percent, day):
+#
+#        df_nav = base_ra_index_nav.load_series('120000011')
+#        df_inc = df_nav.pct_change(period)
+#        df_inc = df_inc.dropna()
+#        df_inc = df_inc[df_inc.index < day]
+#        df_inc = df_inc.iloc[-365*5:]
+#        var = np.percentile(df_inc, percent)
+#
+#        return var
 
 
 

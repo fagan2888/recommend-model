@@ -1231,6 +1231,18 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
         confidence = float(argv.get('bl_confidence'))
         data_period = argv.get('data_period', 'week')
         cov_algo = argv.get('cov_algo')
+
+    elif algo == 28:
+
+        #cppi allocate_fix
+        lookback = 365
+        forcast_days = int(argv.get('forcast_days', '90'))
+        money_alloc_days = int(argv.get('money_alloc_days', 1))
+        trade_date = ATradeDate.trade_date(begin_date=sdate, lookback=lookback+1)
+        assets = dict([(asset_id, Asset(asset_id)) for asset_id in list(assets.keys())])
+        allocate = CppiAllocate_fix('ALC.000001', assets, trade_date, lookback, bound=bounds, period=90, forcast_days = forcast_days, money_alloc_days = money_alloc_days)
+        df = allocate.allocate_cppi()
+
         '''
 
         asset_ids = list(assets.keys())
@@ -1280,7 +1292,7 @@ def pos_update(markowitz, alloc, optappend, sdate, edate, optcpu):
 
     print(df.tail(26))
     # 不需要进行四周平滑的algo id
-    no_rolling_algos = [1, 16, 17, 18, 19, 22]
+    no_rolling_algos = [1, 16, 17, 18, 19, 22, 28]
     if algo in no_rolling_algos:
         pass
     else:
