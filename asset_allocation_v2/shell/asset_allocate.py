@@ -911,7 +911,8 @@ class CppiAllocate(Allocate):
         self.m_ret = 0.006 * forcast_days / 90
 
     def allocate_cppi(self):
-
+        set_trace()
+        print(self.period)
         adjust_days = self.index[self.lookback - 1::self.period]
         sdate = adjust_days[0].date()
 
@@ -1067,7 +1068,7 @@ class CppiAllocate_fix(Allocate):
     def allocate_cppi(self):
 
         adjust_days_copy = self.index[self.lookback - 1::1]
-        adjust_days = self.index[self.lookback - 1::66]
+        adjust_days = self.index[self.lookback - 1::self.period]
         self.adjust_days = adjust_days
         sdate = adjust_days[0].date()
 
@@ -1095,6 +1096,8 @@ class CppiAllocate_fix(Allocate):
             if len(bond_view) > 0:
                 view = bond_view.iloc[-1].ravel()[0]
                 last_view = bond_view.iloc[-2].ravel()[0]
+            if day == self.adjust_days[1]:
+                set_trace()
             if ws['120000039'] == 1.0:
                 #ws['120000039'] = 1.0
                 #ws['PO.LRB010'] = 0.0

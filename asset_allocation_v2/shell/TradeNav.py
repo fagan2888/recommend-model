@@ -10,6 +10,7 @@ import heapq
 import TradeNav
 import readline
 import pdb
+from ipdb import set_trace
 
 
 
@@ -1006,7 +1007,7 @@ class TradeNav(object):
         if self.optt0:
             n = 0
         else:
-            n = 3 # 默认t+3到账
+            n = 2 # 默认t+3到账
             if fund_id in self.df_ack.index:
                 n = self.df_ack.at[fund_id, 'redeem']
             else:
