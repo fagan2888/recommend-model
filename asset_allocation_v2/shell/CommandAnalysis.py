@@ -852,7 +852,7 @@ def index_nav(ctx):
 @click.pass_context
 def benchmark(ctx):
 
-    index_ids = ['120000016', '120000010', '120000001']
+    index_ids = ['120000016', '120000010', '120000001', '120000043', '120000082']
     data = {}
     for _id in index_ids:
         data[_id] = base_ra_index_nav.load_series(_id)
@@ -883,7 +883,7 @@ def benchmark(ctx):
 
     dfs = []
     for i in range(0, 10):
-        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 9' % i
+        sql = 'select on_date as date, on_nav as nav from on_online_nav where on_online_id = 80000%d and on_type = 8' % i
         df = pd.read_sql(sql, conn, index_col = ['date'], parse_dates = ['date'])
         df.columns = ['risk_' + str(i)]
         dfs.append(df)
@@ -1687,3 +1687,38 @@ def pool_to_portfolio(ctx):
     session.add_all(records)
     session.commit()
     session.close()
+
+
+
+#货币基金池每月排名
+@analysis.command()
+@click.pass_context
+def money_pool_rank(ctx):
+ 
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql_t = 'select ra_fund_id, ra_date, ra_nav_adjusted from ra_fund_nav where ra_date > "2012-01-01" and ra_type = 3'
+    ra_fund_nav = pd.read_sql(sql=sql_t, con=session.bind, index_col = ['ra_date', 'ra_fund_id'], parse_dates = ['ra_date'])
+    session.commit()
+    session.close()
+
+    ra_fund_nav = ra_fund_nav.unstack().fillna(method = 'pad')
+    ra_fund_nav = ra_fund_nav.dropna(axis = 1, how = 'all')
+    ra_fund_nav = ra_fund_nav.groupby(ra_fund_nav.index.strftime('%Y-%m')).last()
+    ra_fund_inc = ra_fund_nav.pct_change()
+
+    money_nav = asset_ra_pool_nav.load_series('11310103') 
+    money_nav = money_nav[money_nav.index >= '2012-01-01']
+    money_nav = money_nav.groupby(money_nav.index.strftime('%Y-%m')).last()
+    money_inc = money_nav.pct_change().dropna()
+
+    ranks = []
+    for date in money_inc.index:
+        incs = ra_fund_inc.loc[date].dropna()
+        m_inc = money_inc.loc[date]
+        #print(1.0 * len(incs[incs >= m_inc]) / len(incs) )
+        ranks.append(len(incs[incs >= m_inc]) / len(incs))
+    df = pd.DataFrame(ranks, index = money_inc.index)
+    print(df)
+    df.to_csv('货币组合每月排名百分比.csv')

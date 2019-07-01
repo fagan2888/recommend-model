@@ -292,7 +292,8 @@ def fund_monetary_pool(ctx, datadir, startdate, enddate, optid, optlist, optlimi
     if optpoints is not None:
         adjust_points = pd.DatetimeIndex(optpoints.split(','))
     else:
-        adjust_points = get_week_adjust_point(label_period=optperiod, startdate=startdate, enddate=enddate)
+        #adjust_points = get_week_adjust_point(label_period=optperiod, startdate=startdate, enddate=enddate)
+        adjust_points = get_adjust_point(label_period=optperiod, startdate=startdate, enddate=enddate)
 
     print("adjust point:")
     for date in adjust_points:
@@ -1154,7 +1155,7 @@ def pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc):
 
 
     fund_fee = mnf.fund_fee.ff_fee
-    valid_ids_2 = fund_fee[fund_fee >= 0.01].index
+    valid_ids_2 = fund_fee[fund_fee >= 0.00].index
     #valid_ids_2 = ['%d' % fund_code for fund_code in valid_ids_2]
     #valid_ids = np.intersect1d(valid_ids_1, valid_ids_2)
 
@@ -1221,7 +1222,7 @@ def pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc):
     #    else:
     #        threshold = rs.iloc[int(len(rs) * 0.15)]
 
-    threshold = rs.iloc[int(len(rs) * 0.02)]
+    threshold = rs.iloc[int(len(rs) * 0.05)]
     rs = rs[rs >= threshold]
     #for fund_globalid in rs.index:
     #        pool_codes.append(fund_globalid)
@@ -1231,15 +1232,15 @@ def pool_by_scale_return(pool, day, lookback, limit, mnf, df_inc):
     #print(' fund num ', len(rs))
     for fund_globalid in rs.index:
         if int(fund_globalid) in valid_ids_2:
-            print('fee')
-            print(fund_globalid, fund_fee.loc[fund_globalid])
+            #print('fee')
+            #print(fund_globalid, fund_fee.loc[fund_globalid])
             pool_codes.append(fund_globalid)
         if len(pool_codes) >= num:
             return pool_codes
     for fund_globalid in rs.index:
         if fund_globalid not in pool_codes:
-            print('fee')
-            print(fund_globalid, fund_fee.loc[fund_globalid])
+            #print('fee')
+            #print(fund_globalid, fund_fee.loc[fund_globalid])
             pool_codes.append(fund_globalid)
         if len(pool_codes) >= num:
             return pool_codes
