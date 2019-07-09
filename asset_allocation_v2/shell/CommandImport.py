@@ -27,6 +27,7 @@ from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
 from db import *
+from db.asset_allocate import ra_portfolio_pos
 from util.xdebug import dd
 
 import traceback, code
@@ -161,4 +162,38 @@ def import_riskmgr(ctx):
 
         session.add_all(records)
         session.commit()
+    session.close()
+
+
+@import_command.command()
+@click.pass_context
+def import_portfolio_pos(ctx):
+    df = pd.read_csv('data/wenwen.csv', index_col = ['date'], parse_dates = ['date'])
+    engine = database.connection('base')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    sql = 'select globalid, ra_code from ra_fund'
+    gfid = pd.read_sql(sql, session.bind, index_col = ['ra_code'])
+    #print(gfid.head())
+    session.commit()
+    session.close()
+
+    engine = database.connection('asset')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    records = []
+    for i in range(0, len(df)):
+        date = df.index[i]
+        code = str(int(df.iloc[i].code))
+        ratio = float(df.iloc[i].ratio)
+        rpp = ra_portfolio_pos()
+        rpp.ra_portfolio_id = 'PO.QM0010'
+        rpp.ra_date = date
+        rpp.ra_fund_id = gfid.loc[code].ravel()[0]
+        rpp.ra_fund_code = code
+        rpp.ra_fund_ratio = ratio
+        rpp.ra_fund_type = 11101
+        records.append(rpp)
+    session.add_all(records)
+    session.commit()
     session.close()

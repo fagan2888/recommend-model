@@ -394,11 +394,12 @@ class MzFixRiskBootAllocate(Allocate):
 '''new'''
 class MzFixRiskBootBlAllocate(MzBootBlAllocate):
 
-    def __init__(self, globalid, assets, views, reindex, lookback, period=1, risk=None, bound=None, bootstrap_count=0):
+    def __init__(self, globalid, assets, views, reindex, lookback, period=1, risk=None, bound=None, bootstrap_count=0, benchmark_bound = None):
 
         super(MzFixRiskBootBlAllocate, self).__init__(globalid, assets, views, reindex, lookback, period, bound, bootstrap_count)
 
         self._risk = risk
+        self.benchmark_bound = benchmark_bound
 
     @property
     def risk(self):
@@ -410,9 +411,24 @@ class MzFixRiskBootBlAllocate(MzBootBlAllocate):
         asset_ids = list(self.assets.keys())
         _, df_inc, bound = self.load_allocate_data(day, asset_ids)
 
+        bound_modified = []
+        if self.benchmark_bound is not None:
+            benchmark_pos = self.benchmark_bound.loc[day]
+            benchmark_pos = benchmark_pos.loc[df_inc.columns]
+            for i in range(0, len(bound)):
+                b = bound[i].copy()
+                w = benchmark_pos.iloc[i]
+                upper_bound = w + 0.1 if w + 0.1 <= 1.0 else 1.0
+                lower_bound = w - 0.1 if w - 0.1 >= 0.0 else 0.0
+                b['upper'] = upper_bound
+                b['lower'] = lower_bound
+                bound_modified.append(b)
+
+        if len(bound_modified) >= 1:
+            bound = bound_modified
+
         P, eta, alpha = self.load_bl_view(day, df_inc.columns)
         ws = self.markowitz_bootstrap_bl_fixrisk(day, df_inc, P, eta, alpha, bound, self.risk, self.bootstrap_count)
-
         return ws
 
     def markowitz_bootstrap_bl_fixrisk(self, day, df_inc, P, eta, alpha, bound, target_risk, bootstrap_count):

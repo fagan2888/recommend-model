@@ -25,7 +25,7 @@ from sqlalchemy import MetaData, Table, select, func, literal_column
 from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from tabulate import tabulate
-from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav, base_ra_fund_nav, asset_mz_highlow_pos, asset_ra_pool_nav, asset_allocate
+from db import database, base_exchange_rate_index, base_ra_index, asset_ra_pool_fund, base_ra_fund, asset_ra_pool, asset_on_online_nav, asset_ra_portfolio_nav, asset_on_online_fund, asset_mz_markowitz_nav, base_ra_index_nav, asset_ra_composite_asset_nav, base_exchange_rate_index_nav, base_ra_fund_nav, asset_mz_highlow_pos, asset_ra_pool_nav, asset_allocate, asset_ra_portfolio_nav
 from util import xdict
 from trade_date import ATradeDate
 from asset import Asset
@@ -1825,3 +1825,17 @@ def bond_fund_c(ctx):
     for code in codes:
         ser = base_ra_fund_nav.load_series(code).dropna()
         print(ser.index[0])
+
+
+#导出C类基金
+@analysis.command()
+@click.pass_context
+def wenwen_comp(ctx):
+    wenwen_ser = asset_ra_portfolio_nav.load_series('PO.QM0010', 8)
+    rp_ser = asset_ra_portfolio_nav.load_series('PO.JYRP10', 8)
+    df = pd.DataFrame({'qm':wenwen_ser, 'rp':rp_ser}).dropna()
+    df = df / df.iloc[0]
+    #df = df.groupby(df.index.strftime('%Y-%m')).last()
+    df = df.pct_change(90).dropna()
+    df.to_csv('qm.csv')
+    print(df)
