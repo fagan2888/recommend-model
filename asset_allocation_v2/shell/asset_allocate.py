@@ -418,8 +418,8 @@ class MzFixRiskBootBlAllocate(MzBootBlAllocate):
             for i in range(0, len(bound)):
                 b = bound[i].copy()
                 w = benchmark_pos.iloc[i]
-                upper_bound = w + 0.1 if w + 0.1 <= 1.0 else 1.0
-                lower_bound = w - 0.1 if w - 0.1 >= 0.0 else 0.0
+                upper_bound = w * 2 if w * 2 <= 1.0 else 1.0
+                lower_bound = 0.0
                 b['upper'] = upper_bound
                 b['lower'] = lower_bound
                 bound_modified.append(b)
