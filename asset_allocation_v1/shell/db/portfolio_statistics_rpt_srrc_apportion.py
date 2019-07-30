@@ -45,7 +45,7 @@ def get_old_data(dates):
         t.c.rp_amount_redeem,
         t.c.rp_amount_aum,
     ]
-    rst = session.query(t).filter(t.c.rp_date.in_(dates))
+    rst = session.query(t).filter(t.c.rp_date.in_(dates),t.c.rp_tag_id==0)
     return rst.all()
 def batch(df_new, df_old):
     t = Table('rpt_srrc_apportion', metadata, autoload=True)

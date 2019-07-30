@@ -11,6 +11,7 @@ import calendar
 import numpy as np
 import pandas as pd
 import os
+import copy
 from db import portfolio_statistics_ds_orders_pdate as ds_order
 from db import portfolio_statistics_ds_share as ds_share
 from db import portfolio_statistics_rpt_srrc_apportion as rpt_srrc_apportion
@@ -163,6 +164,7 @@ class MonthlyStaApportion(object):
     def __init__(self):
         self.min_date = ds_order.get_min_date()
         self.max_date = ds_order.get_max_date()
+        #self.max_date = datetime.date(2019, 06, 11)
         self.min_year = self.min_date.year
         self.min_month = self.min_date.month
         self.max_year = self.max_date.year
@@ -366,12 +368,20 @@ class MonthlyStaRetention(object):
     """
     def __init__(self):
         self.retention_type = {100:0, 101:1, 102:2, 103:3, 104:4, 105:5, \
-                                106:6, 107:7, 108:8, 109:9, 110:10, 111:11, \
-                                112:12, 113:13, 114:14, 115:15, 116:16}
+                               106:6, 107:7, 108:8, 109:9, 110:10, 111:11, \
+                               112:12, 113:13, 114:14, 115:15, 116:16, \
+                               117:17, 118:18, 119:19, 120:20, 121:21, \
+                               122:22, 123:23, 124:24, 125:25, 126:26, \
+                               127:27, 128:28, 129:29, 130:30, 131:31, \
+                               132:32, 133:33, 134:34}
+        # self.retention_type = {100:0, 101:1, 102:2, 103:3, 104:4, 105:5, \
+        #                        106:6, 107:7, 108:8, 109:9, 110:10, 111:11, \
+        #                        112:12, 113:13, 114:14, 115:15, 116:16} 
         # 开始有交易的时间
         self.start_date = ds_order.get_min_date()
         # 当前交易时间
         self.end_date = ds_order.get_max_date()
+        #self.end_date = datetime.date(2019, 06, 11)
 
     def handle(self):
         """
@@ -380,13 +390,14 @@ class MonthlyStaRetention(object):
         month_list = getBetweenMonth(self.start_date, self.end_date)
         # 为得到old_df
         dates_list = []
-        if len(month_list) >= 20:
-            month_list = month_list[-20:]
+        if len(month_list) >= 50:
+            month_list = month_list[-50:]
         for month_tube in month_list:
             m_index = month_list.index(month_tube)
             cur_date = datetime.date(month_tube[0], month_tube[1], 1)
             old_df = self.get_old_data([cur_date])
             new_df = self.process_by_month(month_tube, month_list[m_index:])
+            # print new_df
             if new_df is not None:
                 self.insert_db(old_df, new_df)
     def insert_db(self, old_df, new_df):
@@ -419,9 +430,9 @@ class MonthlyStaRetention(object):
         e_date_db = datetime.date(cur_month[0], cur_month[1], 1)
         # 当前月新购买用户
         first_buy_uids = trade_type_uids(s_date, e_date, [10])
-        print s_date, e_date
         if len(first_buy_uids) == 0:
             return None
+        print s_date, e_date
         rp_tag_id = []
         rp_date = []
         rp_retention_type = []
@@ -430,10 +441,16 @@ class MonthlyStaRetention(object):
         rp_amount_resub = []
         rp_amount_redeem = []
         rp_amount_aum = []
-        for re_type, re_value in self.retention_type.iteritems():
+        retention_type_copy = copy.copy(self.retention_type)
+        retention_type_copy = sorted(retention_type_copy.iteritems(), key=lambda d:d[0], reverse=False)
+        for ite in range(len(retention_type_copy)):
+            re_type = retention_type_copy[ite][0]
+            re_value= retention_type_copy[ite][1]
+        # for re_type, re_value in self.retention_type.iteritems():
             # 没有对应留存类型的数据
             if re_value > len(cur_month_list) - 1:
                 break;
+                # continue;
             # 留存类型对应日期
             retype_date_tube = cur_month_list[re_value]
             end_date = datetime.date(retype_date_tube[0], \
@@ -469,7 +486,6 @@ class MonthlyStaRetention(object):
             #         end_date_rp)
             #     cur_clear_uids = np.intersect1d(cur_clear_uids, first_buy_uids)
             #     retain_uids = list(set(first_buy_uids).difference(set(cur_clear_uids)))
-
             resub_num = len(resub_uids)
             redeem_num = len(redeem_uids)
             retain_num = len(retain_uids)
@@ -512,6 +528,7 @@ class MonthlyStaRolling(object):
         self.start_date = ds_order.get_min_date()
         # 当前交易时间
         self.end_date = ds_order.get_max_date()
+        #self.end_date = datetime.date(2019, 06, 11)
         # 统计类型
         self.rolling_types = {100:30, 101:60, 102:90, 103:120, 104:150, \
                                 105:180, 106:210, 107:240, 108:270, 109:300, \
@@ -657,6 +674,7 @@ class MonthlyStaSrrc(object):
         self.start_date = ds_order.get_min_date()
         # 当前交易时间
         self.end_date = ds_order.get_max_date()
+        #self.end_date = datetime.date(2019, 06, 11)
     def handle(self):
         old_df = self.get_old_data()
         new_df = self.latest_sta()
@@ -778,12 +796,20 @@ class MonthlyStaSrrc(object):
 
 
 if __name__ == "__main__":
+    # obj_reten = MonthlyStaRetention()
+    # obj_reten.handle()
+    # hprint('ok')
     obj_srrc = MonthlyStaSrrc()
     obj_srrc.handle()
+    print 'a'
     obj = MonthlyStaApportion()
     obj.incremental_update()
+    print 'b'
     obj_reten = MonthlyStaRetention()
     obj_reten.handle()
+    print 'c'
     obj_rolling = MonthlyStaRolling()
     obj_rolling.handle()
+    print 'd'
     obj_srrc.handle()
+    print 'e'

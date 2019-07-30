@@ -46,7 +46,7 @@ def get_old_data():
         t.c.rp_amount_redeem,
         t.c.rp_amount_aum,
     ]
-    rst = session.query(t)
+    rst = session.query(t).filter(t.c.rp_tag_id == 0)
     return rst.all()
 
 def batch(df_new, df_old):
